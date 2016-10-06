@@ -4,7 +4,11 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
+import android.location.Location;
 import android.widget.Toast;
+
+import org.witness.proofmode.util.DeviceInfo;
+import org.witness.proofmode.util.GPSTracker;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -26,11 +30,66 @@ public class MediaWatcher extends BroadcastReceiver {
         Cursor cursor = context.getContentResolver().query(intent.getData(),      null,null, null, null);
         cursor.moveToFirst();
         String mediaPath = cursor.getString(cursor.getColumnIndex("_data"));
+        cursor.close();
+        Toast.makeText(context, "Generating proof: " + mediaPath, Toast.LENGTH_SHORT).show();
+
+        writeTextToFile(new File(mediaPath + ".proof.txt"),buildProof(context,mediaPath));
+
+    }
+
+    private String buildProof (Context context, String mediaPath)
+    {
+        File fileMedia = new File (mediaPath);
         String hash = getSHA1FromFileContent(mediaPath);
 
-        Toast.makeText(context, "New media: " + mediaPath + " and hash=" + hash, Toast.LENGTH_SHORT).show();
+        StringBuffer sb = new StringBuffer();
+        sb.append("File: ").append(mediaPath).append("\n");
+        sb.append("SHA1: ").append(hash).append("\n");
+        sb.append("Modified: ").append(fileMedia.lastModified()).append("\n");
+        sb.append("CurrentDateTime0GMT: ").append(DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_CURRENT_DATE_TIME_ZERO_GMT)).append("\n");
 
-        writeTextToFile(new File(mediaPath + ".sha1"),hash);
+        sb.append("DeviceID: ").append(DeviceInfo.getDeviceId(context)).append("\n");
+
+        sb.append("MAC: ").append(DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_MAC_ADDRESS)).append("\n");
+        sb.append("IPV4: ").append(DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_IP_ADDRESS_IPV4)).append("\n");
+
+        sb.append("DataType: ").append(DeviceInfo.getDataType(context)).append("\n");
+        sb.append("Network: ").append(DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_NETWORK)).append("\n");
+
+        sb.append("NetworkType: ").append(DeviceInfo.getNetworkType(context)).append("\n");
+        sb.append("Hardware: ").append(DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_HARDWARE_MODEL)).append("\n");
+        sb.append("Manufacturer: ").append(DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_MANUFACTURE)).append("\n");
+
+        sb.append("Language: ").append(DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_LANGUAGE)).append("\n");
+        sb.append("Locale: ").append(DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_LOCALE)).append("\n");
+
+        GPSTracker gpsTracker = new GPSTracker(context);
+        if (gpsTracker.canGetLocation())
+        {
+            Location loc = gpsTracker.getLocation();
+            int waitIdx = 0;
+            while (loc == null && waitIdx < 3)
+            {
+                waitIdx++;
+                try { Thread.sleep (500); }
+                catch (Exception e){}
+                loc = gpsTracker.getLocation();
+            }
+
+            if (loc != null) {
+                sb.append("Location.LatLon: " + loc.getLatitude() + "," + loc.getLongitude()).append("\n");
+                sb.append("Location.Provider: " + loc.getProvider()).append("\n");
+                sb.append("Location.Accuracy: " + loc.getAccuracy()).append("\n");
+                sb.append("Location.Altitude: " + loc.getAltitude()).append("\n");
+                sb.append("Location.Bearing: " + loc.getBearing()).append("\n");
+                sb.append("Location.Speed: " + loc.getSpeed()).append("\n");
+                sb.append("Location.Time: " + loc.getTime()).append("\n");
+            }
+        }
+
+
+        return sb.toString();
+
     }
 
     private static void writeTextToFile (File fileOut, String text)
