@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.location.Location;
+import android.net.Uri;
 import android.widget.Toast;
 
 import org.witness.proofmode.util.DeviceInfo;
@@ -27,11 +28,14 @@ public class MediaWatcher extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
 
-        Cursor cursor = context.getContentResolver().query(intent.getData(),      null,null, null, null);
+        Uri uriMedia = (Uri)intent.getParcelableExtra(Intent.EXTRA_STREAM);
+        if (uriMedia == null)
+            uriMedia = intent.getData();
+
+        Cursor cursor = context.getContentResolver().query(uriMedia,      null,null, null, null);
         cursor.moveToFirst();
         String mediaPath = cursor.getString(cursor.getColumnIndex("_data"));
         cursor.close();
-        Toast.makeText(context, "Generating proof: " + mediaPath, Toast.LENGTH_SHORT).show();
 
         writeTextToFile(new File(mediaPath + ".proof.txt"),buildProof(context,mediaPath));
 
@@ -50,7 +54,7 @@ public class MediaWatcher extends BroadcastReceiver {
 
         sb.append("DeviceID: ").append(DeviceInfo.getDeviceId(context)).append("\n");
 
-        sb.append("MAC: ").append(DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_MAC_ADDRESS)).append("\n");
+        sb.append("Wifi MAC: ").append(DeviceInfo.getWifiMacAddr()).append("\n");
         sb.append("IPV4: ").append(DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_IP_ADDRESS_IPV4)).append("\n");
 
         sb.append("DataType: ").append(DeviceInfo.getDataType(context)).append("\n");

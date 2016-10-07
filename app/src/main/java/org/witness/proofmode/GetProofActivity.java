@@ -34,28 +34,37 @@ public class GetProofActivity extends AppCompatActivity {
         if (Intent.ACTION_SEND.equals(action) && type != null) {
             if (type.startsWith("image/")) {
                 Uri imageUri = (Uri) intent.getParcelableExtra(Intent.EXTRA_STREAM);
+                if (imageUri == null)
+                    imageUri = intent.getData();
+
                 if (imageUri != null) {
                     // Update UI to reflect image being shared
 
                     Cursor cursor = getContentResolver().query(imageUri,      null,null, null, null);
-                    cursor.moveToFirst();
-                    String mediaPath = cursor.getString(cursor.getColumnIndex("_data"));
-                    cursor.close();
 
-                    if (mediaPath != null)
-                    {
-                        Intent shareIntent = new Intent(Intent.ACTION_SEND_MULTIPLE);
+                    if (cursor.getCount() > 0) {
 
-                        ArrayList<Uri> imageUris = new ArrayList<Uri>();
-                        imageUris.add(imageUri); // Add your image URIs here
-                        imageUris.add(Uri.fromFile(new File(mediaPath + ".proof.txt")));
+                        cursor.moveToFirst();
+                        String mediaPath = cursor.getString(cursor.getColumnIndex("_data"));
 
-                        shareIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, imageUris);
-                        shareIntent.setType("*/*");
-                        startActivity(Intent.createChooser(shareIntent, "Share proof to.."));
+                        if (mediaPath != null) {
+                            //check proof metadata against original image
 
-                        finish();
+                            Intent shareIntent = new Intent(Intent.ACTION_SEND_MULTIPLE);
+
+                            ArrayList<Uri> imageUris = new ArrayList<Uri>();
+                            imageUris.add(imageUri); // Add your image URIs here
+                            imageUris.add(Uri.fromFile(new File(mediaPath + ".proof.txt")));
+
+                            shareIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, imageUris);
+                            shareIntent.setType("*/*");
+                            startActivity(Intent.createChooser(shareIntent, "Share proof to.."));
+
+                            finish();
+                        }
                     }
+
+                    cursor.close();
 
 
                 }
