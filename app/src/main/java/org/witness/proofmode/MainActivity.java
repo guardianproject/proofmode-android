@@ -49,9 +49,7 @@ public class MainActivity extends AppCompatActivity {
 
             }
 
-            Toast.makeText(this, "Permission granted", Toast.LENGTH_SHORT).show();
         }else{
-            Toast.makeText(this, "Permission denied", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -92,7 +90,6 @@ public class MainActivity extends AppCompatActivity {
                 ActivityCompat.requestPermissions(MainActivity.this, new String[]{permission}, requestCode);
             }
         } else {
-            Toast.makeText(this, "" + permission + " is already granted.", Toast.LENGTH_SHORT).show();
         }
     }
 }
