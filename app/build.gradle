@@ -24,4 +24,8 @@ dependencies {
     testCompile 'junit:junit:4.12'
     compile 'com.android.support:appcompat-v7:23.3.0'
     compile 'com.android.support:design:23.3.0'
+    compile 'com.madgag.spongycastle:core:1.50.0.0'
+    compile 'com.madgag.spongycastle:pg:1.50.0.0'
+    compile 'com.madgag.spongycastle:pkix:1.50.0.0'
+    compile 'com.madgag.spongycastle:prov:1.50.0.0'
 }

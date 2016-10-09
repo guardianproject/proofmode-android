@@ -6,8 +6,6 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -17,7 +15,19 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
 
+import org.spongycastle.jce.provider.BouncyCastleProvider;
+import org.spongycastle.openpgp.PGPException;
+import org.spongycastle.openpgp.PGPKeyRingGenerator;
+import org.witness.proofmode.crypto.PgpUtils;
+
+import java.io.IOException;
+import java.security.Security;
+
 public class MainActivity extends AppCompatActivity {
+
+    static {
+        Security.addProvider(new BouncyCastleProvider());
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -28,6 +38,25 @@ public class MainActivity extends AppCompatActivity {
 
         askForPermission(Manifest.permission.ACCESS_FINE_LOCATION, 1);
 
+        doCrypto();
+    }
+
+    private void doCrypto ()
+    {
+        try {
+            final PGPKeyRingGenerator krgen = PgpUtils.generateKeyRingGenerator("password".toCharArray());
+            String pgpPublicKey = PgpUtils.genPGPPublicKey(krgen);
+            String pgpSecretKey = PgpUtils.genPGPPrivKey(krgen);
+        }
+        catch (PGPException pgpe)
+        {
+            pgpe.printStackTrace();
+        }
+        catch (IOException pgpe)
+        {
+            pgpe.printStackTrace();
+
+        }
     }
 
 
