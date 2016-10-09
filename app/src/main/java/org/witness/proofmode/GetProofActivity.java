@@ -53,7 +53,7 @@ public class GetProofActivity extends AppCompatActivity {
                             Intent shareIntent = new Intent(Intent.ACTION_SEND_MULTIPLE);
 
                             ArrayList<Uri> imageUris = new ArrayList<Uri>();
-                            imageUris.add(imageUri); // Add your image URIs here
+                            imageUris.add(Uri.fromFile(new File(mediaPath))); // Add your image URIs here
                             imageUris.add(Uri.fromFile(new File(mediaPath + ".proof.txt")));
 
                             shareIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, imageUris);
