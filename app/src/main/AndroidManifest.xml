@@ -80,7 +80,7 @@
                     android:name="android.intent.action.SEND"
                     android:label="Notarize" />
 
-                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.ALTERNATIVE" />
 
                 <data android:mimeType="image/*" />
             </intent-filter>
@@ -89,7 +89,7 @@
                     android:name="android.intent.action.SEND"
                     android:label="Notarize" />
 
-                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.ALTERNATIVE" />
 
                 <data android:mimeType="video/*" />
             </intent-filter>
