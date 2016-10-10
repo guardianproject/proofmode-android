@@ -235,4 +235,10 @@ public class PgpUtils {
 
         publicOut.close();
     }
+
+    public static void publishKey (String publicKey)
+    {
+        //https://pgp.mit.edu/pks/add
+
+    }
 }

@@ -10,6 +10,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.GeneralSecurityException;
 import java.security.Security;
+import java.util.Iterator;
 
 import org.spongycastle.bcpg.ArmoredOutputStream;
 import org.spongycastle.bcpg.BCPGOutputStream;
@@ -24,6 +25,7 @@ import org.spongycastle.openpgp.PGPSecretKey;
 import org.spongycastle.openpgp.PGPSignature;
 import org.spongycastle.openpgp.PGPSignatureGenerator;
 import org.spongycastle.openpgp.PGPSignatureList;
+import org.spongycastle.openpgp.PGPSignatureSubpacketGenerator;
 import org.spongycastle.openpgp.PGPUtil;
 import org.spongycastle.openpgp.operator.jcajce.JcaPGPContentSignerBuilder;
 import org.spongycastle.openpgp.operator.jcajce.JcaPGPContentVerifierBuilderProvider;
@@ -119,22 +121,25 @@ public class DetachedSignatureProcessor
     }
 
     public static void createSignature(
-            PGPSecretKey             pgpSec,
+            PGPSecretKey             skey,
             InputStream          in,
             OutputStream    out,
             char[]          pass,
             boolean         armor)
             throws GeneralSecurityException, IOException, PGPException
     {
+
+        PGPPrivateKey            prKey = skey.extractPrivateKey(new JcePBESecretKeyDecryptorBuilder().setProvider("SC").build(pass));
+
         if (armor)
         {
             out = new ArmoredOutputStream(out);
         }
 
-        PGPPrivateKey            pgpPrivKey = pgpSec.extractPrivateKey(new JcePBESecretKeyDecryptorBuilder().setProvider("SC").build(pass));
-        PGPSignatureGenerator    sGen = new PGPSignatureGenerator(new JcaPGPContentSignerBuilder(pgpSec.getPublicKey().getAlgorithm(), PGPUtil.SHA1).setProvider("SC"));
+        PGPPrivateKey            pgpPrivKey = skey.extractPrivateKey(new JcePBESecretKeyDecryptorBuilder().setProvider("SC").build(pass));
+        PGPSignatureGenerator    sGen = new PGPSignatureGenerator(new JcaPGPContentSignerBuilder(skey.getPublicKey().getAlgorithm(), PGPUtil.SHA256).setProvider("SC"));
 
-        sGen.init(PGPSignature.BINARY_DOCUMENT, pgpPrivKey);
+        sGen.init(PGPSignature.CANONICAL_TEXT_DOCUMENT, pgpPrivKey);
 
         BCPGOutputStream         bOut = new BCPGOutputStream(out);
         InputStream              fIn = new BufferedInputStream(in);
@@ -153,6 +158,43 @@ public class DetachedSignatureProcessor
         {
             out.close();
         }
+
+        //this is for attached / inline sig
+
+        /**
+         PGPSignatureGenerator sGen = new PGPSignatureGenerator(new JcaPGPContentSignerBuilder(skey.getPublicKey().getAlgorithm(), PGPUtil.SHA256).setProvider("BC"));
+         PGPSignatureSubpacketGenerator  spGen = new PGPSignatureSubpacketGenerator();
+
+         sGen.init(PGPSignature.CANONICAL_TEXT_DOCUMENT, prKey);
+         Iterator userIDs = skey.getPublicKey().getUserIDs();
+         if (userIDs.hasNext()) {
+         spGen.setSignerUserID(false, (String)userIDs.next());
+         sGen.setHashedSubpackets(spGen.generate());
+         }
+
+         ArmoredOutputStream aos = new ArmoredOutputStream(out);
+         aos.beginClearText(PGPUtil.SHA256);
+
+         InputStream              fIn = new BufferedInputStream(in);
+
+         int ch;
+         while ((ch = fIn.read()) >= 0)
+         {
+         sGen.update((byte)ch);
+         aos.write((byte)ch);
+         }
+
+         fIn.close();
+
+
+         aos.endClearText();
+
+         BCPGOutputStream bOut = new BCPGOutputStream(aos);
+         sGen.generate().encode(bOut);
+
+         aos.flush();
+         aos.close();
+         **/
     }
 
 

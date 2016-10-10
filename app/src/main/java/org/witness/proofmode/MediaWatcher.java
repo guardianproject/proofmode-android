@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.location.Location;
 import android.net.Uri;
+import android.util.Log;
 import android.widget.Toast;
 
 import org.spongycastle.openpgp.PGPException;
@@ -17,15 +18,22 @@ import org.witness.proofmode.crypto.PgpUtils;
 import org.witness.proofmode.util.DeviceInfo;
 import org.witness.proofmode.util.GPSTracker;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.util.HashMap;
+import java.util.Map;
 
 public class MediaWatcher extends BroadcastReceiver {
 
@@ -73,6 +81,9 @@ public class MediaWatcher extends BroadcastReceiver {
                 PGPSecretKeyRing skr = krgen.generateSecretKeyRing();
                 pgpSec = skr.getSecretKey();
 
+                String pubKey = PgpUtils.genPGPPublicKey(krgen);
+                postKey(pubKey);
+
                 //            String pgpSecretKey = PgpUtils.genPGPPrivKey(krgen);
 
             } catch (PGPException pgpe) {
@@ -82,6 +93,75 @@ public class MediaWatcher extends BroadcastReceiver {
 
             }
         }
+    }
+
+    private void postKey (final String pubKey)
+    {
+        new Thread () {
+
+            public void run() {
+
+                try {
+                    HashMap<String,String> hmParams = new HashMap<String,String>();
+                    hmParams.put("keytext",pubKey);
+                    String queryString = createQueryStringForParameters(hmParams);
+
+                    URL url = new URL("https://pgp.mit.edu/pks/add");
+                    HttpURLConnection client = null;
+                    client = (HttpURLConnection) url.openConnection();
+                    client.setRequestMethod("POST");
+                    client.setFixedLengthStreamingMode(queryString.getBytes().length);
+                    client.setRequestProperty("Content-Type",
+                            "application/x-www-form-urlencoded");
+                    client.setDoOutput(true);
+                    client.setDoInput(true);
+                    client.setReadTimeout(10000);
+                    client.setConnectTimeout(15000);
+
+                    PrintWriter out = new PrintWriter(client.getOutputStream());
+                    out.print(queryString);
+                    out.close();
+
+
+                    // handle issues
+                    int statusCode = client.getResponseCode();
+                    if (statusCode != HttpURLConnection.HTTP_OK) {
+                        // throw some exception
+                        Log.w("PGP","key did not upload: " + statusCode);
+                    }
+
+
+                    client.disconnect();
+                }
+                catch (IOException ioe)
+                {
+                    ioe.printStackTrace();
+                }
+            }
+        }.start();;
+    }
+
+    private static final char PARAMETER_DELIMITER = '&';
+    private static final char PARAMETER_EQUALS_CHAR = '=';
+    public static String createQueryStringForParameters(Map<String, String> parameters) {
+        StringBuilder parametersAsQueryString = new StringBuilder();
+        if (parameters != null) {
+            boolean firstParameter = true;
+
+            for (String parameterName : parameters.keySet()) {
+                if (!firstParameter) {
+                    parametersAsQueryString.append(PARAMETER_DELIMITER);
+                }
+
+                parametersAsQueryString.append(parameterName)
+                        .append(PARAMETER_EQUALS_CHAR)
+                        .append(URLEncoder.encode(
+                                parameters.get(parameterName)));
+
+                firstParameter = false;
+            }
+        }
+        return parametersAsQueryString.toString();
     }
 
 
