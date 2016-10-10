@@ -5,6 +5,7 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.widget.Toast;
 
 import org.witness.proofmode.crypto.HashUtils;
 
@@ -55,25 +56,34 @@ public class GetProofActivity extends AppCompatActivity {
 
                             Intent shareIntent = new Intent(Intent.ACTION_SEND_MULTIPLE);
 
-                            StringBuffer sb = new StringBuffer();
-
-                            String hash = HashUtils.getSHA1FromFileContent(mediaPath);
                             File fileMedia = new File(mediaPath);
+                            File fileMediaSig = new File(mediaPath + ".asc");
+                            File fileMediaProof = new File(mediaPath + ".proof.txt");
+                            File fileMediaProofSig = new File(mediaPath + ".proof.txt.asc");
 
-                            sb.append(fileMedia.getName()).append(' ');
-                            sb.append(" was last modifed at ").append(new Date(fileMedia.lastModified()).toGMTString());
-                            sb.append(" and has a SHA1 hash of ").append(hash);
+                            if (fileMediaSig.exists() && fileMediaProof.exists() && fileMediaProofSig.exists()) {
+                                String hash = HashUtils.getSHA1FromFileContent(mediaPath);
+                                StringBuffer sb = new StringBuffer();
+                                sb.append(fileMedia.getName()).append(' ');
+                                sb.append(" was last modifed at ").append(new Date(fileMedia.lastModified()).toGMTString());
+                                sb.append(" and has a SHA1 hash of ").append(hash);
 
-                            shareIntent.putExtra(Intent.EXTRA_TEXT,sb.toString());
+                                shareIntent.putExtra(Intent.EXTRA_TEXT, sb.toString());
 
-                            ArrayList<Uri> imageUris = new ArrayList<Uri>();
-                            imageUris.add(Uri.fromFile(new File(mediaPath))); // Add your image URIs here
-                            imageUris.add(Uri.fromFile(new File(mediaPath + ".proof.txt")));
-                            imageUris.add(Uri.fromFile(new File(mediaPath + ".proof.txt.asc")));
+                                ArrayList<Uri> imageUris = new ArrayList<Uri>();
+                                imageUris.add(Uri.fromFile(new File(mediaPath))); // Add your image URIs here
+                                imageUris.add(Uri.fromFile(fileMediaSig)); // Add your image URIs here
+                                imageUris.add(Uri.fromFile(fileMediaProof));
+                                imageUris.add(Uri.fromFile(fileMediaProofSig));
 
-                            shareIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, imageUris);
-                            shareIntent.setType("*/*");
-                            startActivity(Intent.createChooser(shareIntent, "Share proof to.."));
+                                shareIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, imageUris);
+                                shareIntent.setType("*/*");
+                                startActivity(Intent.createChooser(shareIntent, "Share proof to.."));
+                            }
+                            else
+                            {
+                                Toast.makeText(this, "ERROR: The proof does not exist or has been modified",Toast.LENGTH_LONG).show();
+                            }
 
                             finish();
                         }

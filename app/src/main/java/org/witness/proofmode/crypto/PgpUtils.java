@@ -61,7 +61,7 @@ import java.util.Iterator;
 
 public class PgpUtils {
     private static final String PROVIDER = "SC";
-    private static final String KEY_RING_ID = "asdf@asdf.com";
+//    private static final String KEY_RING_ID = "asdf@asdf.com";
 
     public static String decrypt(String encryptedText, String password) throws Exception {
         byte[] encrypted = encryptedText.getBytes();
@@ -145,7 +145,7 @@ public class PgpUtils {
         return new String(encOut.toByteArray());
     }
 
-    public final static PGPKeyRingGenerator generateKeyRingGenerator (char[] pass) throws PGPException{
+    public final static PGPKeyRingGenerator generateKeyRingGenerator (String keyId, char[] pass) throws PGPException{
         RSAKeyPairGenerator kpg = new RSAKeyPairGenerator();
         kpg.init(new RSAKeyGenerationParameters(BigInteger.valueOf(0x10001), new SecureRandom(), 2048, 12));
         PGPKeyPair rsakp_sign = new BcPGPKeyPair(PGPPublicKey.RSA_SIGN, kpg.generateKeyPair(), new Date());
@@ -161,7 +161,7 @@ public class PgpUtils {
         PGPDigestCalculator sha256Calc = new BcPGPDigestCalculatorProvider().get(HashAlgorithmTags.SHA256);
         PBESecretKeyEncryptor pske = (new BcPBESecretKeyEncryptorBuilder(PGPEncryptedData.AES_256, sha256Calc, 0xc0)).build(pass);
         PGPKeyRingGenerator keyRingGen = new PGPKeyRingGenerator (PGPSignature.POSITIVE_CERTIFICATION, rsakp_sign,
-                KEY_RING_ID, sha1Calc, signhashgen.generate(), null, new BcPGPContentSignerBuilder(rsakp_sign.getPublicKey().getAlgorithm(),
+                keyId, sha1Calc, signhashgen.generate(), null, new BcPGPContentSignerBuilder(rsakp_sign.getPublicKey().getAlgorithm(),
                 HashAlgorithmTags.SHA1), pske);
         keyRingGen.addSubKey(rsakp_enc, enchashgen.generate(), null);
         return keyRingGen;

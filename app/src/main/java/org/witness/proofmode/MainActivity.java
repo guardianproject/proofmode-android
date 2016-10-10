@@ -26,9 +26,6 @@ import java.security.Security;
 
 public class MainActivity extends AppCompatActivity {
 
-    static {
-        Security.addProvider(new BouncyCastleProvider());
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

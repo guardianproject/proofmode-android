@@ -9,10 +9,14 @@ import android.net.Uri;
 import android.util.Log;
 import android.widget.Toast;
 
+import org.spongycastle.bcpg.ArmoredInputStream;
+import org.spongycastle.bcpg.ArmoredOutputStream;
+import org.spongycastle.jce.provider.BouncyCastleProvider;
 import org.spongycastle.openpgp.PGPException;
 import org.spongycastle.openpgp.PGPKeyRingGenerator;
 import org.spongycastle.openpgp.PGPSecretKey;
 import org.spongycastle.openpgp.PGPSecretKeyRing;
+import org.spongycastle.openpgp.operator.bc.BcKeyFingerprintCalculator;
 import org.witness.proofmode.crypto.DetachedSignatureProcessor;
 import org.witness.proofmode.crypto.PgpUtils;
 import org.witness.proofmode.util.DeviceInfo;
@@ -32,12 +36,16 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.security.MessageDigest;
+import java.security.Security;
 import java.util.HashMap;
 import java.util.Map;
 
 public class MediaWatcher extends BroadcastReceiver {
 
-    PGPSecretKey pgpSec = null;
+    private static PGPSecretKey pgpSec = null;
+
+    private static String keyId = "noone@proofmode.witness.org";
+    private static String password = "password";
 
     public MediaWatcher() {
     }
@@ -57,34 +65,51 @@ public class MediaWatcher extends BroadcastReceiver {
         File fileMediaProof = new File(mediaPath + ".proof.txt");
         writeTextToFile(fileMediaProof,buildProof(context,mediaPath));
 
-        File fileMediaProofAsc = new File(mediaPath + ".proof.txt.asc");
-
         if (pgpSec == null)
         {
-            initCrypto();
+            initCrypto(context);
         }
 
         try {
-            DetachedSignatureProcessor.createSignature(pgpSec, new FileInputStream(fileMediaProof), new FileOutputStream(fileMediaProofAsc), "password".toCharArray(), true);
+
+            //sign the media file
+            DetachedSignatureProcessor.createSignature(pgpSec, new FileInputStream(new File(mediaPath)), new FileOutputStream(new File(mediaPath + ".asc")), password.toCharArray(), true);
+
+            //sign the proof file
+            DetachedSignatureProcessor.createSignature(pgpSec, new FileInputStream(fileMediaProof), new FileOutputStream(new File(mediaPath + ".proof.txt.asc")), password.toCharArray(), true);
         }
         catch (Exception e)
         {
-            e.printStackTrace();
+            Log.e("MediaWatcher","Error signing media or proof",e);
         }
     }
 
-    private synchronized void initCrypto ()
+    private static synchronized void initCrypto (Context context)
     {
         if (pgpSec == null) {
             try {
-                final PGPKeyRingGenerator krgen = PgpUtils.generateKeyRingGenerator("password".toCharArray());
-                PGPSecretKeyRing skr = krgen.generateSecretKeyRing();
+                File fileSecKeyRing = new File(context.getFilesDir(),"pkr.asc");
+                PGPSecretKeyRing skr = null;
+
+                if (fileSecKeyRing.exists())
+                {
+                    ArmoredInputStream sin = new ArmoredInputStream(new FileInputStream(fileSecKeyRing));
+                    skr = new PGPSecretKeyRing(sin,new BcKeyFingerprintCalculator());
+
+                }
+                else {
+                    final PGPKeyRingGenerator krgen = PgpUtils.generateKeyRingGenerator(keyId, password.toCharArray());
+                    skr = krgen.generateSecretKeyRing();
+                    String pubKey = PgpUtils.genPGPPublicKey(krgen);
+                    postKey(pubKey);
+
+                    ArmoredOutputStream sout = new ArmoredOutputStream((new FileOutputStream(fileSecKeyRing)));
+                    skr.encode(sout);
+                    sout.close();
+                }
+
                 pgpSec = skr.getSecretKey();
 
-                String pubKey = PgpUtils.genPGPPublicKey(krgen);
-                postKey(pubKey);
-
-                //            String pgpSecretKey = PgpUtils.genPGPPrivKey(krgen);
 
             } catch (PGPException pgpe) {
                 pgpe.printStackTrace();
@@ -95,7 +120,7 @@ public class MediaWatcher extends BroadcastReceiver {
         }
     }
 
-    private void postKey (final String pubKey)
+    private static void postKey (final String pubKey)
     {
         new Thread () {
 
