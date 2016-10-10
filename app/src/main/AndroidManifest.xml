@@ -60,7 +60,7 @@
             </intent-filter>
         </receiver>
 
-        <activity android:name=".GetProofActivity" android:label="Get Proof">
+        <activity android:name=".GetProofActivity" android:label="Share Proof">
 
             <intent-filter>
                 <action
@@ -73,6 +73,7 @@
             </intent-filter>
 
         </activity>
+        <!--
         <activity android:name=".NotarizeActivity" android:label="Notarize">
 
             <intent-filter>
@@ -95,6 +96,7 @@
             </intent-filter>
 
         </activity>
+        -->
     </application>
 
 </manifest>

@@ -8,6 +8,12 @@ import android.location.Location;
 import android.net.Uri;
 import android.widget.Toast;
 
+import org.spongycastle.openpgp.PGPException;
+import org.spongycastle.openpgp.PGPKeyRingGenerator;
+import org.spongycastle.openpgp.PGPSecretKey;
+import org.spongycastle.openpgp.PGPSecretKeyRing;
+import org.witness.proofmode.crypto.DetachedSignatureProcessor;
+import org.witness.proofmode.crypto.PgpUtils;
 import org.witness.proofmode.util.DeviceInfo;
 import org.witness.proofmode.util.GPSTracker;
 
@@ -19,8 +25,11 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.StringWriter;
 import java.security.MessageDigest;
+import java.util.HashMap;
 
 public class MediaWatcher extends BroadcastReceiver {
+
+    PGPSecretKey pgpSec = null;
 
     public MediaWatcher() {
     }
@@ -37,35 +46,74 @@ public class MediaWatcher extends BroadcastReceiver {
         String mediaPath = cursor.getString(cursor.getColumnIndex("_data"));
         cursor.close();
 
-        writeTextToFile(new File(mediaPath + ".proof.txt"),buildProof(context,mediaPath));
+        File fileMediaProof = new File(mediaPath + ".proof.txt");
+        writeTextToFile(fileMediaProof,buildProof(context,mediaPath));
 
+        File fileMediaProofAsc = new File(mediaPath + ".proof.txt.asc");
+
+        if (pgpSec == null)
+        {
+            initCrypto();
+        }
+
+        try {
+            DetachedSignatureProcessor.createSignature(pgpSec, new FileInputStream(fileMediaProof), new FileOutputStream(fileMediaProofAsc), "password".toCharArray(), true);
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
     }
+
+    private synchronized void initCrypto ()
+    {
+        if (pgpSec == null) {
+            try {
+                final PGPKeyRingGenerator krgen = PgpUtils.generateKeyRingGenerator("password".toCharArray());
+                PGPSecretKeyRing skr = krgen.generateSecretKeyRing();
+                pgpSec = skr.getSecretKey();
+
+                //            String pgpSecretKey = PgpUtils.genPGPPrivKey(krgen);
+
+            } catch (PGPException pgpe) {
+                pgpe.printStackTrace();
+            } catch (Exception pgpe) {
+                pgpe.printStackTrace();
+
+            }
+        }
+    }
+
+
+
+
 
     private String buildProof (Context context, String mediaPath)
     {
         File fileMedia = new File (mediaPath);
         String hash = getSHA1FromFileContent(mediaPath);
 
-        StringBuffer sb = new StringBuffer();
-        sb.append("File: ").append(mediaPath).append("\n");
-        sb.append("SHA1: ").append(hash).append("\n");
-        sb.append("Modified: ").append(fileMedia.lastModified()).append("\n");
-        sb.append("CurrentDateTime0GMT: ").append(DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_CURRENT_DATE_TIME_ZERO_GMT)).append("\n");
+        HashMap<String, String> hmProof = new HashMap<String, String>();
 
-        sb.append("DeviceID: ").append(DeviceInfo.getDeviceId(context)).append("\n");
+        hmProof.put("File",mediaPath);
+        hmProof.put("SHA1",hash);
+        hmProof.put("Modified",fileMedia.lastModified()+"");
+        hmProof.put("CurrentDateTime0GMT",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_CURRENT_DATE_TIME_ZERO_GMT));
 
-        sb.append("Wifi MAC: ").append(DeviceInfo.getWifiMacAddr()).append("\n");
-        sb.append("IPV4: ").append(DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_IP_ADDRESS_IPV4)).append("\n");
+        hmProof.put("DeviceID",DeviceInfo.getDeviceId(context));
 
-        sb.append("DataType: ").append(DeviceInfo.getDataType(context)).append("\n");
-        sb.append("Network: ").append(DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_NETWORK)).append("\n");
+        hmProof.put("Wifi MAC",DeviceInfo.getWifiMacAddr());
+        hmProof.put("IPV4",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_IP_ADDRESS_IPV4));
 
-        sb.append("NetworkType: ").append(DeviceInfo.getNetworkType(context)).append("\n");
-        sb.append("Hardware: ").append(DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_HARDWARE_MODEL)).append("\n");
-        sb.append("Manufacturer: ").append(DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_MANUFACTURE)).append("\n");
+        hmProof.put("DataType",DeviceInfo.getDataType(context));
+        hmProof.put("Network",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_NETWORK));
 
-        sb.append("Language: ").append(DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_LANGUAGE)).append("\n");
-        sb.append("Locale: ").append(DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_LOCALE)).append("\n");
+        hmProof.put("NetworkType",DeviceInfo.getNetworkType(context));
+        hmProof.put("Hardware",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_HARDWARE_MODEL));
+        hmProof.put("Manufacturer",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_MANUFACTURE));
+
+        hmProof.put("Language",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_LANGUAGE));
+        hmProof.put("Locale",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_LOCALE));
 
         GPSTracker gpsTracker = new GPSTracker(context);
         if (gpsTracker.canGetLocation())
@@ -81,16 +129,34 @@ public class MediaWatcher extends BroadcastReceiver {
             }
 
             if (loc != null) {
-                sb.append("Location.LatLon: " + loc.getLatitude() + "," + loc.getLongitude()).append("\n");
-                sb.append("Location.Provider: " + loc.getProvider()).append("\n");
-                sb.append("Location.Accuracy: " + loc.getAccuracy()).append("\n");
-                sb.append("Location.Altitude: " + loc.getAltitude()).append("\n");
-                sb.append("Location.Bearing: " + loc.getBearing()).append("\n");
-                sb.append("Location.Speed: " + loc.getSpeed()).append("\n");
-                sb.append("Location.Time: " + loc.getTime()).append("\n");
+                hmProof.put("Location.Latitude",loc.getLatitude()+"");
+                hmProof.put("Location.Longitude",loc.getLongitude()+"");
+                hmProof.put("Location.Provider",loc.getProvider());
+                hmProof.put("Location.Accuracy",loc.getAccuracy()+"");
+                hmProof.put("Location.Altitude",loc.getAltitude()+"");
+                hmProof.put("Location.Bearing",loc.getBearing()+"");
+                hmProof.put("Location.Speed",loc.getSpeed()+"");
+                hmProof.put("Location.Time",loc.getTime()+"");
             }
+
+
         }
 
+        StringBuffer sb = new StringBuffer();
+
+        for (String key : hmProof.keySet())
+        {
+            sb.append(key).append(",");
+        }
+
+        sb.append("\n");
+
+        for (String key : hmProof.keySet())
+        {
+            sb.append(hmProof.get(key)).append(",");
+        }
+
+        sb.append("\n");
 
         return sb.toString();
 

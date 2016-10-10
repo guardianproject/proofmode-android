@@ -18,6 +18,7 @@ import android.widget.Toast;
 import org.spongycastle.jce.provider.BouncyCastleProvider;
 import org.spongycastle.openpgp.PGPException;
 import org.spongycastle.openpgp.PGPKeyRingGenerator;
+import org.witness.proofmode.crypto.DetachedSignatureProcessor;
 import org.witness.proofmode.crypto.PgpUtils;
 
 import java.io.IOException;
@@ -38,27 +39,7 @@ public class MainActivity extends AppCompatActivity {
 
         askForPermission(Manifest.permission.ACCESS_FINE_LOCATION, 1);
 
-        doCrypto();
     }
-
-    private void doCrypto ()
-    {
-        try {
-            final PGPKeyRingGenerator krgen = PgpUtils.generateKeyRingGenerator("password".toCharArray());
-            String pgpPublicKey = PgpUtils.genPGPPublicKey(krgen);
-            String pgpSecretKey = PgpUtils.genPGPPrivKey(krgen);
-        }
-        catch (PGPException pgpe)
-        {
-            pgpe.printStackTrace();
-        }
-        catch (IOException pgpe)
-        {
-            pgpe.printStackTrace();
-
-        }
-    }
-
 
 
     @Override

@@ -37,6 +37,9 @@ import org.spongycastle.openpgp.operator.bc.BcPGPContentSignerBuilder;
 import org.spongycastle.openpgp.operator.bc.BcPGPDigestCalculatorProvider;
 import org.spongycastle.openpgp.operator.bc.BcPGPKeyPair;
 import org.spongycastle.openpgp.operator.bc.BcPublicKeyDataDecryptorFactory;
+import org.spongycastle.openpgp.operator.jcajce.JcaPGPContentSignerBuilder;
+import org.spongycastle.openpgp.operator.jcajce.JcaPGPDigestCalculatorProviderBuilder;
+import org.spongycastle.openpgp.operator.jcajce.JcePBESecretKeyEncryptorBuilder;
 import org.spongycastle.openpgp.operator.jcajce.JcePGPDataEncryptorBuilder;
 import org.spongycastle.openpgp.operator.jcajce.JcePublicKeyKeyEncryptionMethodGenerator;
 
@@ -47,7 +50,12 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.math.BigInteger;
 import java.nio.charset.Charset;
+import java.security.InvalidKeyException;
+import java.security.NoSuchProviderException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.security.SignatureException;
 import java.util.Date;
 import java.util.Iterator;
 
@@ -182,11 +190,49 @@ public class PgpUtils {
     }
 
     public final static String genPGPPrivKey (PGPKeyRingGenerator krgen) throws IOException {
+            // String pgpPublicKey = PgpUtils.genPGPPublicKey(krgen);
+            //DetachedSignatureProcessor.createSignature(pgpSecretKey, )
+
         ByteArrayOutputStream baosPriv = new ByteArrayOutputStream ();
         PGPSecretKeyRing skr = krgen.generateSecretKeyRing();
         ArmoredOutputStream armoredStreamPriv = new ArmoredOutputStream(baosPriv);
         skr.encode(armoredStreamPriv);
         armoredStreamPriv.close();
         return new String(baosPriv.toByteArray(), Charset.defaultCharset());
+    }
+
+    private static void exportKeyPair(
+            OutputStream    secretOut,
+            OutputStream    publicOut,
+            PublicKey publicKey,
+            PrivateKey privateKey,
+            String          identity,
+            char[]          passPhrase,
+            boolean         armor)
+            throws IOException, InvalidKeyException, NoSuchProviderException, SignatureException, PGPException
+    {
+        if (armor)
+        {
+            secretOut = new ArmoredOutputStream(secretOut);
+        }
+
+        PGPDigestCalculator sha1Calc = new JcaPGPDigestCalculatorProviderBuilder().build().get(HashAlgorithmTags.SHA1);
+        PGPKeyPair          keyPair = new PGPKeyPair(PGPPublicKey.RSA_GENERAL, publicKey, privateKey, new Date());
+        PGPSecretKey        secretKey = new PGPSecretKey(PGPSignature.DEFAULT_CERTIFICATION, keyPair, identity, sha1Calc, null, null, new JcaPGPContentSignerBuilder(keyPair.getPublicKey().getAlgorithm(), HashAlgorithmTags.SHA1), new JcePBESecretKeyEncryptorBuilder(PGPEncryptedData.CAST5, sha1Calc).setProvider("SC").build(passPhrase));
+
+        secretKey.encode(secretOut);
+
+        secretOut.close();
+
+        if (armor)
+        {
+            publicOut = new ArmoredOutputStream(publicOut);
+        }
+
+        PGPPublicKey    key = secretKey.getPublicKey();
+
+        key.encode(publicOut);
+
+        publicOut.close();
     }
 }

@@ -6,6 +6,8 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 
+import org.witness.proofmode.crypto.HashUtils;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -54,7 +56,7 @@ public class NotarizeActivity extends AppCompatActivity {
 
                     Intent notarizeIntent = new Intent(Intent.ACTION_SEND);
 
-                    String hash = getSHA1FromFileContent(mediaPath);
+                    String hash = HashUtils.getSHA1FromFileContent(mediaPath);
                     File fileMedia = new File(mediaPath);
 
                     StringBuffer sb = new StringBuffer();
@@ -77,38 +79,5 @@ public class NotarizeActivity extends AppCompatActivity {
         }
     }
 
-    private static String getSHA1FromFileContent(String filename)
-    {
 
-        try
-        {
-            MessageDigest digest = MessageDigest.getInstance("SHA-1");
-            byte[] buffer = new byte[65536]; //created at start.
-            InputStream fis = new FileInputStream(filename);
-            int n = 0;
-            while (n != -1)
-            {
-                n = fis.read(buffer);
-                if (n > 0)
-                {
-                    digest.update(buffer, 0, n);
-                }
-            }
-            byte[] digestResult = digest.digest();
-            return asHex(digestResult);
-        }
-        catch (Exception e)
-        {
-            return null;
-        }
-    }
-
-    private static String asHex(byte[] arrayBytes) {
-        StringBuffer stringBuffer = new StringBuffer();
-        for (int i = 0; i < arrayBytes.length; i++) {
-            stringBuffer.append(Integer.toString((arrayBytes[i] & 0xff) + 0x100, 16)
-                    .substring(1));
-        }
-        return stringBuffer.toString();
-    }
 }
