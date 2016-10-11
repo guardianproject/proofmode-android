@@ -7,7 +7,7 @@ A Simple Utility Building on CameraV and InformaCam technology and architecture,
 # Goals 
 
 * Run all of the time in the background without noticeable battery, storage or network impact
-* Provide a non-setup, automatic new user experience that works without requiring training
+* Provide a no-setup-required, automatic new user experience that works without requiring training
 * Use strong cryptography for strong identity and verification features, but not encryption 
 * Produce "proof" data formats that can be easily parse, imported by existing tools (CSV)
 * Do not modify the original media files; all proof metadata storied in separate file
