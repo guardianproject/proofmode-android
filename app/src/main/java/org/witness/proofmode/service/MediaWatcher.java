@@ -1,4 +1,4 @@
-package org.witness.proofmode;
+package org.witness.proofmode.service;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -57,30 +57,38 @@ public class MediaWatcher extends BroadcastReceiver {
         if (uriMedia == null)
             uriMedia = intent.getData();
 
+        String mediaPath = null;
+
         Cursor cursor = context.getContentResolver().query(uriMedia,      null,null, null, null);
-        cursor.moveToFirst();
-        String mediaPath = cursor.getString(cursor.getColumnIndex("_data"));
-        cursor.close();
+        if (cursor != null) {
+            cursor.moveToFirst();
+            mediaPath = cursor.getString(cursor.getColumnIndex("_data"));
+            cursor.close();
+        }
+        else
+        {
+            mediaPath = uriMedia.getPath();
+        }
 
         File fileMediaProof = new File(mediaPath + ".proof.txt");
-        writeTextToFile(fileMediaProof,buildProof(context,mediaPath));
 
-        if (pgpSec == null)
-        {
-            initCrypto(context);
-        }
+        if (!fileMediaProof.exists()) {
+            writeTextToFile(fileMediaProof, buildProof(context, mediaPath));
 
-        try {
+            if (pgpSec == null) {
+                initCrypto(context);
+            }
 
-            //sign the media file
-            DetachedSignatureProcessor.createSignature(pgpSec, new FileInputStream(new File(mediaPath)), new FileOutputStream(new File(mediaPath + ".asc")), password.toCharArray(), true);
+            try {
 
-            //sign the proof file
-            DetachedSignatureProcessor.createSignature(pgpSec, new FileInputStream(fileMediaProof), new FileOutputStream(new File(mediaPath + ".proof.txt.asc")), password.toCharArray(), true);
-        }
-        catch (Exception e)
-        {
-            Log.e("MediaWatcher","Error signing media or proof",e);
+                //sign the media file
+                DetachedSignatureProcessor.createSignature(pgpSec, new FileInputStream(new File(mediaPath)), new FileOutputStream(new File(mediaPath + ".asc")), password.toCharArray(), true);
+
+                //sign the proof file
+                DetachedSignatureProcessor.createSignature(pgpSec, new FileInputStream(fileMediaProof), new FileOutputStream(new File(mediaPath + ".proof.txt.asc")), password.toCharArray(), true);
+            } catch (Exception e) {
+                Log.e("MediaWatcher", "Error signing media or proof", e);
+            }
         }
     }
 

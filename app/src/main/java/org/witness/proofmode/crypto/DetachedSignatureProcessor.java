@@ -144,11 +144,11 @@ public class DetachedSignatureProcessor
         BCPGOutputStream         bOut = new BCPGOutputStream(out);
         InputStream              fIn = new BufferedInputStream(in);
 
-        int i = -1;
+        int n = -1;
         byte[] buffer = new byte[2048];
-        while ((i = fIn.read(buffer)) >= 0)
+        while ((n = fIn.read(buffer)) >= 0)
         {
-            sGen.update(buffer);
+            sGen.update(buffer,0,n);
         }
 
         fIn.close();

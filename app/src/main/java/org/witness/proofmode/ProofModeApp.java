@@ -1,8 +1,10 @@
 package org.witness.proofmode;
 
 import android.app.Application;
+import android.content.Intent;
 
 import org.spongycastle.jce.provider.BouncyCastleProvider;
+import org.witness.proofmode.service.MediaListenerService;
 
 import java.security.Security;
 
@@ -19,5 +21,8 @@ public class ProofModeApp extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+
+        startService(new Intent(getBaseContext(), MediaListenerService.class));
+
     }
 }

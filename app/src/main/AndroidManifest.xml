@@ -34,9 +34,19 @@
             </intent-filter>
 
         </activity>
+        <receiver
+            android:name=".service.OnBootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
+        </receiver>
 
         <receiver
-            android:name=".MediaWatcher"
+            android:name=".service.MediaWatcher"
             android:enabled="true"
             android:exported="true">
             <intent-filter>
@@ -74,6 +84,15 @@
 
                 <data android:mimeType="image/*" />
             </intent-filter>
+            <intent-filter>
+                <action
+                    android:name="android.intent.action.SEND"
+                    android:label="Get Proof" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:mimeType="video/*" />
+            </intent-filter>
 
         </activity>
         <!--
@@ -100,6 +119,11 @@
 
         </activity>
         -->
+        <service
+            android:name=".service.MediaListenerService"
+            android:enabled="true"
+            android:exported="false" >
+        </service>
     </application>
 
 </manifest>
