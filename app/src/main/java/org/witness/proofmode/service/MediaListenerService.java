@@ -28,7 +28,15 @@ public class MediaListenerService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        startWatching();
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+
+        if (observer == null)
+            startWatching();
+
+        return Service.START_REDELIVER_INTENT;
     }
 
     private void startWatching() {
@@ -37,7 +45,7 @@ public class MediaListenerService extends Service {
         observer = new RecursiveFileObserver(pathToWatch, FileObserver.CLOSE_WRITE| FileObserver.MOVED_TO) { // set up a file observer to watch this directory on sd card
             @Override
             public void onEvent(int event, final String mediaPath) {
-                if (!mediaPath.equals(".probe")) { // check that it's not equal to .probe because thats created every time camera is launched
+                if (mediaPath != null && (!mediaPath.equals(".probe"))) { // check that it's not equal to .probe because thats created every time camera is launched
 
                     new Handler(Looper.getMainLooper()).post(new Runnable() {
                         @Override

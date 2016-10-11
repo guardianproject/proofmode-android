@@ -129,7 +129,7 @@ public class DetachedSignatureProcessor
             throws GeneralSecurityException, IOException, PGPException
     {
 
-        PGPPrivateKey            prKey = skey.extractPrivateKey(new JcePBESecretKeyDecryptorBuilder().setProvider("SC").build(pass));
+      //  PGPPrivateKey            prKey = skey.extractPrivateKey(new JcePBESecretKeyDecryptorBuilder().setProvider("SC").build(pass));
 
         if (armor)
         {
@@ -139,7 +139,7 @@ public class DetachedSignatureProcessor
         PGPPrivateKey            pgpPrivKey = skey.extractPrivateKey(new JcePBESecretKeyDecryptorBuilder().setProvider("SC").build(pass));
         PGPSignatureGenerator    sGen = new PGPSignatureGenerator(new JcaPGPContentSignerBuilder(skey.getPublicKey().getAlgorithm(), PGPUtil.SHA256).setProvider("SC"));
 
-        sGen.init(PGPSignature.CANONICAL_TEXT_DOCUMENT, pgpPrivKey);
+        sGen.init(PGPSignature.BINARY_DOCUMENT, pgpPrivKey);
 
         BCPGOutputStream         bOut = new BCPGOutputStream(out);
         InputStream              fIn = new BufferedInputStream(in);
