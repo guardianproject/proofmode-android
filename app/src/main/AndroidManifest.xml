@@ -73,12 +73,12 @@
             </intent-filter>
         </receiver>
 
-        <activity android:name=".GetProofActivity" android:label="Share Proof">
+        <activity android:name=".ShareProofActivity" android:label="Share Proof">
 
             <intent-filter>
                 <action
                     android:name="android.intent.action.SEND"
-                    android:label="Get Proof" />
+                    android:label="Share Proof" />
 
                 <category android:name="android.intent.category.DEFAULT" />
 
@@ -87,12 +87,23 @@
             <intent-filter>
                 <action
                     android:name="android.intent.action.SEND"
-                    android:label="Get Proof" />
+                    android:label="Share Proof" />
 
                 <category android:name="android.intent.category.DEFAULT" />
 
                 <data android:mimeType="video/*" />
             </intent-filter>
+            <intent-filter>
+                <action
+                    android:name="android.intent.action.SEND_MULTIPLE"
+                    android:label="Share Proof" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+                <data android:mimeType="video/*" />
+
+            </intent-filter>
+
 
         </activity>
         <!--
