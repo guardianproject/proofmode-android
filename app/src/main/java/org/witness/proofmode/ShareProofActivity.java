@@ -3,6 +3,7 @@ package org.witness.proofmode;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.widget.Toast;
@@ -14,6 +15,8 @@ import java.util.ArrayList;
 import java.util.Date;
 
 public class ShareProofActivity extends AppCompatActivity {
+
+    private final static String PROOF_FILE_TAG = ".proof.csv";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -82,11 +85,28 @@ public class ShareProofActivity extends AppCompatActivity {
             if (mediaPath != null) {
                 //check proof metadata against original image
 
+                String baseFolder = "proofmode";
 
                 File fileMedia = new File(mediaPath);
                 File fileMediaSig = new File(mediaPath + ".asc");
-                File fileMediaProof = new File(mediaPath + ".proof.txt");
-                File fileMediaProofSig = new File(mediaPath + ".proof.txt.asc");
+                File fileMediaProof = new File(mediaPath + PROOF_FILE_TAG);
+                File fileMediaProofSig = new File(fileMediaProof.getAbsolutePath() + ".asc");
+
+                //if not there try alternate locations
+                if (!fileMediaSig.exists())
+                {
+                    fileMediaSig = new File(Environment.getExternalStorageDirectory(),baseFolder + mediaPath + ".asc");
+                    fileMediaProof = new File(Environment.getExternalStorageDirectory(),baseFolder + mediaPath + PROOF_FILE_TAG);
+                    fileMediaProofSig = new File(fileMediaProof.getAbsolutePath() + ".asc");
+
+                    if (!fileMediaSig.exists())
+                    {
+                        fileMediaSig = new File(getExternalFilesDir(null),mediaPath + ".asc");
+                        fileMediaProof = new File(getExternalFilesDir(null),mediaPath + PROOF_FILE_TAG);
+                        fileMediaProofSig = new File(fileMediaProof.getAbsolutePath() + ".asc");
+                    }
+
+                }
 
                 if (fileMediaSig.exists() && fileMediaProof.exists() && fileMediaProofSig.exists()) {
                     String hash = HashUtils.getSHA1FromFileContent(mediaPath);

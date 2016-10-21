@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.location.Location;
 import android.net.Uri;
+import android.os.Environment;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -75,10 +76,28 @@ public class MediaWatcher extends BroadcastReceiver {
         }
 
         File fileMediaProof = new File(mediaPath + PROOF_FILE_TAG);
+
         boolean showDeviceIds = true;
         boolean showLocation = true;
 
+        String baseFolder = "proofmode";
+
         if (!fileMediaProof.exists()) {
+
+            boolean canWrite = false;
+
+            try {
+                fileMediaProof.createNewFile();
+                canWrite = true;
+            }
+            catch (IOException ioe){}
+
+            if (!canWrite)
+            {
+                fileMediaProof = new File(Environment.getExternalStorageDirectory(),baseFolder + mediaPath + PROOF_FILE_TAG);
+                fileMediaProof.getParentFile().mkdirs();
+            }
+
             writeTextToFile(fileMediaProof, buildProof(context, mediaPath, showDeviceIds, showLocation));
 
             if (pgpSec == null) {
@@ -91,7 +110,7 @@ public class MediaWatcher extends BroadcastReceiver {
                 DetachedSignatureProcessor.createSignature(pgpSec, new FileInputStream(new File(mediaPath)), new FileOutputStream(new File(mediaPath + ".asc")), password.toCharArray(), true);
 
                 //sign the proof file
-                DetachedSignatureProcessor.createSignature(pgpSec, new FileInputStream(fileMediaProof), new FileOutputStream(new File(mediaPath + ".proof.txt.asc")), password.toCharArray(), true);
+                DetachedSignatureProcessor.createSignature(pgpSec, new FileInputStream(fileMediaProof), new FileOutputStream(new File(fileMediaProof.getAbsolutePath() + ".asc")), password.toCharArray(), true);
             } catch (Exception e) {
                 Log.e("MediaWatcher", "Error signing media or proof", e);
             }
