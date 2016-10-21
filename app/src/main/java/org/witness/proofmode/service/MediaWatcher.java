@@ -76,7 +76,8 @@ public class MediaWatcher extends BroadcastReceiver {
         }
 
         File fileMediaProof = new File(mediaPath + PROOF_FILE_TAG);
-
+        File fileMediaProofSig = new File(mediaPath + PROOF_FILE_TAG + ".asc");
+        File fileMediaSig =  new File(mediaPath + ".asc");
         boolean showDeviceIds = true;
         boolean showLocation = true;
 
@@ -94,7 +95,11 @@ public class MediaWatcher extends BroadcastReceiver {
 
             if (!canWrite)
             {
-                fileMediaProof = new File(Environment.getExternalStorageDirectory(),baseFolder + mediaPath + PROOF_FILE_TAG);
+                File fileFolder = new File(Environment.getExternalStorageDirectory(),baseFolder);
+                fileFolder.mkdirs();
+                fileMediaProof =  new File(fileFolder.getAbsolutePath() + mediaPath + PROOF_FILE_TAG);
+                fileMediaProofSig =  new File(fileFolder.getAbsolutePath() + mediaPath + PROOF_FILE_TAG + ".asc");
+                fileMediaSig =  new File(fileFolder.getAbsolutePath() + mediaPath + ".asc");
                 fileMediaProof.getParentFile().mkdirs();
             }
 
@@ -107,10 +112,10 @@ public class MediaWatcher extends BroadcastReceiver {
             try {
 
                 //sign the media file
-                DetachedSignatureProcessor.createSignature(pgpSec, new FileInputStream(new File(mediaPath)), new FileOutputStream(new File(mediaPath + ".asc")), password.toCharArray(), true);
+                DetachedSignatureProcessor.createSignature(pgpSec, new FileInputStream(new File(mediaPath)), new FileOutputStream(fileMediaSig), password.toCharArray(), true);
 
                 //sign the proof file
-                DetachedSignatureProcessor.createSignature(pgpSec, new FileInputStream(fileMediaProof), new FileOutputStream(new File(fileMediaProof.getAbsolutePath() + ".asc")), password.toCharArray(), true);
+                DetachedSignatureProcessor.createSignature(pgpSec, new FileInputStream(fileMediaProof), new FileOutputStream(fileMediaProofSig), password.toCharArray(), true);
             } catch (Exception e) {
                 Log.e("MediaWatcher", "Error signing media or proof", e);
             }
