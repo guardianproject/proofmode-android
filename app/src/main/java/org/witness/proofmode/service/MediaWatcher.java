@@ -44,8 +44,12 @@ public class MediaWatcher extends BroadcastReceiver {
 
     private static PGPSecretKey pgpSec = null;
 
-    private static String keyId = "noone@proofmode.witness.org";
-    private static String password = "password";
+    private final static String keyId = "noone@proofmode.witness.org";
+    private final static String password = "password";
+    private final static String PROOF_FILE_TAG = ".proof.csv";
+
+    private final static String FILE_SECRET_KEY_RING = "pkr.asc";
+    private final static String URL_POST_KEY_ENDPOINT = "https://pgp.mit.edu/pks/add";
 
     public MediaWatcher() {
     }
@@ -70,10 +74,12 @@ public class MediaWatcher extends BroadcastReceiver {
             mediaPath = uriMedia.getPath();
         }
 
-        File fileMediaProof = new File(mediaPath + ".proof.txt");
+        File fileMediaProof = new File(mediaPath + PROOF_FILE_TAG);
+        boolean showDeviceIds = true;
+        boolean showLocation = true;
 
         if (!fileMediaProof.exists()) {
-            writeTextToFile(fileMediaProof, buildProof(context, mediaPath));
+            writeTextToFile(fileMediaProof, buildProof(context, mediaPath, showDeviceIds, showLocation));
 
             if (pgpSec == null) {
                 initCrypto(context);
@@ -96,7 +102,7 @@ public class MediaWatcher extends BroadcastReceiver {
     {
         if (pgpSec == null) {
             try {
-                File fileSecKeyRing = new File(context.getFilesDir(),"pkr.asc");
+                File fileSecKeyRing = new File(context.getFilesDir(),FILE_SECRET_KEY_RING);
                 PGPSecretKeyRing skr = null;
 
                 if (fileSecKeyRing.exists())
@@ -139,7 +145,7 @@ public class MediaWatcher extends BroadcastReceiver {
                     hmParams.put("keytext",pubKey);
                     String queryString = createQueryStringForParameters(hmParams);
 
-                    URL url = new URL("https://pgp.mit.edu/pks/add");
+                    URL url = new URL(URL_POST_KEY_ENDPOINT);
                     HttpURLConnection client = null;
                     client = (HttpURLConnection) url.openConnection();
                     client.setRequestMethod("POST");
@@ -148,8 +154,8 @@ public class MediaWatcher extends BroadcastReceiver {
                             "application/x-www-form-urlencoded");
                     client.setDoOutput(true);
                     client.setDoInput(true);
-                    client.setReadTimeout(10000);
-                    client.setConnectTimeout(15000);
+                    client.setReadTimeout(20000);
+                    client.setConnectTimeout(30000);
 
                     PrintWriter out = new PrintWriter(client.getOutputStream());
                     out.print(queryString);
@@ -201,7 +207,7 @@ public class MediaWatcher extends BroadcastReceiver {
 
 
 
-    private String buildProof (Context context, String mediaPath)
+    private String buildProof (Context context, String mediaPath, boolean showDeviceIds, boolean showLocation)
     {
         File fileMedia = new File (mediaPath);
         String hash = getSHA1FromFileContent(mediaPath);
@@ -213,9 +219,11 @@ public class MediaWatcher extends BroadcastReceiver {
         hmProof.put("Modified",fileMedia.lastModified()+"");
         hmProof.put("CurrentDateTime0GMT",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_CURRENT_DATE_TIME_ZERO_GMT));
 
-        hmProof.put("DeviceID",DeviceInfo.getDeviceId(context));
+        if (showDeviceIds) {
+            hmProof.put("DeviceID", DeviceInfo.getDeviceId(context));
+            hmProof.put("Wifi MAC", DeviceInfo.getWifiMacAddr());
+        }
 
-        hmProof.put("Wifi MAC",DeviceInfo.getWifiMacAddr());
         hmProof.put("IPV4",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_IP_ADDRESS_IPV4));
 
         hmProof.put("DataType",DeviceInfo.getDataType(context));
@@ -241,7 +249,7 @@ public class MediaWatcher extends BroadcastReceiver {
                 loc = gpsTracker.getLocation();
             }
 
-            if (loc != null) {
+            if (loc != null && showLocation) {
                 hmProof.put("Location.Latitude",loc.getLatitude()+"");
                 hmProof.put("Location.Longitude",loc.getLongitude()+"");
                 hmProof.put("Location.Provider",loc.getProvider());
