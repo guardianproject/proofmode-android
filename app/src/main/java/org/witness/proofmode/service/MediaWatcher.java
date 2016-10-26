@@ -3,10 +3,12 @@ package org.witness.proofmode.service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Environment;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -58,66 +60,71 @@ public class MediaWatcher extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
 
-        Uri uriMedia = (Uri)intent.getParcelableExtra(Intent.EXTRA_STREAM);
-        if (uriMedia == null)
-            uriMedia = intent.getData();
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 
-        String mediaPath = null;
+        boolean doProof = prefs.getBoolean("doProof",true);
 
-        Cursor cursor = context.getContentResolver().query(uriMedia,      null,null, null, null);
-        if (cursor != null) {
-            cursor.moveToFirst();
-            mediaPath = cursor.getString(cursor.getColumnIndex("_data"));
-            cursor.close();
-        }
-        else
-        {
-            mediaPath = uriMedia.getPath();
-        }
+        if (doProof) {
 
-        File fileMediaProof = new File(mediaPath + PROOF_FILE_TAG);
-        File fileMediaProofSig = new File(mediaPath + PROOF_FILE_TAG + ".asc");
-        File fileMediaSig =  new File(mediaPath + ".asc");
-        boolean showDeviceIds = true;
-        boolean showLocation = true;
+            Uri uriMedia = (Uri) intent.getParcelableExtra(Intent.EXTRA_STREAM);
+            if (uriMedia == null)
+                uriMedia = intent.getData();
 
-        String baseFolder = "proofmode";
+            String mediaPath = null;
 
-        if (!fileMediaProof.exists()) {
-
-            boolean canWrite = false;
-
-            try {
-                fileMediaProof.createNewFile();
-                canWrite = true;
-            }
-            catch (IOException ioe){}
-
-            if (!canWrite)
-            {
-                File fileFolder = new File(Environment.getExternalStorageDirectory(),baseFolder);
-                fileFolder.mkdirs();
-                fileMediaProof =  new File(fileFolder.getAbsolutePath() + mediaPath + PROOF_FILE_TAG);
-                fileMediaProofSig =  new File(fileFolder.getAbsolutePath() + mediaPath + PROOF_FILE_TAG + ".asc");
-                fileMediaSig =  new File(fileFolder.getAbsolutePath() + mediaPath + ".asc");
-                fileMediaProof.getParentFile().mkdirs();
+            Cursor cursor = context.getContentResolver().query(uriMedia, null, null, null, null);
+            if (cursor != null) {
+                cursor.moveToFirst();
+                mediaPath = cursor.getString(cursor.getColumnIndex("_data"));
+                cursor.close();
+            } else {
+                mediaPath = uriMedia.getPath();
             }
 
-            writeTextToFile(fileMediaProof, buildProof(context, mediaPath, showDeviceIds, showLocation));
+            File fileMediaProof = new File(mediaPath + PROOF_FILE_TAG);
+            File fileMediaProofSig = new File(mediaPath + PROOF_FILE_TAG + ".asc");
+            File fileMediaSig = new File(mediaPath + ".asc");
 
-            if (pgpSec == null) {
-                initCrypto(context);
-            }
+            boolean showDeviceIds = prefs.getBoolean("trackDeviceId",true);;
+            boolean showLocation = prefs.getBoolean("trackLocation",true);;;
 
-            try {
+            String baseFolder = "proofmode";
 
-                //sign the media file
-                DetachedSignatureProcessor.createSignature(pgpSec, new FileInputStream(new File(mediaPath)), new FileOutputStream(fileMediaSig), password.toCharArray(), true);
+            if (!fileMediaProof.exists()) {
 
-                //sign the proof file
-                DetachedSignatureProcessor.createSignature(pgpSec, new FileInputStream(fileMediaProof), new FileOutputStream(fileMediaProofSig), password.toCharArray(), true);
-            } catch (Exception e) {
-                Log.e("MediaWatcher", "Error signing media or proof", e);
+                boolean canWrite = false;
+
+                try {
+                    fileMediaProof.createNewFile();
+                    canWrite = true;
+                } catch (IOException ioe) {
+                }
+
+                if (!canWrite) {
+                    File fileFolder = new File(Environment.getExternalStorageDirectory(), baseFolder);
+                    fileFolder.mkdirs();
+                    fileMediaProof = new File(fileFolder.getAbsolutePath() + mediaPath + PROOF_FILE_TAG);
+                    fileMediaProofSig = new File(fileFolder.getAbsolutePath() + mediaPath + PROOF_FILE_TAG + ".asc");
+                    fileMediaSig = new File(fileFolder.getAbsolutePath() + mediaPath + ".asc");
+                    fileMediaProof.getParentFile().mkdirs();
+                }
+
+                writeTextToFile(fileMediaProof, buildProof(context, mediaPath, showDeviceIds, showLocation));
+
+                if (pgpSec == null) {
+                    initCrypto(context);
+                }
+
+                try {
+
+                    //sign the media file
+                    DetachedSignatureProcessor.createSignature(pgpSec, new FileInputStream(new File(mediaPath)), new FileOutputStream(fileMediaSig), password.toCharArray(), true);
+
+                    //sign the proof file
+                    DetachedSignatureProcessor.createSignature(pgpSec, new FileInputStream(fileMediaProof), new FileOutputStream(fileMediaProofSig), password.toCharArray(), true);
+                } catch (Exception e) {
+                    Log.e("MediaWatcher", "Error signing media or proof", e);
+                }
             }
         }
     }
@@ -256,12 +263,14 @@ public class MediaWatcher extends BroadcastReceiver {
         hmProof.put("NetworkType",DeviceInfo.getNetworkType(context));
         hmProof.put("Hardware",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_HARDWARE_MODEL));
         hmProof.put("Manufacturer",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_MANUFACTURE));
+        hmProof.put("ScreenSize",DeviceInfo.getDeviceInch(context));
 
         hmProof.put("Language",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_LANGUAGE));
         hmProof.put("Locale",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_LOCALE));
 
         GPSTracker gpsTracker = new GPSTracker(context);
-        if (gpsTracker.canGetLocation())
+        if (showLocation
+                && gpsTracker.canGetLocation())
         {
             Location loc = gpsTracker.getLocation();
             int waitIdx = 0;
@@ -273,7 +282,7 @@ public class MediaWatcher extends BroadcastReceiver {
                 loc = gpsTracker.getLocation();
             }
 
-            if (loc != null && showLocation) {
+            if (loc != null) {
                 hmProof.put("Location.Latitude",loc.getLatitude()+"");
                 hmProof.put("Location.Longitude",loc.getLongitude()+"");
                 hmProof.put("Location.Provider",loc.getProvider());

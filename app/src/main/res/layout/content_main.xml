@@ -21,32 +21,32 @@
         android:src="@drawable/camerav256"
         />
 
-    <Switch
+    <android.support.v7.widget.SwitchCompat
         android:layout_margin="5dp"
 
         android:layout_width="200dp"
         android:layout_height="wrap_content"
         android:text="Enable ProofMode"
         android:checked="true"
-        android:id="@+id/switch1"
+        android:id="@+id/switchProof"
         android:layout_gravity="center_horizontal" />
 
-    <Switch
+    <android.support.v7.widget.SwitchCompat
         android:layout_marginTop="20dp"
         android:layout_width="200dp"
         android:layout_height="wrap_content"
         android:text="Include Location"
         android:checked="true"
-        android:id="@+id/switch2"
+        android:id="@+id/switchLocation"
         android:layout_gravity="center_horizontal" />
 
 
-    <Switch
+    <android.support.v7.widget.SwitchCompat
         android:layout_width="200dp"
         android:layout_height="wrap_content"
         android:text="Inlucde Device IDs"
         android:checked="true"
-        android:id="@+id/switch3"
+        android:id="@+id/switchDevice"
         android:layout_gravity="center_horizontal" />
 
 

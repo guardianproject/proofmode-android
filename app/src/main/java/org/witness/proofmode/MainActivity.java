@@ -2,17 +2,22 @@ package org.witness.proofmode;
 
 import android.Manifest;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.SwitchCompat;
 import android.support.v7.widget.Toolbar;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.CompoundButton;
+import android.widget.Switch;
 import android.widget.Toast;
 
 import org.spongycastle.jce.provider.BouncyCastleProvider;
@@ -27,6 +32,7 @@ import java.security.Security;
 
 public class MainActivity extends AppCompatActivity {
 
+    private SharedPreferences mPrefs;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,6 +42,42 @@ public class MainActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
 
         askForPermission(Manifest.permission.ACCESS_FINE_LOCATION, 1);
+
+        mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+
+        SwitchCompat switchProof = (SwitchCompat)findViewById(R.id.switchProof);
+        switchProof.setChecked(mPrefs.getBoolean("doProof",true));
+
+        switchProof.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+
+                mPrefs.edit().putBoolean("doProof",isChecked).commit();
+
+            }
+        });
+
+        SwitchCompat switchLocation = (SwitchCompat)findViewById(R.id.switchLocation);
+        switchLocation.setChecked(mPrefs.getBoolean("trackLocation",true));
+        switchLocation.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+
+                mPrefs.edit().putBoolean("trackLocation",isChecked).commit();
+
+            }
+        });
+
+        SwitchCompat switchDevice = (SwitchCompat)findViewById(R.id.switchDevice);
+        switchDevice.setChecked(mPrefs.getBoolean("trackDeviceId",true));
+        switchDevice.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+
+                mPrefs.edit().putBoolean("trackDeviceId",isChecked).commit();
+
+            }
+        });
 
     }
 
