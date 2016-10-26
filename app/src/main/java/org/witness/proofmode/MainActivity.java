@@ -34,6 +34,8 @@ public class MainActivity extends AppCompatActivity {
 
     private SharedPreferences mPrefs;
 
+    private final static String URL_ABOUT = "https://guardianproject.info/apps/camerav";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -124,8 +126,11 @@ public class MainActivity extends AppCompatActivity {
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
+        if (id == R.id.action_about){
+
+            openUrl(URL_ABOUT);
+
+
             return true;
         }
 
@@ -148,5 +153,12 @@ public class MainActivity extends AppCompatActivity {
             }
         } else {
         }
+    }
+
+    private void openUrl (String url)
+    {
+        Intent i = new Intent(Intent.ACTION_VIEW);
+        i.setData(Uri.parse(url));
+        startActivity(i);
     }
 }
