@@ -139,10 +139,10 @@ public class ShareProofActivity extends AppCompatActivity {
                 }
 
                 if (fileMediaSig.exists() && fileMediaProof.exists() && fileMediaProofSig.exists()) {
-                    String hash = HashUtils.getSHA1FromFileContent(mediaPath);
+                    String hash = HashUtils.getSHA256FromFileContent(mediaPath);
                     sb.append(fileMedia.getName()).append(' ');
-                    sb.append(" was last modifed at ").append(new Date(fileMedia.lastModified()).toGMTString());
-                    sb.append(" and has a SHA1 hash of ").append(hash);
+                    sb.append(" was last modified at ").append(new Date(fileMedia.lastModified()).toGMTString());
+                    sb.append(" and has a SHA-256 hash of ").append(hash);
                     sb.append("\n\n");
 
                     shareUris.add(Uri.fromFile(new File(mediaPath))); // Add your image URIs here

@@ -56,14 +56,14 @@ public class NotarizeActivity extends AppCompatActivity {
 
                     Intent notarizeIntent = new Intent(Intent.ACTION_SEND);
 
-                    String hash = HashUtils.getSHA1FromFileContent(mediaPath);
+                    String hash = HashUtils.getSHA256FromFileContent(mediaPath);
                     File fileMedia = new File(mediaPath);
 
                     StringBuffer sb = new StringBuffer();
 
                     sb.append(fileMedia.getName()).append(' ');
-                    sb.append(" was last modifed at ").append(new Date(fileMedia.lastModified()).toGMTString());
-                    sb.append(" and has a SHA1 hash of ").append(hash);
+                    sb.append(" was last modified at ").append(new Date(fileMedia.lastModified()).toGMTString());
+                    sb.append(" and has a SHA-256 hash of ").append(hash);
 
                     notarizeIntent.putExtra(Intent.EXTRA_TEXT,sb.toString());
                     notarizeIntent.setType("text/plain");

@@ -9,12 +9,12 @@ import java.security.MessageDigest;
  */
 public class HashUtils {
 
-    public static String getSHA1FromFileContent(String filename)
+    public static String getSHA256FromFileContent(String filename)
     {
 
         try
         {
-            MessageDigest digest = MessageDigest.getInstance("SHA-1");
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] buffer = new byte[65536]; //created at start.
             InputStream fis = new FileInputStream(filename);
             int n = 0;

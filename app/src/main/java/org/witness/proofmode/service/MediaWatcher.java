@@ -241,12 +241,12 @@ public class MediaWatcher extends BroadcastReceiver {
     private String buildProof (Context context, String mediaPath, boolean showDeviceIds, boolean showLocation)
     {
         File fileMedia = new File (mediaPath);
-        String hash = getSHA1FromFileContent(mediaPath);
+        String hash = getSHA256FromFileContent(mediaPath);
 
         HashMap<String, String> hmProof = new HashMap<String, String>();
 
         hmProof.put("File",mediaPath);
-        hmProof.put("SHA1",hash);
+        hmProof.put("SHA256",hash);
         hmProof.put("Modified",fileMedia.lastModified()+"");
         hmProof.put("CurrentDateTime0GMT",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_CURRENT_DATE_TIME_ZERO_GMT));
 
@@ -331,12 +331,12 @@ public class MediaWatcher extends BroadcastReceiver {
 
     }
 
-    private static String getSHA1FromFileContent(String filename)
+    private static String getSHA256FromFileContent(String filename)
     {
 
         try
         {
-            MessageDigest digest = MessageDigest.getInstance("SHA-1");
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] buffer = new byte[65536]; //created at start.
             InputStream fis = new FileInputStream(filename);
             int n = 0;
