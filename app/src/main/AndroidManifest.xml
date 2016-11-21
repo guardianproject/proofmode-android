@@ -34,7 +34,10 @@
             </intent-filter>
 
         </activity>
-        <receiver
+        <activity
+            android:name=".PMAppIntro"
+           />
+                   <receiver
             android:name=".service.OnBootReceiver"
             android:enabled="true"
             android:exported="true">
