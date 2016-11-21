@@ -94,22 +94,20 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if(ActivityCompat.checkSelfPermission(this, permissions[0]) == PackageManager.PERMISSION_GRANTED){
-            switch (requestCode) {
-                //Location
-                case 1:
-                    askForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE,2);
-                    break;
-                //Call
-                case 2:
-                    askForPermission(Manifest.permission.ACCESS_NETWORK_STATE,3);
 
-                    break;
+        switch (requestCode) {
+            //Location
+            case 1:
+                askForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE,2);
+                break;
+            //Call
+            case 2:
+                askForPermission(Manifest.permission.ACCESS_NETWORK_STATE,3);
 
-            }
+                break;
 
-        }else{
         }
+
     }
 
     @Override
