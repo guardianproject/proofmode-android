@@ -9,4 +9,13 @@
         android:orderInCategory="100"
         android:title="@string/action_about"
         app:showAsAction="never" />
+
+
+    <item
+        android:id="@+id/action_website"
+        android:orderInCategory="100"
+        android:title="@string/action_website"
+        app:showAsAction="never" />
+
+
 </menu>

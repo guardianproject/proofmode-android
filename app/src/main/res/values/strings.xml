@@ -3,11 +3,26 @@
 
     <string name="action_settings">Settings</string>
     <string name="action_share_key">Advanced</string>
+
     <string name="action_about">About ProofMode</string>
+    <string name="action_website">Open Website...</string>
+
 
     <string name="switch_include_device">Include Device Identity</string>
 
     <string name="switch_include_location">Include Location</string>
     <string name="switch_enable_proofmode">Enable ProofMode</string>
+
+    <string name="intro1_title">Capture the Proof</string>
+    <string name="intro1_desc">You\'ve taken the first step to transform your photos and video into digital proof.</string>
+
+    <string name="intro2_title">Sensing Your World</string>
+    <string name="intro2_desc">ProofMode taps into all of the sensors on your device it can. Make sure to enable permissions as they are requested.</string>
+
+    <string name="intro3_title">Easy and Automatic</string>
+    <string name="intro3_desc">ProofMode is always running in the background, automatically adding proof to all photos and videos you take.</string>
+
+    <string name="intro4_title">Share Proof</string>
+    <string name="intro4_desc">When you need to share something with proof, just open the photo or video, and select SHARE PROOF from the Share menu.</string>
 
 </resources>

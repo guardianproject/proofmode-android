@@ -35,6 +35,7 @@ public class MainActivity extends AppCompatActivity {
     private SharedPreferences mPrefs;
 
     private final static String URL_ABOUT = "https://guardianproject.info/apps/camerav";
+    private final static int REQUEST_CODE_INTRO = 9999;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,7 +44,6 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        askForPermission(Manifest.permission.ACCESS_FINE_LOCATION, 1);
 
         mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
 
@@ -67,6 +67,10 @@ public class MainActivity extends AppCompatActivity {
 
                 mPrefs.edit().putBoolean("trackLocation",isChecked).commit();
 
+                if (isChecked)
+                {
+                    askForPermission(Manifest.permission.ACCESS_FINE_LOCATION, 1);
+                }
             }
         });
 
@@ -81,6 +85,10 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        if (mPrefs.getBoolean("firsttime",true)) {
+            startActivityForResult(new Intent(this, PMAppIntro.class),REQUEST_CODE_INTRO);
+            mPrefs.edit().putBoolean("firsttime",false).commit();
+        }
     }
 
     @Override
@@ -126,8 +134,13 @@ public class MainActivity extends AppCompatActivity {
 
         if (id == R.id.action_about){
 
-            openUrl(URL_ABOUT);
+            startActivity(new Intent(this,PMAppIntro.class));
 
+            return true;
+        }
+        else if (id == R.id.action_website){
+
+            openUrl(URL_ABOUT);
 
             return true;
         }
@@ -158,5 +171,15 @@ public class MainActivity extends AppCompatActivity {
         Intent i = new Intent(Intent.ACTION_VIEW);
         i.setData(Uri.parse(url));
         startActivity(i);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == REQUEST_CODE_INTRO)
+        {
+            askForPermission(Manifest.permission.ACCESS_FINE_LOCATION, 1);
+        }
     }
 }
