@@ -16,9 +16,9 @@
     >
 
     <ImageView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:src="@drawable/camerav256"
+        android:layout_width="256dp"
+        android:layout_height="256dp"
+        android:src="@drawable/proofmode512"
         />
 
     <android.support.v7.widget.SwitchCompat
@@ -26,7 +26,7 @@
 
         android:layout_width="200dp"
         android:layout_height="wrap_content"
-        android:text="Enable ProofMode"
+        android:text="@string/switch_enable_proofmode"
         android:checked="true"
         android:id="@+id/switchProof"
         android:layout_gravity="center_horizontal" />
@@ -35,7 +35,7 @@
         android:layout_marginTop="20dp"
         android:layout_width="200dp"
         android:layout_height="wrap_content"
-        android:text="Include Location"
+        android:text="@string/switch_include_location"
         android:checked="true"
         android:id="@+id/switchLocation"
         android:layout_gravity="center_horizontal" />
@@ -44,7 +44,7 @@
     <android.support.v7.widget.SwitchCompat
         android:layout_width="200dp"
         android:layout_height="wrap_content"
-        android:text="Inlucde Device IDs"
+        android:text="@string/switch_include_device"
         android:checked="true"
         android:id="@+id/switchDevice"
         android:layout_gravity="center_horizontal" />

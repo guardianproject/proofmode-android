@@ -5,4 +5,9 @@
     <string name="action_share_key">Advanced</string>
     <string name="action_about">About ProofMode</string>
 
+    <string name="switch_include_device">Include Device Identity</string>
+
+    <string name="switch_include_location">Include Location</string>
+    <string name="switch_enable_proofmode">Enable ProofMode</string>
+
 </resources>
