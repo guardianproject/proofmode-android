@@ -45,14 +45,7 @@ import java.util.Map;
 
 public class MediaWatcher extends BroadcastReceiver {
 
-    private static PGPSecretKey pgpSec = null;
-
-    private final static String keyId = "noone@proofmode.witness.org";
-    private final static String password = "password";
     private final static String PROOF_FILE_TAG = ".proof.csv";
-
-    private final static String FILE_SECRET_KEY_RING = "pkr.asc";
-    private final static String URL_POST_KEY_ENDPOINT = "https://pgp.mit.edu/pks/add";
 
     public MediaWatcher() {
     }
@@ -111,132 +104,22 @@ public class MediaWatcher extends BroadcastReceiver {
 
                 writeTextToFile(fileMediaProof, buildProof(context, mediaPath, showDeviceIds, showLocation));
 
-                if (pgpSec == null) {
-                    initCrypto(context);
-                }
+                PgpUtils.initCrypto(context);
 
                 try {
 
                     //sign the media file
-                    DetachedSignatureProcessor.createSignature(pgpSec, new FileInputStream(new File(mediaPath)), new FileOutputStream(fileMediaSig), password.toCharArray(), true);
+                    PgpUtils.createDetachedSignature(new File(mediaPath), fileMediaSig);
 
                     //sign the proof file
-                    DetachedSignatureProcessor.createSignature(pgpSec, new FileInputStream(fileMediaProof), new FileOutputStream(fileMediaProofSig), password.toCharArray(), true);
+                    PgpUtils.createDetachedSignature(fileMediaProof, fileMediaProofSig);
+                    
                 } catch (Exception e) {
                     Log.e("MediaWatcher", "Error signing media or proof", e);
                 }
             }
         }
     }
-
-    private static synchronized void initCrypto (Context context)
-    {
-        if (pgpSec == null) {
-            try {
-                File fileSecKeyRing = new File(context.getFilesDir(),FILE_SECRET_KEY_RING);
-                PGPSecretKeyRing skr = null;
-
-                if (fileSecKeyRing.exists())
-                {
-                    ArmoredInputStream sin = new ArmoredInputStream(new FileInputStream(fileSecKeyRing));
-                    skr = new PGPSecretKeyRing(sin,new BcKeyFingerprintCalculator());
-
-                }
-                else {
-                    final PGPKeyRingGenerator krgen = PgpUtils.generateKeyRingGenerator(keyId, password.toCharArray());
-                    skr = krgen.generateSecretKeyRing();
-                    String pubKey = PgpUtils.genPGPPublicKey(krgen);
-                    postKey(pubKey);
-
-                    ArmoredOutputStream sout = new ArmoredOutputStream((new FileOutputStream(fileSecKeyRing)));
-                    skr.encode(sout);
-                    sout.close();
-                }
-
-                pgpSec = skr.getSecretKey();
-
-
-            } catch (PGPException pgpe) {
-                pgpe.printStackTrace();
-            } catch (Exception pgpe) {
-                pgpe.printStackTrace();
-
-            }
-        }
-    }
-
-    private static void postKey (final String pubKey)
-    {
-        new Thread () {
-
-            public void run() {
-
-                try {
-                    HashMap<String,String> hmParams = new HashMap<String,String>();
-                    hmParams.put("keytext",pubKey);
-                    String queryString = createQueryStringForParameters(hmParams);
-
-                    URL url = new URL(URL_POST_KEY_ENDPOINT);
-                    HttpURLConnection client = null;
-                    client = (HttpURLConnection) url.openConnection();
-                    client.setRequestMethod("POST");
-                    client.setFixedLengthStreamingMode(queryString.getBytes().length);
-                    client.setRequestProperty("Content-Type",
-                            "application/x-www-form-urlencoded");
-                    client.setDoOutput(true);
-                    client.setDoInput(true);
-                    client.setReadTimeout(20000);
-                    client.setConnectTimeout(30000);
-
-                    PrintWriter out = new PrintWriter(client.getOutputStream());
-                    out.print(queryString);
-                    out.close();
-
-
-                    // handle issues
-                    int statusCode = client.getResponseCode();
-                    if (statusCode != HttpURLConnection.HTTP_OK) {
-                        // throw some exception
-                        Log.w("PGP","key did not upload: " + statusCode);
-                    }
-
-
-                    client.disconnect();
-                }
-                catch (IOException ioe)
-                {
-                    ioe.printStackTrace();
-                }
-            }
-        }.start();;
-    }
-
-    private static final char PARAMETER_DELIMITER = '&';
-    private static final char PARAMETER_EQUALS_CHAR = '=';
-    public static String createQueryStringForParameters(Map<String, String> parameters) {
-        StringBuilder parametersAsQueryString = new StringBuilder();
-        if (parameters != null) {
-            boolean firstParameter = true;
-
-            for (String parameterName : parameters.keySet()) {
-                if (!firstParameter) {
-                    parametersAsQueryString.append(PARAMETER_DELIMITER);
-                }
-
-                parametersAsQueryString.append(parameterName)
-                        .append(PARAMETER_EQUALS_CHAR)
-                        .append(URLEncoder.encode(
-                                parameters.get(parameterName)));
-
-                firstParameter = false;
-            }
-        }
-        return parametersAsQueryString.toString();
-    }
-
-
-
-
 
     private String buildProof (Context context, String mediaPath, boolean showDeviceIds, boolean showLocation)
     {
