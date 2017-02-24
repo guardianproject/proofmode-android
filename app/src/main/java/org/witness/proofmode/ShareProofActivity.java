@@ -10,6 +10,7 @@ import android.util.Log;
 import android.widget.Toast;
 
 import org.witness.proofmode.crypto.HashUtils;
+import org.witness.proofmode.crypto.PgpUtils;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -139,11 +140,15 @@ public class ShareProofActivity extends AppCompatActivity {
                 }
 
                 if (fileMediaSig.exists() && fileMediaProof.exists() && fileMediaProofSig.exists()) {
+
                     String hash = HashUtils.getSHA256FromFileContent(mediaPath);
+                    String fingerprint = PgpUtils.getInstance(this).getPublicKeyFingerprint();
+
                     sb.append(fileMedia.getName()).append(' ');
                     sb.append(" was last modified at ").append(new Date(fileMedia.lastModified()).toGMTString());
                     sb.append(" and has a SHA-256 hash of ").append(hash);
                     sb.append("\n\n");
+                    sb.append("This proof is signed by PGP key 0x" + fingerprint);
 
                     shareUris.add(Uri.fromFile(new File(mediaPath))); // Add your image URIs here
                     shareUris.add(Uri.fromFile(fileMediaSig)); // Add your image URIs here

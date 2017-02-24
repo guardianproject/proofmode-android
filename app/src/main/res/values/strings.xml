@@ -2,11 +2,10 @@
     <string name="app_name">ProofMode</string>
 
     <string name="action_settings">Settings</string>
-    <string name="action_share_key">Advanced</string>
-    <string name="action_publish_key">Publish Key...</string>
+    <string name="action_share_key">Share Public Key...</string>
+    <string name="action_publish_key">Publish Public Key...</string>
 
     <string name="action_about">About ProofMode</string>
-    <string name="action_website">Open Website...</string>
 
 
     <string name="switch_include_device">Include Device Identity</string>

@@ -143,15 +143,15 @@ public class MainActivity extends AppCompatActivity {
 
             return true;
         }
-        else if (id == R.id.action_website){
-
-            openUrl(URL_ABOUT);
-
-            return true;
-        }
         else if (id == R.id.action_publish_key){
 
             publishKey();
+
+            return true;
+        }
+        else if (id == R.id.action_share_key){
+
+            shareKey();
 
             return true;
         }
@@ -188,6 +188,25 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "Opening public key page", Toast.LENGTH_LONG).show();
 
             openUrl("https://pgp.mit.edu/pks/lookup?op=get&search=0x" + fingerprint);
+        }
+        catch (IOException ioe)
+        {
+            Log.e("Proofmode","error publishing key",ioe);
+        }
+    }
+
+    private void shareKey ()
+    {
+
+
+        try {
+            PgpUtils.getInstance(this).publishPublicKey();
+            String pubKey = PgpUtils.getInstance(this).getPublicKey();
+
+            Intent intent = new Intent(Intent.ACTION_SEND);
+            intent.setType("text/plain");
+            intent.putExtra(Intent.EXTRA_TEXT,pubKey);
+            startActivity(intent);
         }
         catch (IOException ioe)
         {

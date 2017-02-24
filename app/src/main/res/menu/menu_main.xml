@@ -3,10 +3,17 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:context="org.witness.proofmode.MainActivity">
 
+
     <item
         android:id="@+id/action_publish_key"
         android:orderInCategory="100"
         android:title="@string/action_publish_key"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_share_key"
+        android:orderInCategory="100"
+        android:title="@string/action_share_key"
         app:showAsAction="never" />
 
     <item
@@ -15,12 +22,6 @@
         android:title="@string/action_about"
         app:showAsAction="never" />
 
-
-    <item
-        android:id="@+id/action_website"
-        android:orderInCategory="100"
-        android:title="@string/action_website"
-        app:showAsAction="never" />
 
 
 </menu>

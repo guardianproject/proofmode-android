@@ -200,7 +200,7 @@ public class PgpUtils {
 
     public final static PGPKeyRingGenerator generateKeyRingGenerator (String keyId, char[] pass) throws PGPException{
         RSAKeyPairGenerator kpg = new RSAKeyPairGenerator();
-        kpg.init(new RSAKeyGenerationParameters(BigInteger.valueOf(0x10001), new SecureRandom(), 2048, 12));
+        kpg.init(new RSAKeyGenerationParameters(BigInteger.valueOf(0x10001), new SecureRandom(), 4096, 12));
         PGPKeyPair rsakp_sign = new BcPGPKeyPair(PGPPublicKey.RSA_SIGN, kpg.generateKeyPair(), new Date());
         PGPKeyPair rsakp_enc = new BcPGPKeyPair(PGPPublicKey.RSA_ENCRYPT, kpg.generateKeyPair(), new Date());
         PGPSignatureSubpacketGenerator signhashgen = new PGPSignatureSubpacketGenerator();
@@ -221,16 +221,15 @@ public class PgpUtils {
     }
 
 
-    /**
-    public final static String genPGPPublicKey (PGPKeyRingGenerator krgen) throws IOException {
+
+    public String getPublicKey () throws IOException {
         ByteArrayOutputStream baosPkr = new ByteArrayOutputStream();
-        PGPPublicKeyRing pkr = krgen.generatePublicKeyRing();
         ArmoredOutputStream armoredStreamPkr = new ArmoredOutputStream(baosPkr);
         pkr.encode(armoredStreamPkr);
         armoredStreamPkr.close();
         return new String(baosPkr.toByteArray(), Charset.defaultCharset());
     }
-    **/
+
 
     public final static String genPGPPrivKey (PGPKeyRingGenerator krgen) throws IOException {
             // String pgpPublicKey = PgpUtils.genPGPPublicKey(krgen);
@@ -304,7 +303,7 @@ public class PgpUtils {
                     sin.close();
                 }
                 else {
-                    final PGPKeyRingGenerator krgen = PgpUtils.generateKeyRingGenerator(keyId, password.toCharArray());
+                    final PGPKeyRingGenerator krgen = generateKeyRingGenerator(keyId, password.toCharArray());
                     skr = krgen.generateSecretKeyRing();
 
 
