@@ -25,6 +25,7 @@ While we are very proud of the work we did with the CameraV and InformaCam proje
  	* The user can also select multiple photos and videos to "Share Proof" for, and create a batch of data, with correlating sensor data for all media files, combined together in a single log of an "event"
 5. The user can also choose to publish their public key on pgp.mit.edu directory from within the app menu, or directly share their public key with anyone who would need it for verifying digital signatures. 
 6. As the receiver of a ProofMode data set, you can verify the media file was not tampered with, verify the public key idenity of who signed the files, to see if it is consistent with what you expect, and examine all the correlating sensor data around the event, for extra context and evidence.
+	* The CSV data can easily be imported into any spreadsheet or visualization type tool to create maps, charts, graphs, and other means of understanding the values included, over time, especially across multiple proof points of media
 
 # Screenshots
 
