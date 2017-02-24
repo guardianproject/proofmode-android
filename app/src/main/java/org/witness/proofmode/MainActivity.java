@@ -97,6 +97,9 @@ public class MainActivity extends AppCompatActivity {
 
         startService(new Intent(getBaseContext(), MediaListenerService.class));
 
+        SwitchCompat switchProof = (SwitchCompat)findViewById(R.id.switchProof);
+        switchProof.setChecked(mPrefs.getBoolean("doProof",true));
+
     }
 
     @Override

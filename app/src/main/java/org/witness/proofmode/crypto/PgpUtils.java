@@ -81,13 +81,14 @@ public class PgpUtils {
     private static PGPSecretKey pgpSec = null;
 
     private final static String keyId = "noone@proofmode.witness.org";
-    private final static String password = "password";
 
     private final static String FILE_SECRET_KEY_RING = "pkr.asc";
+    private final static String password = "password"; //static string for local keystore
     private final static String URL_POST_KEY_ENDPOINT = "https://pgp.mit.edu/pks/add";
 
 
     public static String decrypt(String encryptedText, String password) throws Exception {
+
         byte[] encrypted = encryptedText.getBytes();
         InputStream in = new ByteArrayInputStream(encrypted);
         in = PGPUtil.getDecoderStream(in);
