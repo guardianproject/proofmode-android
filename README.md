@@ -19,9 +19,9 @@ While we are very proud of the work we did with the CameraV and InformaCam proje
 
 # Screenshots
 
-![Screenshot](https://raw.githubusercontent.com/guardianproject/proofmode/master/art/screens/Screenshot_20170222-173854.png)
-![Screenshot](https://raw.githubusercontent.com/guardianproject/proofmode/master/art/screens/Screenshot_20170222-174004.png)
-![Screenshot](https://raw.githubusercontent.com/guardianproject/proofmode/master/art/screens/Screenshot_20170222-174126.png)
+![Screenshot](https://raw.githubusercontent.com/guardianproject/proofmode/master/art/screens/Screenshot_20170222-173854.jpg)
+![Screenshot](https://raw.githubusercontent.com/guardianproject/proofmode/master/art/screens/Screenshot_20170222-174004.jpg)
+![Screenshot](https://raw.githubusercontent.com/guardianproject/proofmode/master/art/screens/Screenshot_20170222-174126.jpg)
 
 # Contributions
 
