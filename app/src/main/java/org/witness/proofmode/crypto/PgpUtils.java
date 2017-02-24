@@ -46,6 +46,7 @@ import org.spongycastle.openpgp.operator.jcajce.JcaPGPDigestCalculatorProviderBu
 import org.spongycastle.openpgp.operator.jcajce.JcePBESecretKeyEncryptorBuilder;
 import org.spongycastle.openpgp.operator.jcajce.JcePGPDataEncryptorBuilder;
 import org.spongycastle.openpgp.operator.jcajce.JcePublicKeyKeyEncryptionMethodGenerator;
+import org.spongycastle.util.encoders.Hex;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -77,17 +78,44 @@ public class PgpUtils {
     private static final String PROVIDER = "SC";
 //    private static final String KEY_RING_ID = "asdf@asdf.com";
 
+    private static PgpUtils mInstance;
 
-    private static PGPSecretKey pgpSec = null;
+    private PGPSecretKey pgpSec = null;
+    private PGPSecretKeyRing skr = null;
+    private PGPPublicKeyRing pkr = null;
 
     private final static String keyId = "noone@proofmode.witness.org";
 
     private final static String FILE_SECRET_KEY_RING = "pkr.asc";
+    private final static String FILE_PUBLIC_KEY_RING = "pub.asc";
+
     private final static String password = "password"; //static string for local keystore
     private final static String URL_POST_KEY_ENDPOINT = "https://pgp.mit.edu/pks/add";
 
+    private PgpUtils ()
+    {
 
-    public static String decrypt(String encryptedText, String password) throws Exception {
+    }
+
+    public static synchronized PgpUtils getInstance (Context context)
+    {
+        if (mInstance == null)
+        {
+            mInstance = new PgpUtils();
+            mInstance.initCrypto(context);
+        }
+
+        return mInstance;
+
+    }
+
+    public String getPublicKeyFingerprint ()
+    {
+        PGPPublicKey key = pkr.getPublicKey();
+        return new String(Hex.encode(key.getFingerprint()));
+    }
+
+    public String decrypt(String encryptedText, String password) throws Exception {
 
         byte[] encrypted = encryptedText.getBytes();
         InputStream in = new ByteArrayInputStream(encrypted);
@@ -104,7 +132,7 @@ public class PgpUtils {
         PGPPublicKeyEncryptedData pbe = null;
         while (sKey == null && enc.getEncryptedDataObjects().hasNext()) {
             pbe = (PGPPublicKeyEncryptedData)enc.getEncryptedDataObjects().next();
-            sKey = getPrivateKey(getPGPSecretKeyRing(), pbe.getKeyID(), password.toCharArray());
+            sKey = getPrivateKey(skr, pbe.getKeyID(), password.toCharArray());
         }
         if (pbe != null) {
             InputStream clear = pbe.getDataStream(new BcPublicKeyDataDecryptorFactory(sKey));
@@ -142,9 +170,9 @@ public class PgpUtils {
         return secretKey.extractPrivateKey(decryptor);
     }
 
-    public static String encrypt(String msgText) throws IOException, PGPException {
+    public String encrypt(String msgText) throws IOException, PGPException {
         byte[] clearData = msgText.getBytes();
-        PGPPublicKey encKey = getPublicKey(getPGPPublicKeyRing());
+        PGPPublicKey encKey = getPublicKey(pkr);
         ByteArrayOutputStream encOut = new ByteArrayOutputStream();
         OutputStream out = new ArmoredOutputStream(encOut);
         ByteArrayOutputStream bOut = new ByteArrayOutputStream();
@@ -192,19 +220,8 @@ public class PgpUtils {
         return keyRingGen;
     }
 
-    static byte[] privateKey = new byte[1024];
-    static byte[] publicKey = new byte[1024];
 
-    private static PGPPublicKeyRing getPGPPublicKeyRing() throws IOException {
-        ArmoredInputStream ais = new ArmoredInputStream(new ByteArrayInputStream(publicKey));
-        return (PGPPublicKeyRing) new PGPObjectFactory(ais).nextObject();
-    }
-
-    private static PGPSecretKeyRing getPGPSecretKeyRing() throws IOException {
-        ArmoredInputStream ais = new ArmoredInputStream(new ByteArrayInputStream(privateKey));
-        return (PGPSecretKeyRing) new PGPObjectFactory(ais).nextObject();
-    }
-
+    /**
     public final static String genPGPPublicKey (PGPKeyRingGenerator krgen) throws IOException {
         ByteArrayOutputStream baosPkr = new ByteArrayOutputStream();
         PGPPublicKeyRing pkr = krgen.generatePublicKeyRing();
@@ -213,6 +230,7 @@ public class PgpUtils {
         armoredStreamPkr.close();
         return new String(baosPkr.toByteArray(), Charset.defaultCharset());
     }
+    **/
 
     public final static String genPGPPrivKey (PGPKeyRingGenerator krgen) throws IOException {
             // String pgpPublicKey = PgpUtils.genPGPPublicKey(krgen);
@@ -261,41 +279,45 @@ public class PgpUtils {
         publicOut.close();
     }
 
-    public static void publishKey (String publicKey)
-    {
-        //https://pgp.mit.edu/pks/add
-
-    }
-
-    public static void createDetachedSignature (File media, File mediaSig) throws Exception
+    public void createDetachedSignature (File media, File mediaSig) throws Exception
     {
         DetachedSignatureProcessor.createSignature(pgpSec, new FileInputStream(media), new FileOutputStream(mediaSig), password.toCharArray(), true);
 
     }
 
 
-    public static synchronized void initCrypto (Context context)
+    public synchronized void initCrypto (Context context)
     {
         if (pgpSec == null) {
             try {
                 File fileSecKeyRing = new File(context.getFilesDir(),FILE_SECRET_KEY_RING);
-                PGPSecretKeyRing skr = null;
+                File filePubKeyRing = new File(context.getFilesDir(),FILE_PUBLIC_KEY_RING);
 
                 if (fileSecKeyRing.exists())
                 {
                     ArmoredInputStream sin = new ArmoredInputStream(new FileInputStream(fileSecKeyRing));
                     skr = new PGPSecretKeyRing(sin,new BcKeyFingerprintCalculator());
+                    sin.close();
 
+                    sin = new ArmoredInputStream(new FileInputStream(filePubKeyRing));
+                    pkr = new PGPPublicKeyRing(sin, new BcKeyFingerprintCalculator());
+                    sin.close();
                 }
                 else {
                     final PGPKeyRingGenerator krgen = PgpUtils.generateKeyRingGenerator(keyId, password.toCharArray());
                     skr = krgen.generateSecretKeyRing();
-                    String pubKey = PgpUtils.genPGPPublicKey(krgen);
-                    postKey(pubKey);
+
 
                     ArmoredOutputStream sout = new ArmoredOutputStream((new FileOutputStream(fileSecKeyRing)));
                     skr.encode(sout);
                     sout.close();
+
+                    pkr = krgen.generatePublicKeyRing();
+
+                    sout = new ArmoredOutputStream((new FileOutputStream(filePubKeyRing)));
+                    pkr.encode(sout);
+                    sout.close();
+
                 }
 
                 pgpSec = skr.getSecretKey();
@@ -310,8 +332,14 @@ public class PgpUtils {
         }
     }
 
-    public static void postKey (final String pubKey)
+    public void publishPublicKey () throws IOException
     {
+        ByteArrayOutputStream baosPkr = new ByteArrayOutputStream();
+        ArmoredOutputStream armoredStreamPkr = new ArmoredOutputStream(baosPkr);
+        pkr.encode(armoredStreamPkr);
+        armoredStreamPkr.close();
+        final String pubKey = new String(baosPkr.toByteArray(), Charset.defaultCharset());
+
         new Thread () {
 
             public void run() {

@@ -13,6 +13,7 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.SwitchCompat;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -23,6 +24,7 @@ import android.widget.Toast;
 import org.spongycastle.jce.provider.BouncyCastleProvider;
 import org.spongycastle.openpgp.PGPException;
 import org.spongycastle.openpgp.PGPKeyRingGenerator;
+import org.spongycastle.openpgp.PGPUtil;
 import org.witness.proofmode.crypto.DetachedSignatureProcessor;
 import org.witness.proofmode.crypto.PgpUtils;
 import org.witness.proofmode.service.MediaListenerService;
@@ -147,6 +149,12 @@ public class MainActivity extends AppCompatActivity {
 
             return true;
         }
+        else if (id == R.id.action_publish_key){
+
+            publishKey();
+
+            return true;
+        }
 
         return super.onOptionsItemSelected(item);
     }
@@ -166,6 +174,24 @@ public class MainActivity extends AppCompatActivity {
                 ActivityCompat.requestPermissions(MainActivity.this, new String[]{permission}, requestCode);
             }
         } else {
+        }
+    }
+
+    private void publishKey ()
+    {
+
+
+        try {
+            PgpUtils.getInstance(this).publishPublicKey();
+            String fingerprint = PgpUtils.getInstance(this).getPublicKeyFingerprint();
+
+            Toast.makeText(this, "Opening public key page", Toast.LENGTH_LONG).show();
+
+            openUrl("https://pgp.mit.edu/pks/lookup?op=get&search=0x" + fingerprint);
+        }
+        catch (IOException ioe)
+        {
+            Log.e("Proofmode","error publishing key",ioe);
         }
     }
 
