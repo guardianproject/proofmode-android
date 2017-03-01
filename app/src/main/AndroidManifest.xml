@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.witness.proofmode"
-    android:versionName="0.0.6"
-    android:versionCode="6"
-
+    android:versionName="0.0.7-alpha-1"
+    android:versionCode="71"
     >
 
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
