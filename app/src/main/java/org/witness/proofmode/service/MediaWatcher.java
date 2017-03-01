@@ -88,23 +88,25 @@ public class MediaWatcher extends BroadcastReceiver {
                 boolean canWrite = false;
 
                 try {
-                    fileMediaProof.createNewFile();
-                    canWrite = true;
-                } catch (IOException ioe) {
+
+                    canWrite = fileMediaProof.createNewFile();
+                    canWrite = true; //no exception was thrown, so all is well
+
+                } catch (Exception ioe) {
                 }
 
-                if (!canWrite) {
-                    File fileFolder = new File(Environment.getExternalStorageDirectory(), baseFolder);
-                    fileFolder.mkdirs();
-                    fileMediaProof = new File(fileFolder.getAbsolutePath() + mediaPath + PROOF_FILE_TAG);
-                    fileMediaProofSig = new File(fileFolder.getAbsolutePath() + mediaPath + PROOF_FILE_TAG + ".asc");
-                    fileMediaSig = new File(fileFolder.getAbsolutePath() + mediaPath + ".asc");
-                    fileMediaProof.getParentFile().mkdirs();
-                }
-
-                writeTextToFile(fileMediaProof, buildProof(context, mediaPath, showDeviceIds, showLocation));
 
                 try {
+                    if (!canWrite) {
+                        File fileFolder = new File(Environment.getExternalStorageDirectory(), baseFolder);
+                        fileFolder.mkdirs();
+                        fileMediaProof = new File(fileFolder.getAbsolutePath() + mediaPath + PROOF_FILE_TAG);
+                        fileMediaProofSig = new File(fileFolder.getAbsolutePath() + mediaPath + PROOF_FILE_TAG + ".asc");
+                        fileMediaSig = new File(fileFolder.getAbsolutePath() + mediaPath + ".asc");
+                        fileMediaProof.getParentFile().mkdirs();
+                    }
+
+                    writeTextToFile(fileMediaProof, buildProof(context, mediaPath, showDeviceIds, showLocation));
 
                     //sign the media file
                     PgpUtils.getInstance(context).createDetachedSignature(new File(mediaPath), fileMediaSig);
