@@ -1,9 +1,11 @@
 package org.witness.proofmode;
 
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Environment;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -36,17 +38,36 @@ public class ShareProofActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
 
-        checkIntent();
+        CharSequence items[] = {"Share Proof and Media","Notarize Only"};
+
+        new AlertDialog.Builder(this).setItems(items, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+
+                switch (i)
+                {
+                    case 0:
+
+                        shareProof (false);
+
+                        break;
+                    case 1:
+
+                        shareProof (true);
+
+                        break;
+                }
+            }
+        }).show();
     }
 
-    private void checkIntent ()
+    private void shareProof (boolean notarizeOnly)
     {
         // Get intent, action and MIME type
         Intent intent = getIntent();
         String action = intent.getAction();
         String type = intent.getType();
 
-        Intent shareIntent = new Intent(Intent.ACTION_SEND_MULTIPLE);
         ArrayList<Uri> shareUris = new ArrayList<Uri>();
         StringBuffer shareText = new StringBuffer ();
 
@@ -70,7 +91,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
             for (Uri mediaUri : mediaUris)
             {
-                processUri (mediaUri, shareIntent, shareUris, shareText, fBatchProofOut);
+                processUri (mediaUri, shareUris, shareText, fBatchProofOut);
             }
 
 
@@ -88,23 +109,38 @@ public class ShareProofActivity extends AppCompatActivity {
                 mediaUri = intent.getData();
 
             if (mediaUri != null)
-                processUri (mediaUri, shareIntent, shareUris, shareText, null);
+                processUri (mediaUri, shareUris, shareText, null);
 
 
         }
 
+        Intent shareIntent = null;
+
         if (shareUris.size() > 0) {
-            shareIntent.putExtra(Intent.EXTRA_TEXT, shareText.toString());
-            shareIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, shareUris);
-            shareIntent.setType("*/*");
-            startActivity(Intent.createChooser(shareIntent, "Share proof to..."));
+
+            if (notarizeOnly)
+            {
+                shareIntent = new Intent(Intent.ACTION_SEND);
+                shareIntent.putExtra(Intent.EXTRA_TEXT, shareText.toString());
+                shareIntent.setType("*/*");
+                startActivity(Intent.createChooser(shareIntent, "Share notarization to..."));
+            }
+            else {
+
+                shareIntent = new Intent(Intent.ACTION_SEND_MULTIPLE);
+
+                shareIntent.putExtra(Intent.EXTRA_TEXT, shareText.toString());
+                shareIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, shareUris);
+                shareIntent.setType("*/*");
+                startActivity(Intent.createChooser(shareIntent, "Share proof to..."));
+            }
         }
 
 
         finish();
     }
 
-    private void processUri (Uri mediaUri, Intent shareIntent, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut)
+    private void processUri (Uri mediaUri, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut)
     {
         Cursor cursor = getContentResolver().query(mediaUri,      null,null, null, null);
 
