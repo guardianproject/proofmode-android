@@ -38,7 +38,7 @@ public class ShareProofActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
 
-        CharSequence items[] = {"Share Proof and Media","Notarize Only"};
+        CharSequence items[] = {"Share Proof Only","Share Proof with Media","Notarize Only"};
 
         new AlertDialog.Builder(this).setItems(items, new DialogInterface.OnClickListener() {
             @Override
@@ -48,12 +48,17 @@ public class ShareProofActivity extends AppCompatActivity {
                 {
                     case 0:
 
-                        shareProof (false);
+                        shareProof (false, true);
 
                         break;
                     case 1:
 
-                        shareProof (true);
+                        shareProof (true, true);
+
+                        break;
+                    case 2:
+
+                        shareProof (false, false);
 
                         break;
                 }
@@ -61,7 +66,7 @@ public class ShareProofActivity extends AppCompatActivity {
         }).show();
     }
 
-    private void shareProof (boolean notarizeOnly)
+    private void shareProof (boolean shareMedia, boolean shareProof)
     {
         // Get intent, action and MIME type
         Intent intent = getIntent();
@@ -91,7 +96,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
             for (Uri mediaUri : mediaUris)
             {
-                processUri (mediaUri, shareUris, shareText, fBatchProofOut);
+                processUri (mediaUri, shareUris, shareText, fBatchProofOut, shareMedia);
             }
 
 
@@ -109,7 +114,7 @@ public class ShareProofActivity extends AppCompatActivity {
                 mediaUri = intent.getData();
 
             if (mediaUri != null)
-                processUri (mediaUri, shareUris, shareText, null);
+                processUri (mediaUri, shareUris, shareText, null, shareMedia);
 
 
         }
@@ -118,7 +123,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
         if (shareUris.size() > 0) {
 
-            if (notarizeOnly)
+            if (!shareProof)
             {
                 shareIntent = new Intent(Intent.ACTION_SEND);
                 shareIntent.putExtra(Intent.EXTRA_TEXT, shareText.toString());
@@ -140,7 +145,7 @@ public class ShareProofActivity extends AppCompatActivity {
         finish();
     }
 
-    private void processUri (Uri mediaUri, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut)
+    private void processUri (Uri mediaUri, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut, boolean shareMedia)
     {
         Cursor cursor = getContentResolver().query(mediaUri,      null,null, null, null);
 
@@ -186,8 +191,10 @@ public class ShareProofActivity extends AppCompatActivity {
                     sb.append("\n\n");
                     sb.append("This proof is signed by PGP key 0x" + fingerprint);
 
-                    shareUris.add(Uri.fromFile(new File(mediaPath))); // Add your image URIs here
-                    shareUris.add(Uri.fromFile(fileMediaSig)); // Add your image URIs here
+                    if (shareMedia) {
+                        shareUris.add(Uri.fromFile(new File(mediaPath))); // Add your image URIs here
+                        shareUris.add(Uri.fromFile(fileMediaSig)); // Add your image URIs here
+                    }
                     shareUris.add(Uri.fromFile(fileMediaProof));
                     shareUris.add(Uri.fromFile(fileMediaProofSig));
 
