@@ -11,7 +11,7 @@ public class OnBootReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        
+
         if (android.os.Build.VERSION.SDK_INT >= 24) {
             PhotosContentJob.scheduleJob(context);
             VideosContentJob.scheduleJob(context);
