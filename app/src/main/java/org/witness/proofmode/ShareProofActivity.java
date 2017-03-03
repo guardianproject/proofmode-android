@@ -13,6 +13,7 @@ import android.widget.Toast;
 
 import org.witness.proofmode.crypto.HashUtils;
 import org.witness.proofmode.crypto.PgpUtils;
+import org.witness.proofmode.service.MediaWatcher;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -28,6 +29,7 @@ import java.util.Date;
 public class ShareProofActivity extends AppCompatActivity {
 
     private final static String PROOF_FILE_TAG = ".proof.csv";
+    private final static String OPENPGP_FILE_TAG = ".asc";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,7 +40,7 @@ public class ShareProofActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
 
-        CharSequence items[] = {"Share Proof Only","Share Proof with Media","Notarize Only"};
+        CharSequence items[] = {"Notarize Only (Short Text)", "Share Proof Only (Metadata Files)","Share Proof with Media (Everything!)",};
 
         new AlertDialog.Builder(this).setItems(items, new DialogInterface.OnClickListener() {
             @Override
@@ -48,17 +50,17 @@ public class ShareProofActivity extends AppCompatActivity {
                 {
                     case 0:
 
-                        shareProof (false, true);
+                        shareProof (false, false);
 
                         break;
                     case 1:
 
-                        shareProof (true, true);
+                        shareProof (false, true);
 
                         break;
                     case 2:
 
-                        shareProof (false, false);
+                        shareProof (true, true);
 
                         break;
                 }
@@ -86,9 +88,8 @@ public class ShareProofActivity extends AppCompatActivity {
 
             try
             {
-                File fileParent =new File(Environment.getExternalStorageDirectory(),"proofmode");
-                fileParent.mkdirs();
-                fileBatchProof = new File(fileParent,new Date().getTime() + "batchproof.csv");
+                File fileFolder = MediaWatcher.getHashStorageDir("batch");
+                fileBatchProof = new File(fileFolder,new Date().getTime() + "batchproof.csv");
                 fBatchProofOut = new PrintWriter(new FileWriter(fileBatchProof,  true));
             }
             catch (IOException ioe) {}
@@ -128,7 +129,7 @@ public class ShareProofActivity extends AppCompatActivity {
                 shareIntent = new Intent(Intent.ACTION_SEND);
                 shareIntent.putExtra(Intent.EXTRA_TEXT, shareText.toString());
                 shareIntent.setType("*/*");
-                startActivity(Intent.createChooser(shareIntent, "Share notarization to..."));
+                startActivity(Intent.createChooser(shareIntent, "SHARE NOTARIZATION TO..."));
             }
             else {
 
@@ -137,7 +138,7 @@ public class ShareProofActivity extends AppCompatActivity {
                 shareIntent.putExtra(Intent.EXTRA_TEXT, shareText.toString());
                 shareIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, shareUris);
                 shareIntent.setType("*/*");
-                startActivity(Intent.createChooser(shareIntent, "Share proof to..."));
+                startActivity(Intent.createChooser(shareIntent, "SHARE PROOF TO..."));
             }
         }
 
@@ -157,72 +158,115 @@ public class ShareProofActivity extends AppCompatActivity {
             if (mediaPath != null) {
                 //check proof metadata against original image
 
-                String baseFolder = "proofmode";
+                boolean success = shareProof(mediaPath, shareUris, sb, fBatchProofOut, shareMedia);
 
-                File fileMedia = new File(mediaPath);
-                File fileMediaSig = new File(mediaPath + ".asc");
-                File fileMediaProof = new File(mediaPath + PROOF_FILE_TAG);
-                File fileMediaProofSig = new File(fileMediaProof.getAbsolutePath() + ".asc");
+                if (!success)
+                    success = shareProofClassic(mediaPath, shareUris, sb, fBatchProofOut, shareMedia);
 
-                //if not there try alternate locations
-                if (!fileMediaSig.exists())
-                {
-                    fileMediaSig = new File(Environment.getExternalStorageDirectory(),baseFolder + mediaPath + ".asc");
-                    fileMediaProof = new File(Environment.getExternalStorageDirectory(),baseFolder + mediaPath + PROOF_FILE_TAG);
-                    fileMediaProofSig = new File(fileMediaProof.getAbsolutePath() + ".asc");
-
-                    if (!fileMediaSig.exists())
-                    {
-                        fileMediaSig = new File(getExternalFilesDir(null),mediaPath + ".asc");
-                        fileMediaProof = new File(getExternalFilesDir(null),mediaPath + PROOF_FILE_TAG);
-                        fileMediaProofSig = new File(fileMediaProof.getAbsolutePath() + ".asc");
-                    }
-
-                }
-
-                if (fileMediaSig.exists() && fileMediaProof.exists() && fileMediaProofSig.exists()) {
-
-                    String hash = HashUtils.getSHA256FromFileContent(mediaPath);
-                    String fingerprint = PgpUtils.getInstance(this).getPublicKeyFingerprint();
-
-                    sb.append(fileMedia.getName()).append(' ');
-                    sb.append(" was last modified at ").append(new Date(fileMedia.lastModified()).toGMTString());
-                    sb.append(" and has a SHA-256 hash of ").append(hash);
-                    sb.append("\n\n");
-                    sb.append("This proof is signed by PGP key 0x" + fingerprint);
-
-                    if (shareMedia) {
-                        shareUris.add(Uri.fromFile(new File(mediaPath))); // Add your image URIs here
-                        shareUris.add(Uri.fromFile(fileMediaSig)); // Add your image URIs here
-                    }
-                    shareUris.add(Uri.fromFile(fileMediaProof));
-                    shareUris.add(Uri.fromFile(fileMediaProofSig));
-
-                    if (fBatchProofOut != null)
-                    {
-                        try {
-                            BufferedReader br = new BufferedReader(new FileReader(fileMediaProof));
-                            br.readLine();//skip header
-                            String csvLine = br.readLine();
-                           // Log.i("ShareProof","batching csv line: " + csvLine);
-                            fBatchProofOut.println(csvLine);
-                            br.close();
-                        }
-                        catch (IOException ioe)
-                        {}
-                    }
-
-                }
-                else
+                if (!success)
                 {
                     Toast.makeText(this, "ERROR: The proof does not exist or has been modified",Toast.LENGTH_LONG).show();
                 }
-
-
             }
         }
 
         cursor.close();
 
+    }
+
+    private boolean shareProof (String mediaPath, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut, boolean shareMedia)
+    {
+
+        String hash = HashUtils.getSHA256FromFileContent(mediaPath);
+
+        File fileMedia = new File(mediaPath);
+        File fileFolder = MediaWatcher.getHashStorageDir(hash);
+
+        File fileMediaSig = new File(fileFolder, fileMedia.getName() + OPENPGP_FILE_TAG);
+        File fileMediaProof = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG);
+        File fileMediaProofSig = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
+
+        if (fileMediaSig.exists() && fileMediaProof.exists() && fileMediaProofSig.exists()) {
+
+            generateProofOutput(fileMedia, fileMediaSig, fileMediaProof, fileMediaProofSig, hash, shareMedia, fBatchProofOut, shareUris, sb);
+
+            return true;
+        }
+
+        return false;
+
+    }
+
+    private boolean shareProofClassic (String mediaPath, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut, boolean shareMedia)
+    {
+
+        String baseFolder = "proofmode";
+
+        String hash = HashUtils.getSHA256FromFileContent(mediaPath);
+
+        File fileMedia = new File(mediaPath);
+        File fileMediaSig = new File(mediaPath + ".asc");
+        File fileMediaProof = new File(mediaPath + PROOF_FILE_TAG);
+        File fileMediaProofSig = new File(fileMediaProof.getAbsolutePath() + ".asc");
+
+        //if not there try alternate locations
+        if (!fileMediaSig.exists())
+        {
+            fileMediaSig = new File(Environment.getExternalStorageDirectory(),baseFolder + mediaPath + ".asc");
+            fileMediaProof = new File(Environment.getExternalStorageDirectory(),baseFolder + mediaPath + PROOF_FILE_TAG);
+            fileMediaProofSig = new File(fileMediaProof.getAbsolutePath() + ".asc");
+
+            if (!fileMediaSig.exists())
+            {
+                fileMediaSig = new File(getExternalFilesDir(null),mediaPath + ".asc");
+                fileMediaProof = new File(getExternalFilesDir(null),mediaPath + PROOF_FILE_TAG);
+                fileMediaProofSig = new File(fileMediaProof.getAbsolutePath() + ".asc");
+            }
+
+        }
+
+        if (fileMediaSig.exists() && fileMediaProof.exists() && fileMediaProofSig.exists()) {
+
+           generateProofOutput(fileMedia, fileMediaSig, fileMediaProof, fileMediaProofSig, hash, shareMedia, fBatchProofOut, shareUris, sb);
+
+            return true;
+        }
+
+
+        return false;
+
+
+    }
+
+    private void generateProofOutput (File fileMedia, File fileMediaSig, File fileMediaProof, File fileMediaProofSig, String hash, boolean shareMedia, PrintWriter fBatchProofOut, ArrayList<Uri> shareUris, StringBuffer sb)
+    {
+        String fingerprint = PgpUtils.getInstance(this).getPublicKeyFingerprint();
+
+        sb.append(fileMedia.getName()).append(' ');
+        sb.append(" was last modified at ").append(new Date(fileMedia.lastModified()).toGMTString());
+        sb.append(" and has a SHA-256 hash of ").append(hash);
+        sb.append("\n\n");
+        sb.append("This proof is signed by PGP key 0x" + fingerprint);
+
+        if (shareMedia) {
+            shareUris.add(Uri.fromFile(fileMedia)); // Add your image URIs here
+            shareUris.add(Uri.fromFile(fileMediaSig)); // Add your image URIs here
+        }
+        shareUris.add(Uri.fromFile(fileMediaProof));
+        shareUris.add(Uri.fromFile(fileMediaProofSig));
+
+        if (fBatchProofOut != null)
+        {
+            try {
+                BufferedReader br = new BufferedReader(new FileReader(fileMediaProof));
+                br.readLine();//skip header
+                String csvLine = br.readLine();
+                // Log.i("ShareProof","batching csv line: " + csvLine);
+                fBatchProofOut.println(csvLine);
+                br.close();
+            }
+            catch (IOException ioe)
+            {}
+        }
     }
 }

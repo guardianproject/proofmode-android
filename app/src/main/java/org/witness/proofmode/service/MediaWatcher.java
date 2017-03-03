@@ -21,6 +21,7 @@ import org.spongycastle.openpgp.PGPSecretKey;
 import org.spongycastle.openpgp.PGPSecretKeyRing;
 import org.spongycastle.openpgp.operator.bc.BcKeyFingerprintCalculator;
 import org.witness.proofmode.crypto.DetachedSignatureProcessor;
+import org.witness.proofmode.crypto.HashUtils;
 import org.witness.proofmode.crypto.PgpUtils;
 import org.witness.proofmode.util.DeviceInfo;
 import org.witness.proofmode.util.GPSTracker;
@@ -46,6 +47,8 @@ import java.util.Map;
 public class MediaWatcher extends BroadcastReceiver {
 
     private final static String PROOF_FILE_TAG = ".proof.csv";
+    private final static String OPENPGP_FILE_TAG = ".asc";
+    private final static String PROOF_BASE_FOLDER = "proofmode";
 
     public MediaWatcher() {
     }
@@ -58,6 +61,12 @@ public class MediaWatcher extends BroadcastReceiver {
         boolean doProof = prefs.getBoolean("doProof",true);
 
         if (doProof) {
+
+            if (!isExternalStorageWritable())
+            {
+                Toast.makeText(context, "WARNING: ProofMode enabled, but there is no external storage available!",Toast.LENGTH_SHORT).show();
+                return;
+            }
 
             Uri uriMedia = (Uri) intent.getParcelableExtra(Intent.EXTRA_STREAM);
             if (uriMedia == null)
@@ -74,39 +83,24 @@ public class MediaWatcher extends BroadcastReceiver {
                 mediaPath = uriMedia.getPath();
             }
 
-            File fileMediaProof = new File(mediaPath + PROOF_FILE_TAG);
-            File fileMediaProofSig = new File(mediaPath + PROOF_FILE_TAG + ".asc");
-            File fileMediaSig = new File(mediaPath + ".asc");
+
+            String hash = HashUtils.getSHA256FromFileContent(mediaPath);
+
+            File fileMedia = new File(mediaPath);
+            File fileFolder = getHashStorageDir(hash);
+
+            File fileMediaSig = new File(fileFolder, fileMedia.getName() + OPENPGP_FILE_TAG);
+            File fileMediaProof = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG);
+            File fileMediaProofSig = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
 
             boolean showDeviceIds = prefs.getBoolean("trackDeviceId",true);;
             boolean showLocation = prefs.getBoolean("trackLocation",true);;;
 
-            String baseFolder = "proofmode";
-
             if (!fileMediaProof.exists()) {
 
-                boolean canWrite = false;
-
                 try {
 
-                    canWrite = fileMediaProof.createNewFile();
-                    canWrite = true; //no exception was thrown, so all is well
-
-                } catch (Exception ioe) {
-                }
-
-
-                try {
-                    if (!canWrite) {
-                        File fileFolder = new File(Environment.getExternalStorageDirectory(), baseFolder);
-                        fileFolder.mkdirs();
-                        fileMediaProof = new File(fileFolder.getAbsolutePath() + mediaPath + PROOF_FILE_TAG);
-                        fileMediaProofSig = new File(fileFolder.getAbsolutePath() + mediaPath + PROOF_FILE_TAG + ".asc");
-                        fileMediaSig = new File(fileFolder.getAbsolutePath() + mediaPath + ".asc");
-                        fileMediaProof.getParentFile().mkdirs();
-                    }
-
-                    writeTextToFile(fileMediaProof, buildProof(context, mediaPath, showDeviceIds, showLocation));
+                    writeTextToFile(context, fileMediaProof, buildProof(context, mediaPath, showDeviceIds, showLocation));
 
                     //sign the media file
                     PgpUtils.getInstance(context).createDetachedSignature(new File(mediaPath), fileMediaSig);
@@ -116,9 +110,32 @@ public class MediaWatcher extends BroadcastReceiver {
                     
                 } catch (Exception e) {
                     Log.e("MediaWatcher", "Error signing media or proof", e);
+                    Toast.makeText(context, "Unable to save proof: " + e.getLocalizedMessage(),Toast.LENGTH_SHORT).show();
+
                 }
             }
         }
+    }
+
+    public static File getHashStorageDir(String hash) {
+        // Get the directory for the user's public pictures directory.
+        File file = new File(Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_DOCUMENTS), PROOF_BASE_FOLDER);
+        file = new File(file, hash);
+
+        if (!file.mkdirs()) {
+            Log.e("ProofMode", "Directory not created");
+        }
+        return file;
+    }
+
+    /* Checks if external storage is available for read and write */
+    public boolean isExternalStorageWritable() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            return true;
+        }
+        return false;
     }
 
     private String buildProof (Context context, String mediaPath, boolean showDeviceIds, boolean showLocation)
@@ -199,7 +216,7 @@ public class MediaWatcher extends BroadcastReceiver {
 
     }
 
-    private static void writeTextToFile (File fileOut, String text)
+    private static void writeTextToFile (Context context, File fileOut, String text)
     {
         try {
             PrintStream ps = new PrintStream(new FileOutputStream(fileOut));
