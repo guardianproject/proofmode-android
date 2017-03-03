@@ -8,8 +8,8 @@ android {
         applicationId "org.witness.proofmode"
         minSdkVersion 14
         targetSdkVersion 25
-        versionCode 82
-        versionName "0.0.8-beta-1"
+        versionCode 83
+        versionName "0.0.8-beta-2"
     }
     buildTypes {
         release {
