@@ -1,6 +1,6 @@
 language: android
 #wish we had openjdk8, but this will do...
-jdk
+jdk:
     - oraclejdk8
 android:
   components:
