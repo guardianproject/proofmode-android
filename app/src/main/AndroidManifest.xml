@@ -113,6 +113,16 @@
         </service>
 
         <service
+            android:name=".service.PhotosContentJob"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="true"/>
+
+        <service
+            android:name=".service.VideosContentJob"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="true"/>
+
+        <service
             android:name=".service.ProofModeTileService"
             android:icon="@drawable/tile_icon"
             android:label="@string/app_name"

@@ -135,7 +135,11 @@ public class ShareProofActivity extends AppCompatActivity {
 
                 shareIntent = new Intent(Intent.ACTION_SEND_MULTIPLE);
 
-                shareIntent.putExtra(Intent.EXTRA_TEXT, shareText.toString());
+                ArrayList<String> arrayListStrings = new ArrayList<String>();
+                for (int i = 0; i < shareUris.size(); i++)
+                    arrayListStrings.add(shareText.toString());
+
+                shareIntent.putExtra(Intent.EXTRA_TEXT, arrayListStrings);
                 shareIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, shareUris);
                 shareIntent.setType("*/*");
                 startActivity(Intent.createChooser(shareIntent, "SHARE PROOF TO..."));
