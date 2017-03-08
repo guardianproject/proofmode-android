@@ -10,6 +10,7 @@ import android.net.Uri;
 import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.text.TextUtils;
+import android.util.Base64;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -26,7 +27,6 @@ import org.spongycastle.openpgp.PGPKeyRingGenerator;
 import org.spongycastle.openpgp.PGPSecretKey;
 import org.spongycastle.openpgp.PGPSecretKeyRing;
 import org.spongycastle.openpgp.operator.bc.BcKeyFingerprintCalculator;
-import org.spongycastle.util.encoders.Base64;
 import org.witness.proofmode.ProofModeApp;
 import org.witness.proofmode.crypto.DetachedSignatureProcessor;
 import org.witness.proofmode.crypto.HashUtils;
@@ -34,6 +34,7 @@ import org.witness.proofmode.crypto.PgpUtils;
 import org.witness.proofmode.util.DeviceInfo;
 import org.witness.proofmode.util.GPSTracker;
 import org.witness.proofmode.util.SafetyNetCheck;
+import org.witness.proofmode.util.SafetyNetResponse;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -100,9 +101,10 @@ public class MediaWatcher extends BroadcastReceiver {
             final String mediaHash = HashUtils.getSHA256FromFileContent(mediaPath);
 
             //write immediate proof, w/o safety check result
-            writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, null);
+            writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, null, false, false, -1);
 
             if (autoNotarize) {
+
                 //if we can do safetycheck, then add that in as well
                 new SafetyNetCheck().sendSafetyNetRequest(mediaHash, new ResultCallback<SafetyNetApi.AttestationResult>() {
 
@@ -110,15 +112,15 @@ public class MediaWatcher extends BroadcastReceiver {
                     public void onResult(SafetyNetApi.AttestationResult result) {
                         Status status = result.getStatus();
                         if (status.isSuccess()) {
-                                /*
-                                 Successfully communicated with SafetyNet API.
-                                 Use result.getJwsResult() to get the signed result data. See the server
-                                 component of this sample for details on how to verify and parse this
-                                 result.
-                                 */
                             String resultString = result.getJwsResult();
-                            Log.d(ProofModeApp.TAG, "Success! SafetyNet result:\n" + resultString + "\n");
-                            writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, resultString);
+                            SafetyNetResponse resp = parseJsonWebSignature(resultString);
+
+                            long timestamp = resp.getTimestampMs();
+                            boolean isBasicIntegrity = resp.isBasicIntegrity();
+                            boolean isCtsMatch = resp.isCtsProfileMatch();
+
+                            Log.d(ProofModeApp.TAG, "Success! SafetyNet result: isBasicIntegrity: " + isBasicIntegrity + " isCts:" + isCtsMatch);
+                            writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, resultString, isBasicIntegrity, isCtsMatch, timestamp);
 
 
                         } else {
@@ -135,7 +137,24 @@ public class MediaWatcher extends BroadcastReceiver {
 
     }
 
-    private void writeProof (Context context, String mediaPath, String hash, boolean showDeviceIds, boolean showLocation, String safetyCheckResult)
+    private SafetyNetResponse parseJsonWebSignature(String jwsResult) {
+        if (jwsResult == null) {
+            return null;
+        }
+        //the JWT (JSON WEB TOKEN) is just a 3 base64 encoded parts concatenated by a . character
+        final String[] jwtParts = jwsResult.split("\\.");
+
+        if (jwtParts.length == 3) {
+            //we're only really interested in the body/payload
+            String decodedPayload = new String(Base64.decode(jwtParts[1], Base64.DEFAULT));
+
+            return SafetyNetResponse.parse(decodedPayload);
+        } else {
+            return null;
+        }
+    }
+
+    private void writeProof (Context context, String mediaPath, String hash, boolean showDeviceIds, boolean showLocation, String safetyCheckResult, boolean isBasicIntegrity, boolean isCtsMatch, long notarizeTimestamp)
     {
 
         File fileMedia = new File(mediaPath);
@@ -153,7 +172,7 @@ public class MediaWatcher extends BroadcastReceiver {
 
             //add data to proof csv and sign again
             boolean writeHeaders = !fileMediaProof.exists();
-            writeTextToFile(context, fileMediaProof, buildProof(context, mediaPath, writeHeaders, showDeviceIds, showLocation, safetyCheckResult));
+            writeTextToFile(context, fileMediaProof, buildProof(context, mediaPath, writeHeaders, showDeviceIds, showLocation, safetyCheckResult, isBasicIntegrity, isCtsMatch, notarizeTimestamp));
 
             //sign the proof file again
             PgpUtils.getInstance(context).createDetachedSignature(fileMediaProof, fileMediaProofSig);
@@ -200,7 +219,7 @@ public class MediaWatcher extends BroadcastReceiver {
         return false;
     }
 
-    private String buildProof (Context context, String mediaPath, boolean writeHeaders, boolean showDeviceIds, boolean showLocation, String safetyCheckResult)
+    private String buildProof (Context context, String mediaPath, boolean writeHeaders, boolean showDeviceIds, boolean showLocation, String safetyCheckResult, boolean isBasicIntegrity, boolean isCtsMatch, long notarizeTimestamp)
     {
         File fileMedia = new File (mediaPath);
         String hash = getSHA256FromFileContent(mediaPath);
@@ -259,12 +278,17 @@ public class MediaWatcher extends BroadcastReceiver {
         }
 
         if (!TextUtils.isEmpty(safetyCheckResult)) {
-
-            safetyCheckResult = safetyCheckResult.replace("{","");
-            safetyCheckResult = safetyCheckResult.replace("}","");
-            safetyCheckResult = safetyCheckResult.replace("\n","");
-
             hmProof.put("SafetyCheck", safetyCheckResult);
+            hmProof.put("SafetyCheckBasicIntegrity", isBasicIntegrity+"");
+            hmProof.put("SafetyCheckCtsMatch", isCtsMatch+"");
+            hmProof.put("SafetyCheckTimestamp", notarizeTimestamp+"");
+        }
+        else
+        {
+            hmProof.put("SafetyCheck", "");
+            hmProof.put("SafetyCheckBasicIntegrity", "");
+            hmProof.put("SafetyCheckCtsMatch", "");
+            hmProof.put("SafetyCheckTimestamp", "");
         }
 
         StringBuffer sb = new StringBuffer();

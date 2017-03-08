@@ -36,4 +36,5 @@ dependencies {
     compile "com.android.support:support-v4:25.0.0"
     compile "com.android.support:support-v13:25.0.0"
     compile 'com.google.android.gms:play-services-safetynet:9.8.0'
+
 }
