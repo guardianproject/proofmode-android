@@ -4,6 +4,10 @@ android {
     compileSdkVersion 25
     buildToolsVersion "25"
 
+    lintOptions {
+          abortOnError false
+     }
+
     defaultConfig {
         applicationId "org.witness.proofmode"
         minSdkVersion 14
