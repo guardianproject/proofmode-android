@@ -49,5 +49,12 @@
         android:id="@+id/switchDevice"
         android:layout_gravity="center_horizontal" />
 
+    <android.support.v7.widget.SwitchCompat
+        android:layout_width="200dp"
+        android:layout_height="wrap_content"
+        android:text="@string/switch_auto_notarize"
+        android:checked="true"
+        android:id="@+id/switchNotarize"
+        android:layout_gravity="center_horizontal" />
 
 </LinearLayout>

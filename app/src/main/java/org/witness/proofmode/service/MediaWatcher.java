@@ -9,8 +9,14 @@ import android.location.Location;
 import android.net.Uri;
 import android.os.Environment;
 import android.preference.PreferenceManager;
+import android.text.TextUtils;
 import android.util.Log;
 import android.widget.Toast;
+
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.common.api.Status;
+import com.google.android.gms.safetynet.SafetyNet;
+import com.google.android.gms.safetynet.SafetyNetApi;
 
 import org.spongycastle.bcpg.ArmoredInputStream;
 import org.spongycastle.bcpg.ArmoredOutputStream;
@@ -20,11 +26,14 @@ import org.spongycastle.openpgp.PGPKeyRingGenerator;
 import org.spongycastle.openpgp.PGPSecretKey;
 import org.spongycastle.openpgp.PGPSecretKeyRing;
 import org.spongycastle.openpgp.operator.bc.BcKeyFingerprintCalculator;
+import org.spongycastle.util.encoders.Base64;
+import org.witness.proofmode.ProofModeApp;
 import org.witness.proofmode.crypto.DetachedSignatureProcessor;
 import org.witness.proofmode.crypto.HashUtils;
 import org.witness.proofmode.crypto.PgpUtils;
 import org.witness.proofmode.util.DeviceInfo;
 import org.witness.proofmode.util.GPSTracker;
+import org.witness.proofmode.util.SafetyNetCheck;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -54,17 +63,17 @@ public class MediaWatcher extends BroadcastReceiver {
     }
 
     @Override
-    public void onReceive(Context context, Intent intent) {
+    public void onReceive(final Context context, Intent intent) {
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 
-        boolean doProof = prefs.getBoolean("doProof",true);
+        boolean doProof = prefs.getBoolean("doProof", true);
+        boolean autoNotarize = prefs.getBoolean("autoNotarize", true);
 
         if (doProof) {
 
-            if (!isExternalStorageWritable())
-            {
-                Toast.makeText(context, "WARNING: ProofMode enabled, but there is no external storage available!",Toast.LENGTH_SHORT).show();
+            if (!isExternalStorageWritable()) {
+                Toast.makeText(context, "WARNING: ProofMode enabled, but there is no external storage available!", Toast.LENGTH_SHORT).show();
                 return;
             }
 
@@ -72,55 +81,108 @@ public class MediaWatcher extends BroadcastReceiver {
             if (uriMedia == null)
                 uriMedia = intent.getData();
 
-            String mediaPath = null;
+            String mediaPathTmp = null;
 
             Cursor cursor = context.getContentResolver().query(uriMedia, null, null, null, null);
             if (cursor != null) {
                 cursor.moveToFirst();
-                mediaPath = cursor.getString(cursor.getColumnIndex("_data"));
+                mediaPathTmp = cursor.getString(cursor.getColumnIndex("_data"));
                 cursor.close();
             } else {
-                mediaPath = uriMedia.getPath();
+                mediaPathTmp = uriMedia.getPath();
             }
 
+            final String mediaPath = mediaPathTmp;
 
-            String hash = HashUtils.getSHA256FromFileContent(mediaPath);
+            final boolean showDeviceIds = prefs.getBoolean("trackDeviceId",true);;
+            final boolean showLocation = prefs.getBoolean("trackLocation",true);;;
 
-            File fileMedia = new File(mediaPath);
-            File fileFolder = getHashStorageDir(hash);
+            final String mediaHash = HashUtils.getSHA256FromFileContent(mediaPath);
 
-            File fileMediaSig = new File(fileFolder, fileMedia.getName() + OPENPGP_FILE_TAG);
-            File fileMediaProof = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG);
-            File fileMediaProofSig = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
+            //write immediate proof, w/o safety check result
+            writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, null);
 
-            boolean showDeviceIds = prefs.getBoolean("trackDeviceId",true);;
-            boolean showLocation = prefs.getBoolean("trackLocation",true);;;
+            if (autoNotarize) {
+                //if we can do safetycheck, then add that in as well
+                new SafetyNetCheck().sendSafetyNetRequest(mediaHash, new ResultCallback<SafetyNetApi.AttestationResult>() {
 
-            if (!fileMediaProof.exists()) {
+                    @Override
+                    public void onResult(SafetyNetApi.AttestationResult result) {
+                        Status status = result.getStatus();
+                        if (status.isSuccess()) {
+                                /*
+                                 Successfully communicated with SafetyNet API.
+                                 Use result.getJwsResult() to get the signed result data. See the server
+                                 component of this sample for details on how to verify and parse this
+                                 result.
+                                 */
+                            String resultString = result.getJwsResult();
+                            Log.d(ProofModeApp.TAG, "Success! SafetyNet result:\n" + resultString + "\n");
+                            writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, resultString);
 
-                try {
 
-                    writeTextToFile(context, fileMediaProof, buildProof(context, mediaPath, showDeviceIds, showLocation));
+                        } else {
+                            // An error occurred while communicating with the service.
+                            Log.d(ProofModeApp.TAG, "ERROR! " + status.getStatusCode() + " " + status
+                                    .getStatusMessage());
 
-                    //sign the media file
-                    PgpUtils.getInstance(context).createDetachedSignature(new File(mediaPath), fileMediaSig);
-
-                    //sign the proof file
-                    PgpUtils.getInstance(context).createDetachedSignature(fileMediaProof, fileMediaProofSig);
-                    
-                } catch (Exception e) {
-                    Log.e("MediaWatcher", "Error signing media or proof", e);
-                    Toast.makeText(context, "Unable to save proof: " + e.getLocalizedMessage(),Toast.LENGTH_SHORT).show();
-
-                }
+                        }
+                    }
+                });
             }
+
         }
+
+    }
+
+    private void writeProof (Context context, String mediaPath, String hash, boolean showDeviceIds, boolean showLocation, String safetyCheckResult)
+    {
+
+        File fileMedia = new File(mediaPath);
+        File fileFolder = getHashStorageDir(hash);
+
+        File fileMediaSig = new File(fileFolder, fileMedia.getName() + OPENPGP_FILE_TAG);
+        File fileMediaProof = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG);
+        File fileMediaProofSig = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
+
+        try {
+
+            //sign the media file
+            if (!fileMediaSig.exists())
+                PgpUtils.getInstance(context).createDetachedSignature(new File(mediaPath), fileMediaSig);
+
+            //add data to proof csv and sign again
+            boolean writeHeaders = !fileMediaProof.exists();
+            writeTextToFile(context, fileMediaProof, buildProof(context, mediaPath, writeHeaders, showDeviceIds, showLocation, safetyCheckResult));
+
+            //sign the proof file again
+            PgpUtils.getInstance(context).createDetachedSignature(fileMediaProof, fileMediaProofSig);
+
+        } catch (Exception e) {
+            Log.e("MediaWatcher", "Error signing media or proof", e);
+            Toast.makeText(context, "Unable to save proof: " + e.getLocalizedMessage(),Toast.LENGTH_SHORT).show();
+
+        }
+
+
     }
 
     public static File getHashStorageDir(String hash) {
+
         // Get the directory for the user's public pictures directory.
-        File file = new File(Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_DOCUMENTS), PROOF_BASE_FOLDER);
+        File file = null;
+
+        if (android.os.Build.VERSION.SDK_INT >= 19) {
+            file = new File(Environment.getExternalStoragePublicDirectory(
+                    Environment.DIRECTORY_DOCUMENTS), PROOF_BASE_FOLDER);
+        }
+        else
+        {
+            file = new File(Environment.getExternalStoragePublicDirectory(
+                    Environment.DIRECTORY_DOWNLOADS), PROOF_BASE_FOLDER);
+        }
+
+
         file = new File(file, hash);
 
         if (!file.mkdirs()) {
@@ -138,12 +200,12 @@ public class MediaWatcher extends BroadcastReceiver {
         return false;
     }
 
-    private String buildProof (Context context, String mediaPath, boolean showDeviceIds, boolean showLocation)
+    private String buildProof (Context context, String mediaPath, boolean writeHeaders, boolean showDeviceIds, boolean showLocation, String safetyCheckResult)
     {
         File fileMedia = new File (mediaPath);
         String hash = getSHA256FromFileContent(mediaPath);
 
-        HashMap<String, String> hmProof = new HashMap<String, String>();
+        HashMap<String, String> hmProof = new HashMap<>();
 
         hmProof.put("File",mediaPath);
         hmProof.put("SHA256",hash);
@@ -196,14 +258,24 @@ public class MediaWatcher extends BroadcastReceiver {
 
         }
 
-        StringBuffer sb = new StringBuffer();
+        if (!TextUtils.isEmpty(safetyCheckResult)) {
 
-        for (String key : hmProof.keySet())
-        {
-            sb.append(key).append(",");
+            safetyCheckResult = safetyCheckResult.replace("{","");
+            safetyCheckResult = safetyCheckResult.replace("}","");
+            safetyCheckResult = safetyCheckResult.replace("\n","");
+
+            hmProof.put("SafetyCheck", safetyCheckResult);
         }
 
-        sb.append("\n");
+        StringBuffer sb = new StringBuffer();
+
+        if (writeHeaders) {
+            for (String key : hmProof.keySet()) {
+                sb.append(key).append(",");
+            }
+
+            sb.append("\n");
+        }
 
         for (String key : hmProof.keySet())
         {
@@ -219,7 +291,7 @@ public class MediaWatcher extends BroadcastReceiver {
     private static void writeTextToFile (Context context, File fileOut, String text)
     {
         try {
-            PrintStream ps = new PrintStream(new FileOutputStream(fileOut));
+            PrintStream ps = new PrintStream(new FileOutputStream(fileOut,true));
             ps.println(text);
             ps.flush();
             ps.close();

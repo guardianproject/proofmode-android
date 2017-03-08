@@ -87,6 +87,17 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        SwitchCompat switchNotarize = (SwitchCompat)findViewById(R.id.switchNotarize);
+        switchNotarize.setChecked(mPrefs.getBoolean("autoNotarize",true));
+        switchNotarize.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+
+                mPrefs.edit().putBoolean("autoNotarize",isChecked).commit();
+
+            }
+        });
+
         if (mPrefs.getBoolean("firsttime",true)) {
             startActivityForResult(new Intent(this, PMAppIntro.class),REQUEST_CODE_INTRO);
             mPrefs.edit().putBoolean("firsttime",false).commit();

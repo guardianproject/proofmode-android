@@ -13,6 +13,7 @@ import org.spongycastle.jce.provider.BouncyCastleProvider;
 import org.witness.proofmode.service.MediaListenerService;
 import org.witness.proofmode.service.PhotosContentJob;
 import org.witness.proofmode.service.VideosContentJob;
+import org.witness.proofmode.util.SafetyNetCheck;
 
 import java.security.Security;
 
@@ -21,6 +22,8 @@ import java.security.Security;
  */
 public class ProofModeApp extends Application {
 
+
+    public final static String TAG = "ProofMode";
 
     static {
         Security.addProvider(new BouncyCastleProvider());
@@ -38,6 +41,8 @@ public class ProofModeApp extends Application {
         {
             startService(new Intent(getBaseContext(), MediaListenerService.class));
         }
+
+        SafetyNetCheck.buildGoogleApiClient(this);
     }
 
 }

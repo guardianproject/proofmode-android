@@ -7,11 +7,10 @@
 
     <string name="action_about">About ProofMode</string>
 
-
     <string name="switch_include_device">Include Device Identity</string>
-
-    <string name="switch_include_location">Include Location</string>
+    <string name="switch_include_location">Include GPS Location</string>
     <string name="switch_enable_proofmode">Enable ProofMode</string>
+    <string name="switch_auto_notarize">Enable Auto-Notarize</string>
 
     <string name="intro1_title">Capture the Proof</string>
     <string name="intro1_desc">You\'ve taken the first step to transform your photos and video into digital proof.</string>
