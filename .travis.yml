@@ -1,32 +1,39 @@
 language: android
 #wish we had openjdk8, but this will do...
-jdk:
-    - oraclejdk8
+jdk: oraclejdk8
+
+android:
+  components:
+    - tools
+    - build-tools-25.0.0
+    - android-25
+    - extra-android-support
+    - extra-android-m2repository
+
 install:
   - echo y | android update sdk -u -a -t tools
   - echo y | android update sdk -u -a -t platform-tools
-  - echo y | android update sdk -u -a -t build-tools-25.0.2
+  - echo y | android update sdk -u -a -t build-tools-25.0.0
   - echo y | android update sdk -u -a -t android-25
+  - echo y | android update sdk -u -a -t extra-android-support
   - echo y | android update sdk -u -a -t extra-google-m2repository
   - echo y | android update sdk -u -a -t extra-android-m2repository
 android:
   components:
-
-    #wish we had openjdk8, but this will do...putting it here as well
-    - oraclejdk8
+    - tools
+    - build-tools-25.0.0
 
     # Uncomment the lines below if you want to
     # use the latest revision of Android SDK Tools
-    - tools
     - platform-tools
 
     # The BuildTools version used by your project
-    - build-tools-25.0.2 
 
     # The SDK version used to compile your project
     - android-25
 
     # Additional components
+    - extra-android-support
     - extra-google-m2repository
     - extra-android-m2repository
 
