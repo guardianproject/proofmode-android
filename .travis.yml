@@ -1,6 +1,7 @@
 language: android
 #wish we had openjdk8, but this will do...
 jdk: oraclejdk8
+sudo: false
 
 android:
   components:
@@ -39,5 +40,10 @@ android:
 
     # Specify at least one system image,
     # if you need to run emulator(s) during your tests
-    #- sys-img-armeabi-v7a-android-25
+    - sys-img-armeabi-v7a-android-25
 
+  before_script:
+   - echo no | android create avd --force -n test -t android-25 --abi armeabi-v7a
+   - emulator -avd test -no-skin -no-audio -no-window &
+   - android-wait-for-emulator
+   - adb shell input keyevent 82 &
