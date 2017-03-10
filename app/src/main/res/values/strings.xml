@@ -8,7 +8,7 @@
     <string name="action_about">About ProofMode</string>
 
     <string name="switch_include_device">Include Device Identity</string>
-    <string name="switch_include_location">Include GPS Location</string>
+    <string name="switch_include_location">Include Location</string>
     <string name="switch_enable_proofmode">Enable ProofMode</string>
     <string name="switch_auto_notarize">Enable Auto-Notarize</string>
 
