@@ -73,6 +73,10 @@
 
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.UMS_CONNECTED" />
+                <action android:name="android.intent.action.UMS_DISCONNECTED" />
+            </intent-filter>
         </receiver>
 
         <activity android:name=".ShareProofActivity" android:label="Share Proof">

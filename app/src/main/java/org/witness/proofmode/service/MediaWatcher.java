@@ -16,19 +16,9 @@ import android.widget.Toast;
 
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
-import com.google.android.gms.safetynet.SafetyNet;
 import com.google.android.gms.safetynet.SafetyNetApi;
 
-import org.spongycastle.bcpg.ArmoredInputStream;
-import org.spongycastle.bcpg.ArmoredOutputStream;
-import org.spongycastle.jce.provider.BouncyCastleProvider;
-import org.spongycastle.openpgp.PGPException;
-import org.spongycastle.openpgp.PGPKeyRingGenerator;
-import org.spongycastle.openpgp.PGPSecretKey;
-import org.spongycastle.openpgp.PGPSecretKeyRing;
-import org.spongycastle.openpgp.operator.bc.BcKeyFingerprintCalculator;
 import org.witness.proofmode.ProofModeApp;
-import org.witness.proofmode.crypto.DetachedSignatureProcessor;
 import org.witness.proofmode.crypto.HashUtils;
 import org.witness.proofmode.crypto.PgpUtils;
 import org.witness.proofmode.util.DeviceInfo;
@@ -36,29 +26,22 @@ import org.witness.proofmode.util.GPSTracker;
 import org.witness.proofmode.util.SafetyNetCheck;
 import org.witness.proofmode.util.SafetyNetResponse;
 
-import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.PrintStream;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLEncoder;
 import java.security.MessageDigest;
-import java.security.Security;
 import java.util.HashMap;
-import java.util.Map;
 
 public class MediaWatcher extends BroadcastReceiver {
 
     private final static String PROOF_FILE_TAG = ".proof.csv";
     private final static String OPENPGP_FILE_TAG = ".asc";
     private final static String PROOF_BASE_FOLDER = "proofmode";
+
+    private static boolean mStorageMounted = false;
 
     public MediaWatcher() {
     }
@@ -70,6 +53,14 @@ public class MediaWatcher extends BroadcastReceiver {
 
         boolean doProof = prefs.getBoolean("doProof", true);
         boolean autoNotarize = prefs.getBoolean("autoNotarize", true);
+
+        if (intent.getAction() != null) {
+            if (intent.getAction().equals(Intent.ACTION_UMS_CONNECTED)) {
+                mStorageMounted = true;
+            } else if (intent.getAction().equals(Intent.ACTION_UMS_DISCONNECTED)) {
+                mStorageMounted = false;
+            }
+        }
 
         if (doProof) {
 
