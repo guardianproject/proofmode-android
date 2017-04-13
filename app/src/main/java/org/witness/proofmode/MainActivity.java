@@ -102,6 +102,10 @@ public class MainActivity extends AppCompatActivity {
             startActivityForResult(new Intent(this, PMAppIntro.class),REQUEST_CODE_INTRO);
             mPrefs.edit().putBoolean("firsttime",false).commit();
         }
+        else
+        {
+            askForPermission(Manifest.permission.ACCESS_FINE_LOCATION, 1);
+        }
     }
 
     @Override
@@ -126,7 +130,12 @@ public class MainActivity extends AppCompatActivity {
                 break;
             //Call
             case 2:
-                askForPermission(Manifest.permission.ACCESS_NETWORK_STATE,3);
+                askForPermission(Manifest.permission.READ_EXTERNAL_STORAGE,3);
+
+                break;
+
+            case 3:
+                askForPermission(Manifest.permission.ACCESS_NETWORK_STATE,4);
 
                 break;
 

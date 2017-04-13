@@ -91,37 +91,43 @@ public class MediaWatcher extends BroadcastReceiver {
 
             final String mediaHash = HashUtils.getSHA256FromFileContent(mediaPath);
 
-            //write immediate proof, w/o safety check result
-            writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, null, false, false, -1);
+            if (mediaHash != null) {
+                //write immediate proof, w/o safety check result
+                writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, null, false, false, -1);
 
-            if (autoNotarize) {
+                if (autoNotarize) {
 
-                //if we can do safetycheck, then add that in as well
-                new SafetyNetCheck().sendSafetyNetRequest(mediaHash, new ResultCallback<SafetyNetApi.AttestationResult>() {
+                    //if we can do safetycheck, then add that in as well
+                    new SafetyNetCheck().sendSafetyNetRequest(mediaHash, new ResultCallback<SafetyNetApi.AttestationResult>() {
 
-                    @Override
-                    public void onResult(SafetyNetApi.AttestationResult result) {
-                        Status status = result.getStatus();
-                        if (status.isSuccess()) {
-                            String resultString = result.getJwsResult();
-                            SafetyNetResponse resp = parseJsonWebSignature(resultString);
+                        @Override
+                        public void onResult(SafetyNetApi.AttestationResult result) {
+                            Status status = result.getStatus();
+                            if (status.isSuccess()) {
+                                String resultString = result.getJwsResult();
+                                SafetyNetResponse resp = parseJsonWebSignature(resultString);
 
-                            long timestamp = resp.getTimestampMs();
-                            boolean isBasicIntegrity = resp.isBasicIntegrity();
-                            boolean isCtsMatch = resp.isCtsProfileMatch();
+                                long timestamp = resp.getTimestampMs();
+                                boolean isBasicIntegrity = resp.isBasicIntegrity();
+                                boolean isCtsMatch = resp.isCtsProfileMatch();
 
-                            Log.d(ProofModeApp.TAG, "Success! SafetyNet result: isBasicIntegrity: " + isBasicIntegrity + " isCts:" + isCtsMatch);
-                            writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, resultString, isBasicIntegrity, isCtsMatch, timestamp);
+                                Log.d(ProofModeApp.TAG, "Success! SafetyNet result: isBasicIntegrity: " + isBasicIntegrity + " isCts:" + isCtsMatch);
+                                writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, resultString, isBasicIntegrity, isCtsMatch, timestamp);
 
 
-                        } else {
-                            // An error occurred while communicating with the service.
-                            Log.d(ProofModeApp.TAG, "ERROR! " + status.getStatusCode() + " " + status
-                                    .getStatusMessage());
+                            } else {
+                                // An error occurred while communicating with the service.
+                                Log.d(ProofModeApp.TAG, "ERROR! " + status.getStatusCode() + " " + status
+                                        .getStatusMessage());
 
+                            }
                         }
-                    }
-                });
+                    });
+                }
+            }
+            else
+            {
+                Toast.makeText(context,"ProofMode Alert: Unable to access media files",Toast.LENGTH_SHORT).show();
             }
 
         }
@@ -185,6 +191,7 @@ public class MediaWatcher extends BroadcastReceiver {
         if (android.os.Build.VERSION.SDK_INT >= 19) {
             file = new File(Environment.getExternalStoragePublicDirectory(
                     Environment.DIRECTORY_DOCUMENTS), PROOF_BASE_FOLDER);
+
         }
         else
         {
@@ -192,12 +199,9 @@ public class MediaWatcher extends BroadcastReceiver {
                     Environment.DIRECTORY_DOWNLOADS), PROOF_BASE_FOLDER);
         }
 
-
         file = new File(file, hash);
+        file.mkdirs();
 
-        if (!file.mkdirs()) {
-            Log.e("ProofMode", "Directory not created");
-        }
         return file;
     }
 

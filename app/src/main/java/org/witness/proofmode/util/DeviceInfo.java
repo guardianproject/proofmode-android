@@ -373,9 +373,9 @@ public class DeviceInfo {
         final android.net.NetworkInfo mobile =
                 connMgr.getNetworkInfo(ConnectivityManager.TYPE_MOBILE);
 
-        if (wifi.isAvailable()) {
+        if (wifi.isConnected()) {
             networkStatus = "Wifi";
-        } else if (mobile.isAvailable()) {
+        } else if (mobile.isConnected()) {
             networkStatus = getDataType(activity);
         } else {
             networkStatus = "noNetwork";
@@ -396,10 +396,10 @@ public class DeviceInfo {
             final android.net.NetworkInfo mobile =
                     connMgr.getNetworkInfo(ConnectivityManager.TYPE_MOBILE);
 
-            if (wifi.isAvailable()) {
-                networkStatus = "Wifi";
-            } else if (mobile.isAvailable()) {
-                networkStatus = getDataType(activity);
+            if (wifi.isConnected()) {
+                networkStatus = "Connected";
+            } else if (mobile.isConnected()) {
+                networkStatus = "Connected";
             } else {
                 networkStatus = "noNetwork";
                 networkStatus = "0";

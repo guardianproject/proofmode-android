@@ -17,6 +17,7 @@ public class ProofModeTileService extends TileService {
 
     private SharedPreferences mPrefs;
     private boolean isActive = false;
+    private Tile mTile;
 
     @Override
     public void onCreate() {
@@ -45,18 +46,16 @@ public class ProofModeTileService extends TileService {
     public void onStartListening() {
         super.onStartListening();
 
-        isActive = mPrefs.getBoolean("doProof",false);
-
-        Tile tile = getQsTile();
-        tile.setState(isActive? Tile.STATE_ACTIVE : Tile.STATE_INACTIVE);
-        tile.updateTile();
-
+        updateTileState ();
     }
 
-    @Override
-    public void onStopListening() {
-        super.onStopListening();
+    private void updateTileState ()
+    {
+        isActive = mPrefs.getBoolean("doProof",false);
 
+        mTile = getQsTile();
+        mTile.setState(isActive? Tile.STATE_ACTIVE : Tile.STATE_INACTIVE);
+        mTile.updateTile();
 
     }
 
@@ -64,14 +63,10 @@ public class ProofModeTileService extends TileService {
     public void onClick() {
         super.onClick();
 
-        //Start main activity
-        //startActivity(new Intent(this, MainActivity.class));
         isActive = !isActive;
         mPrefs.edit().putBoolean("doProof",isActive).commit();
+        updateTileState ();
 
-        Tile tile = getQsTile();
-        tile.setState(isActive? Tile.STATE_ACTIVE : Tile.STATE_INACTIVE);
-        tile.updateTile();
     }
 
 

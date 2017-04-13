@@ -183,18 +183,18 @@ public class ShareProofActivity extends AppCompatActivity {
 
         String hash = HashUtils.getSHA256FromFileContent(mediaPath);
 
-        File fileMedia = new File(mediaPath);
-        File fileFolder = MediaWatcher.getHashStorageDir(hash);
+        if (hash != null) {
+            File fileMedia = new File(mediaPath);
+            File fileFolder = MediaWatcher.getHashStorageDir(hash);
 
-        File fileMediaSig = new File(fileFolder, fileMedia.getName() + OPENPGP_FILE_TAG);
-        File fileMediaProof = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG);
-        File fileMediaProofSig = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
+            File fileMediaSig = new File(fileFolder, fileMedia.getName() + OPENPGP_FILE_TAG);
+            File fileMediaProof = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG);
+            File fileMediaProofSig = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
 
-        if (fileMediaSig.exists() && fileMediaProof.exists() && fileMediaProofSig.exists()) {
-
-            generateProofOutput(fileMedia, fileMediaSig, fileMediaProof, fileMediaProofSig, hash, shareMedia, fBatchProofOut, shareUris, sb);
-
-            return true;
+            if (fileMediaSig.exists() && fileMediaProof.exists() && fileMediaProofSig.exists()) {
+                generateProofOutput(fileMedia, fileMediaSig, fileMediaProof, fileMediaProofSig, hash, shareMedia, fBatchProofOut, shareUris, sb);
+                return true;
+            }
         }
 
         return false;

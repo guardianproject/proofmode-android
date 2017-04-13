@@ -2,7 +2,7 @@ apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 25
-    buildToolsVersion "25"
+    buildToolsVersion "25.0.2"
 
     lintOptions {
           abortOnError false
@@ -12,8 +12,8 @@ android {
         applicationId "org.witness.proofmode"
         minSdkVersion 14
         targetSdkVersion 25
-        versionCode 91
-        versionName "0.0.9-beta-1"
+        versionCode 92
+        versionName "0.0.9-beta-2"
     }
     buildTypes {
         release {
@@ -26,15 +26,15 @@ android {
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
     testCompile 'junit:junit:4.12'
-    compile 'com.android.support:appcompat-v7:25.0.0'
-    compile 'com.android.support:design:25.0.0'
+    compile 'com.android.support:appcompat-v7:25.3.0'
+    compile 'com.android.support:design:25.3.0'
     compile 'com.madgag.spongycastle:core:1.50.0.0'
     compile 'com.madgag.spongycastle:pg:1.50.0.0'
     compile 'com.madgag.spongycastle:pkix:1.50.0.0'
     compile 'com.madgag.spongycastle:prov:1.50.0.0'
     compile 'com.github.paolorotolo:appintro:4.1.0'
-    compile "com.android.support:support-v4:25.0.0"
-    compile "com.android.support:support-v13:25.0.0"
-    compile 'com.google.android.gms:play-services-safetynet:9.8.0'
+    compile "com.android.support:support-v4:25.3.0"
+    compile "com.android.support:support-v13:25.3.0"
+    compile 'com.google.android.gms:play-services-safetynet:10.2.0'
 
 }
