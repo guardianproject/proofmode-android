@@ -69,19 +69,31 @@ public class MediaWatcher extends BroadcastReceiver {
                 return;
             }
 
-            Uri uriMedia = (Uri) intent.getParcelableExtra(Intent.EXTRA_STREAM);
+            Uri uriMedia = intent.getData();
             if (uriMedia == null)
-                uriMedia = intent.getData();
+                uriMedia = (Uri) intent.getParcelableExtra(Intent.EXTRA_STREAM);
 
-            String mediaPathTmp = null;
+            if (uriMedia == null) //still null?
+                return;
 
-            Cursor cursor = context.getContentResolver().query(uriMedia, null, null, null, null);
-            if (cursor != null) {
-                cursor.moveToFirst();
-                mediaPathTmp = cursor.getString(cursor.getColumnIndex("_data"));
-                cursor.close();
-            } else {
-                mediaPathTmp = uriMedia.getPath();
+            String mediaPathTmp = uriMedia.getPath();
+
+            if (!new File(mediaPathTmp).exists())
+            {
+                //do a better job of handling a null situation
+                try {
+                    Cursor cursor = context.getContentResolver().query(uriMedia, null, null, null, null);
+                    if (cursor != null) {
+                        cursor.moveToFirst();
+                        mediaPathTmp = cursor.getString(cursor.getColumnIndex("_data"));
+                        cursor.close();
+                    } else {
+                        mediaPathTmp = uriMedia.getPath();
+                    }
+                } catch (Exception e) {
+                    //error looking up file?
+                    Log.e("MediaWatcher", "unable to find source media file for: " + mediaPathTmp,e);
+                }
             }
 
             final String mediaPath = mediaPathTmp;
