@@ -89,7 +89,7 @@ public class PgpUtils {
     private final static String FILE_SECRET_KEY_RING = "pkr.asc";
     private final static String FILE_PUBLIC_KEY_RING = "pub.asc";
 
-    private final static String password = "password"; //static string for local keystore
+    public final static String DEFAULT_PASSWORD = "password"; //static string for local keystore
     private final static String URL_POST_KEY_ENDPOINT = "https://pgp.mit.edu/pks/add";
 
     private PgpUtils ()
@@ -99,10 +99,15 @@ public class PgpUtils {
 
     public static synchronized PgpUtils getInstance (Context context)
     {
+        return getInstance(context, DEFAULT_PASSWORD);
+    }
+
+    public static synchronized PgpUtils getInstance (Context context, String password)
+    {
         if (mInstance == null)
         {
             mInstance = new PgpUtils();
-            mInstance.initCrypto(context);
+            mInstance.initCrypto(context, password);
         }
 
         return mInstance;
@@ -278,14 +283,14 @@ public class PgpUtils {
         publicOut.close();
     }
 
-    public void createDetachedSignature (File media, File mediaSig) throws Exception
+    public void createDetachedSignature (File media, File mediaSig, String password) throws Exception
     {
         DetachedSignatureProcessor.createSignature(pgpSec, new FileInputStream(media), new FileOutputStream(mediaSig), password.toCharArray(), true);
 
     }
 
 
-    public synchronized void initCrypto (Context context)
+    public synchronized void initCrypto (Context context, String password)
     {
         if (pgpSec == null) {
             try {

@@ -177,14 +177,14 @@ public class MediaWatcher extends BroadcastReceiver {
 
             //sign the media file
             if (!fileMediaSig.exists())
-                PgpUtils.getInstance(context).createDetachedSignature(new File(mediaPath), fileMediaSig);
+                PgpUtils.getInstance(context).createDetachedSignature(new File(mediaPath), fileMediaSig, PgpUtils.DEFAULT_PASSWORD);
 
             //add data to proof csv and sign again
             boolean writeHeaders = !fileMediaProof.exists();
             writeTextToFile(context, fileMediaProof, buildProof(context, mediaPath, writeHeaders, showDeviceIds, showLocation, safetyCheckResult, isBasicIntegrity, isCtsMatch, notarizeTimestamp));
 
             //sign the proof file again
-            PgpUtils.getInstance(context).createDetachedSignature(fileMediaProof, fileMediaProofSig);
+            PgpUtils.getInstance(context).createDetachedSignature(fileMediaProof, fileMediaProofSig, PgpUtils.DEFAULT_PASSWORD);
 
         } catch (Exception e) {
             Log.e("MediaWatcher", "Error signing media or proof", e);

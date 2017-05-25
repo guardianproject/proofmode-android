@@ -39,6 +39,8 @@ public class MainActivity extends AppCompatActivity {
     private final static String URL_ABOUT = "https://guardianproject.info/apps/camerav";
     private final static int REQUEST_CODE_INTRO = 9999;
 
+    private PgpUtils mPgpUtils;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -46,8 +48,9 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-
         mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+
+        mPgpUtils = PgpUtils.getInstance(this,mPrefs.getString("password",PgpUtils.DEFAULT_PASSWORD));
 
         SwitchCompat switchProof = (SwitchCompat)findViewById(R.id.switchProof);
         switchProof.setChecked(mPrefs.getBoolean("doProof",true));
@@ -202,8 +205,8 @@ public class MainActivity extends AppCompatActivity {
 
 
         try {
-            PgpUtils.getInstance(this).publishPublicKey();
-            String fingerprint = PgpUtils.getInstance(this).getPublicKeyFingerprint();
+            mPgpUtils.publishPublicKey();
+            String fingerprint = mPgpUtils.getPublicKeyFingerprint();
 
             Toast.makeText(this, "Opening public key page", Toast.LENGTH_LONG).show();
 
@@ -220,8 +223,8 @@ public class MainActivity extends AppCompatActivity {
 
 
         try {
-            PgpUtils.getInstance(this).publishPublicKey();
-            String pubKey = PgpUtils.getInstance(this).getPublicKey();
+            mPgpUtils.publishPublicKey();
+            String pubKey = mPgpUtils.getPublicKey();
 
             Intent intent = new Intent(Intent.ACTION_SEND);
             intent.setType("text/plain");
