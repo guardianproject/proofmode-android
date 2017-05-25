@@ -37,7 +37,7 @@ public class ProofModeTileService extends TileService {
         super.onTileAdded();
 
         changeTileState(mPrefs.getBoolean("doProof",true)?Tile.STATE_ACTIVE:Tile.STATE_INACTIVE);
-        
+
     }
 
     @Override
