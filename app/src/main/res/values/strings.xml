@@ -33,5 +33,11 @@
     <string name="share_proof_only">Share Proof Only (Metadata Files)</string>
     <string name="share_proof_with_media">Share Proof with Media (Everything!)</string>
     <string name="open_public_key_page">Opening public key page</string>
+    <string name="no_external_storage">WARNING: ProofMode enabled, but there is no external storage available!</string>
+    <string name="no_hash_generated">ProofMode Alert: Unable to access media files</string>
+    <string name="generating_proof_notify">Generating proof...</string>
+    <string name="inspect_photos">Inspecting photos</string>
+    <string name="inspect_videos">Inspecting videos</string>
+    <string name="select_app">Select the app to share proof to...</string>
 
 </resources>

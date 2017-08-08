@@ -19,6 +19,7 @@ import com.google.android.gms.common.api.Status;
 import com.google.android.gms.safetynet.SafetyNetApi;
 
 import org.witness.proofmode.ProofModeApp;
+import org.witness.proofmode.R;
 import org.witness.proofmode.crypto.HashUtils;
 import org.witness.proofmode.crypto.PgpUtils;
 import org.witness.proofmode.notarization.NotarizationListener;
@@ -39,6 +40,8 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
+
+import timber.log.Timber;
 
 public class MediaWatcher extends BroadcastReceiver {
 
@@ -67,10 +70,12 @@ public class MediaWatcher extends BroadcastReceiver {
             }
         }
 
+        Timber.d("Received intent. doProof is %b and autoNotarize is %b",doProof,autoNotarize);
+
         if (doProof) {
 
             if (!isExternalStorageWritable()) {
-                Toast.makeText(context, "WARNING: ProofMode enabled, but there is no external storage available!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(context, R.string.no_external_storage, Toast.LENGTH_SHORT).show();
                 return;
             }
 
@@ -97,7 +102,7 @@ public class MediaWatcher extends BroadcastReceiver {
                     }
                 } catch (Exception e) {
                     //error looking up file?
-                    Log.e("MediaWatcher", "unable to find source media file for: " + mediaPathTmp,e);
+                    Timber.w("unable to find source media file for: " + mediaPathTmp,e);
                 }
             }
 
@@ -109,6 +114,9 @@ public class MediaWatcher extends BroadcastReceiver {
             final String mediaHash = HashUtils.getSHA256FromFileContent(new File(mediaPath));
 
             if (mediaHash != null) {
+
+                Timber.d("Writing proof for hash %s for path %s",mediaHash, mediaPath);
+
                 //write immediate proof, w/o safety check result
                 writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, null, false, false, -1, null);
 
@@ -128,13 +136,13 @@ public class MediaWatcher extends BroadcastReceiver {
                                 boolean isBasicIntegrity = resp.isBasicIntegrity();
                                 boolean isCtsMatch = resp.isCtsProfileMatch();
 
-                                Log.d(ProofModeApp.TAG, "Success! SafetyNet result: isBasicIntegrity: " + isBasicIntegrity + " isCts:" + isCtsMatch);
+                                Timber.d("Success! SafetyNet result: isBasicIntegrity: " + isBasicIntegrity + " isCts:" + isCtsMatch);
                                 writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, resultString, isBasicIntegrity, isCtsMatch, timestamp, null);
 
 
                             } else {
                                 // An error occurred while communicating with the service.
-                                Log.d(ProofModeApp.TAG, "ERROR! " + status.getStatusCode() + " " + status
+                                Timber.d("ERROR! " + status.getStatusCode() + " " + status
                                         .getStatusMessage());
 
                             }
@@ -142,14 +150,18 @@ public class MediaWatcher extends BroadcastReceiver {
                     });
 
                     TimeBeatNotarizationProvider tbNotarize = new TimeBeatNotarizationProvider(context);
-                    tbNotarize.notarize("proof mode test for: " + mediaHash, new File(mediaPath), new NotarizationListener() {
+                    tbNotarize.notarize("ProofMode Media Hash: " + mediaHash, new File(mediaPath), new NotarizationListener() {
                         @Override
                         public void notarizationSuccessful(String result) {
+
+                            Timber.d("Got Timebeat success response: " + result);
                             writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, null, false, false, -1, "TimeBeat: " + result);
                         }
 
                         @Override
                         public void notarizationFailed(int errCode, String message) {
+
+                            Timber.d("Got Timebeat error response: " + message);
                             writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, null, false, false, -1, "TimeBeat Error: " + message);
 
                         }
@@ -160,7 +172,7 @@ public class MediaWatcher extends BroadcastReceiver {
             }
             else
             {
-                Toast.makeText(context,"ProofMode Alert: Unable to access media files",Toast.LENGTH_SHORT).show();
+                Toast.makeText(context, R.string.no_hash_generated,Toast.LENGTH_SHORT).show();
             }
 
         }

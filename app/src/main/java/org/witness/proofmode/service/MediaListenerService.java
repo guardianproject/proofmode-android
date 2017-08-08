@@ -13,6 +13,8 @@ import org.witness.proofmode.util.RecursiveFileObserver;
 
 import java.io.File;
 
+import timber.log.Timber;
+
 public class MediaListenerService extends Service {
 
     public static FileObserver observer;
@@ -32,6 +34,8 @@ public class MediaListenerService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+
+        Timber.d("starting MediaListenerService for file observing");
 
         if (observer == null)
             startWatching();

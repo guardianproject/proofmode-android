@@ -13,8 +13,7 @@ public class OnBootReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
 
         if (android.os.Build.VERSION.SDK_INT >= 24) {
-            PhotosContentJob.scheduleJob(context);
-            VideosContentJob.scheduleJob(context);
+            //do nothing; the contentjobs are started in the app onCreate() right?
         }
         else
         {

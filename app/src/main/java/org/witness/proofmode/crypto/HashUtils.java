@@ -2,8 +2,13 @@ package org.witness.proofmode.crypto;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.InputStream;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+
+import timber.log.Timber;
 
 /**
  * Created by n8fr8 on 10/9/16.
@@ -30,8 +35,19 @@ public class HashUtils {
             byte[] digestResult = digest.digest();
             return asHex(digestResult);
         }
-        catch (Exception e)
+        catch (FileNotFoundException e)
         {
+            Timber.e("Could not find the file to generate hash %s",filename.getAbsolutePath());
+            return null;
+        }
+        catch (IOException e)
+        {
+            Timber.e(e,"Error generating hash; IOError");
+            return null;
+        }
+        catch (NoSuchAlgorithmException e)
+        {
+            Timber.e(e,"Error generating hash; No such algorithm");
             return null;
         }
     }

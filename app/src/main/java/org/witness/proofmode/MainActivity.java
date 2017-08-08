@@ -28,6 +28,7 @@ import org.spongycastle.openpgp.PGPUtil;
 import org.witness.proofmode.crypto.DetachedSignatureProcessor;
 import org.witness.proofmode.crypto.PgpUtils;
 import org.witness.proofmode.service.MediaListenerService;
+import org.witness.proofmode.util.GPSTracker;
 
 import java.io.IOException;
 import java.security.Security;
@@ -75,6 +76,7 @@ public class MainActivity extends AppCompatActivity {
                 if (isChecked)
                 {
                     askForPermission(Manifest.permission.ACCESS_FINE_LOCATION, 1);
+                    refreshLocation();
                 }
             }
         });
@@ -114,8 +116,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-
-        startService(new Intent(getBaseContext(), MediaListenerService.class));
 
         SwitchCompat switchProof = (SwitchCompat)findViewById(R.id.switchProof);
         switchProof.setChecked(mPrefs.getBoolean("doProof",true));
@@ -251,6 +251,14 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == REQUEST_CODE_INTRO)
         {
             askForPermission(Manifest.permission.ACCESS_FINE_LOCATION, 1);
+        }
+    }
+
+    private void refreshLocation ()
+    {
+        GPSTracker gpsTracker = new GPSTracker(this);
+        if (gpsTracker.canGetLocation()) {
+            gpsTracker.getLocation();
         }
     }
 }

@@ -4,6 +4,7 @@ package org.witness.proofmode.service;
  * Created by n8fr8 on 3/3/17.
  */
 import android.annotation.TargetApi;
+import android.app.NotificationManager;
 import android.app.job.JobInfo;
 import android.app.job.JobParameters;
 import android.app.job.JobScheduler;
@@ -17,12 +18,17 @@ import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.provider.MediaStore;
+import android.support.v7.app.NotificationCompat;
 import android.util.Log;
 import android.widget.Toast;
+
+import org.witness.proofmode.R;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+
+import timber.log.Timber;
 
 /**
  * Example stub job to monitor when there is a change to photos in the media provider.
@@ -66,7 +72,8 @@ public class PhotosContentJob extends JobService {
 
         // Also look for general reports of changes in the overall provider.
         builder.addTriggerContentUri(new JobInfo.TriggerContentUri(MEDIA_URI, 0));
-
+        builder.setRequiresDeviceIdle(false);
+        builder.setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY);
         builder.setTriggerContentMaxDelay(3000);
 
         JOB_INFO = builder.build();
@@ -87,7 +94,7 @@ public class PhotosContentJob extends JobService {
     public static void scheduleJob(Context context) {
         JobScheduler js = context.getSystemService(JobScheduler.class);
         js.schedule(JOB_INFO);
-        Log.i("PhotosContentJob", "JOB SCHEDULED!");
+        Timber.d("PhotosContentJob: JOB SCHEDULED!");
     }
 
     // Check whether this job is currently scheduled.
@@ -113,8 +120,18 @@ public class PhotosContentJob extends JobService {
 
     @Override
     public boolean onStartJob(JobParameters params) {
-//        Log.i("PhotosContentJob", "JOB STARTED!");
+        Timber.d("JOB STARTED!");
         mRunningParams = params;
+
+        int notifyId = 1;
+
+        NotificationManager manager =
+                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this);
+        builder.setContentTitle(getString(R.string.generating_proof_notify))
+                .setContentText(getString(R.string.inspect_photos))
+                .setSmallIcon(R.drawable.ic_proof_notify);
+        manager.notify(notifyId, builder.build());
 
         // Did we trigger due to a content change?
         if (params.getTriggeredContentAuthorities() != null) {
@@ -137,6 +154,9 @@ public class PhotosContentJob extends JobService {
                 }
 
                 if (ids.size() > 0) {
+
+                    builder.setProgress(ids.size(), 0, false);
+
                     // If we found some ids that changed, we want to determine what they are.
                     // First, we do a query with content provider to ask about all of them.
                     StringBuilder selection = new StringBuilder();
@@ -158,12 +178,17 @@ public class PhotosContentJob extends JobService {
                         cursor = getContentResolver().query(
                                 MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                                 PROJECTION, selection.toString(), null, null);
+
+                        int mediaIdx=0;
+                        mediaIdx++;
+
                         while (cursor.moveToNext()) {
 
                             // We only care about files in the DCIM directory.
                             String path = cursor.getString(PROJECTION_DATA);
                             if (path.startsWith(DCIM_DIR)) {
 
+                                Timber.d("found new photo files for generating proof");
                                 //NEW PHOTOS FOUND!
                                 haveFiles = true;
 
@@ -171,6 +196,8 @@ public class PhotosContentJob extends JobService {
                                 intent.setData(Uri.fromFile(new File(path)));
                                 new MediaWatcher().onReceive(PhotosContentJob.this,intent);
 
+                                builder.setProgress(ids.size(), mediaIdx++, false);
+                                manager.notify(notifyId, builder.build());
                             }
                         }
                     } catch (SecurityException e) {
@@ -189,12 +216,13 @@ public class PhotosContentJob extends JobService {
                 rescanNeeded = true;
             }
 
-        } else {
-
         }
 
+        manager.cancel(notifyId);
+
+
         // We will emulate taking some time to do this work, so we can see batching happen.
-        mHandler.postDelayed(mWorker, 10*1000);
+        mHandler.postDelayed(mWorker, 100);
         return true;
     }
 
