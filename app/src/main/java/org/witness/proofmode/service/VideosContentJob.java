@@ -64,6 +64,7 @@ public class VideosContentJob extends JobService {
 
         // Also look for general reports of changes in the overall provider.
         builder.addTriggerContentUri(new JobInfo.TriggerContentUri(MEDIA_URI, 0));
+        builder.setTriggerContentMaxDelay(3000);
         JOB_INFO = builder.build();
     }
 
@@ -82,7 +83,7 @@ public class VideosContentJob extends JobService {
     public static void scheduleJob(Context context) {
         JobScheduler js = context.getSystemService(JobScheduler.class);
         js.schedule(JOB_INFO);
-        Log.i("PhotosContentJob", "JOB SCHEDULED!");
+        Log.i("VideosContentJob", "JOB SCHEDULED!");
     }
 
     // Check whether this job is currently scheduled.

@@ -21,6 +21,7 @@ import com.google.android.gms.safetynet.SafetyNetApi;
 import org.witness.proofmode.ProofModeApp;
 import org.witness.proofmode.crypto.HashUtils;
 import org.witness.proofmode.crypto.PgpUtils;
+import org.witness.proofmode.notarization.NotarizationListener;
 import org.witness.proofmode.notarization.TimeBeatNotarizationProvider;
 import org.witness.proofmode.util.DeviceInfo;
 import org.witness.proofmode.util.GPSTracker;
@@ -109,7 +110,7 @@ public class MediaWatcher extends BroadcastReceiver {
 
             if (mediaHash != null) {
                 //write immediate proof, w/o safety check result
-                writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, null, false, false, -1);
+                writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, null, false, false, -1, null);
 
                 if (autoNotarize) {
 
@@ -128,7 +129,7 @@ public class MediaWatcher extends BroadcastReceiver {
                                 boolean isCtsMatch = resp.isCtsProfileMatch();
 
                                 Log.d(ProofModeApp.TAG, "Success! SafetyNet result: isBasicIntegrity: " + isBasicIntegrity + " isCts:" + isCtsMatch);
-                                writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, resultString, isBasicIntegrity, isCtsMatch, timestamp);
+                                writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, resultString, isBasicIntegrity, isCtsMatch, timestamp, null);
 
 
                             } else {
@@ -141,7 +142,20 @@ public class MediaWatcher extends BroadcastReceiver {
                     });
 
                     TimeBeatNotarizationProvider tbNotarize = new TimeBeatNotarizationProvider(context);
-                    tbNotarize.notarize("proof mode test for: " + mediaHash, new File(mediaPath));
+                    tbNotarize.notarize("proof mode test for: " + mediaHash, new File(mediaPath), new NotarizationListener() {
+                        @Override
+                        public void notarizationSuccessful(String result) {
+                            writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, null, false, false, -1, "TimeBeat: " + result);
+                        }
+
+                        @Override
+                        public void notarizationFailed(int errCode, String message) {
+                            writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, null, false, false, -1, "TimeBeat Error: " + message);
+
+                        }
+                    });
+
+
                 }
             }
             else
@@ -170,7 +184,7 @@ public class MediaWatcher extends BroadcastReceiver {
         }
     }
 
-    private void writeProof (Context context, String mediaPath, String hash, boolean showDeviceIds, boolean showLocation, String safetyCheckResult, boolean isBasicIntegrity, boolean isCtsMatch, long notarizeTimestamp)
+    private void writeProof (Context context, String mediaPath, String hash, boolean showDeviceIds, boolean showLocation, String safetyCheckResult, boolean isBasicIntegrity, boolean isCtsMatch, long notarizeTimestamp, String notes)
     {
 
         File fileMedia = new File(mediaPath);
@@ -188,7 +202,7 @@ public class MediaWatcher extends BroadcastReceiver {
 
             //add data to proof csv and sign again
             boolean writeHeaders = !fileMediaProof.exists();
-            writeTextToFile(context, fileMediaProof, buildProof(context, mediaPath, writeHeaders, showDeviceIds, showLocation, safetyCheckResult, isBasicIntegrity, isCtsMatch, notarizeTimestamp));
+            writeTextToFile(context, fileMediaProof, buildProof(context, mediaPath, writeHeaders, showDeviceIds, showLocation, safetyCheckResult, isBasicIntegrity, isCtsMatch, notarizeTimestamp, notes));
 
             //sign the proof file again
             PgpUtils.getInstance(context).createDetachedSignature(fileMediaProof, fileMediaProofSig, PgpUtils.DEFAULT_PASSWORD);
@@ -233,7 +247,7 @@ public class MediaWatcher extends BroadcastReceiver {
         return false;
     }
 
-    private String buildProof (Context context, String mediaPath, boolean writeHeaders, boolean showDeviceIds, boolean showLocation, String safetyCheckResult, boolean isBasicIntegrity, boolean isCtsMatch, long notarizeTimestamp)
+    private String buildProof (Context context, String mediaPath, boolean writeHeaders, boolean showDeviceIds, boolean showLocation, String safetyCheckResult, boolean isBasicIntegrity, boolean isCtsMatch, long notarizeTimestamp, String notes)
     {
         File fileMedia = new File (mediaPath);
         String hash = getSHA256FromFileContent(mediaPath);
@@ -245,7 +259,7 @@ public class MediaWatcher extends BroadcastReceiver {
         hmProof.put("File",mediaPath);
         hmProof.put("SHA256",hash);
         hmProof.put("Modified",df.format(new Date(fileMedia.lastModified())));
-        hmProof.put("CurrentDateTime0GMT",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_CURRENT_DATE_TIME_ZERO_GMT));
+        hmProof.put("CurrentDateTime0GMT",df.format(new Date(Long.parseLong(DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_CURRENT_DATE_TIME_ZERO_GMT)))));
 
         if (showDeviceIds) {
             hmProof.put("DeviceID", DeviceInfo.getDeviceId(context));
@@ -297,7 +311,7 @@ public class MediaWatcher extends BroadcastReceiver {
             hmProof.put("SafetyCheck", safetyCheckResult);
             hmProof.put("SafetyCheckBasicIntegrity", isBasicIntegrity+"");
             hmProof.put("SafetyCheckCtsMatch", isCtsMatch+"");
-            hmProof.put("SafetyCheckTimestamp", notarizeTimestamp+"");
+            hmProof.put("SafetyCheckTimestamp", df.format(new Date(notarizeTimestamp)));
         }
         else
         {
@@ -306,6 +320,11 @@ public class MediaWatcher extends BroadcastReceiver {
             hmProof.put("SafetyCheckCtsMatch", "");
             hmProof.put("SafetyCheckTimestamp", "");
         }
+
+        if (!TextUtils.isEmpty(notes))
+            hmProof.put("Notes",notes);
+        else
+            hmProof.put("Notes","");
 
         StringBuffer sb = new StringBuffer();
 
@@ -319,7 +338,9 @@ public class MediaWatcher extends BroadcastReceiver {
 
         for (String key : hmProof.keySet())
         {
-            sb.append(hmProof.get(key)).append(",");
+            String value = hmProof.get(key);
+            value = value.replace(',',' '); //remove commas from CSV file
+            sb.append(value).append(",");
         }
 
         sb.append("\n");

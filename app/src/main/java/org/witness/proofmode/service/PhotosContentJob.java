@@ -66,6 +66,9 @@ public class PhotosContentJob extends JobService {
 
         // Also look for general reports of changes in the overall provider.
         builder.addTriggerContentUri(new JobInfo.TriggerContentUri(MEDIA_URI, 0));
+
+        builder.setTriggerContentMaxDelay(3000);
+
         JOB_INFO = builder.build();
     }
 
