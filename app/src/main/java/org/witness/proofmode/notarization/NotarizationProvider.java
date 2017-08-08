@@ -8,7 +8,7 @@ import java.io.File;
 
 public interface NotarizationProvider {
 
-    public String notarize (String hash, File fileMedia);
+    public void notarize (String hash, File fileMedia, NotarizationListener listener);
 
     public String getProofURI (String hash);
 

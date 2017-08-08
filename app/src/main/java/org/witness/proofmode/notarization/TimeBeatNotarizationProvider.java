@@ -49,13 +49,12 @@ public class TimeBeatNotarizationProvider implements NotarizationProvider {
     }
 
     @Override
-    public String notarize(String comment, File fileMedia) {
+    public void notarize(String comment, File fileMedia, NotarizationListener listener) {
 
-        String response = null;
 
-        new NotarizationTask(comment).execute(fileMedia);
+        new NotarizationTask(comment, listener).execute(fileMedia);
 
-        return response;
+
     }
 
     @Override
@@ -138,11 +137,13 @@ public class TimeBeatNotarizationProvider implements NotarizationProvider {
     private class NotarizationTask extends AsyncTask<File, Integer, Long> {
 
         private String mComment = null;
+        private NotarizationListener mListener = null;
 
-        public NotarizationTask(String comment)
+        public NotarizationTask(String comment, NotarizationListener listener)
         {
             super();
             mComment = comment;
+            mListener = listener;
         }
 
         protected Long doInBackground(File... fileMedias) {
@@ -165,8 +166,10 @@ public class TimeBeatNotarizationProvider implements NotarizationProvider {
                 try {
                     String response = doNotarizationRequest(fileMedia.length(), fileMedia.getName(), mimeType, sha256hash, mComment);
                     Log.i(TAG,"got notarization response: " + response);
+                    mListener.notarizationSuccessful(response);
                 } catch (Exception e) {
                     Log.e(TAG, "Error notarizing via timebeat", e);
+                    mListener.notarizationFailed(-1,e.getMessage());
                 }
             }
 
