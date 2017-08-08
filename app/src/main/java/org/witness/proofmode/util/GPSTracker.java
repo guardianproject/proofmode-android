@@ -1,6 +1,7 @@
 package org.witness.proofmode.util;
 
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -9,6 +10,7 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.Handler;
 import android.provider.Settings;
 import android.util.Log;
 
@@ -42,7 +44,9 @@ public final class GPSTracker implements LocationListener {
 
     public GPSTracker(Context context) {
         this.mContext = context;
+
         getLocation();
+
     }
 
     /**
@@ -73,10 +77,6 @@ public final class GPSTracker implements LocationListener {
                 this.canGetLocation = true;
                 if (isNetworkEnabled) {
                     location=null;
-                    locationManager.requestLocationUpdates(
-                            LocationManager.NETWORK_PROVIDER,
-                            MIN_TIME_BW_UPDATES,
-                            MIN_DISTANCE_CHANGE_FOR_UPDATES, this);
                     Log.d("Network", "Network");
                     if (locationManager != null) {
                         location = locationManager
@@ -91,10 +91,6 @@ public final class GPSTracker implements LocationListener {
                 if (isGPSEnabled) {
                     location=null;
                     if (location == null) {
-                        locationManager.requestLocationUpdates(
-                                LocationManager.GPS_PROVIDER,
-                                MIN_TIME_BW_UPDATES,
-                                MIN_DISTANCE_CHANGE_FOR_UPDATES, this);
                         Log.d("GPS Enabled", "GPS Enabled");
                         if (locationManager != null) {
                             location = locationManager
