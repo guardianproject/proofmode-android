@@ -21,6 +21,7 @@ import com.google.android.gms.safetynet.SafetyNetApi;
 import org.witness.proofmode.ProofModeApp;
 import org.witness.proofmode.crypto.HashUtils;
 import org.witness.proofmode.crypto.PgpUtils;
+import org.witness.proofmode.notarization.TimeBeatNotarizationProvider;
 import org.witness.proofmode.util.DeviceInfo;
 import org.witness.proofmode.util.GPSTracker;
 import org.witness.proofmode.util.SafetyNetCheck;
@@ -33,6 +34,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.security.MessageDigest;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 
 public class MediaWatcher extends BroadcastReceiver {
@@ -101,7 +105,7 @@ public class MediaWatcher extends BroadcastReceiver {
             final boolean showDeviceIds = prefs.getBoolean("trackDeviceId",true);;
             final boolean showLocation = prefs.getBoolean("trackLocation",true);;;
 
-            final String mediaHash = HashUtils.getSHA256FromFileContent(mediaPath);
+            final String mediaHash = HashUtils.getSHA256FromFileContent(new File(mediaPath));
 
             if (mediaHash != null) {
                 //write immediate proof, w/o safety check result
@@ -135,6 +139,9 @@ public class MediaWatcher extends BroadcastReceiver {
                             }
                         }
                     });
+
+                    TimeBeatNotarizationProvider tbNotarize = new TimeBeatNotarizationProvider(context);
+                    tbNotarize.notarize("proof mode test for: " + mediaHash, new File(mediaPath));
                 }
             }
             else
@@ -231,11 +238,13 @@ public class MediaWatcher extends BroadcastReceiver {
         File fileMedia = new File (mediaPath);
         String hash = getSHA256FromFileContent(mediaPath);
 
+        DateFormat df = DateFormat.getDateTimeInstance(DateFormat.FULL,DateFormat.FULL);
+
         HashMap<String, String> hmProof = new HashMap<>();
 
         hmProof.put("File",mediaPath);
         hmProof.put("SHA256",hash);
-        hmProof.put("Modified",fileMedia.lastModified()+"");
+        hmProof.put("Modified",df.format(new Date(fileMedia.lastModified())));
         hmProof.put("CurrentDateTime0GMT",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_CURRENT_DATE_TIME_ZERO_GMT));
 
         if (showDeviceIds) {
