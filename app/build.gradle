@@ -36,5 +36,5 @@ dependencies {
     compile "com.android.support:support-v4:25.3.0"
     compile "com.android.support:support-v13:25.3.0"
     compile 'com.google.android.gms:play-services-safetynet:10.2.0'
-
+    compile 'com.squareup.okhttp3:okhttp:3.8.1'
 }

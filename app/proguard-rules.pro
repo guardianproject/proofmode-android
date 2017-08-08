@@ -32,7 +32,9 @@
 
 -dontwarn javax.naming.**
 -dontwarn android.support.**
-
+-dontwarn okio.**
+-dontwarn javax.annotation.Nullable
+-dontwarn javax.annotation.ParametersAreNonnullByDefault
 
 ####
 -keep class org.**  { *; }

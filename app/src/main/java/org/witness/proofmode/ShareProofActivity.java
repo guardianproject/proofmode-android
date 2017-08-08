@@ -181,7 +181,7 @@ public class ShareProofActivity extends AppCompatActivity {
     private boolean shareProof (String mediaPath, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut, boolean shareMedia)
     {
 
-        String hash = HashUtils.getSHA256FromFileContent(mediaPath);
+        String hash = HashUtils.getSHA256FromFileContent(new File(mediaPath));
 
         if (hash != null) {
             File fileMedia = new File(mediaPath);
@@ -206,7 +206,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
         String baseFolder = "proofmode";
 
-        String hash = HashUtils.getSHA256FromFileContent(mediaPath);
+        String hash = HashUtils.getSHA256FromFileContent(new File(mediaPath));
 
         File fileMedia = new File(mediaPath);
         File fileMediaSig = new File(mediaPath + ".asc");

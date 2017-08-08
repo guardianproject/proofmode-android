@@ -1,5 +1,6 @@
 package org.witness.proofmode.crypto;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.security.MessageDigest;
@@ -9,7 +10,7 @@ import java.security.MessageDigest;
  */
 public class HashUtils {
 
-    public static String getSHA256FromFileContent(String filename)
+    public static String getSHA256FromFileContent(File filename)
     {
 
         try
