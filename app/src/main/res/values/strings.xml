@@ -23,5 +23,15 @@
 
     <string name="intro4_title">Share Proof</string>
     <string name="intro4_desc">When you need to share something with proof, just open the photo or video, and select SHARE PROOF from the Share menu.</string>
+    <string name="share_notarization">SHARE NOTARIZATION TO...</string>
+    <string name="share_proof">SHARE PROOF TO...</string>
+    <string name="proof_error_message">ERROR: The proof does not exist or has been modified</string>
+    <string name="last_modified">was last modified at</string>
+    <string name="has_hash">and has a SHA-256 hash of</string>
+    <string name="proof_signed">This proof is signed by PGP key 0x</string>
+    <string name="notarize_only">Notarize Only (Short Text)</string>
+    <string name="share_proof_only">Share Proof Only (Metadata Files)</string>
+    <string name="share_proof_with_media">Share Proof with Media (Everything!)</string>
+    <string name="open_public_key_page">Opening public key page</string>
 
 </resources>

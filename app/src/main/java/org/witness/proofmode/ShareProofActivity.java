@@ -40,7 +40,7 @@ public class ShareProofActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
 
-        CharSequence items[] = {"Notarize Only (Short Text)", "Share Proof Only (Metadata Files)","Share Proof with Media (Everything!)",};
+        CharSequence items[] = {getString(R.string.notarize_only), getString(R.string.share_proof_only),getString(R.string.share_proof_with_media),};
 
         new AlertDialog.Builder(this).setItems(items, new DialogInterface.OnClickListener() {
             @Override
@@ -129,7 +129,7 @@ public class ShareProofActivity extends AppCompatActivity {
                 shareIntent = new Intent(Intent.ACTION_SEND);
                 shareIntent.putExtra(Intent.EXTRA_TEXT, shareText.toString());
                 shareIntent.setType("*/*");
-                startActivity(Intent.createChooser(shareIntent, "SHARE NOTARIZATION TO..."));
+                startActivity(Intent.createChooser(shareIntent, getString(R.string.share_notarization)));
             }
             else {
 
@@ -142,7 +142,7 @@ public class ShareProofActivity extends AppCompatActivity {
                 shareIntent.putExtra(Intent.EXTRA_TEXT, arrayListStrings);
                 shareIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, shareUris);
                 shareIntent.setType("*/*");
-                startActivity(Intent.createChooser(shareIntent, "SHARE PROOF TO..."));
+                startActivity(Intent.createChooser(shareIntent, getString(R.string.share_proof)));
             }
         }
 
@@ -169,7 +169,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
                 if (!success)
                 {
-                    Toast.makeText(this, "ERROR: The proof does not exist or has been modified",Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, R.string.proof_error_message,Toast.LENGTH_LONG).show();
                 }
             }
         }
@@ -247,10 +247,10 @@ public class ShareProofActivity extends AppCompatActivity {
         String fingerprint = PgpUtils.getInstance(this).getPublicKeyFingerprint();
 
         sb.append(fileMedia.getName()).append(' ');
-        sb.append(" was last modified at ").append(new Date(fileMedia.lastModified()).toGMTString());
-        sb.append(" and has a SHA-256 hash of ").append(hash);
+        sb.append(getString(R.string.last_modified)).append(new Date(fileMedia.lastModified()).toGMTString());
+        sb.append(getString(R.string.has_hash)).append(hash);
         sb.append("\n\n");
-        sb.append("This proof is signed by PGP key 0x" + fingerprint);
+        sb.append(getString(R.string.proof_signed) + fingerprint);
 
         if (shareMedia) {
             shareUris.add(Uri.fromFile(fileMedia)); // Add your image URIs here

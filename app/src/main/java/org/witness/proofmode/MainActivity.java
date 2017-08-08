@@ -208,7 +208,7 @@ public class MainActivity extends AppCompatActivity {
             mPgpUtils.publishPublicKey();
             String fingerprint = mPgpUtils.getPublicKeyFingerprint();
 
-            Toast.makeText(this, "Opening public key page", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, R.string.open_public_key_page, Toast.LENGTH_LONG).show();
 
             openUrl("https://pgp.mit.edu/pks/lookup?op=get&search=0x" + fingerprint);
         }
