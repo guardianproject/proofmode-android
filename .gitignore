@@ -47,4 +47,4 @@ captures/
 # Keystore files
 *.jks
 
-app/src/main/res/values/enigiotime.xml
+app/src/main/res/values/enigio.xml
