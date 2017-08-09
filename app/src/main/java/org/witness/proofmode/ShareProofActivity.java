@@ -8,6 +8,7 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Environment;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -17,6 +18,7 @@ import android.widget.Toast;
 
 import org.witness.proofmode.crypto.HashUtils;
 import org.witness.proofmode.crypto.PgpUtils;
+import org.witness.proofmode.service.MediaListenerService;
 import org.witness.proofmode.service.MediaWatcher;
 
 import java.io.BufferedReader;
@@ -198,32 +200,57 @@ public class ShareProofActivity extends AppCompatActivity {
 
     private boolean proofExists (Uri mediaUri)
     {
+        boolean result = false;
+
         Cursor cursor = getContentResolver().query(mediaUri,      null,null, null, null);
 
         if (cursor.getCount() > 0) {
 
             cursor.moveToFirst();
-            String mediaPath = cursor.getString(cursor.getColumnIndex("_data"));
+            final String mediaPath = cursor.getString(cursor.getColumnIndex("_data"));
 
-            String hash = HashUtils.getSHA256FromFileContent(new File(mediaPath));
+            if (mediaPath != null) {
 
-            if (hash != null) {
-                File fileMedia = new File(mediaPath);
-                File fileFolder = MediaWatcher.getHashStorageDir(hash);
+                String hash = HashUtils.getSHA256FromFileContent(new File(mediaPath));
 
-                File fileMediaSig = new File(fileFolder, fileMedia.getName() + OPENPGP_FILE_TAG);
-                File fileMediaProof = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG);
-                File fileMediaProofSig = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
+                if (hash != null) {
+                    File fileMedia = new File(mediaPath);
+                    File fileFolder = MediaWatcher.getHashStorageDir(hash);
 
-                if (fileMediaSig.exists() && fileMediaProof.exists() && fileMediaProofSig.exists()) {
-                    return true;
+                    File fileMediaSig = new File(fileFolder, fileMedia.getName() + OPENPGP_FILE_TAG);
+                    File fileMediaProof = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG);
+                    File fileMediaProofSig = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
+
+                    if (fileMediaSig.exists() && fileMediaProof.exists() && fileMediaProofSig.exists()) {
+                        result = true;
+                    }
+                    else {
+                         //generate now?
+
+                        new AsyncTask<Void, Void, String>() {
+                            protected String doInBackground(Void... params) {
+                                Intent intent = new Intent();
+                                intent.setData(Uri.fromFile(new File(mediaPath)));
+                                new MediaWatcher().onReceive(ShareProofActivity.this, intent);
+                                return "message";
+                            }
+                            protected void onPostExecute(String msg) {
+                                // Post Code
+                                // Use `msg` in code
+                            }
+                        }.execute();
+
+
+                        result = true;
+
+                    }
                 }
             }
         }
 
         cursor.close();
 
-        return false;
+        return result;
     }
 
     private boolean processUri (Uri mediaUri, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut, boolean shareMedia)
