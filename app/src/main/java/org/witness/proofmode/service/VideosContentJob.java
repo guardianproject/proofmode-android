@@ -19,6 +19,7 @@ import android.os.Handler;
 import android.provider.MediaStore;
 import android.support.v7.app.NotificationCompat;
 import android.util.Log;
+import android.widget.Toast;
 
 import org.witness.proofmode.R;
 
@@ -64,15 +65,11 @@ public class VideosContentJob extends JobService {
         // Look for specific changes to images in the provider.
         builder.addTriggerContentUri(new JobInfo.TriggerContentUri(
                 MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
-
                 JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS));
 
-
         // Also look for general reports of changes in the overall provider.
-        builder.addTriggerContentUri(new JobInfo.TriggerContentUri(MEDIA_URI, 0));
+      //  builder.addTriggerContentUri(new JobInfo.TriggerContentUri(MEDIA_URI, 0));
         builder.setTriggerContentMaxDelay(3000);
-        builder.setRequiresDeviceIdle(false);
-        builder.setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY);
         JOB_INFO = builder.build();
     }
 
@@ -80,8 +77,9 @@ public class VideosContentJob extends JobService {
     final Handler mHandler = new Handler();
     final Runnable mWorker = new Runnable() {
         @Override public void run() {
-            scheduleJob(VideosContentJob.this);
+            doWork ();
             jobFinished(mRunningParams, false);
+            scheduleJob(VideosContentJob.this);
         }
     };
 
@@ -120,6 +118,12 @@ public class VideosContentJob extends JobService {
 //        Log.i("PhotosContentJob", "JOB STARTED!");
         mRunningParams = params;
 
+        mHandler.postDelayed(mWorker, 100);
+        return true;
+    }
+
+    private void doWork ()
+    {
 
         int notifyId = 2;
 
@@ -131,17 +135,16 @@ public class VideosContentJob extends JobService {
                 .setSmallIcon(R.drawable.ic_proof_notify);
         manager.notify(notifyId, builder.build());
 
-
         // Did we trigger due to a content change?
-        if (params.getTriggeredContentAuthorities() != null) {
+        if (mRunningParams.getTriggeredContentAuthorities() != null) {
             boolean rescanNeeded = false;
 
-            if (params.getTriggeredContentUris() != null) {
+            if (mRunningParams.getTriggeredContentUris() != null) {
                 // If we have details about which URIs changed, then iterate through them
                 // and collect either the ids that were impacted or note that a generic
                 // change has happened.
                 ArrayList<String> ids = new ArrayList<>();
-                for (Uri uri : params.getTriggeredContentUris()) {
+                for (Uri uri : mRunningParams.getTriggeredContentUris()) {
                     List<String> path = uri.getPathSegments();
                     if (path != null && path.size() == EXTERNAL_PATH_SEGMENTS.size()+1) {
                         // This is a specific file.
@@ -211,16 +214,14 @@ public class VideosContentJob extends JobService {
                 // We don't have any details about URIs (because too many changed at once),
                 // so just note that we need to do a full rescan.
                 rescanNeeded = true;
+                Timber.w("rescan is needed since many videos changed at once");
+                Toast.makeText(this,"Rescan is needed!",Toast.LENGTH_SHORT).show();
             }
 
         }
 
         manager.cancel(notifyId);
 
-
-        // We will emulate taking some time to do this work, so we can see batching happen.
-        mHandler.postDelayed(mWorker, 100);
-        return true;
     }
 
     @Override

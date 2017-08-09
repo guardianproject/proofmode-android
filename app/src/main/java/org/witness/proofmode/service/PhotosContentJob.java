@@ -31,7 +31,7 @@ import java.util.List;
 import timber.log.Timber;
 
 /**
- * Example stub job to monitor when there is a change to photos in the media provider.
+ * Job to monitor when there is a change to photos in the media provider.
  */
 
 @TargetApi(24)
@@ -66,14 +66,10 @@ public class PhotosContentJob extends JobService {
         // Look for specific changes to images in the provider.
         builder.addTriggerContentUri(new JobInfo.TriggerContentUri(
                 MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-
                 JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS));
 
-
         // Also look for general reports of changes in the overall provider.
-        builder.addTriggerContentUri(new JobInfo.TriggerContentUri(MEDIA_URI, 0));
-        builder.setRequiresDeviceIdle(false);
-        builder.setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY);
+//        builder.addTriggerContentUri(new JobInfo.TriggerContentUri(MEDIA_URI, 0));
         builder.setTriggerContentMaxDelay(3000);
 
         JOB_INFO = builder.build();
@@ -83,8 +79,9 @@ public class PhotosContentJob extends JobService {
     final Handler mHandler = new Handler();
     final Runnable mWorker = new Runnable() {
         @Override public void run() {
-            scheduleJob(PhotosContentJob.this);
+            doWork ();
             jobFinished(mRunningParams, false);
+            scheduleJob(PhotosContentJob.this);
         }
     };
 
@@ -123,6 +120,13 @@ public class PhotosContentJob extends JobService {
         Timber.d("JOB STARTED!");
         mRunningParams = params;
 
+        mHandler.postDelayed(mWorker, 100);
+
+        return true;
+    }
+
+    private void doWork ()
+    {
         int notifyId = 1;
 
         NotificationManager manager =
@@ -134,15 +138,15 @@ public class PhotosContentJob extends JobService {
         manager.notify(notifyId, builder.build());
 
         // Did we trigger due to a content change?
-        if (params.getTriggeredContentAuthorities() != null) {
+        if (mRunningParams.getTriggeredContentAuthorities() != null) {
             boolean rescanNeeded = false;
 
-            if (params.getTriggeredContentUris() != null) {
+            if (mRunningParams.getTriggeredContentUris() != null) {
                 // If we have details about which URIs changed, then iterate through them
                 // and collect either the ids that were impacted or note that a generic
                 // change has happened.
                 ArrayList<String> ids = new ArrayList<>();
-                for (Uri uri : params.getTriggeredContentUris()) {
+                for (Uri uri : mRunningParams.getTriggeredContentUris()) {
                     List<String> path = uri.getPathSegments();
                     if (path != null && path.size() == EXTERNAL_PATH_SEGMENTS.size()+1) {
                         // This is a specific file.
@@ -201,7 +205,7 @@ public class PhotosContentJob extends JobService {
                             }
                         }
                     } catch (SecurityException e) {
-                        //sb.append("Error: no access to media!");
+                        Timber.e(e, "Error: no access to media!");
 
                     } finally {
                         if (cursor != null) {
@@ -214,16 +218,15 @@ public class PhotosContentJob extends JobService {
                 // We don't have any details about URIs (because too many changed at once),
                 // so just note that we need to do a full rescan.
                 rescanNeeded = true;
+                Timber.w("rescan is needed since many photos changed at once");
+                Toast.makeText(this,"Rescan is needed!",Toast.LENGTH_SHORT).show();
+
             }
 
         }
 
         manager.cancel(notifyId);
 
-
-        // We will emulate taking some time to do this work, so we can see batching happen.
-        mHandler.postDelayed(mWorker, 100);
-        return true;
     }
 
     @Override
