@@ -137,6 +137,8 @@ public class ShareProofActivity extends AppCompatActivity {
 
     private boolean shareProof (final boolean shareMedia, final boolean shareProof) {
 
+        Toast.makeText(this, R.string.packaging_proof,Toast.LENGTH_LONG).show();
+
         new Thread(new Runnable (){
 
             public void run ()

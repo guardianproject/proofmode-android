@@ -40,5 +40,6 @@
     <string name="inspect_videos">Inspecting videos</string>
     <string name="select_app">Select the app to share proof to...</string>
     <string name="independent_notary">Independent notarization by Enigio TimeBeat at:</string>
+    <string name="packaging_proof">Packaging proof for sharing...</string>
 
 </resources>
