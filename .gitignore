@@ -44,7 +44,9 @@ captures/
 *.iml
 .idea/workspace.xml
 
+
 # Keystore files
 *.jks
 
-app/src/main/res/values/enigio.xml
+/app/src/main/res/values/enigio.xml
+/app/src/main/res/values/enigio.actual.xml

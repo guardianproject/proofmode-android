@@ -28,6 +28,7 @@ import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 import okhttp3.Route;
+import timber.log.Timber;
 
 import static org.witness.proofmode.ProofModeApp.TAG;
 
@@ -41,6 +42,8 @@ public class TimeBeatNotarizationProvider implements NotarizationProvider {
     private Context mContext = null;
 
     private final static String PATH_NOTARIZE = "/s/timeStamp/reg";
+    private final static String PATH_PROOF = "/proof/";
+
 
     public TimeBeatNotarizationProvider (Context context)
     {
@@ -56,12 +59,6 @@ public class TimeBeatNotarizationProvider implements NotarizationProvider {
 
 
     }
-
-    @Override
-    public String getProofURI(String hash) {
-        return null;
-    }
-
 
 
     /**
@@ -214,8 +211,10 @@ public class TimeBeatNotarizationProvider implements NotarizationProvider {
 
     }
 
-    private String checkTimestamp (String timestamp)
+    public String getProof (String hash) throws IOException
     {
+        String proofResponse;
+
         /**
          * !
          Call to aquire proof of timestamp:
@@ -236,7 +235,57 @@ public class TimeBeatNotarizationProvider implements NotarizationProvider {
          Google Groups:  12/day
          */
 
-        return null;
+        OkHttpClient client = new OkHttpClient.Builder().authenticator(new Authenticator() {
+            @Override
+            public Request authenticate(Route route, Response response) throws IOException {
+                String credential = Credentials.basic(mContext.getString(R.string.enigio_username), mContext.getString(R.string.enigio_password));
+                return response.request().newBuilder()
+                        .header("Authorization", credential)
+                        .build();
+            }
+        }).build();
+
+        HttpUrl.Builder proofUrl = HttpUrl.parse(mBaseEndpoint + PATH_PROOF + hash).newBuilder();
+        proofUrl.addQueryParameter("channel","wordpress"); //blockchain, wordpress, yahoo, etc
+
+        Log.d(TAG,"timebeat request: " + proofUrl.build().toString());
+
+        // Create request for remote resource.
+        Request request = new Request.Builder()
+                .url(proofUrl.build())
+                .build();
+
+        // Execute the request and retrieve the response.
+        Response response = client.newCall(request).execute();
+
+        int respCode = response.code();
+
+        if (respCode == 200) {
+            // Deserialize HTTP response to concrete type.
+            ResponseBody body = response.body();
+            proofResponse = body.string();
+            try {
+                JSONObject jsResponse = new JSONObject(proofResponse);
+                proofResponse = jsResponse.getString("url");
+            }
+            catch (JSONException ioe)
+            {
+                Timber.d("Error parsing proof json",ioe);
+            }
+            body.close();
+        }
+        else if (respCode == 204) {
+            proofResponse = "202: No proof generated yet: " + proofUrl.build().toString();
+        }
+        else if (respCode == 404) {
+            proofResponse = "404: No proof for given hash";
+        }
+        else
+        {
+            proofResponse = respCode + ": unexpected error";
+        }
+
+        return proofResponse;
     }
 
 

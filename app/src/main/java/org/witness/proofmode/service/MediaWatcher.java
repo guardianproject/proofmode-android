@@ -149,13 +149,13 @@ public class MediaWatcher extends BroadcastReceiver {
                         }
                     });
 
-                    TimeBeatNotarizationProvider tbNotarize = new TimeBeatNotarizationProvider(context);
+                    final TimeBeatNotarizationProvider tbNotarize = new TimeBeatNotarizationProvider(context);
                     tbNotarize.notarize("ProofMode Media Hash: " + mediaHash, new File(mediaPath), new NotarizationListener() {
                         @Override
-                        public void notarizationSuccessful(String result) {
+                        public void notarizationSuccessful(String timestamp) {
 
-                            Timber.d("Got Timebeat success response: " + result);
-                            writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, null, false, false, -1, "TimeBeat: " + result);
+                            Timber.d("Got Timebeat success response timestamp: " + timestamp);
+                            writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, null, false, false, -1, "TimeBeat: " + timestamp);
                         }
 
                         @Override

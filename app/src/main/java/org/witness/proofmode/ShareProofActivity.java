@@ -18,6 +18,7 @@ import android.widget.Toast;
 
 import org.witness.proofmode.crypto.HashUtils;
 import org.witness.proofmode.crypto.PgpUtils;
+import org.witness.proofmode.notarization.TimeBeatNotarizationProvider;
 import org.witness.proofmode.service.MediaListenerService;
 import org.witness.proofmode.service.MediaWatcher;
 
@@ -32,6 +33,8 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+
+import timber.log.Timber;
 
 public class ShareProofActivity extends AppCompatActivity {
 
@@ -132,9 +135,24 @@ public class ShareProofActivity extends AppCompatActivity {
 
     }
 
-    private boolean shareProof (boolean shareMedia, boolean shareProof)
+    private boolean shareProof (final boolean shareMedia, final boolean shareProof) {
+
+        new Thread(new Runnable (){
+
+            public void run ()
+            {
+                shareProofAsync(shareMedia, shareProof);
+
+            }
+        }).start();
+
+        return true;
+    }
+
+    private boolean shareProofAsync (boolean shareMedia, boolean shareProof)
     {
-        // Get intent, action and MIME type
+
+    // Get intent, action and MIME type
         Intent intent = getIntent();
         String action = intent.getAction();
         String type = intent.getType();
@@ -353,6 +371,17 @@ public class ShareProofActivity extends AppCompatActivity {
         sb.append(getString(R.string.has_hash)).append(hash);
         sb.append("\n\n");
         sb.append(getString(R.string.proof_signed) + fingerprint);
+        sb.append("\n\n");
+
+        try {
+            final TimeBeatNotarizationProvider tbNotarize = new TimeBeatNotarizationProvider(this);
+            String tbProof = tbNotarize.getProof(hash);
+            sb.append(getString(R.string.independent_notary) + ' ' + tbProof);
+        }
+        catch (Exception ioe)
+        {
+            Timber.e("Error checking for Timebeat proof",ioe);
+        }
 
         if (shareMedia) {
             shareUris.add(Uri.fromFile(fileMedia)); // Add your image URIs here

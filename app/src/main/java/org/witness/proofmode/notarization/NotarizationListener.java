@@ -9,4 +9,5 @@ public interface NotarizationListener {
     public void notarizationSuccessful (String result);
 
     public void notarizationFailed (int errCode, String message);
+
 }
