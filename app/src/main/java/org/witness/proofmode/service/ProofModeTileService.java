@@ -25,6 +25,7 @@ public class ProofModeTileService extends TileService {
         super.onCreate();
 
         mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+
     }
 
     @Override
@@ -35,9 +36,7 @@ public class ProofModeTileService extends TileService {
     @Override
     public void onTileAdded() {
         super.onTileAdded();
-
-        changeTileState(mPrefs.getBoolean("doProof",true)?Tile.STATE_INACTIVE:Tile.STATE_ACTIVE);
-
+        setCurrentState();
     }
 
     @Override
@@ -58,9 +57,18 @@ public class ProofModeTileService extends TileService {
     @Override
     public void onStartListening() {
         super.onStartListening();
-        changeTileState(getQsTile().getState());
+        setCurrentState();
     }
 
+    @Override
+    public void onStopListening() {
+        super.onStopListening();
+    }
+
+    private void setCurrentState ()
+    {
+        changeTileState(mPrefs.getBoolean("doProof",true)?Tile.STATE_ACTIVE:Tile.STATE_INACTIVE);
+    }
 
     private void updateTile() {
         if (Tile.STATE_ACTIVE == getQsTile().getState()) {
@@ -78,7 +86,6 @@ public class ProofModeTileService extends TileService {
         getQsTile().setState(newState);
         getQsTile().updateTile();
     }
-
 
 
 }
