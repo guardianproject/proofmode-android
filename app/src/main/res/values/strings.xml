@@ -41,5 +41,6 @@
     <string name="select_app">Select the app to share proof to...</string>
     <string name="independent_notary">Independent notarization by Enigio TimeBeat at:</string>
     <string name="packaging_proof">Packaging proof for sharing...</string>
+    <string name="view_public_key">View public key at: http://pgp.mit.edu/pks/lookup?search=0x</string>
 
 </resources>

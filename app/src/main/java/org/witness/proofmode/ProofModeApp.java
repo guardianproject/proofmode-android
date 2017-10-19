@@ -10,6 +10,10 @@ import android.content.Intent;
 import android.provider.ContactsContract;
 import android.util.Log;
 
+import net.hockeyapp.android.CrashManager;
+import net.hockeyapp.android.UpdateManager;
+import net.hockeyapp.android.metrics.MetricsManager;
+
 import org.spongycastle.jce.provider.BouncyCastleProvider;
 import org.witness.proofmode.service.MediaListenerService;
 import org.witness.proofmode.service.PhotosContentJob;
@@ -17,6 +21,7 @@ import org.witness.proofmode.service.VideosContentJob;
 import org.witness.proofmode.util.SafetyNetCheck;
 
 import java.security.Security;
+import java.util.HashMap;
 
 import timber.log.Timber;
 
@@ -52,6 +57,8 @@ public class ProofModeApp extends Application {
         }
 
         SafetyNetCheck.buildGoogleApiClient(this);
+
+        checkForCrashes();
     }
 
     /** A tree which logs important information for crash reporting. */
@@ -61,16 +68,22 @@ public class ProofModeApp extends Application {
                 return;
             }
 
-                /**
-            FakeCrashLibrary.log(priority, tag, message);
+// add this wherever you want to track a custom event
+            MetricsManager.trackEvent("Crash: " + tag);
 
-            if (t != null) {
-                if (priority == Log.ERROR) {
-                    FakeCrashLibrary.logError(t);
-                } else if (priority == Log.WARN) {
-                    FakeCrashLibrary.logWarning(t);
-                }
-            }**/
+// add this wherever you want to track a custom event and attach properties or measurements to it
+            HashMap<String, String> properties = new HashMap<>();
+            properties.put("Message", message);
+
+            HashMap<String, Double> measurements = new HashMap<>();
+            MetricsManager.trackEvent("YOUR_EVENT_NAME", properties, measurements);
+
         }
     }
+
+    private void checkForCrashes() {
+        CrashManager.register(this);
+    }
+
+
 }

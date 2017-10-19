@@ -21,6 +21,9 @@ import android.widget.CompoundButton;
 import android.widget.Switch;
 import android.widget.Toast;
 
+import net.hockeyapp.android.UpdateManager;
+import net.hockeyapp.android.metrics.MetricsManager;
+
 import org.spongycastle.jce.provider.BouncyCastleProvider;
 import org.spongycastle.openpgp.PGPException;
 import org.spongycastle.openpgp.PGPKeyRingGenerator;
@@ -111,6 +114,9 @@ public class MainActivity extends AppCompatActivity {
         {
             askForPermission(Manifest.permission.ACCESS_FINE_LOCATION, 1);
         }
+
+        checkForUpdates();
+
     }
 
     @Override
@@ -260,5 +266,30 @@ public class MainActivity extends AppCompatActivity {
         if (gpsTracker.canGetLocation()) {
             gpsTracker.getLocation();
         }
+    }
+
+    private void checkForUpdates() {
+
+        // add this to your main activity's onCreate()-callback
+        MetricsManager.register(getApplication());
+
+        // Remove this for store builds!
+        UpdateManager.register(this);
+    }
+
+    private void unregisterManagers() {
+        UpdateManager.unregister();
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        unregisterManagers();
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        unregisterManagers();
     }
 }
