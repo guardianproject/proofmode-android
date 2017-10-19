@@ -117,7 +117,8 @@ public class PgpUtils {
     public String getPublicKeyFingerprint ()
     {
         PGPPublicKey key = pkr.getPublicKey();
-        return new String(Hex.encode(key.getFingerprint()));
+        String fullKey = new String(Hex.encode(key.getFingerprint()));
+        return fullKey.substring(fullKey.length()-16);
     }
 
     public String decrypt(String encryptedText, String password) throws Exception {
