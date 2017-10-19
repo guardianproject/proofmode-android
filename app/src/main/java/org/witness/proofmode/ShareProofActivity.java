@@ -369,10 +369,13 @@ public class ShareProofActivity extends AppCompatActivity {
         String fingerprint = PgpUtils.getInstance(this).getPublicKeyFingerprint();
 
         sb.append(fileMedia.getName()).append(' ');
-        sb.append(getString(R.string.last_modified)).append(new Date(fileMedia.lastModified()).toGMTString());
-        sb.append(getString(R.string.has_hash)).append(hash);
+        sb.append(getString(R.string.last_modified)).append(' ').append(new Date(fileMedia.lastModified()).toGMTString());
+        sb.append(' ');
+        sb.append(getString(R.string.has_hash)).append(' ').append(hash);
         sb.append("\n\n");
         sb.append(getString(R.string.proof_signed) + fingerprint);
+        sb.append("\n");
+        sb.append(getString(R.string.view_public_key) + fingerprint);
         sb.append("\n\n");
 
         try {
