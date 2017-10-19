@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<resources>
+    <string name="app_name">ProofMode</string>
+
+    <string name="action_settings">Paramètres</string>
+    <string name="action_share_key">Partager une clé publique...</string>
+    <string name="action_publish_key">Publier une clé publique...</string>
+
+    <string name="action_about">À propos de ProofMode</string>
+
+    <string name="switch_include_device">Inclure l\'identité de l\'appareil</string>
+    <string name="switch_include_location">Inclure la localisation</string>
+    <string name="switch_enable_proofmode">Activer ProofMode</string>
+    <string name="switch_auto_notarize">Activer la certification automatique</string>
+
+    <string name="intro1_title">Capturer la preuve</string>
+    <string name="intro1_desc">Vous avez accompli la première étape dans la transformation de vos photos ou vidéos en preuve numérique.</string>
+
+    <string name="intro2_title">Détecte ton Monde</string>
+    <string name="intro2_desc">ProofMode puise dans tous les capteurs possible de votre appareil. Assurez-vous d'activer les permissions comme demandé.</string>
+
+    <string name="intro3_title">Facile et automatique</string>
+    <string name="intro3_desc">ProofMode fonctionne en permanence en arrière-plan, en ajoutant automatiquement une preuve à toutes les photos ou vidéos que vous prenez.</string>
+
+    <string name="intro4_title">Partager une preuve</string>
+    <string name="intro4_desc">Quand vous avez besoin de partager quelque chose avec une preuve, ouvrez simplement la photo ou vidéo et choisissez PARTAGER LA PREUVE depuis le menu Partager.</string>
+    <string name="share_notarization">PARTAGER UNE CERTIFICATION À...</string>
+    <string name="share_proof">PARTAGER UNE PREUVE À...</string>
+    <string name="proof_error_message">ERREUR: La preuve n\'existe pas ou a été modifiée</string>
+    <string name="last_modified">a été modifié pour la dernière fois à</string>
+    <string name="has_hash">et utilise un hachage de SHA-256</string>
+    <string name="proof_signed">Cette preuve est signée par la clé PGP de valeur 0x</string>
+    <string name="notarize_only">Certifie seulement (Texte court)</string>
+    <string name="share_proof_only">Partager uniquement la preuve (fichiers de métadonnées)</string>
+    <string name="share_proof_with_media">Partager une preuve avec les supports numériques</string>
+    <string name="open_public_key_page">Ouverture de la page de la clé publique</string>
+    <string name="no_external_storage">AVERTISSEMENT: ProofMode activé, cependant aucun disque dur externe n\'est disponible!</string>
+    <string name="no_hash_generated">Alerte ProofMode: Impossible d'accéder aux supports numériques</string>
+    <string name="generating_proof_notify">Générateur de preuve...</string>
+    <string name="inspect_photos">Examiner les photos</string>
+    <string name="inspect_videos">Examiner les videos</string>
+    <string name="select_app">Choisissez l\'application pour partager la preuve avec...</string>
+    <string name="independent_notary">Certification indépendante par Enigio TimeBeat à:</string>
+    <string name="packaging_proof">Conditionner une preuve pour l'a faire partager...</string>
+
+</resources>
