@@ -1,8 +1,8 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 25
-    buildToolsVersion "25.0.2"
+    compileSdkVersion 27
+    buildToolsVersion "27.0.0"
 
     lintOptions {
           abortOnError false
@@ -10,15 +10,15 @@ android {
 
     defaultConfig {
         applicationId "org.witness.proofmode"
-        minSdkVersion 15
-        targetSdkVersion 25
-        versionCode 102
-        versionName "0.0.10-alpha-2"
+        minSdkVersion 23
+        targetSdkVersion 27
+        versionCode 103
+        versionName "0.0.10-alpha-3"
         manifestPlaceholders = [HOCKEYAPP_APP_ID: "b72b51a4aa74469fb8051586deab598b"]
     }
     buildTypes {
         release {
-            minifyEnabled true
+            minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
@@ -27,15 +27,15 @@ android {
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
     testCompile 'junit:junit:4.12'
-    compile 'com.android.support:appcompat-v7:25.3.1'
-    compile 'com.android.support:design:25.3.1'
+    compile 'com.android.support:appcompat-v7:27.0.0'
+    compile 'com.android.support:design:27.0.0'
     compile 'com.madgag.spongycastle:core:1.50.0.0'
     compile 'com.madgag.spongycastle:pg:1.50.0.0'
     compile 'com.madgag.spongycastle:pkix:1.50.0.0'
     compile 'com.madgag.spongycastle:prov:1.50.0.0'
     compile 'com.github.paolorotolo:appintro:4.1.0'
-    compile "com.android.support:support-v4:25.3.1"
-    compile "com.android.support:support-v13:25.3.1"
+    compile "com.android.support:support-v4:27.0.0"
+    compile "com.android.support:support-v13:27.0.0"
     compile 'com.google.android.gms:play-services-safetynet:11.0.4'
     compile 'com.squareup.okhttp3:okhttp:3.8.1'
     compile 'com.jakewharton.timber:timber:4.5.1'
