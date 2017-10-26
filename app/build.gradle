@@ -13,7 +13,7 @@ android {
         minSdkVersion 23
         targetSdkVersion 27
         versionCode 103
-        versionName "0.0.10-alpha-3"
+        versionName "0.0.10-beta-1"
         manifestPlaceholders = [HOCKEYAPP_APP_ID: "b72b51a4aa74469fb8051586deab598b"]
     }
     buildTypes {
