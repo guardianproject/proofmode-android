@@ -43,11 +43,13 @@ import java.util.HashMap;
 
 import timber.log.Timber;
 
+import static org.witness.proofmode.ProofModeApp.TAG;
+
 public class MediaWatcher extends BroadcastReceiver {
 
     private final static String PROOF_FILE_TAG = ".proof.csv";
     private final static String OPENPGP_FILE_TAG = ".asc";
-    private final static String PROOF_BASE_FOLDER = "proofmode";
+    private final static String PROOF_BASE_FOLDER = "proofmode/";
 
     private static boolean mStorageMounted = false;
 
@@ -55,7 +57,19 @@ public class MediaWatcher extends BroadcastReceiver {
     }
 
     @Override
-    public void onReceive(final Context context, Intent intent) {
+    public void onReceive(final Context context, final Intent intent) {
+
+        new Thread ()
+        {
+            public void run ()
+            {
+                handleIntent(context, intent);
+            }
+        }.start();
+
+    }
+
+    private void handleIntent (final Context context, Intent intent) {
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 
@@ -75,7 +89,7 @@ public class MediaWatcher extends BroadcastReceiver {
         if (doProof) {
 
             if (!isExternalStorageWritable()) {
-                Toast.makeText(context, R.string.no_external_storage, Toast.LENGTH_SHORT).show();
+              //  Toast.makeText(context, R.string.no_external_storage, Toast.LENGTH_SHORT).show();
                 return;
             }
 
@@ -172,7 +186,7 @@ public class MediaWatcher extends BroadcastReceiver {
             }
             else
             {
-                Toast.makeText(context, R.string.no_hash_generated,Toast.LENGTH_SHORT).show();
+                Timber.d("Unable to access media files, no proof generated");
             }
 
         }
@@ -202,52 +216,79 @@ public class MediaWatcher extends BroadcastReceiver {
         File fileMedia = new File(mediaPath);
         File fileFolder = getHashStorageDir(hash);
 
-        File fileMediaSig = new File(fileFolder, fileMedia.getName() + OPENPGP_FILE_TAG);
-        File fileMediaProof = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG);
-        File fileMediaProofSig = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
+        if (fileFolder != null) {
 
-        try {
+            File fileMediaSig = new File(fileFolder, fileMedia.getName() + OPENPGP_FILE_TAG);
+            File fileMediaProof = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG);
+            File fileMediaProofSig = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
 
-            //sign the media file
-            if (!fileMediaSig.exists())
-                PgpUtils.getInstance(context).createDetachedSignature(new File(mediaPath), fileMediaSig, PgpUtils.DEFAULT_PASSWORD);
+            try {
 
-            //add data to proof csv and sign again
-            boolean writeHeaders = !fileMediaProof.exists();
-            writeTextToFile(context, fileMediaProof, buildProof(context, mediaPath, writeHeaders, showDeviceIds, showLocation, safetyCheckResult, isBasicIntegrity, isCtsMatch, notarizeTimestamp, notes));
+                //sign the media file
+                if (!fileMediaSig.exists())
+                    PgpUtils.getInstance(context).createDetachedSignature(fileMedia, fileMediaSig, PgpUtils.DEFAULT_PASSWORD);
 
-            //sign the proof file again
-            PgpUtils.getInstance(context).createDetachedSignature(fileMediaProof, fileMediaProofSig, PgpUtils.DEFAULT_PASSWORD);
+                //add data to proof csv and sign again
+                boolean writeHeaders = !fileMediaProof.exists();
+                writeTextToFile(context, fileMediaProof, buildProof(context, mediaPath, writeHeaders, showDeviceIds, showLocation, safetyCheckResult, isBasicIntegrity, isCtsMatch, notarizeTimestamp, notes));
 
-        } catch (Exception e) {
-            Log.e("MediaWatcher", "Error signing media or proof", e);
-            Toast.makeText(context, "Unable to save proof: " + e.getLocalizedMessage(),Toast.LENGTH_SHORT).show();
+                if (fileMediaProof.exists()) {
+                    //sign the proof file again
+                    PgpUtils.getInstance(context).createDetachedSignature(fileMediaProof, fileMediaProofSig, PgpUtils.DEFAULT_PASSWORD);
+                }
 
+            } catch (Exception e) {
+                Log.e("MediaWatcher", "Error signing media or proof", e);
+            }
         }
-
-
     }
 
     public static File getHashStorageDir(String hash) {
 
         // Get the directory for the user's public pictures directory.
-        File file = null;
+        File fileParentDir = null;
 
         if (android.os.Build.VERSION.SDK_INT >= 19) {
-            file = new File(Environment.getExternalStoragePublicDirectory(
+            fileParentDir = new File(Environment.getExternalStoragePublicDirectory(
                     Environment.DIRECTORY_DOCUMENTS), PROOF_BASE_FOLDER);
 
         }
         else
         {
-            file = new File(Environment.getExternalStoragePublicDirectory(
+            fileParentDir = new File(Environment.getExternalStoragePublicDirectory(
                     Environment.DIRECTORY_DOWNLOADS), PROOF_BASE_FOLDER);
         }
 
-        file = new File(file, hash);
-        file.mkdirs();
+        if (!fileParentDir.exists())
+            fileParentDir.mkdir();
 
-        return file;
+        File fileHashDir = new File(fileParentDir, hash + '/');
+
+        if (!fileHashDir.exists()) {
+            boolean success = fileHashDir.mkdir();
+
+            if (!success)
+            {
+                fileParentDir = new File(Environment.getExternalStorageDirectory(), PROOF_BASE_FOLDER);
+
+                if (!fileParentDir.exists())
+                    success = fileParentDir.mkdir();
+
+                fileHashDir = new File(fileParentDir, hash + '/');
+                if (!fileHashDir.exists())
+                {
+                    success = fileHashDir.mkdir();
+                }
+
+            }
+
+            Timber.d(success + ": created new path: " + fileHashDir.toString());
+
+            if (!success)
+                return null;
+        }
+
+        return fileHashDir;
     }
 
     /* Checks if external storage is available for read and write */
@@ -292,6 +333,7 @@ public class MediaWatcher extends BroadcastReceiver {
         hmProof.put("Locale",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_LOCALE));
 
         GPSTracker gpsTracker = new GPSTracker(context);
+
         if (showLocation
                 && gpsTracker.canGetLocation())
         {
@@ -315,7 +357,6 @@ public class MediaWatcher extends BroadcastReceiver {
                 hmProof.put("Location.Speed",loc.getSpeed()+"");
                 hmProof.put("Location.Time",loc.getTime()+"");
             }
-
 
         }
 

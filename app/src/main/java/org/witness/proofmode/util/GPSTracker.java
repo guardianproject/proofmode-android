@@ -155,11 +155,7 @@ public final class GPSTracker implements LocationListener {
      * */
     public boolean canGetLocation() {
 
-        if ( ContextCompat.checkSelfPermission( mContext, android.Manifest.permission.ACCESS_COARSE_LOCATION ) != PackageManager.PERMISSION_GRANTED ) {
-            return this.canGetLocation;
-        }
-        else
-            return false;
+        return canGetLocation;
 
     }
 

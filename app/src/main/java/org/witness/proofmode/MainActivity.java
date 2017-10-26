@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.content.PermissionChecker;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.SwitchCompat;
 import android.support.v7.widget.Toolbar;
@@ -64,7 +65,10 @@ public class MainActivity extends AppCompatActivity {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 
                 mPrefs.edit().putBoolean("doProof",isChecked).commit();
-
+                if (isChecked)
+                {
+                    askForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE, 1);
+                }
             }
         });
 
@@ -188,21 +192,24 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    private void askForPermission(String permission, Integer requestCode) {
-        if (ContextCompat.checkSelfPermission(MainActivity.this, permission) != PackageManager.PERMISSION_GRANTED) {
+    private boolean askForPermission(String permission, Integer requestCode) {
+        if (checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED) {
 
             // Should we show an explanation?
-            if (ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this, permission)) {
+            if (shouldShowRequestPermissionRationale(permission)) {
 
                 //This is called if user has denied the permission before
                 //In this case I am just asking the permission again
-                ActivityCompat.requestPermissions(MainActivity.this, new String[]{permission}, requestCode);
+                requestPermissions( new String[]{permission}, requestCode);
 
             } else {
-
-                ActivityCompat.requestPermissions(MainActivity.this, new String[]{permission}, requestCode);
+                requestPermissions(new String[]{permission}, requestCode);
             }
+
+            return true;
         } else {
+
+            return false;
         }
     }
 

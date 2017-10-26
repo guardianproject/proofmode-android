@@ -7,6 +7,7 @@ import android.app.job.JobScheduler;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.os.StrictMode;
 import android.provider.ContactsContract;
 import android.util.Log;
 
@@ -40,6 +41,8 @@ public class ProofModeApp extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+
+        StrictMode.setVmPolicy(StrictMode.VmPolicy.LAX);
 
         if (BuildConfig.DEBUG) {
             Timber.plant(new Timber.DebugTree());

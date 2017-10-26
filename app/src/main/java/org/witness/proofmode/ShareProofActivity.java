@@ -1,5 +1,6 @@
 package org.witness.proofmode;
 
+import android.Manifest;
 import android.content.ComponentName;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -10,6 +11,8 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Environment;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -49,6 +52,8 @@ public class ShareProofActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+
+        askForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE,4);
 
         // Get intent, action and MIME type
         Intent intent = getIntent();
@@ -173,6 +178,10 @@ public class ShareProofActivity extends AppCompatActivity {
             try
             {
                 File fileFolder = MediaWatcher.getHashStorageDir("batch");
+
+                if (fileFolder == null)
+                    return false;
+
                 fileBatchProof = new File(fileFolder,new Date().getTime() + "batchproof.csv");
                 fBatchProofOut = new PrintWriter(new FileWriter(fileBatchProof,  true));
             }
@@ -237,32 +246,34 @@ public class ShareProofActivity extends AppCompatActivity {
                     File fileMedia = new File(mediaPath);
                     File fileFolder = MediaWatcher.getHashStorageDir(hash);
 
-                    File fileMediaSig = new File(fileFolder, fileMedia.getName() + OPENPGP_FILE_TAG);
-                    File fileMediaProof = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG);
-                    File fileMediaProofSig = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
+                    if (fileFolder != null ) {
+                        File fileMediaSig = new File(fileFolder, fileMedia.getName() + OPENPGP_FILE_TAG);
+                        File fileMediaProof = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG);
+                        File fileMediaProofSig = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
 
-                    if (fileMediaSig.exists() && fileMediaProof.exists() && fileMediaProofSig.exists()) {
-                        result = true;
-                    }
-                    else {
-                         //generate now?
+                        if (fileMediaSig.exists() && fileMediaProof.exists() && fileMediaProofSig.exists()) {
+                            result = true;
+                        } else {
+                            //generate now?
 
-                        new AsyncTask<Void, Void, String>() {
-                            protected String doInBackground(Void... params) {
-                                Intent intent = new Intent();
-                                intent.setData(Uri.fromFile(new File(mediaPath)));
-                                new MediaWatcher().onReceive(ShareProofActivity.this, intent);
-                                return "message";
-                            }
-                            protected void onPostExecute(String msg) {
-                                // Post Code
-                                // Use `msg` in code
-                            }
-                        }.execute();
+                            new AsyncTask<Void, Void, String>() {
+                                protected String doInBackground(Void... params) {
+                                    Intent intent = new Intent();
+                                    intent.setData(Uri.fromFile(new File(mediaPath)));
+                                    new MediaWatcher().onReceive(ShareProofActivity.this, intent);
+                                    return "message";
+                                }
+
+                                protected void onPostExecute(String msg) {
+                                    // Post Code
+                                    // Use `msg` in code
+                                }
+                            }.execute();
 
 
-                        result = true;
+                            result = true;
 
+                        }
                     }
                 }
             }
@@ -308,6 +319,9 @@ public class ShareProofActivity extends AppCompatActivity {
         if (hash != null) {
             File fileMedia = new File(mediaPath);
             File fileFolder = MediaWatcher.getHashStorageDir(hash);
+
+            if (fileFolder == null)
+                return false;
 
             File fileMediaSig = new File(fileFolder, fileMedia.getName() + OPENPGP_FILE_TAG);
             File fileMediaProof = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG);
@@ -546,5 +560,23 @@ public class ShareProofActivity extends AppCompatActivity {
         Intent openInChooser = Intent.createChooser(emailIntent,shareMessage);
         openInChooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, extraIntents);
         startActivity(openInChooser);
+    }
+
+    private void askForPermission(String permission, Integer requestCode) {
+        if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+
+            // Should we show an explanation?
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this, permission)) {
+
+                //This is called if user has denied the permission before
+                //In this case I am just asking the permission again
+                ActivityCompat.requestPermissions(this, new String[]{permission}, requestCode);
+
+            } else {
+
+                ActivityCompat.requestPermissions(this, new String[]{permission}, requestCode);
+            }
+        } else {
+        }
     }
 }

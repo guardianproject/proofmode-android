@@ -24,6 +24,7 @@ import java.net.NetworkInterface;
 import java.security.MessageDigest;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
@@ -43,15 +44,13 @@ public class DeviceInfo {
                     return "" + (Calendar.getInstance().get(Calendar.YEAR));
                 case DEVICE_CURRENT_DATE_TIME:
                     Calendar calendarTime = Calendar.getInstance(TimeZone.getDefault(), Locale.getDefault());
+                    calendarTime.setTime(new Date());
                     long time = (calendarTime.getTimeInMillis() / 1000);
                     return String.valueOf(time);
-                //                    return DateFormat.getDateTimeInstance().format(new Date());
                 case DEVICE_CURRENT_DATE_TIME_ZERO_GMT:
                     Calendar calendarTime_zero = Calendar.getInstance(TimeZone.getTimeZone("GMT+0"), Locale.getDefault());
+                    calendarTime_zero.setTime(new Date());
                     return String.valueOf((calendarTime_zero.getTimeInMillis() / 1000));
-                //                    DateFormat df = DateFormat.getDateTimeInstance();
-                //                    df.setTimeZone(TimeZone.getTimeZone("GMT+0"));
-                //                    return df.format(new Date());
                 case DEVICE_HARDWARE_MODEL:
                     return getDeviceName();
                 case DEVICE_NUMBER_OF_PROCESSORS:
@@ -456,6 +455,22 @@ public class DeviceInfo {
         String type = "Mobile Data";
         TelephonyManager tm = (TelephonyManager) activity.getSystemService(Context.TELEPHONY_SERVICE);
         switch (tm.getNetworkType()) {
+            case TelephonyManager.NETWORK_TYPE_CDMA:
+                type = "Mobile Data LTE";
+                Log.d("Type", "LTE");
+                // for 3g HSDPA networktype will be return as
+                // per testing(real) in device with 3g enable
+                // data
+                // and speed will also matters to decide 3g network type
+                break;
+            case TelephonyManager.NETWORK_TYPE_LTE:
+                type = "Mobile Data LTE";
+                Log.d("Type", "LTE");
+                // for 3g HSDPA networktype will be return as
+                // per testing(real) in device with 3g enable
+                // data
+                // and speed will also matters to decide 3g network type
+                break;
             case TelephonyManager.NETWORK_TYPE_HSDPA:
                 type = "Mobile Data 3G";
                 Log.d("Type", "3g");
