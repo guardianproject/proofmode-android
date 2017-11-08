@@ -8,7 +8,7 @@
     <string name="action_about">Acerca de ProofMode </string>
 
     <string name="switch_include_device">Incluir la identidad del dispositivo</string>
-    <string name="switch_include_location">Incluir Ubicación</string>
+    <string name="switch_include_location">Ubicacion GPS incluida</string>
     <string name="switch_enable_proofmode">Habilitar ProofMode</string>
     <string name="switch_auto_notarize">Habilitar Notarización Automatica</string>
 
@@ -42,5 +42,5 @@
     <string name="independent_notary">Notarizacion independiente por Enigio TimeBeat :</string>
     <string name="packaging_proof">Colectando evidencia para compartir...</string>
     <string name="view_public_key">Ver la llave publica en:  http://pgp.mit.edu/pks/lookup?search=0x</string>
-
-</resources>
+    <string name="include_mobile_network">Red Movil Incluida</string>
+    </resources>
