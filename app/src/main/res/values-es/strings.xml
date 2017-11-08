@@ -1,0 +1,46 @@
+<resources>
+    <string name="app_name">ProofMode</string>
+
+    <string name="action_settings">Configuracion</string>
+    <string name="action_share_key">Compartir la llave pública</string>
+    <string name="action_publish_key">Publicar la llave pública</string>
+
+    <string name="action_about">Acerca de ProofMode </string>
+
+    <string name="switch_include_device">Incluir la identidad del dispositivo</string>
+    <string name="switch_include_location">Incluir Ubicación</string>
+    <string name="switch_enable_proofmode">Habilitar ProofMode</string>
+    <string name="switch_auto_notarize">Habilitar Notarización Automatica</string>
+
+    <string name="intro1_title">Capturar la Prueba</string>
+    <string name="intro1_desc">Has tomado el primer paso para transformar tus fotos y video en una prueba digital.</string>
+
+    <string name="intro2_title">Registrando tu Mundo</string>
+    <string name="intro2_desc">ProofMode registra todos los sensores disponibles en tu dispositivo. Asegurate de habilitar los permisos cuando son requeridos.</string>
+
+    <string name="intro3_title">Fácil y automático</string>
+    <string name="intro3_desc">ProofMode esta siempre activado en tu dispositivo, agregando evidencias a todas las fotos y videos que tu tomas.</string>
+
+    <string name="intro4_title">Comparte la evidencia</string>
+    <string name="intro4_desc">Cuando necesitas compartir un archivo con evidencia, abre la foto o el video, y selecciona COMPARTIR EVIDENCIA de el menu  SHARE. </string>
+    <string name="share_notarization">COMPARTIR LA NOTARIZACION CON</string>
+    <string name="share_proof">COMPARTIR LA EVIDENCIA CON</string>
+    <string name="proof_error_message">ERROR: La evidencia no existe o ha sido modificada.</string>
+    <string name="last_modified">Fue modificado por ultima vez </string>
+    <string name="has_hash">y tiene un SHA-256 hash of</string>
+    <string name="proof_signed">Esta evidencia es respaldada por PGP llave 0x</string>
+    <string name="notarize_only">Notariar Unicamente ( Short Text )</string>
+    <string name="share_proof_only">Compartir la evidencia ( Unicamente archivos de Metadatos )</string>
+    <string name="share_proof_with_media">Compartir la evidencia con Multimedia ( Everything! )</string>
+    <string name="open_public_key_page">Abriendo la pagina de la llave publica</string>
+    <string name="no_external_storage">Advertencia: ProofMode esta habilitado, pero no hay memoria externa dosponible. </string>
+    <string name="no_hash_generated">ProofMode Alert: No fue posible accessar los datos multimedia</string>
+    <string name="generating_proof_notify">Creando Evidencia</string>
+    <string name="inspect_photos">Inspeccionando Fotos</string>
+    <string name="inspect_videos">Inspeccionando Videos</string>
+    <string name="select_app">SEleccionar la aplicacion para compartir la evidencia con ...</string>
+    <string name="independent_notary">Notarizacion independiente por Enigio TimeBeat :</string>
+    <string name="packaging_proof">Colectando evidencia para compartir...</string>
+    <string name="view_public_key">Ver la llave publica en:  http://pgp.mit.edu/pks/lookup?search=0x</string>
+
+</resources>
