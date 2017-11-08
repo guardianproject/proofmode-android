@@ -309,20 +309,22 @@ public class MediaWatcher extends BroadcastReceiver {
 
         HashMap<String, String> hmProof = new HashMap<>();
 
-        hmProof.put("File",mediaPath);
-        hmProof.put("SHA256",hash);
-        hmProof.put("Modified",df.format(new Date(fileMedia.lastModified())));
-        hmProof.put("CurrentDateTime0GMT",df.format(new Date(Long.parseLong(DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_CURRENT_DATE_TIME_ZERO_GMT)))));
+        hmProof.put("File Path",mediaPath);
+        hmProof.put("File Hash SHA256",hash);
+        hmProof.put("File Modified",df.format(new Date(fileMedia.lastModified())));
+        hmProof.put("Proof Generated",df.format(new Date()));
 
         if (showDeviceIds) {
             hmProof.put("DeviceID", DeviceInfo.getDeviceId(context));
             hmProof.put("Wifi MAC", DeviceInfo.getWifiMacAddr());
         }
 
-        hmProof.put("IPV4",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_IP_ADDRESS_IPV4));
+        hmProof.put("IPv4",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_IP_ADDRESS_IPV4));
+        hmProof.put("IPv6",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_IP_ADDRESS_IPV6));
 
         hmProof.put("DataType",DeviceInfo.getDataType(context));
         hmProof.put("Network",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_NETWORK));
+      //  hmProof.put("Network",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_CE));
 
         hmProof.put("NetworkType",DeviceInfo.getNetworkType(context));
         hmProof.put("Hardware",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_HARDWARE_MODEL));
