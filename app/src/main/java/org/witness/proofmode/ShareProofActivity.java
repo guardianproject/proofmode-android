@@ -25,8 +25,11 @@ import org.witness.proofmode.notarization.TimeBeatNotarizationProvider;
 import org.witness.proofmode.service.MediaListenerService;
 import org.witness.proofmode.service.MediaWatcher;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -36,6 +39,8 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import timber.log.Timber;
 
@@ -111,17 +116,17 @@ public class ShareProofActivity extends AppCompatActivity {
                 {
                     case 0:
 
-                        shareProof (false, false);
+                        shareProof (false, false, false);
 
                         break;
                     case 1:
 
-                        shareProof (false, true);
+                        shareProof (false, true, false);
 
                         break;
                     case 2:
 
-                        shareProof (true, true);
+                        shareProof (true, true, true);
 
                         break;
                 }
@@ -140,7 +145,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
     }
 
-    private boolean shareProof (final boolean shareMedia, final boolean shareProof) {
+    private boolean shareProof (final boolean shareMedia, final boolean shareProof, final boolean shareAsZip) {
 
         Toast.makeText(this, R.string.packaging_proof,Toast.LENGTH_LONG).show();
 
@@ -148,7 +153,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
             public void run ()
             {
-                shareProofAsync(shareMedia, shareProof);
+                shareProofAsync(shareMedia, shareProof, shareAsZip);
 
             }
         }).start();
@@ -156,7 +161,7 @@ public class ShareProofActivity extends AppCompatActivity {
         return true;
     }
 
-    private boolean shareProofAsync (boolean shareMedia, boolean shareProof)
+    private boolean shareProofAsync (boolean shareMedia, boolean shareProof, boolean shareAsZip)
     {
 
     // Get intent, action and MIME type
@@ -217,9 +222,24 @@ public class ShareProofActivity extends AppCompatActivity {
         if (shareUris.size() > 0) {
 
             if (!shareProof)
-                shareAll(shareProof, shareText.toString(), shareUris);
-            else
-                shareFiltered(getString(R.string.select_app), shareText.toString(), shareUris);
+                shareNotarization(shareText.toString());
+            else {
+
+                if (shareAsZip)
+                {
+                    File fileFolder = MediaWatcher.getHashStorageDir("zip");
+                    File fileZip = new File(fileFolder,"proofmode." + new Date().getTime() + ".zip");
+                    zip(shareUris,fileZip);
+                    shareFilteredSingle(getString(R.string.select_app), shareText.toString(), Uri.fromFile(fileZip),"application/zip");
+
+                }
+                else {
+                    if (shareUris.size() == 1)
+                        shareFilteredSingle(getString(R.string.select_app), shareText.toString(), shareUris.get(0),"*/*");
+                    else
+                        shareFiltered(getString(R.string.select_app), shareText.toString(), shareUris);
+                }
+            }
         }
 
         finish();
@@ -402,12 +422,13 @@ public class ShareProofActivity extends AppCompatActivity {
             Timber.e("Error checking for Timebeat proof",ioe);
         }
 
-        if (shareMedia) {
-            shareUris.add(Uri.fromFile(fileMedia)); // Add your image URIs here
-            shareUris.add(Uri.fromFile(fileMediaSig)); // Add your image URIs here
-        }
         shareUris.add(Uri.fromFile(fileMediaProof));
-        shareUris.add(Uri.fromFile(fileMediaProofSig));
+
+        if (shareMedia) {
+            shareUris.add(Uri.fromFile(fileMedia));
+            shareUris.add(Uri.fromFile(fileMediaSig));
+            shareUris.add(Uri.fromFile(fileMediaProofSig));
+        }
 
         if (fBatchProofOut != null)
         {
@@ -424,37 +445,139 @@ public class ShareProofActivity extends AppCompatActivity {
         }
     }
 
-    private void shareAll (boolean shareProof, String shareText, ArrayList<Uri> shareUris)
+    private void shareNotarization (String shareText)
     {
 
         Intent shareIntent = null;
+        shareIntent = new Intent(Intent.ACTION_SEND);
+        shareIntent.putExtra(Intent.EXTRA_TEXT, shareText);
+        shareIntent.setType("*/*");
 
-        if (shareUris.size() > 0) {
+        startActivity(Intent.createChooser(shareIntent, getString(R.string.share_notarization)));
 
-            if (!shareProof)
-            {
-                shareIntent = new Intent(Intent.ACTION_SEND);
-                shareIntent.putExtra(Intent.EXTRA_TEXT, shareText);
-                shareIntent.setType("*/*");
+    }
 
-                startActivity(Intent.createChooser(shareIntent, getString(R.string.share_notarization)));
+    private void shareFilteredSingle(String shareMessage, String shareText, Uri shareUri, String shareMimeType) {
 
+        Intent emailIntent = new Intent();
+        emailIntent.setAction(Intent.ACTION_SEND);
+        // Native email client doesn't currently support HTML, but it doesn't
+        // hurt to try in case they fix it
+        emailIntent.setDataAndType(shareUri, shareMimeType);
+        emailIntent.putExtra(Intent.EXTRA_STREAM,shareUri);
+        emailIntent.putExtra(Intent.EXTRA_TITLE,shareUri.getLastPathSegment());
+        emailIntent.putExtra(Intent.EXTRA_SUBJECT,shareUri.getLastPathSegment());
 
+        PackageManager pm = getPackageManager();
+        Intent sendIntent = new Intent(Intent.ACTION_SEND);
+        sendIntent.setType("*/*");
+
+        List<ResolveInfo> resInfo = pm.queryIntentActivities(sendIntent, 0);
+        ArrayList<LabeledIntent> intentList = new ArrayList();
+
+        for (int i = 0; i < resInfo.size(); i++) {
+            // Extract the label, append it, and repackage it in a LabeledIntent
+            ResolveInfo ri = resInfo.get(i);
+            String packageName = ri.activityInfo.packageName;
+            if (packageName.contains("android.email")) {
+                emailIntent.setPackage(packageName);
+            } else if (packageName.contains("com.whatsapp")) {
+                Intent intent = new Intent();
+                intent.setComponent(new ComponentName(packageName,
+                        ri.activityInfo.name));
+                intent.setAction(Intent.ACTION_SEND);
+                intent.setDataAndType(shareUri, shareMimeType);
+                intent.putExtra(Intent.EXTRA_TEXT, shareText);
+                intent.putExtra(Intent.EXTRA_STREAM,shareUri);
+
+                intentList.add(new LabeledIntent(intent, packageName, ri
+                        .loadLabel(pm), ri.icon));
             }
-            else {
+            else if (packageName.contains("com.google.android.gm")) {
+                Intent intent = new Intent();
+                intent.setComponent(new ComponentName(packageName,
+                        ri.activityInfo.name));
+                intent.setAction(Intent.ACTION_SEND);
+                intent.setDataAndType(shareUri, shareMimeType);
+                intent.putExtra(Intent.EXTRA_TEXT, shareText);
+                intent.putExtra(Intent.EXTRA_STREAM,shareUri);
+                intent.putExtra(Intent.EXTRA_TITLE,shareUri.getLastPathSegment());
+                intent.putExtra(Intent.EXTRA_SUBJECT,shareUri.getLastPathSegment());
 
-                shareIntent = new Intent(Intent.ACTION_SEND_MULTIPLE);
-
-                ArrayList<String> arrayListStrings = new ArrayList<String>();
-                for (int i = 0; i < shareUris.size(); i++)
-                    arrayListStrings.add(shareText.toString());
-
-                shareIntent.putExtra(Intent.EXTRA_TEXT, arrayListStrings);
-                shareIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, shareUris);
-                shareIntent.setType("*/*");
-                startActivity(Intent.createChooser(shareIntent, getString(R.string.share_proof)));
+                intentList.add(new LabeledIntent(intent, packageName, ri
+                        .loadLabel(pm), ri.icon));
             }
+            else if (packageName.contains("com.google.android.apps.docs")) {
+                Intent intent = new Intent();
+                intent.setComponent(new ComponentName(packageName,
+                        ri.activityInfo.name));
+
+                intent.setAction(Intent.ACTION_SEND);
+                intent.setDataAndType(shareUri, shareMimeType);
+                intent.putExtra(Intent.EXTRA_TEXT, shareText);
+                intent.putExtra(Intent.EXTRA_STREAM,shareUri);
+                intent.putExtra(Intent.EXTRA_TITLE,shareUri.getLastPathSegment());
+                intent.putExtra(Intent.EXTRA_SUBJECT,shareUri.getLastPathSegment());
+
+                intentList.add(new LabeledIntent(intent, packageName, ri
+                        .loadLabel(pm), ri.icon));
+            }
+            else if (packageName.contains("com.dropbox")) {
+                Intent intent = new Intent();
+                intent.setComponent(new ComponentName(packageName,
+                        ri.activityInfo.name));
+
+                intent.setAction(Intent.ACTION_SEND);
+                intent.setDataAndType(shareUri, shareMimeType);
+                intent.putExtra(Intent.EXTRA_TEXT, shareText);
+                intent.putExtra(Intent.EXTRA_TITLE,shareUri.getLastPathSegment());
+                intent.putExtra(Intent.EXTRA_SUBJECT,shareUri.getLastPathSegment());
+
+                intentList.add(new LabeledIntent(intent, packageName, ri
+                        .loadLabel(pm), ri.icon));
+            }
+            else if (packageName.contains("org.thoughtcrime")) {
+                Intent intent = new Intent();
+                intent.setComponent(new ComponentName(packageName,
+                        ri.activityInfo.name));
+
+                intent.setAction(Intent.ACTION_SEND);
+                intent.setDataAndType(shareUri, shareMimeType);
+                intent.putExtra(Intent.EXTRA_TEXT, shareText);
+                intent.putExtra(Intent.EXTRA_STREAM,shareUri);
+                intent.putExtra(Intent.EXTRA_TITLE,shareUri.getLastPathSegment());
+                intent.putExtra(Intent.EXTRA_SUBJECT,shareUri.getLastPathSegment());
+
+                intentList.add(new LabeledIntent(intent, packageName, ri
+                        .loadLabel(pm), ri.icon));
+            }
+            else if (packageName.contains("conversations")) {
+                Intent intent = new Intent();
+                intent.setComponent(new ComponentName(packageName,
+                        ri.activityInfo.name));
+
+                intent.setAction(Intent.ACTION_SEND);
+                intent.setDataAndType(shareUri, shareMimeType);
+                intent.putExtra(Intent.EXTRA_TEXT, shareText);
+                intent.putExtra(Intent.EXTRA_STREAM,shareUri);
+                intent.putExtra(Intent.EXTRA_TITLE,shareUri.getLastPathSegment());
+                intent.putExtra(Intent.EXTRA_SUBJECT,shareUri.getLastPathSegment());
+
+                intentList.add(new LabeledIntent(intent, packageName, ri
+                        .loadLabel(pm), ri.icon));
+            }
+
         }
+
+
+
+        // convert intentList to array
+        LabeledIntent[] extraIntents = intentList
+                .toArray(new LabeledIntent[intentList.size()]);
+
+        Intent openInChooser = Intent.createChooser(emailIntent,shareMessage);
+        openInChooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, extraIntents);
+        startActivity(openInChooser);
     }
 
     private void shareFiltered(String shareMessage, String shareText, ArrayList<Uri> shareUris) {
@@ -467,7 +590,7 @@ public class ShareProofActivity extends AppCompatActivity {
         emailIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, shareUris);
 
         PackageManager pm = getPackageManager();
-        Intent sendIntent = new Intent(Intent.ACTION_SEND_MULTIPLE);
+        Intent sendIntent = new Intent(Intent.ACTION_SEND);
         sendIntent.setType("*/*");
 
         List<ResolveInfo> resInfo = pm.queryIntentActivities(sendIntent, 0);
@@ -531,10 +654,10 @@ public class ShareProofActivity extends AppCompatActivity {
                 Intent intent = new Intent();
                 intent.setComponent(new ComponentName(packageName,
                         ri.activityInfo.name));
-                intent.setAction(Intent.ACTION_SEND_MULTIPLE);
-                intent.setType("*/*");
+                intent.setAction(Intent.ACTION_SEND);
                 intent.putExtra(Intent.EXTRA_TEXT, shareText);
-                intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, shareUris);
+                intent.setDataAndType(shareUris.get(0),"*/*");
+                        //        intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, shareUris);
 
                 intentList.add(new LabeledIntent(intent, packageName, ri
                         .loadLabel(pm), ri.icon));
@@ -551,7 +674,10 @@ public class ShareProofActivity extends AppCompatActivity {
                 intentList.add(new LabeledIntent(intent, packageName, ri
                         .loadLabel(pm), ri.icon));
             }
+
         }
+
+
 
         // convert intentList to array
         LabeledIntent[] extraIntents = intentList
@@ -577,6 +703,35 @@ public class ShareProofActivity extends AppCompatActivity {
                 ActivityCompat.requestPermissions(this, new String[]{permission}, requestCode);
             }
         } else {
+        }
+    }
+
+    private final static int BUFFER = 1024*8;
+
+    public void zip(ArrayList<Uri> uris, File fileZip) {
+        try {
+            BufferedInputStream origin = null;
+            FileOutputStream dest = new FileOutputStream(fileZip);
+            ZipOutputStream out = new ZipOutputStream(new BufferedOutputStream(
+                    dest));
+            byte data[] = new byte[BUFFER];
+
+            for (Uri uri : uris) {
+                origin = new BufferedInputStream(getContentResolver().openInputStream(uri), BUFFER);
+
+                ZipEntry entry = new ZipEntry(uri.getLastPathSegment());
+                out.putNextEntry(entry);
+                int count;
+
+                while ((count = origin.read(data, 0, BUFFER)) != -1) {
+                    out.write(data, 0, count);
+                }
+                origin.close();
+            }
+
+            out.close();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 }
