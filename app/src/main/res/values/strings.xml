@@ -43,5 +43,6 @@
     <string name="packaging_proof">Packaging proof for sharing...</string>
     <string name="view_public_key">View public key at: http://pgp.mit.edu/pks/lookup?search=0x</string>
     <string name="include_mobile_network">Include Mobile Network</string>
+    <string name="share_proof_action">Share Proof</string>
 
 </resources>

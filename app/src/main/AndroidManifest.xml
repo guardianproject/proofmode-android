@@ -80,12 +80,12 @@
             </intent-filter>
         </receiver>
 
-        <activity android:name=".ShareProofActivity" android:label="Share Proof">
+        <activity android:name=".ShareProofActivity" android:label="@string/share_proof_action">
 
             <intent-filter>
                 <action
                     android:name="android.intent.action.SEND"
-                    android:label="Share Proof" />
+                    android:label="@string/share_proof_action" />
 
                 <category android:name="android.intent.category.DEFAULT" />
 
@@ -94,7 +94,7 @@
             <intent-filter>
                 <action
                     android:name="android.intent.action.SEND"
-                    android:label="Share Proof" />
+                    android:label="@string/share_proof_action" />
 
                 <category android:name="android.intent.category.DEFAULT" />
 
@@ -103,7 +103,7 @@
             <intent-filter>
                 <action
                     android:name="android.intent.action.SEND_MULTIPLE"
-                    android:label="Share Proof" />
+                    android:label="@string/share_proof_action" />
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="image/*" />
