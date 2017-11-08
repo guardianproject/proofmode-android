@@ -9,10 +9,21 @@ import android.net.ConnectivityManager;
 import android.os.Build;
 import android.os.Debug;
 import android.provider.Settings;
+import android.telephony.CellIdentityGsm;
+import android.telephony.CellIdentityLte;
+import android.telephony.CellInfo;
+import android.telephony.CellInfoGsm;
+import android.telephony.CellInfoLte;
+import android.telephony.CellSignalStrengthGsm;
+import android.telephony.CellSignalStrengthLte;
+import android.telephony.NeighboringCellInfo;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import android.util.DisplayMetrics;
 import android.util.Log;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -275,7 +286,10 @@ public class DeviceInfo {
      * @return address or empty string
      */
     private static String getIPAddress(boolean useIPv4) {
+        StringBuffer sb = new StringBuffer();
+
         try {
+
             List<NetworkInterface> interfaces = Collections.list(NetworkInterface.getNetworkInterfaces());
             for (NetworkInterface intf : interfaces) {
                 List<InetAddress> addrs = Collections.list(intf.getInetAddresses());
@@ -285,12 +299,12 @@ public class DeviceInfo {
                         boolean isIPv4 = addr instanceof Inet4Address;
                         if (useIPv4) {
                             if (isIPv4)
-                                return sAddr;
+                                sb.append(sAddr).append(' ');
                         } else {
                             if (!isIPv4) {
                                 int delim = sAddr.indexOf('%'); // drop ip6 port
                                 // suffix
-                                return delim < 0 ? sAddr : sAddr.substring(0, delim);
+                                sb.append(delim < 0 ? sAddr : sAddr.substring(0, delim)).append(' ');
                             }
                         }
                     }
@@ -298,7 +312,7 @@ public class DeviceInfo {
             }
         } catch (Exception ex) {
         } // for now eat exceptions
-        return "";
+        return sb.toString();
     }
 
     /*
@@ -560,5 +574,65 @@ public class DeviceInfo {
         } catch (Exception ex) {
         }
         return "02:00:00:00:00:00";
+    }
+
+    public static String getCellInfo(Context ctx){
+        TelephonyManager tel = (TelephonyManager) ctx.getSystemService(Context.TELEPHONY_SERVICE);
+
+        JSONArray cellList = new JSONArray();
+
+// Type of the network
+        int phoneTypeInt = tel.getPhoneType();
+        String phoneType = null;
+        phoneType = phoneTypeInt == TelephonyManager.PHONE_TYPE_GSM ? "gsm" : phoneType;
+        phoneType = phoneTypeInt == TelephonyManager.PHONE_TYPE_CDMA ? "cdma" : phoneType;
+
+        //from Android M up must use getAllCellInfo
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+
+
+
+            List<NeighboringCellInfo> neighCells = tel.getNeighboringCellInfo();
+            for (int i = 0; i < neighCells.size(); i++) {
+                try {
+                    JSONObject cellObj = new JSONObject();
+                    NeighboringCellInfo thisCell = neighCells.get(i);
+                    cellObj.put("cellId", thisCell.getCid());
+                    cellObj.put("lac", thisCell.getLac());
+                    cellObj.put("rssi", thisCell.getRssi());
+                    cellList.put(cellObj);
+                } catch (Exception e) {
+                }
+            }
+
+        } else {
+            List<CellInfo> infos = tel.getAllCellInfo();
+            for (int i = 0; i<infos.size(); ++i) {
+                try {
+                    JSONObject cellObj = new JSONObject();
+                    CellInfo info = infos.get(i);
+                    if (info instanceof CellInfoGsm){
+                        CellSignalStrengthGsm gsm = ((CellInfoGsm) info).getCellSignalStrength();
+                        CellIdentityGsm identityGsm = ((CellInfoGsm) info).getCellIdentity();
+                        cellObj.put("cellId", identityGsm.getCid());
+                        cellObj.put("lac", identityGsm.getLac());
+                        cellObj.put("dbm", gsm.getDbm());
+                        cellList.put(cellObj);
+                    } else if (info instanceof CellInfoLte) {
+                        CellSignalStrengthLte lte = ((CellInfoLte) info).getCellSignalStrength();
+                        CellIdentityLte identityLte = ((CellInfoLte) info).getCellIdentity();
+                        cellObj.put("cellId", identityLte.getCi());
+                        cellObj.put("tac", identityLte.getTac());
+                        cellObj.put("dbm", lte.getDbm());
+                        cellList.put(cellObj);
+                    }
+
+                } catch (Exception ex) {
+
+                }
+            }
+        }
+
+        return cellList.toString();
     }
 }

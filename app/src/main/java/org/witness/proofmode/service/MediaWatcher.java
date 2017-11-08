@@ -122,8 +122,10 @@ public class MediaWatcher extends BroadcastReceiver {
 
             final String mediaPath = mediaPathTmp;
 
-            final boolean showDeviceIds = prefs.getBoolean("trackDeviceId",true);;
-            final boolean showLocation = prefs.getBoolean("trackLocation",true);;;
+            final boolean showDeviceIds = prefs.getBoolean("trackDeviceId",true);
+            final boolean showLocation = prefs.getBoolean("trackLocation",true);
+            final boolean showMobileNetwork = prefs.getBoolean("trackMobileNetwork",false);
+
 
             final String mediaHash = HashUtils.getSHA256FromFileContent(new File(mediaPath));
 
@@ -132,7 +134,7 @@ public class MediaWatcher extends BroadcastReceiver {
                 Timber.d("Writing proof for hash %s for path %s",mediaHash, mediaPath);
 
                 //write immediate proof, w/o safety check result
-                writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, null, false, false, -1, null);
+                writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, null);
 
                 if (autoNotarize) {
 
@@ -151,7 +153,7 @@ public class MediaWatcher extends BroadcastReceiver {
                                 boolean isCtsMatch = resp.isCtsProfileMatch();
 
                                 Timber.d("Success! SafetyNet result: isBasicIntegrity: " + isBasicIntegrity + " isCts:" + isCtsMatch);
-                                writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, resultString, isBasicIntegrity, isCtsMatch, timestamp, null);
+                                writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, showMobileNetwork, resultString, isBasicIntegrity, isCtsMatch, timestamp, null);
 
 
                             } else {
@@ -169,14 +171,14 @@ public class MediaWatcher extends BroadcastReceiver {
                         public void notarizationSuccessful(String timestamp) {
 
                             Timber.d("Got Timebeat success response timestamp: " + timestamp);
-                            writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, null, false, false, -1, "TimeBeat: " + timestamp);
+                            writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, "TimeBeat: " + timestamp);
                         }
 
                         @Override
                         public void notarizationFailed(int errCode, String message) {
 
                             Timber.d("Got Timebeat error response: " + message);
-                            writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, null, false, false, -1, "TimeBeat Error: " + message);
+                            writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, "TimeBeat Error: " + message);
 
                         }
                     });
@@ -210,7 +212,7 @@ public class MediaWatcher extends BroadcastReceiver {
         }
     }
 
-    private void writeProof (Context context, String mediaPath, String hash, boolean showDeviceIds, boolean showLocation, String safetyCheckResult, boolean isBasicIntegrity, boolean isCtsMatch, long notarizeTimestamp, String notes)
+    private void writeProof (Context context, String mediaPath, String hash, boolean showDeviceIds, boolean showLocation, boolean showMobileNetwork, String safetyCheckResult, boolean isBasicIntegrity, boolean isCtsMatch, long notarizeTimestamp, String notes)
     {
 
         File fileMedia = new File(mediaPath);
@@ -230,7 +232,7 @@ public class MediaWatcher extends BroadcastReceiver {
 
                 //add data to proof csv and sign again
                 boolean writeHeaders = !fileMediaProof.exists();
-                writeTextToFile(context, fileMediaProof, buildProof(context, mediaPath, writeHeaders, showDeviceIds, showLocation, safetyCheckResult, isBasicIntegrity, isCtsMatch, notarizeTimestamp, notes));
+                writeTextToFile(context, fileMediaProof, buildProof(context, mediaPath, writeHeaders, showDeviceIds, showLocation, showMobileNetwork, safetyCheckResult, isBasicIntegrity, isCtsMatch, notarizeTimestamp, notes));
 
                 if (fileMediaProof.exists()) {
                     //sign the proof file again
@@ -300,7 +302,7 @@ public class MediaWatcher extends BroadcastReceiver {
         return false;
     }
 
-    private String buildProof (Context context, String mediaPath, boolean writeHeaders, boolean showDeviceIds, boolean showLocation, String safetyCheckResult, boolean isBasicIntegrity, boolean isCtsMatch, long notarizeTimestamp, String notes)
+    private String buildProof (Context context, String mediaPath, boolean writeHeaders, boolean showDeviceIds, boolean showLocation, boolean showMobileNetwork, String safetyCheckResult, boolean isBasicIntegrity, boolean isCtsMatch, long notarizeTimestamp, String notes)
     {
         File fileMedia = new File (mediaPath);
         String hash = getSHA256FromFileContent(mediaPath);
@@ -324,7 +326,6 @@ public class MediaWatcher extends BroadcastReceiver {
 
         hmProof.put("DataType",DeviceInfo.getDataType(context));
         hmProof.put("Network",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_NETWORK));
-      //  hmProof.put("Network",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_CE));
 
         hmProof.put("NetworkType",DeviceInfo.getNetworkType(context));
         hmProof.put("Hardware",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_HARDWARE_MODEL));
@@ -380,6 +381,9 @@ public class MediaWatcher extends BroadcastReceiver {
             hmProof.put("Notes",notes);
         else
             hmProof.put("Notes","");
+
+        if (showMobileNetwork)
+            hmProof.put("CellInfo",DeviceInfo.getCellInfo(context));
 
         StringBuffer sb = new StringBuffer();
 

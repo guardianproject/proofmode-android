@@ -88,6 +88,21 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        SwitchCompat switchMobile = (SwitchCompat)findViewById(R.id.switchCellInfo);
+        switchMobile.setChecked(mPrefs.getBoolean("trackMobileNetwork",false));
+        switchMobile.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+
+                mPrefs.edit().putBoolean("trackMobileNetwork",isChecked).commit();
+
+                if (isChecked)
+                {
+                    askForPermission(Manifest.permission.READ_PHONE_STATE, 1);
+                }
+            }
+        });
+
         SwitchCompat switchDevice = (SwitchCompat)findViewById(R.id.switchDevice);
         switchDevice.setChecked(mPrefs.getBoolean("trackDeviceId",true));
         switchDevice.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -150,6 +165,10 @@ public class MainActivity extends AppCompatActivity {
             case 3:
                 askForPermission(Manifest.permission.ACCESS_NETWORK_STATE,4);
 
+                break;
+
+            case 4:
+                askForPermission(Manifest.permission.READ_PHONE_STATE, 5);
                 break;
 
         }
