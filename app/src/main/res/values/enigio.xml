@@ -1,7 +1,9 @@
 <!-- This needs to be modified with value's provided by Enigio or configured by the user -->
 <resources>
+<!--
     <string name="enigio_site_url"></string>
     <string name="enigio_email"></string>
     <string name="enigio_username"></string>
     <string name="enigio_password"></string>
+-->
 </resources>
