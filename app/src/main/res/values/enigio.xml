@@ -1,7 +1,7 @@
 <!-- This needs to be modified with value's provided by Enigio or configured by the user -->
 <resources>
-    <string name="enigio_site_url">demo.enigio.com</string>
-    <string name="enigio_email">nathan@guardianproject.info</string>
-    <string name="enigio_username">guardian_project</string>
-    <string name="enigio_password">ne4uf5mWANgL</string>
+    <string name="enigio_site_url"></string>
+    <string name="enigio_email"></string>
+    <string name="enigio_username"></string>
+    <string name="enigio_password"></string>
 </resources>
