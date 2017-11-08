@@ -498,7 +498,8 @@ public class ShareProofActivity extends AppCompatActivity {
                 intent.setComponent(new ComponentName(packageName,
                         ri.activityInfo.name));
                 intent.setAction(Intent.ACTION_SEND);
-                intent.setDataAndType(shareUri, shareMimeType);
+         //       intent.setDataAndType(shareUri, shareMimeType);
+                intent.putExtra(Intent.EXTRA_EMAIL, new String[] { "" });
                 intent.putExtra(Intent.EXTRA_TEXT, shareText);
                 intent.putExtra(Intent.EXTRA_STREAM,shareUri);
                 intent.putExtra(Intent.EXTRA_TITLE,shareUri.getLastPathSegment());
@@ -513,7 +514,7 @@ public class ShareProofActivity extends AppCompatActivity {
                         ri.activityInfo.name));
 
                 intent.setAction(Intent.ACTION_SEND);
-                intent.setDataAndType(shareUri, shareMimeType);
+           //     intent.setDataAndType(shareUri, shareMimeType);
                 intent.putExtra(Intent.EXTRA_TEXT, shareText);
                 intent.putExtra(Intent.EXTRA_STREAM,shareUri);
                 intent.putExtra(Intent.EXTRA_TITLE,shareUri.getLastPathSegment());
@@ -528,8 +529,9 @@ public class ShareProofActivity extends AppCompatActivity {
                         ri.activityInfo.name));
 
                 intent.setAction(Intent.ACTION_SEND);
-                intent.setDataAndType(shareUri, shareMimeType);
+            //    intent.setDataAndType(shareUri, shareMimeType);
                 intent.putExtra(Intent.EXTRA_TEXT, shareText);
+                intent.putExtra(Intent.EXTRA_STREAM,shareUri);
                 intent.putExtra(Intent.EXTRA_TITLE,shareUri.getLastPathSegment());
                 intent.putExtra(Intent.EXTRA_SUBJECT,shareUri.getLastPathSegment());
 
@@ -537,6 +539,21 @@ public class ShareProofActivity extends AppCompatActivity {
                         .loadLabel(pm), ri.icon));
             }
             else if (packageName.contains("org.thoughtcrime")) {
+                Intent intent = new Intent();
+                intent.setComponent(new ComponentName(packageName,
+                        ri.activityInfo.name));
+
+                intent.setAction(Intent.ACTION_SEND);
+           //     intent.setDataAndType(shareUri, shareMimeType);
+                intent.putExtra(Intent.EXTRA_TEXT, shareText);
+                intent.putExtra(Intent.EXTRA_STREAM,shareUri);
+                intent.putExtra(Intent.EXTRA_TITLE,shareUri.getLastPathSegment());
+                intent.putExtra(Intent.EXTRA_SUBJECT,shareUri.getLastPathSegment());
+
+                intentList.add(new LabeledIntent(intent, packageName, ri
+                        .loadLabel(pm), ri.icon));
+            }
+            else if (packageName.contains("conversations")) {
                 Intent intent = new Intent();
                 intent.setComponent(new ComponentName(packageName,
                         ri.activityInfo.name));
@@ -551,7 +568,7 @@ public class ShareProofActivity extends AppCompatActivity {
                 intentList.add(new LabeledIntent(intent, packageName, ri
                         .loadLabel(pm), ri.icon));
             }
-            else if (packageName.contains("conversations")) {
+            else if (packageName.contains("org.awesomeapp")||packageName.contains("im.zom")) {
                 Intent intent = new Intent();
                 intent.setComponent(new ComponentName(packageName,
                         ri.activityInfo.name));
