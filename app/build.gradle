@@ -12,8 +12,8 @@ android {
         applicationId "org.witness.proofmode"
         minSdkVersion 23
         targetSdkVersion 27
-        versionCode 104
-        versionName "0.0.10-RC-1"
+        versionCode 105
+        versionName "0.0.10-RC-2"
         manifestPlaceholders = [HOCKEYAPP_APP_ID: "b72b51a4aa74469fb8051586deab598b"]
     }
     buildTypes {
