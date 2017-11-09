@@ -412,6 +412,8 @@ public class ShareProofActivity extends AppCompatActivity {
         sb.append(getString(R.string.view_public_key) + fingerprint);
         sb.append("\n\n");
 
+        /**
+         * //disable for now
         try {
             final TimeBeatNotarizationProvider tbNotarize = new TimeBeatNotarizationProvider(this);
             String tbProof = tbNotarize.getProof(hash);
@@ -420,7 +422,7 @@ public class ShareProofActivity extends AppCompatActivity {
         catch (Exception ioe)
         {
             Timber.e("Error checking for Timebeat proof",ioe);
-        }
+        }**/
 
         shareUris.add(Uri.fromFile(fileMediaProof));
 

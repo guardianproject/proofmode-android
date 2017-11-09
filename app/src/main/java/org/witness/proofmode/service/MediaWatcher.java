@@ -37,13 +37,10 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.security.MessageDigest;
 import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 
 import timber.log.Timber;
-
-import static org.witness.proofmode.ProofModeApp.TAG;
 
 public class MediaWatcher extends BroadcastReceiver {
 
@@ -165,6 +162,7 @@ public class MediaWatcher extends BroadcastReceiver {
                         }
                     });
 
+                    /**
                     final TimeBeatNotarizationProvider tbNotarize = new TimeBeatNotarizationProvider(context);
                     tbNotarize.notarize("ProofMode Media Hash: " + mediaHash, new File(mediaPath), new NotarizationListener() {
                         @Override
@@ -182,7 +180,7 @@ public class MediaWatcher extends BroadcastReceiver {
 
                         }
                     });
-
+                    **/
 
                 }
             }
