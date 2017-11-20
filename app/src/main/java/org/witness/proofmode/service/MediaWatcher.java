@@ -259,34 +259,20 @@ public class MediaWatcher extends BroadcastReceiver {
                     Environment.DIRECTORY_DOWNLOADS), PROOF_BASE_FOLDER);
         }
 
-        if (!fileParentDir.exists())
-            fileParentDir.mkdir();
-
-        File fileHashDir = new File(fileParentDir, hash + '/');
-
-        if (!fileHashDir.exists()) {
-            boolean success = fileHashDir.mkdir();
-
-            if (!success)
+        if (!fileParentDir.exists()) {
+            if (!fileParentDir.mkdir())
             {
                 fileParentDir = new File(Environment.getExternalStorageDirectory(), PROOF_BASE_FOLDER);
-
                 if (!fileParentDir.exists())
-                    success = fileParentDir.mkdir();
-
-                fileHashDir = new File(fileParentDir, hash + '/');
-                if (!fileHashDir.exists())
-                {
-                    success = fileHashDir.mkdir();
-                }
-
+                    if (!fileParentDir.mkdir())
+                        return null;
             }
-
-            Timber.d(success + ": created new path: " + fileHashDir.toString());
-
-            if (!success)
-                return null;
         }
+
+        File fileHashDir = new File(fileParentDir, hash + '/');
+        if (!fileHashDir.exists())
+            if (!fileHashDir.mkdir())
+                return null;
 
         return fileHashDir;
     }
