@@ -13,6 +13,7 @@ import android.os.AsyncTask;
 import android.os.Environment;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.content.FileProvider;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -116,17 +117,17 @@ public class ShareProofActivity extends AppCompatActivity {
                 {
                     case 0:
 
-                        shareProof (false, false, false);
+                        shareProof (false, false);
 
                         break;
                     case 1:
 
-                        shareProof (false, true, false);
+                        shareProof (false, true);
 
                         break;
                     case 2:
 
-                        shareProof (true, true, true);
+                        shareProof (true, true);
 
                         break;
                 }
@@ -145,7 +146,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
     }
 
-    private boolean shareProof (final boolean shareMedia, final boolean shareProof, final boolean shareAsZip) {
+    private boolean shareProof (final boolean shareMedia, final boolean shareProof) {
 
         Toast.makeText(this, R.string.packaging_proof,Toast.LENGTH_LONG).show();
 
@@ -153,7 +154,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
             public void run ()
             {
-                shareProofAsync(shareMedia, shareProof, shareAsZip);
+                shareProofAsync(shareMedia, shareProof);
 
             }
         }).start();
@@ -161,7 +162,7 @@ public class ShareProofActivity extends AppCompatActivity {
         return true;
     }
 
-    private boolean shareProofAsync (boolean shareMedia, boolean shareProof, boolean shareAsZip)
+    private boolean shareProofAsync (boolean shareMedia, boolean shareProof)
     {
 
     // Get intent, action and MIME type
@@ -203,7 +204,8 @@ public class ShareProofActivity extends AppCompatActivity {
             if (fBatchProofOut != null && fileBatchProof != null) {
                 fBatchProofOut.flush();
                 fBatchProofOut.close();
-                shareUris.add(Uri.fromFile(fileBatchProof)); // Add your image URIs here
+                Uri uriBatchProof = FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider",fileBatchProof);
+                shareUris.add(uriBatchProof); // Add your image URIs here
             }
 
         }
@@ -225,20 +227,17 @@ public class ShareProofActivity extends AppCompatActivity {
                 shareNotarization(shareText.toString());
             else {
 
-                if (shareAsZip)
-                {
-                    File fileFolder = MediaWatcher.getHashStorageDir("zip");
-                    File fileZip = new File(fileFolder,"proofmode." + new Date().getTime() + ".zip");
-                    zip(shareUris,fileZip);
-                    shareFilteredSingle(getString(R.string.select_app), shareText.toString(), Uri.fromFile(fileZip),"application/zip");
+                File fileFolder = MediaWatcher.getHashStorageDir("zip");
+                File fileZip = new File(fileFolder,"proofmode." + new Date().getTime() + ".zip");
+                zip(shareUris,fileZip);
+                fileZip.setReadable(true);
+                Uri uriZip = FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider",fileZip);
 
-                }
-                else {
-                    if (shareUris.size() == 1)
-                        shareFilteredSingle(getString(R.string.select_app), shareText.toString(), shareUris.get(0),"*/*");
-                    else
-                        shareFiltered(getString(R.string.select_app), shareText.toString(), shareUris);
-                }
+                if (shareUris.size() == 1)
+                    shareFilteredSingle(getString(R.string.select_app), shareText.toString(), shareUris.get(0),"*/*");
+                else
+                    shareFiltered(getString(R.string.select_app), shareText.toString(), shareUris, uriZip);
+
             }
         }
 
@@ -424,12 +423,12 @@ public class ShareProofActivity extends AppCompatActivity {
             Timber.e("Error checking for Timebeat proof",ioe);
         }**/
 
-        shareUris.add(Uri.fromFile(fileMediaProof));
+        shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider",fileMediaProof));
 
         if (shareMedia) {
-            shareUris.add(Uri.fromFile(fileMedia));
-            shareUris.add(Uri.fromFile(fileMediaSig));
-            shareUris.add(Uri.fromFile(fileMediaProofSig));
+            shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider",fileMedia));
+            shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider",fileMediaSig));
+            shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider",fileMediaProofSig));
         }
 
         if (fBatchProofOut != null)
@@ -599,7 +598,7 @@ public class ShareProofActivity extends AppCompatActivity {
         startActivity(openInChooser);
     }
 
-    private void shareFiltered(String shareMessage, String shareText, ArrayList<Uri> shareUris) {
+    private void shareFiltered(String shareMessage, String shareText, ArrayList<Uri> shareUris, Uri shareZipUri) {
 
         Intent emailIntent = new Intent();
         emailIntent.setAction(Intent.ACTION_SEND_MULTIPLE);
@@ -673,10 +672,10 @@ public class ShareProofActivity extends AppCompatActivity {
                 Intent intent = new Intent();
                 intent.setComponent(new ComponentName(packageName,
                         ri.activityInfo.name));
-                intent.setAction(Intent.ACTION_SEND);
-                intent.putExtra(Intent.EXTRA_TEXT, shareText);
-                intent.setDataAndType(shareUris.get(0),"*/*");
-                        //        intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, shareUris);
+                intent.setAction(Intent.ACTION_SEND_MULTIPLE);
+             //   intent.putExtra(Intent.EXTRA_TEXT, shareText);
+               // intent.setDataAndType(shareZipUri,"application/zip");
+                intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, shareUris);
 
                 intentList.add(new LabeledIntent(intent, packageName, ri
                         .loadLabel(pm), ri.icon));

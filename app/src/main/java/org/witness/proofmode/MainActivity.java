@@ -22,26 +22,15 @@ import android.widget.CompoundButton;
 import android.widget.Switch;
 import android.widget.Toast;
 
-import net.hockeyapp.android.UpdateManager;
-import net.hockeyapp.android.metrics.MetricsManager;
-
-import org.spongycastle.jce.provider.BouncyCastleProvider;
-import org.spongycastle.openpgp.PGPException;
-import org.spongycastle.openpgp.PGPKeyRingGenerator;
-import org.spongycastle.openpgp.PGPUtil;
-import org.witness.proofmode.crypto.DetachedSignatureProcessor;
 import org.witness.proofmode.crypto.PgpUtils;
-import org.witness.proofmode.service.MediaListenerService;
 import org.witness.proofmode.util.GPSTracker;
 
 import java.io.IOException;
-import java.security.Security;
 
 public class MainActivity extends AppCompatActivity {
 
     private SharedPreferences mPrefs;
 
-    private final static String URL_ABOUT = "https://guardianproject.info/apps/camerav";
     private final static int REQUEST_CODE_INTRO = 9999;
 
     private PgpUtils mPgpUtils;
@@ -134,7 +123,7 @@ public class MainActivity extends AppCompatActivity {
             askForPermission(Manifest.permission.ACCESS_FINE_LOCATION, 1);
         }
 
-        checkForUpdates();
+
 
     }
 
@@ -294,17 +283,8 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void checkForUpdates() {
 
-        // add this to your main activity's onCreate()-callback
-        MetricsManager.register(getApplication());
-
-        // Remove this for store builds!
-        UpdateManager.register(this);
-    }
-
-    private void unregisterManagers() {
-        UpdateManager.unregister();
+    private void unregisterManagers(){
     }
 
     @Override

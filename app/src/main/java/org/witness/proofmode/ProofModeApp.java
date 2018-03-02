@@ -1,20 +1,8 @@
 package org.witness.proofmode;
 
-import android.annotation.TargetApi;
 import android.app.Application;
-import android.app.job.JobInfo;
-import android.app.job.JobScheduler;
-import android.content.ComponentName;
-import android.content.Context;
 import android.content.Intent;
-import android.os.StrictMode;
-import android.provider.ContactsContract;
 import android.util.Log;
-
-import net.hockeyapp.android.CrashManager;
-import net.hockeyapp.android.UpdateManager;
-import net.hockeyapp.android.metrics.MetricsManager;
-
 import org.spongycastle.jce.provider.BouncyCastleProvider;
 import org.witness.proofmode.service.MediaListenerService;
 import org.witness.proofmode.service.PhotosContentJob;
@@ -42,8 +30,6 @@ public class ProofModeApp extends Application {
     public void onCreate() {
         super.onCreate();
 
-        StrictMode.setVmPolicy(StrictMode.VmPolicy.LAX);
-
         if (BuildConfig.DEBUG) {
             Timber.plant(new Timber.DebugTree());
         } else {
@@ -61,7 +47,6 @@ public class ProofModeApp extends Application {
 
         SafetyNetCheck.buildGoogleApiClient(this);
 
-        checkForCrashes();
     }
 
     /** A tree which logs important information for crash reporting. */
@@ -71,6 +56,7 @@ public class ProofModeApp extends Application {
                 return;
             }
 
+            /**
 // add this wherever you want to track a custom event
             MetricsManager.trackEvent("Crash: " + tag);
 
@@ -80,13 +66,9 @@ public class ProofModeApp extends Application {
 
             HashMap<String, Double> measurements = new HashMap<>();
             MetricsManager.trackEvent("YOUR_EVENT_NAME", properties, measurements);
+             **/
 
         }
     }
-
-    private void checkForCrashes() {
-        CrashManager.register(this);
-    }
-
 
 }
