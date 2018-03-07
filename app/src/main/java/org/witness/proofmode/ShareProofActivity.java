@@ -62,7 +62,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
         askForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE,4);
 
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_share);
 
         // Get intent, action and MIME type
         Intent intent = getIntent();
@@ -103,8 +103,8 @@ public class ShareProofActivity extends AppCompatActivity {
         }
         else
         {
-           // Toast.makeText(this, R.string.proof_error_message,Toast.LENGTH_LONG).show();
-           // finish();
+           Toast.makeText(this, R.string.proof_error_message,Toast.LENGTH_LONG).show();
+           finish();
         }
     }
 
