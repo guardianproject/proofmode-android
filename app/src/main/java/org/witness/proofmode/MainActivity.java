@@ -44,8 +44,6 @@ public class MainActivity extends AppCompatActivity {
 
         mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
 
-        mPgpUtils = PgpUtils.getInstance(this,mPrefs.getString("password",PgpUtils.DEFAULT_PASSWORD));
-
         SwitchCompat switchProof = findViewById(R.id.switchProof);
         switchProof.setChecked(mPrefs.getBoolean("doProof",true));
 
@@ -122,7 +120,6 @@ public class MainActivity extends AppCompatActivity {
         {
             askForPermission(Manifest.permission.ACCESS_FINE_LOCATION, 1);
         }
-
 
 
     }
@@ -224,8 +221,10 @@ public class MainActivity extends AppCompatActivity {
     private void publishKey ()
     {
 
-
         try {
+            if (mPgpUtils == null)
+                mPgpUtils = PgpUtils.getInstance(this,mPrefs.getString("password",PgpUtils.DEFAULT_PASSWORD));
+
             mPgpUtils.publishPublicKey();
             String fingerprint = mPgpUtils.getPublicKeyFingerprint();
 
@@ -244,6 +243,10 @@ public class MainActivity extends AppCompatActivity {
 
 
         try {
+
+            if (mPgpUtils == null)
+                mPgpUtils = PgpUtils.getInstance(this,mPrefs.getString("password",PgpUtils.DEFAULT_PASSWORD));
+
             mPgpUtils.publishPublicKey();
             String pubKey = mPgpUtils.getPublicKey();
 

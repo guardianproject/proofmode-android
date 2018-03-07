@@ -62,6 +62,8 @@ public class ShareProofActivity extends AppCompatActivity {
 
         askForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE,4);
 
+        setContentView(R.layout.activity_main);
+
         // Get intent, action and MIME type
         Intent intent = getIntent();
         String action = intent.getAction();
@@ -232,6 +234,7 @@ public class ShareProofActivity extends AppCompatActivity {
                 File fileZip = new File(fileFolder,"proofmode." + new Date().getTime() + ".zip");
                 zip(shareUris,fileZip);
                 fileZip.setReadable(true);
+
                 Uri uriZip = FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider",fileZip);
 
                 if (shareUris.size() == 1)
@@ -276,7 +279,7 @@ public class ShareProofActivity extends AppCompatActivity {
                             result = true;
                         } else {
                             //generate now?
-                            result = false;
+                            result = true;
 
                             new AsyncTask<Void, Void, String>() {
                                 protected String doInBackground(Void... params) {
@@ -287,9 +290,7 @@ public class ShareProofActivity extends AppCompatActivity {
                                 }
 
                                 protected void onPostExecute(String msg) {
-                                    // Post Code
-                                    // Use `msg` in code
-                                    displaySharePrompt();
+
 
                                 }
                             }.execute();
@@ -692,13 +693,17 @@ public class ShareProofActivity extends AppCompatActivity {
                         .loadLabel(pm), ri.icon));
             }
             else if (packageName.contains("org.thoughtcrime")) {
+
                 Intent intent = new Intent();
                 intent.setComponent(new ComponentName(packageName,
                         ri.activityInfo.name));
-                intent.setAction(Intent.ACTION_SEND_MULTIPLE);
-             //   intent.putExtra(Intent.EXTRA_TEXT, shareText);
-               // intent.setDataAndType(shareZipUri,"application/zip");
-                intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, shareUris);
+
+                intent.setAction(Intent.ACTION_SEND);
+                //     intent.setDataAndType(shareUri, shareMimeType);
+                intent.putExtra(Intent.EXTRA_TEXT, shareText);
+                intent.putExtra(Intent.EXTRA_STREAM,shareZipUri);
+                intent.putExtra(Intent.EXTRA_TITLE,shareZipUri.getLastPathSegment());
+                intent.putExtra(Intent.EXTRA_SUBJECT,shareZipUri.getLastPathSegment());
 
                 intentList.add(new LabeledIntent(intent, packageName, ri
                         .loadLabel(pm), ri.icon));
