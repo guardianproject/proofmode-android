@@ -67,19 +67,6 @@ public class ProofModeApp extends Application {
             if (priority == Log.VERBOSE || priority == Log.DEBUG) {
                 return;
             }
-
-            /**
-// add this wherever you want to track a custom event
-            MetricsManager.trackEvent("Crash: " + tag);
-
-// add this wherever you want to track a custom event and attach properties or measurements to it
-            HashMap<String, String> properties = new HashMap<>();
-            properties.put("Message", message);
-
-            HashMap<String, Double> measurements = new HashMap<>();
-            MetricsManager.trackEvent("YOUR_EVENT_NAME", properties, measurements);
-             **/
-
         }
     }
 
