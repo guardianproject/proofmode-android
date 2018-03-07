@@ -2,7 +2,7 @@ apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 27
-    buildToolsVersion "27.0.0"
+    buildToolsVersion "27.0.3"
 
     lintOptions {
           abortOnError false
@@ -25,12 +25,13 @@ android {
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
+  //  compile fileTree(dir: 'libs', include: ['*.jar'])
     testCompile 'junit:junit:4.12'
     compile 'com.android.support:appcompat-v7:27.1.0'
+    compile 'com.android.support:support-compat:27.1.0'
     compile 'com.android.support:design:27.1.0'
     compile 'com.madgag.spongycastle:core:1.51.0.0'
-    compile 'com.madgag.spongycastle:pg:1.50.0.0'
+    compile 'com.madgag.spongycastle:pg:1.51.0.0'
     compile 'com.madgag.spongycastle:pkix:1.51.0.0'
     compile 'com.madgag.spongycastle:prov:1.51.0.0'
     compile 'com.github.paolorotolo:appintro:4.1.0'
