@@ -39,14 +39,14 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
         mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
 
         mPgpUtils = PgpUtils.getInstance(this,mPrefs.getString("password",PgpUtils.DEFAULT_PASSWORD));
 
-        SwitchCompat switchProof = (SwitchCompat)findViewById(R.id.switchProof);
+        SwitchCompat switchProof = findViewById(R.id.switchProof);
         switchProof.setChecked(mPrefs.getBoolean("doProof",true));
 
         switchProof.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {

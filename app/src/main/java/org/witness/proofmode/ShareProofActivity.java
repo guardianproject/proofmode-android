@@ -11,6 +11,7 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Environment;
+import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.FileProvider;
@@ -100,8 +101,8 @@ public class ShareProofActivity extends AppCompatActivity {
         }
         else
         {
-            Toast.makeText(this, R.string.proof_error_message,Toast.LENGTH_LONG).show();
-            finish();
+           // Toast.makeText(this, R.string.proof_error_message,Toast.LENGTH_LONG).show();
+           // finish();
         }
     }
 
@@ -249,13 +250,14 @@ public class ShareProofActivity extends AppCompatActivity {
     private boolean proofExists (Uri mediaUri)
     {
         boolean result = false;
+        String[] projection = { MediaStore.Images.Media.DATA };
 
-        Cursor cursor = getContentResolver().query(mediaUri,      null,null, null, null);
+        Cursor cursor = getContentResolver().query(getRealUri(mediaUri),      projection,null, null, null);
 
         if (cursor.getCount() > 0) {
 
             cursor.moveToFirst();
-            final String mediaPath = cursor.getString(cursor.getColumnIndex("_data"));
+            final String mediaPath = cursor.getString(cursor.getColumnIndex(projection[0]));
 
             if (mediaPath != null) {
 
@@ -274,6 +276,7 @@ public class ShareProofActivity extends AppCompatActivity {
                             result = true;
                         } else {
                             //generate now?
+                            result = false;
 
                             new AsyncTask<Void, Void, String>() {
                                 protected String doInBackground(Void... params) {
@@ -286,11 +289,12 @@ public class ShareProofActivity extends AppCompatActivity {
                                 protected void onPostExecute(String msg) {
                                     // Post Code
                                     // Use `msg` in code
+                                    displaySharePrompt();
+
                                 }
                             }.execute();
 
 
-                            result = true;
 
                         }
                     }
@@ -303,15 +307,34 @@ public class ShareProofActivity extends AppCompatActivity {
         return result;
     }
 
+    private Uri getRealUri (Uri contentUri)
+    {
+        String unusablePath = contentUri.getPath();
+        int startIndex = unusablePath.indexOf("external/");
+        int endIndex = unusablePath.indexOf("/ACTUAL");
+        if (startIndex != -1 && endIndex != -1) {
+            String embeddedPath = unusablePath.substring(startIndex, endIndex);
+
+            Uri.Builder builder = contentUri.buildUpon();
+            builder.path(embeddedPath);
+            builder.authority("media");
+            return builder.build();
+        }
+        else
+            return contentUri;
+    }
+
     private boolean processUri (Uri mediaUri, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut, boolean shareMedia)
     {
-        Cursor cursor = getContentResolver().query(mediaUri,      null,null, null, null);
+        String[] projection = { MediaStore.Images.Media.DATA };
+        Cursor cursor = getContentResolver().query(getRealUri(mediaUri),      projection,null, null, null);
         boolean result = false;
 
         if (cursor.getCount() > 0) {
 
             cursor.moveToFirst();
-            String mediaPath = cursor.getString(cursor.getColumnIndex("_data"));
+            int columnIndex = cursor.getColumnIndexOrThrow(projection[0]);
+            String mediaPath = cursor.getString(columnIndex);
 
             if (mediaPath != null) {
                 //check proof metadata against original image

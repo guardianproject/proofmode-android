@@ -56,6 +56,8 @@ public class MediaWatcher extends BroadcastReceiver {
     @Override
     public void onReceive(final Context context, final Intent intent) {
 
+        ProofModeApp.init(context);
+
         new Thread ()
         {
             public void run ()

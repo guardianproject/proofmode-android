@@ -252,8 +252,8 @@ public class PgpUtils {
     private static void exportKeyPair(
             OutputStream    secretOut,
             OutputStream    publicOut,
-            PublicKey publicKey,
-            PrivateKey privateKey,
+            PGPPublicKey publicKey,
+            PGPPrivateKey privateKey,
             String          identity,
             char[]          passPhrase,
             boolean         armor)
@@ -265,7 +265,7 @@ public class PgpUtils {
         }
 
         PGPDigestCalculator sha1Calc = new JcaPGPDigestCalculatorProviderBuilder().build().get(HashAlgorithmTags.SHA1);
-        PGPKeyPair          keyPair = new PGPKeyPair(PGPPublicKey.RSA_GENERAL, publicKey, privateKey, new Date());
+        PGPKeyPair          keyPair = new PGPKeyPair(publicKey, privateKey);
         PGPSecretKey        secretKey = new PGPSecretKey(PGPSignature.DEFAULT_CERTIFICATION, keyPair, identity, sha1Calc, null, null, new JcaPGPContentSignerBuilder(keyPair.getPublicKey().getAlgorithm(), HashAlgorithmTags.SHA1), new JcePBESecretKeyEncryptorBuilder(PGPEncryptedData.CAST5, sha1Calc).setProvider("SC").build(passPhrase));
 
         secretKey.encode(secretOut);

@@ -1,6 +1,7 @@
 package org.witness.proofmode;
 
 import android.app.Application;
+import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 import org.spongycastle.jce.provider.BouncyCastleProvider;
@@ -22,6 +23,8 @@ public class ProofModeApp extends Application {
 
     public final static String TAG = "ProofMode";
 
+    private static boolean mInit = false;
+
     static {
         Security.addProvider(new BouncyCastleProvider());
     }
@@ -30,6 +33,14 @@ public class ProofModeApp extends Application {
     public void onCreate() {
         super.onCreate();
 
+        init(this);
+    }
+
+    public synchronized static void init (Context context)
+    {
+        if (mInit)
+            return;
+
         if (BuildConfig.DEBUG) {
             Timber.plant(new Timber.DebugTree());
         } else {
@@ -37,16 +48,17 @@ public class ProofModeApp extends Application {
         }
 
         if (android.os.Build.VERSION.SDK_INT >= 24) {
-            PhotosContentJob.scheduleJob(this);
-            VideosContentJob.scheduleJob(this);
+            PhotosContentJob.scheduleJob(context);
+            VideosContentJob.scheduleJob(context);
         }
         else
         {
-            startService(new Intent(getBaseContext(), MediaListenerService.class));
+            context.startService(new Intent(context, MediaListenerService.class));
         }
 
-        SafetyNetCheck.buildGoogleApiClient(this);
+        SafetyNetCheck.buildGoogleApiClient(context);
 
+        mInit = true;
     }
 
     /** A tree which logs important information for crash reporting. */

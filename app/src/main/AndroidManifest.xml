@@ -11,6 +11,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:remove="android:maxSdkVersion" />
     <uses-permission android:name="android.permission.INTERNET"  tools:remove="android:maxSdkVersion"/>
     <uses-permission android:name="android.permission.READ_PHONE_STATE"   tools:remove="android:maxSdkVersion"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
         android:allowBackup="true"
@@ -19,7 +20,6 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
-
         >
         <activity
             android:name=".MainActivity"
@@ -138,6 +138,8 @@
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
         </service>
+
+
 
         <provider
             android:name="android.support.v4.content.FileProvider"
