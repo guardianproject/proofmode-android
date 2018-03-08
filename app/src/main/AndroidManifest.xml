@@ -80,7 +80,10 @@
             </intent-filter>
         </receiver>
 
-        <activity android:name=".ShareProofActivity" android:label="@string/share_proof_action">
+        <activity android:name=".ShareProofActivity"
+            android:launchMode="singleTop"
+            android:theme="@style/AppTheme"
+            android:label="@string/share_proof_action">
 
             <intent-filter>
                 <action

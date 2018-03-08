@@ -25,13 +25,13 @@
     <string name="intro4_desc">When you need to share something with proof, just open the photo or video, and select SHARE PROOF from the Share menu.</string>
     <string name="share_notarization">SHARE NOTARIZATION TO...</string>
     <string name="share_proof">SHARE PROOF TO...</string>
-    <string name="proof_error_message">ERROR: The proof does not exist or has been modified</string>
+    <string name="proof_error_message">The proof does not exist</string>
     <string name="last_modified">was last modified at</string>
     <string name="has_hash">and has a SHA-256 hash of</string>
     <string name="proof_signed">This proof is signed by PGP key 0x</string>
-    <string name="notarize_only">Notarize Only (Short Text)</string>
-    <string name="share_proof_only">Share Proof Only (Metadata Files)</string>
-    <string name="share_proof_with_media">Share Proof with Media (Everything!)</string>
+    <string name="notarize_only">Share Notarization</string>
+    <string name="share_proof_only">Share Proof Metadata</string>
+    <string name="share_proof_with_media">Share Proof with Media</string>
     <string name="open_public_key_page">Opening public key page</string>
     <string name="no_external_storage">WARNING: ProofMode enabled, but there is no external storage available!</string>
     <string name="no_hash_generated">ProofMode Alert: Unable to access media files</string>
@@ -44,5 +44,6 @@
     <string name="view_public_key">View public key at: http://pgp.mit.edu/pks/lookup?search=0x</string>
     <string name="include_mobile_network">Include Mobile Network</string>
     <string name="share_proof_action">Share Proof</string>
-
+    <string name="action_generate">Generate Proof</string>
+    <string name="proof_error_message_final">We were unable to generate proof for this file.</string>
 </resources>

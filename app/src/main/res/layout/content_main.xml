@@ -13,6 +13,8 @@
     tools:showIn="@layout/activity_main"
     android:orientation="vertical"
     android:gravity="center_horizontal"
+    android:background="@color/colorPrimary"
+
     >
 
     <ImageView
@@ -30,6 +32,7 @@
         android:checked="true"
         android:id="@+id/switchProof"
         android:layout_gravity="center_horizontal"
+        android:textColor="@color/colorPrimaryAlt"
         />
 
     <android.support.v7.widget.SwitchCompat
@@ -40,7 +43,10 @@
         android:text="@string/switch_include_location"
         android:checked="true"
         android:id="@+id/switchLocation"
-        android:layout_gravity="center_horizontal" />
+        android:layout_gravity="center_horizontal"
+        android:textColor="@color/colorPrimaryAlt"
+
+        />
 
 
     <android.support.v7.widget.SwitchCompat
@@ -51,7 +57,10 @@
         android:text="@string/switch_include_device"
         android:checked="true"
         android:id="@+id/switchDevice"
-        android:layout_gravity="center_horizontal" />
+        android:layout_gravity="center_horizontal"
+        android:textColor="@color/colorPrimaryAlt"
+
+        />
 
 
     <android.support.v7.widget.SwitchCompat
@@ -61,7 +70,10 @@
         android:text="@string/include_mobile_network"
         android:checked="false"
         android:id="@+id/switchCellInfo"
-        android:layout_gravity="center_horizontal" />
+        android:layout_gravity="center_horizontal"
+        android:textColor="@color/colorPrimaryAlt"
+
+        />
 
     <android.support.v7.widget.SwitchCompat
         android:layout_marginTop="5dp"
@@ -71,6 +83,9 @@
         android:text="@string/switch_auto_notarize"
         android:checked="true"
         android:id="@+id/switchNotarize"
-        android:layout_gravity="center_horizontal" />
+        android:layout_gravity="center_horizontal"
+        android:textColor="@color/colorPrimaryAlt"
+
+        />
 
 </LinearLayout>

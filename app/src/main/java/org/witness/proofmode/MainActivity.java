@@ -230,7 +230,7 @@ public class MainActivity extends AppCompatActivity {
 
             Toast.makeText(this, R.string.open_public_key_page, Toast.LENGTH_LONG).show();
 
-            openUrl("https://pgp.mit.edu/pks/lookup?op=get&search=0x" + fingerprint);
+            openUrl(PgpUtils.URL_LOOKUP_ENDPOINT + fingerprint);
         }
         catch (IOException ioe)
         {

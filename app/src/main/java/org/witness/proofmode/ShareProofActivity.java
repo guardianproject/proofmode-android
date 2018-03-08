@@ -2,12 +2,15 @@ package org.witness.proofmode;
 
 import android.Manifest;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.LabeledIntent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Environment;
@@ -19,6 +22,8 @@ import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.MenuItem;
+import android.view.View;
 import android.widget.Toast;
 
 import org.witness.proofmode.crypto.HashUtils;
@@ -30,12 +35,15 @@ import org.witness.proofmode.service.MediaWatcher;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -63,6 +71,7 @@ public class ShareProofActivity extends AppCompatActivity {
         askForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE,4);
 
         setContentView(R.layout.activity_share);
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
         // Get intent, action and MIME type
         Intent intent = getIntent();
@@ -101,57 +110,112 @@ public class ShareProofActivity extends AppCompatActivity {
         {
             displaySharePrompt();
         }
-        else
-        {
-           Toast.makeText(this, R.string.proof_error_message,Toast.LENGTH_LONG).show();
-           finish();
+        else {
+            displayGeneratePrompt();
         }
+
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            // Respond to the action bar's Up/Home button
+            case android.R.id.home:
+                finish();
+                return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    public void generateProof (View button)
+    {
+
+        findViewById(R.id.view_proof_progress).setVisibility(View.VISIBLE);
+        findViewById(R.id.view_no_proof).setVisibility(View.GONE);
+
+        // Get intent, action and MIME type
+        Intent intent = getIntent();
+        String action = intent.getAction();
+        String type = intent.getType();
+
+        ArrayList<Uri> shareUris = new ArrayList<Uri>();
+        StringBuffer shareText = new StringBuffer();
+
+        boolean proofExists = false;
+
+        if (Intent.ACTION_SEND_MULTIPLE.equals(action)) {
+            ArrayList<Uri> mediaUris = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
+
+            for (Uri mediaUri : mediaUris)
+            {
+                proofExists = proofExists(mediaUri);
+
+                if (!proofExists) {
+                    generateProof(mediaUri);
+                }
+            }
+
+        } else if (Intent.ACTION_SEND.equals(action) && type != null) {
+
+            Uri mediaUri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
+            if (mediaUri == null)
+                mediaUri = intent.getData();
+
+            if (mediaUri != null)
+            {
+                proofExists = proofExists(mediaUri);
+
+                if (!proofExists)
+                    generateProof(mediaUri);
+            }
+        }
+    }
+
+    public void clickNotarize (View button)
+    {
+        shareProof (false, false);
+
+    }
+
+    public void clickProof (View button)
+    {
+        shareProof (false, true);
+
+    }
+
+    public void clickAll (View button)
+    {
+        shareProof (true, true);
+
+    }
+
+    private void displayProgress ()
+    {
+
+        findViewById(R.id.view_proof_progress).setVisibility(View.VISIBLE);
+        findViewById(R.id.view_no_proof).setVisibility(View.GONE);
+        findViewById(R.id.view_proof).setVisibility(View.GONE);
+
+    }
+
+    private void displayGeneratePrompt ()
+    {
+
+        findViewById(R.id.view_proof_progress).setVisibility(View.GONE);
+        findViewById(R.id.view_no_proof).setVisibility(View.VISIBLE);
+        findViewById(R.id.view_proof).setVisibility(View.GONE);
     }
 
     private void displaySharePrompt ()
     {
-        CharSequence items[] = {getString(R.string.notarize_only), getString(R.string.share_proof_only),getString(R.string.share_proof_with_media),};
-
-        new AlertDialog.Builder(this).setItems(items, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialogInterface, int i) {
-
-                switch (i)
-                {
-                    case 0:
-
-                        shareProof (false, false);
-
-                        break;
-                    case 1:
-
-                        shareProof (false, true);
-
-                        break;
-                    case 2:
-
-                        shareProof (true, true);
-
-                        break;
-                }
-            }
-        }).setOnCancelListener(new DialogInterface.OnCancelListener() {
-            @Override
-            public void onCancel(DialogInterface dialogInterface) {
-                finish();
-            }
-        }).setOnDismissListener(new DialogInterface.OnDismissListener() {
-            @Override
-            public void onDismiss(DialogInterface dialogInterface) {
-                finish();
-            }
-        }).show();
-
+        findViewById(R.id.view_proof_progress).setVisibility(View.GONE);
+        findViewById(R.id.view_no_proof).setVisibility(View.GONE);
+        findViewById(R.id.view_proof).setVisibility(View.VISIBLE);
     }
 
     private boolean shareProof (final boolean shareMedia, final boolean shareProof) {
 
-        Toast.makeText(this, R.string.packaging_proof,Toast.LENGTH_LONG).show();
+        displayProgress();
 
         new Thread(new Runnable (){
 
@@ -245,7 +309,6 @@ public class ShareProofActivity extends AppCompatActivity {
             }
         }
 
-        finish();
 
         return true;
     }
@@ -279,21 +342,9 @@ public class ShareProofActivity extends AppCompatActivity {
                             result = true;
                         } else {
                             //generate now?
-                            result = true;
-
-                            new AsyncTask<Void, Void, String>() {
-                                protected String doInBackground(Void... params) {
-                                    Intent intent = new Intent();
-                                    intent.setData(Uri.fromFile(new File(mediaPath)));
-                                    new MediaWatcher().onReceive(ShareProofActivity.this, intent);
-                                    return "message";
-                                }
-
-                                protected void onPostExecute(String msg) {
+                            result = false;
 
 
-                                }
-                            }.execute();
 
 
 
@@ -306,6 +357,70 @@ public class ShareProofActivity extends AppCompatActivity {
         cursor.close();
 
         return result;
+    }
+
+    private void generateProof (Uri mediaUri)
+    {
+        boolean result = false;
+        String[] projection = { MediaStore.Images.Media.DATA };
+
+        Cursor cursor = getContentResolver().query(getRealUri(mediaUri),      projection,null, null, null);
+
+        if (cursor.getCount() > 0) {
+
+            cursor.moveToFirst();
+            final String mediaPath = cursor.getString(cursor.getColumnIndex(projection[0]));
+
+            if (mediaPath != null) {
+
+                new AsyncTask<Void, Void, String>() {
+                    protected String doInBackground(Void... params) {
+                        Intent intent = new Intent();
+                        intent.setData(Uri.fromFile(new File(mediaPath)));
+                        new MediaWatcher().handleIntent(ShareProofActivity.this, intent, true);
+                        return "message";
+                    }
+
+                    protected void onPostExecute(String msg) {
+
+                        displaySharePrompt ();
+                    }
+                }.execute();
+            }
+            else
+            {
+                final String tmpMediaPath = getImageUrlWithAuthority(getApplicationContext(),mediaUri);
+                final Intent intent = new Intent();
+                Uri tmpMediaUri = Uri.fromFile(new File(tmpMediaPath));
+                intent.setAction(Intent.ACTION_SEND);
+                intent.setDataAndType(tmpMediaUri,getIntent().getType());
+                setIntent(intent);
+
+                new AsyncTask<Void, Void, String>() {
+                    protected String doInBackground(Void... params) {
+                        Intent intent = new Intent();
+                        intent.setData(Uri.fromFile(new File(tmpMediaPath)));
+                        new MediaWatcher().handleIntent(ShareProofActivity.this, intent, true);
+                        return "message";
+                    }
+
+                    protected void onPostExecute(String msg) {
+
+                        displaySharePrompt ();
+                    }
+                }.execute();
+
+            }
+        }
+
+        cursor.close();
+    }
+
+    private void showProofError ()
+    {
+        findViewById(R.id.view_proof).setVisibility(View.GONE);
+        findViewById(R.id.view_no_proof).setVisibility(View.GONE);
+        findViewById(R.id.view_proof_failed).setVisibility(View.VISIBLE);
     }
 
     private Uri getRealUri (Uri contentUri)
@@ -330,26 +445,35 @@ public class ShareProofActivity extends AppCompatActivity {
         String[] projection = { MediaStore.Images.Media.DATA };
         Cursor cursor = getContentResolver().query(getRealUri(mediaUri),      projection,null, null, null);
         boolean result = false;
+        String mediaPath = null;
 
-        if (cursor.getCount() > 0) {
+        if (cursor != null) {
+            if (cursor.getCount() > 0) {
 
-            cursor.moveToFirst();
-            int columnIndex = cursor.getColumnIndexOrThrow(projection[0]);
-            String mediaPath = cursor.getString(columnIndex);
-
-            if (mediaPath != null) {
-                //check proof metadata against original image
-
-                result = shareProof(mediaPath, shareUris, sb, fBatchProofOut, shareMedia);
-
-                if (!result)
-                    result = shareProofClassic(mediaPath, shareUris, sb, fBatchProofOut, shareMedia);
-
+                cursor.moveToFirst();
+                int columnIndex = cursor.getColumnIndexOrThrow(projection[0]);
+                mediaPath = cursor.getString(columnIndex);
 
             }
+
+            cursor.close();
+        }
+        else
+        {
+            File fileMedia = new File(mediaUri.getPath());
+            if (fileMedia.exists())
+                mediaPath = fileMedia.getAbsolutePath();
         }
 
-        cursor.close();
+        if (mediaPath != null) {
+            //check proof metadata against original image
+
+            result = shareProof(mediaPath, shareUris, sb, fBatchProofOut, shareMedia);
+
+            if (!result)
+                result = shareProofClassic(mediaPath, shareUris, sb, fBatchProofOut, shareMedia);
+
+        }
 
         return result;
     }
@@ -415,10 +539,7 @@ public class ShareProofActivity extends AppCompatActivity {
             return true;
         }
 
-
         return false;
-
-
     }
 
     private void generateProofOutput (File fileMedia, File fileMediaSig, File fileMediaProof, File fileMediaProofSig, String hash, boolean shareMedia, PrintWriter fBatchProofOut, ArrayList<Uri> shareUris, StringBuffer sb)
@@ -779,5 +900,32 @@ public class ShareProofActivity extends AppCompatActivity {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public static String getImageUrlWithAuthority(Context context, Uri uri) {
+        InputStream is = null;
+        if (uri.getAuthority() != null) {
+            try {
+                is = context.getContentResolver().openInputStream(uri);
+                Bitmap bmp = BitmapFactory.decodeStream(is);
+                return writeToTempImageAndGetPathUri(context, bmp).toString();
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }finally {
+                try {
+                    is.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return null;
+    }
+
+    public static Uri writeToTempImageAndGetPathUri(Context inContext, Bitmap inImage) {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        inImage.compress(Bitmap.CompressFormat.JPEG, 100, bytes);
+        String path = MediaStore.Images.Media.insertImage(inContext.getContentResolver(), inImage, "Title", null);
+        return Uri.parse(path);
     }
 }

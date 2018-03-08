@@ -92,6 +92,8 @@ public class PgpUtils {
     public final static String DEFAULT_PASSWORD = "password"; //static string for local keystore
     private final static String URL_POST_KEY_ENDPOINT = "https://pgp.mit.edu/pks/add";
 
+    public final static String URL_LOOKUP_ENDPOINT = "https://pgp.mit.edu/pks/lookup?op=get&search=0x";
+
     private PgpUtils ()
     {
 

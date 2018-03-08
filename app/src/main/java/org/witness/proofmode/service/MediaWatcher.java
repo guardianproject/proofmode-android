@@ -62,13 +62,13 @@ public class MediaWatcher extends BroadcastReceiver {
         {
             public void run ()
             {
-                handleIntent(context, intent);
+                handleIntent(context, intent, false);
             }
         }.start();
 
     }
 
-    private void handleIntent (final Context context, Intent intent) {
+    public boolean handleIntent (final Context context, Intent intent, boolean forceDoProof) {
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 
@@ -85,11 +85,11 @@ public class MediaWatcher extends BroadcastReceiver {
 
         Timber.d("Received intent. doProof is %b and autoNotarize is %b",doProof,autoNotarize);
 
-        if (doProof) {
+        if (doProof || forceDoProof) {
 
             if (!isExternalStorageWritable()) {
               //  Toast.makeText(context, R.string.no_external_storage, Toast.LENGTH_SHORT).show();
-                return;
+                return false;
             }
 
             Uri uriMedia = intent.getData();
@@ -97,7 +97,7 @@ public class MediaWatcher extends BroadcastReceiver {
                 uriMedia = (Uri) intent.getParcelableExtra(Intent.EXTRA_STREAM);
 
             if (uriMedia == null) //still null?
-                return;
+                return false;
 
             String mediaPathTmp = uriMedia.getPath();
 
@@ -185,14 +185,18 @@ public class MediaWatcher extends BroadcastReceiver {
                     **/
 
                 }
+
+                return true;
             }
             else
             {
                 Timber.d("Unable to access media files, no proof generated");
+
             }
 
         }
 
+        return false;
     }
 
     private SafetyNetResponse parseJsonWebSignature(String jwsResult) {
