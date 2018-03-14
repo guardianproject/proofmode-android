@@ -1,4 +1,4 @@
-package org.witness.proofmode.service;
+package org.witness.proofmode;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;

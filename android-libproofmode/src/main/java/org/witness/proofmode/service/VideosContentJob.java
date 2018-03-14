@@ -21,7 +21,7 @@ import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 import android.widget.Toast;
 
-import org.witness.proofmode.R;
+import org.witness.proofmode.library.R;
 
 import java.io.File;
 import java.util.ArrayList;

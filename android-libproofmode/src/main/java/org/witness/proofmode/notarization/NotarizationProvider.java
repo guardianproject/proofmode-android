@@ -9,8 +9,8 @@ import java.io.IOException;
 
 public interface NotarizationProvider {
 
-    public void notarize (String hash, File fileMedia, NotarizationListener listener);
+    public void notarize(String hash, File fileMedia, NotarizationListener listener);
 
-    public String getProof (String hash) throws IOException;
+    public String getProof(String hash) throws IOException;
 
 }

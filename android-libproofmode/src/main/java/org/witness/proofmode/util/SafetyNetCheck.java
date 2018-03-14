@@ -1,23 +1,14 @@
 package org.witness.proofmode.util;
 
+import android.content.Context;
+import android.support.annotation.NonNull;
+import android.util.Log;
+
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.common.api.Result;
 import com.google.android.gms.common.api.ResultCallback;
-import com.google.android.gms.common.api.Status;
 import com.google.android.gms.safetynet.SafetyNet;
 import com.google.android.gms.safetynet.SafetyNetApi;
-
-import android.content.Context;
-import android.content.Intent;
-import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
-import android.util.Log;
-import android.view.MenuItem;
-
-import org.witness.proofmode.ProofModeApp;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -32,7 +23,7 @@ import java.util.Random;
 public class SafetyNetCheck
         implements GoogleApiClient.OnConnectionFailedListener {
 
-    private static final String TAG = ProofModeApp.TAG;
+    private static final String TAG = "SafetyNetCheck";
 
     private final Random mRandom = new SecureRandom();
 

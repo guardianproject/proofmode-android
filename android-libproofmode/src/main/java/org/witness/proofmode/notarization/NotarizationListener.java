@@ -6,8 +6,8 @@ package org.witness.proofmode.notarization;
 
 public interface NotarizationListener {
 
-    public void notarizationSuccessful (String result);
+    public void notarizationSuccessful(String result);
 
-    public void notarizationFailed (int errCode, String message);
+    public void notarizationFailed(int errCode, String message);
 
 }

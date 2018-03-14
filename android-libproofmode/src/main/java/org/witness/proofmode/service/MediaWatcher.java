@@ -12,20 +12,16 @@ import android.preference.PreferenceManager;
 import android.text.TextUtils;
 import android.util.Base64;
 import android.util.Log;
-import android.widget.Toast;
 
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.safetynet.SafetyNetApi;
 
-import org.witness.proofmode.ProofModeApp;
-import org.witness.proofmode.R;
 import org.witness.proofmode.crypto.HashUtils;
 import org.witness.proofmode.crypto.PgpUtils;
 import org.witness.proofmode.notarization.NotarizationListener;
 import org.witness.proofmode.notarization.NotarizationProvider;
 import org.witness.proofmode.notarization.OpenTimestampsNotarizationProvider;
-import org.witness.proofmode.notarization.TimeBeatNotarizationProvider;
 import org.witness.proofmode.util.DeviceInfo;
 import org.witness.proofmode.util.GPSTracker;
 import org.witness.proofmode.util.SafetyNetCheck;
@@ -58,7 +54,6 @@ public class MediaWatcher extends BroadcastReceiver {
     @Override
     public void onReceive(final Context context, final Intent intent) {
 
-        ProofModeApp.init(context);
 
         new Thread ()
         {

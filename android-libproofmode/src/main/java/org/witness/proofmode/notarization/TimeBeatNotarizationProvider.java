@@ -1,7 +1,6 @@
 package org.witness.proofmode.notarization;
 
 import android.content.Context;
-import android.net.Proxy;
 import android.os.AsyncTask;
 import android.text.TextUtils;
 import android.util.Log;
@@ -9,18 +8,13 @@ import android.webkit.MimeTypeMap;
 
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.w3c.dom.Text;
-import org.witness.proofmode.R;
+import org.witness.proofmode.library.R;
 import org.witness.proofmode.crypto.HashUtils;
 
 import java.io.File;
-import java.io.IOError;
 import java.io.IOException;
-import java.net.URL;
-import java.util.List;
 
 import okhttp3.Authenticator;
-import okhttp3.Challenge;
 import okhttp3.Credentials;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
@@ -30,7 +24,6 @@ import okhttp3.ResponseBody;
 import okhttp3.Route;
 import timber.log.Timber;
 
-import static org.witness.proofmode.ProofModeApp.TAG;
 
 /**
  * Created by n8fr8 on 5/31/17.
@@ -43,6 +36,8 @@ public class TimeBeatNotarizationProvider implements NotarizationProvider {
 
     private final static String PATH_NOTARIZE = "/s/timeStamp/reg";
     private final static String PATH_PROOF = "/proof/";
+
+    private final static String TAG = "TimeBeat";
 
 
     public TimeBeatNotarizationProvider (Context context)

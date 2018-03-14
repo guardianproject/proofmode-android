@@ -2,11 +2,9 @@ package org.witness.proofmode.notarization;
 
 import com.eternitywall.ots.DetachedTimestampFile;
 import com.eternitywall.ots.OpenTimestamps;
-import com.eternitywall.ots.Timestamp;
 import com.eternitywall.ots.op.OpSHA256;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 

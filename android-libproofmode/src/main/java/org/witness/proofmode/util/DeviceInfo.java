@@ -2,12 +2,10 @@ package org.witness.proofmode.util;
 
 import android.annotation.SuppressLint;
 import android.app.ActivityManager;
-import android.bluetooth.BluetoothClass;
 import android.content.Context;
 import android.content.res.Configuration;
 import android.net.ConnectivityManager;
 import android.os.Build;
-import android.os.Debug;
 import android.provider.Settings;
 import android.telephony.CellIdentityGsm;
 import android.telephony.CellIdentityLte;
@@ -115,11 +113,11 @@ public class DeviceInfo {
                     }
                     return "";
                 case DEVICE_MANUFACTURE:
-                    return android.os.Build.MANUFACTURER;
+                    return Build.MANUFACTURER;
                 case DEVICE_SYSTEM_VERSION:
                     return String.valueOf(getDeviceName());
                 case DEVICE_VERSION:
-                    return String.valueOf(android.os.Build.VERSION.SDK_INT);
+                    return String.valueOf(Build.VERSION.SDK_INT);
                 case DEVICE_IN_INCH:
                     return getDeviceInch(activity);
                 case DEVICE_TOTAL_CPU_IDLE:
@@ -160,7 +158,7 @@ public class DeviceInfo {
         } else {
             try {
                 byte[] _data = device_uuid.getBytes();
-                MessageDigest _digest = java.security.MessageDigest.getInstance("MD5");
+                MessageDigest _digest = MessageDigest.getInstance("MD5");
                 _digest.update(_data);
                 _data = _digest.digest();
                 BigInteger _bi = new BigInteger(_data).abs();
@@ -350,7 +348,7 @@ public class DeviceInfo {
     }
 
     private static String executeTop() {
-        java.lang.Process p = null;
+        Process p = null;
         BufferedReader in = null;
         String returnString = null;
         try {

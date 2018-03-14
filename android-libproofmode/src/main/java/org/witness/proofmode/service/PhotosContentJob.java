@@ -14,15 +14,13 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.provider.MediaStore;
 import android.support.v4.app.NotificationCompat;
-import android.util.Log;
 import android.widget.Toast;
 
-import org.witness.proofmode.R;
+import org.witness.proofmode.library.R;
 
 import java.io.File;
 import java.util.ArrayList;

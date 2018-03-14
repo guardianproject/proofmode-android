@@ -1,7 +1,6 @@
-package org.witness.proofmode.service;
+package org.witness.proofmode;
 
 import android.annotation.TargetApi;
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.drawable.Icon;
 import android.os.Build;
@@ -9,8 +8,6 @@ import android.preference.PreferenceManager;
 import android.service.quicksettings.Tile;
 import android.service.quicksettings.TileService;
 
-import org.witness.proofmode.MainActivity;
-import org.witness.proofmode.R;
 
 /**
  * Created by n8fr8 on 2/23/17.

@@ -1,12 +1,12 @@
 package org.witness.proofmode.util;
 
 
+import android.os.FileObserver;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
-
-import android.os.FileObserver;
 
 /**
  * Originally found here: https://github.com/przybylski/owncloud-android/blob/master/src/com/owncloud/android/utils/RecursiveFileObserver.java

@@ -43,17 +43,12 @@ dependencies {
     compile 'com.android.support:appcompat-v7:27.1.0'
     compile 'com.android.support:support-compat:27.1.0'
     compile 'com.android.support:design:27.1.0'
-    compile 'com.madgag.spongycastle:core:1.51.0.0'
-    compile 'com.madgag.spongycastle:pg:1.51.0.0'
-    compile 'com.madgag.spongycastle:pkix:1.51.0.0'
-    compile 'com.madgag.spongycastle:prov:1.51.0.0'
+
     compile 'com.github.paolorotolo:appintro:4.1.0'
     compile "com.android.support:support-v4:27.1.0"
     compile "com.android.support:support-v13:27.1.0"
-    compile 'com.google.android.gms:play-services-safetynet:11.8.0'
-    compile 'com.squareup.okhttp3:okhttp:3.9.1'
     compile 'com.jakewharton.timber:timber:4.5.1'
     compile 'com.android.support:multidex:1.0.3'
-    compile project(':java-opentimestamps')
+    compile project(':android-libproofmode')
 
 }
