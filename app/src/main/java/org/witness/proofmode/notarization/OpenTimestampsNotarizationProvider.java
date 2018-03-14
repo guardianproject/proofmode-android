@@ -20,7 +20,7 @@ public class OpenTimestampsNotarizationProvider implements NotarizationProvider 
 
         try {
             DetachedTimestampFile detached = DetachedTimestampFile.from(new OpSHA256(), fileMedia);
-            byte[] stampResult = OpenTimestamps.stamp(new FileInputStream(fileMedia));
+            byte[] stampResult = OpenTimestamps.stamp(detached,null,0, null);
             String infoResult = OpenTimestamps.info(stampResult);
             listener.notarizationSuccessful(infoResult);
         }

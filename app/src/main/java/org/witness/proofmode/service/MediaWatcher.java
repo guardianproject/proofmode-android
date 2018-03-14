@@ -166,8 +166,8 @@ public class MediaWatcher extends BroadcastReceiver {
                         }
                     });
 
-                    final NotarizationProvider tbNotarize = new OpenTimestampsNotarizationProvider();
-                    tbNotarize.notarize("ProofMode Media Hash: " + mediaHash, new File(mediaPath), new NotarizationListener() {
+                    final NotarizationProvider nProvider = new OpenTimestampsNotarizationProvider();
+                    nProvider.notarize("ProofMode Media Hash: " + mediaHash, new File(mediaPath), new NotarizationListener() {
                         @Override
                         public void notarizationSuccessful(String timestamp) {
 
