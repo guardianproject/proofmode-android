@@ -3,6 +3,7 @@ package org.witness.proofmode;
 import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
+import android.support.multidex.MultiDexApplication;
 import android.util.Log;
 import org.spongycastle.jce.provider.BouncyCastleProvider;
 import org.witness.proofmode.service.MediaListenerService;
@@ -18,7 +19,7 @@ import timber.log.Timber;
 /**
  * Created by n8fr8 on 10/10/16.
  */
-public class ProofModeApp extends Application {
+public class ProofModeApp extends MultiDexApplication {
 
 
     public final static String TAG = "ProofMode";

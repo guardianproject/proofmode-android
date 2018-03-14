@@ -16,6 +16,14 @@ allprojects {
             url "https://maven.google.com"
         }
     }
+    project.ext {
+        // these are common variables used in */build.gradle
+        buildToolsVersion="27.0.3"
+        compileSdkVersion=27
+        minSdkVersion=15
+        targetSdkVersion=27
+        appcompat='com.android.support:appcompat-v7:27.0.2'
+    }
 }
 
 task clean(type: Delete) {

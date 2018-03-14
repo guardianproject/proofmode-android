@@ -14,6 +14,7 @@ android {
         targetSdkVersion 27
         versionCode 112
         versionName "0.0.11-beta-2"
+        multiDexEnabled true
     }
     buildTypes {
         release {
@@ -21,10 +22,23 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    packagingOptions {
+        exclude 'org.bitcoin.production.checkpoints'
+        exclude 'org.bitcoin.test.checkpoints'
+        exclude 'org/bitcoinj/crypto/cacerts'
+        exclude 'org/bitcoinj/crypto/mnemonic/wordlist/english.txt'
+        exclude 'lib/x86_64/darwin/libscrypt.dylib'
+        exclude 'com/google/thirdparty/publicsuffix/PublicSuffixType.gwt.xml'
+        exclude 'com/google/thirdparty/publicsuffix/PublicSuffixPatterns.gwt.xml'
+        exclude 'com/google/thirdparty/publicsuffix/PublicSuffixPatterns.gwt.xml'
+        exclude 'org/apache/commons/cli/AlreadySelectedException.class'
+    }
+    lintOptions {
+        abortOnError false
+    }
 }
 
 dependencies {
-  //  compile fileTree(dir: 'libs', include: ['*.jar'])
     testCompile 'junit:junit:4.12'
     compile 'com.android.support:appcompat-v7:27.1.0'
     compile 'com.android.support:support-compat:27.1.0'
@@ -39,4 +53,7 @@ dependencies {
     compile 'com.google.android.gms:play-services-safetynet:11.8.0'
     compile 'com.squareup.okhttp3:okhttp:3.9.1'
     compile 'com.jakewharton.timber:timber:4.5.1'
+    compile 'com.android.support:multidex:1.0.3'
+    compile project(':java-opentimestamps')
+
 }

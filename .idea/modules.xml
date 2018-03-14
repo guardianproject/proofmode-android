@@ -4,6 +4,7 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/ProofMode.iml" filepath="$PROJECT_DIR$/ProofMode.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/java-opentimestamps/java-opentimestamps.iml" filepath="$PROJECT_DIR$/java-opentimestamps/java-opentimestamps.iml" />
     </modules>
   </component>
 </project>

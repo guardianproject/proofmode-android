@@ -23,6 +23,8 @@ import org.witness.proofmode.R;
 import org.witness.proofmode.crypto.HashUtils;
 import org.witness.proofmode.crypto.PgpUtils;
 import org.witness.proofmode.notarization.NotarizationListener;
+import org.witness.proofmode.notarization.NotarizationProvider;
+import org.witness.proofmode.notarization.OpenTimestampsNotarizationProvider;
 import org.witness.proofmode.notarization.TimeBeatNotarizationProvider;
 import org.witness.proofmode.util.DeviceInfo;
 import org.witness.proofmode.util.GPSTracker;
@@ -163,6 +165,25 @@ public class MediaWatcher extends BroadcastReceiver {
                             }
                         }
                     });
+
+                    final NotarizationProvider tbNotarize = new OpenTimestampsNotarizationProvider();
+                    tbNotarize.notarize("ProofMode Media Hash: " + mediaHash, new File(mediaPath), new NotarizationListener() {
+                        @Override
+                        public void notarizationSuccessful(String timestamp) {
+
+                            Timber.d("Got OpenTimestamps success response timestamp: " + timestamp);
+                            writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, "OpenTimestamps: " + timestamp);
+                        }
+
+                        @Override
+                        public void notarizationFailed(int errCode, String message) {
+
+                            Timber.d("Got OpenTimestamps error response: " + message);
+                            writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, "OpenTimestamps Error: " + message);
+
+                        }
+                    });
+
 
                     /**
                     final TimeBeatNotarizationProvider tbNotarize = new TimeBeatNotarizationProvider(context);
