@@ -40,4 +40,20 @@ dependencies {
 
     compile project(':java-opentimestamps')
 
+
 }
+
+apply plugin: 'maven'
+
+uploadArchives {
+        repositories.mavenDeployer {
+                def deployPath = file(getProperty('aar.deployPath'))
+                repository(url: "file://${deployPath.absolutePath}")
+                pom.project {
+                        groupId 'org.witness'
+                        artifactId 'android-libproofmode'
+                        version "0.0.1"
+                }
+        }
+}
+

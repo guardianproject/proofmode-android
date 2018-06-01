@@ -70,7 +70,6 @@ public class MediaWatcher extends BroadcastReceiver {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 
         boolean doProof = prefs.getBoolean("doProof", true);
-        boolean autoNotarize = prefs.getBoolean("autoNotarize", true);
 
         if (intent.getAction() != null) {
             if (intent.getAction().equals(Intent.ACTION_UMS_CONNECTED)) {
@@ -79,8 +78,6 @@ public class MediaWatcher extends BroadcastReceiver {
                 mStorageMounted = false;
             }
         }
-
-        Timber.d("Received intent. doProof is %b and autoNotarize is %b",doProof,autoNotarize);
 
         if (doProof || forceDoProof) {
 
@@ -120,6 +117,7 @@ public class MediaWatcher extends BroadcastReceiver {
 
             final boolean showDeviceIds = prefs.getBoolean("trackDeviceId",true);
             final boolean showLocation = prefs.getBoolean("trackLocation",true);
+            final boolean autoNotarize = prefs.getBoolean("autoNotarize", true);
             final boolean showMobileNetwork = prefs.getBoolean("trackMobileNetwork",false);
 
 

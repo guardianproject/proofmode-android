@@ -3,7 +3,6 @@ package org.witness.proofmode;
 import android.Manifest;
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.LabeledIntent;
 import android.content.pm.PackageManager;
@@ -13,23 +12,18 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.FileProvider;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
-import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Toast;
 
 import org.witness.proofmode.crypto.HashUtils;
 import org.witness.proofmode.crypto.PgpUtils;
-import org.witness.proofmode.notarization.TimeBeatNotarizationProvider;
-import org.witness.proofmode.service.MediaListenerService;
 import org.witness.proofmode.service.MediaWatcher;
 
 import java.io.BufferedInputStream;
@@ -37,14 +31,12 @@ import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Date;
@@ -52,12 +44,10 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import timber.log.Timber;
+import static org.witness.proofmode.ProofMode.OPENPGP_FILE_TAG;
+import static org.witness.proofmode.ProofMode.PROOF_FILE_TAG;
 
 public class ShareProofActivity extends AppCompatActivity {
-
-    private final static String PROOF_FILE_TAG = ".proof.csv";
-    private final static String OPENPGP_FILE_TAG = ".asc";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -375,9 +365,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
                 new AsyncTask<Void, Void, String>() {
                     protected String doInBackground(Void... params) {
-                        Intent intent = new Intent();
-                        intent.setData(Uri.fromFile(new File(mediaPath)));
-                        new MediaWatcher().handleIntent(ShareProofActivity.this, intent, true);
+                        ProofMode.generateProof(ShareProofActivity.this,Uri.fromFile(new File(mediaPath)));
                         return "message";
                     }
 
@@ -398,9 +386,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
                 new AsyncTask<Void, Void, String>() {
                     protected String doInBackground(Void... params) {
-                        Intent intent = new Intent();
-                        intent.setData(Uri.fromFile(new File(tmpMediaPath)));
-                        new MediaWatcher().handleIntent(ShareProofActivity.this, intent, true);
+                        ProofMode.generateProof(ShareProofActivity.this,Uri.fromFile(new File(tmpMediaPath)));
                         return "message";
                     }
 

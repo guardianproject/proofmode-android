@@ -24,11 +24,6 @@ public class ProofModeApp extends MultiDexApplication {
 
     public final static String TAG = "ProofMode";
 
-    private static boolean mInit = false;
-
-    static {
-        Security.addProvider(new BouncyCastleProvider());
-    }
 
     @Override
     public void onCreate() {
@@ -37,10 +32,8 @@ public class ProofModeApp extends MultiDexApplication {
         init(this);
     }
 
-    public synchronized static void init (Context context)
+    public static void init (Context context)
     {
-        if (mInit)
-            return;
 
         if (BuildConfig.DEBUG) {
             Timber.plant(new Timber.DebugTree());
@@ -48,18 +41,7 @@ public class ProofModeApp extends MultiDexApplication {
             Timber.plant(new CrashReportingTree());
         }
 
-        if (android.os.Build.VERSION.SDK_INT >= 24) {
-            PhotosContentJob.scheduleJob(context);
-            VideosContentJob.scheduleJob(context);
-        }
-        else
-        {
-            context.startService(new Intent(context, MediaListenerService.class));
-        }
-
-        SafetyNetCheck.buildGoogleApiClient(context);
-
-        mInit = true;
+        ProofMode.init(context);
     }
 
     /** A tree which logs important information for crash reporting. */

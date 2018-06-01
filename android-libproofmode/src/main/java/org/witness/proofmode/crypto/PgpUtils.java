@@ -290,6 +290,12 @@ public class PgpUtils {
 
     }
 
+    public void createDetachedSignature (InputStream media, OutputStream mediaSig, String password) throws Exception
+    {
+        DetachedSignatureProcessor.createSignature(pgpSec, media, mediaSig, password.toCharArray(), true);
+
+    }
+
 
     public synchronized void initCrypto (Context context, String password)
     {
