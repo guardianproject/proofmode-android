@@ -34,7 +34,7 @@ uploadArchives {
                 pom.project {
                         groupId 'com.eternitywall'
                         artifactId 'opentimestamps'
-                        version "0.1.14"
+                        version "0.1.14.1"
                 }
         }
 }
