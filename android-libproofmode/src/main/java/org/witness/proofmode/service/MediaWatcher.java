@@ -9,6 +9,7 @@ import android.location.Location;
 import android.net.Uri;
 import android.os.Environment;
 import android.preference.PreferenceManager;
+import android.support.annotation.NonNull;
 import android.text.TextUtils;
 import android.util.Base64;
 import android.util.Log;
@@ -16,9 +17,12 @@ import android.util.Log;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.safetynet.SafetyNetApi;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 
 import org.witness.proofmode.crypto.HashUtils;
 import org.witness.proofmode.crypto.PgpUtils;
+import org.witness.proofmode.library.R;
 import org.witness.proofmode.notarization.NotarizationListener;
 import org.witness.proofmode.notarization.NotarizationProvider;
 import org.witness.proofmode.notarization.OpenTimestampsNotarizationProvider;
@@ -133,13 +137,13 @@ public class MediaWatcher extends BroadcastReceiver {
                 if (autoNotarize) {
 
                     //if we can do safetycheck, then add that in as well
-                    new SafetyNetCheck().sendSafetyNetRequest(mediaHash, new ResultCallback<SafetyNetApi.AttestationResult>() {
-
+                    new SafetyNetCheck().sendSafetyNetRequest(context, mediaHash, new OnSuccessListener<SafetyNetApi.AttestationResponse>() {
                         @Override
-                        public void onResult(SafetyNetApi.AttestationResult result) {
-                            Status status = result.getStatus();
-                            if (status.isSuccess()) {
-                                String resultString = result.getJwsResult();
+                        public void onSuccess(SafetyNetApi.AttestationResponse response) {
+                            // Indicates communication with the service was successful.
+                            // Use response.getJwsResult() to get the result data.
+
+                                String resultString = response.getJwsResult();
                                 SafetyNetResponse resp = parseJsonWebSignature(resultString);
 
                                 long timestamp = resp.getTimestampMs();
@@ -150,14 +154,15 @@ public class MediaWatcher extends BroadcastReceiver {
                                 writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, showMobileNetwork, resultString, isBasicIntegrity, isCtsMatch, timestamp, null);
 
 
-                            } else {
-                                // An error occurred while communicating with the service.
-                                Timber.d("ERROR! " + status.getStatusCode() + " " + status
-                                        .getStatusMessage());
-
-                            }
+                        }
+                    }, new OnFailureListener() {
+                        @Override
+                        public void onFailure(@NonNull Exception e) {
+                            // An error occurred while communicating with the service.
+                            Timber.d("SafetyNet check failed",e);
                         }
                     });
+
 
                     final NotarizationProvider nProvider = new OpenTimestampsNotarizationProvider();
                     nProvider.notarize("ProofMode Media Hash: " + mediaHash, new File(mediaPath), new NotarizationListener() {

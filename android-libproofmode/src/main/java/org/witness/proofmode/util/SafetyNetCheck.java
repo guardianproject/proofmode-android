@@ -5,10 +5,13 @@ import android.support.annotation.NonNull;
 import android.util.Log;
 
 import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.safetynet.SafetyNet;
 import com.google.android.gms.safetynet.SafetyNetApi;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -27,16 +30,25 @@ public class SafetyNetCheck
 
     private final Random mRandom = new SecureRandom();
 
-    private static GoogleApiClient mGoogleApiClient;
+    private static String sApiKey = null;
 
-    public void sendSafetyNetRequest(String nonceData, ResultCallback result) {
-        Log.d(TAG, "Sending SafetyNet API request.");
+    public static void setApiKey (String apiKey)
+    {
+        sApiKey = apiKey;
+    }
 
-        byte[] nonce = getRequestNonce(nonceData);
+    public void sendSafetyNetRequest(Context context, String nonceData, OnSuccessListener<SafetyNetApi.AttestationResponse> successListener, OnFailureListener failureListener) {
+        if (GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context)
+                == ConnectionResult.SUCCESS && sApiKey != null) {
+            // The SafetyNet Attestation API is available.
 
-        // Call the SafetyNet API asynchronously. The result is returned through the result callback.
-        SafetyNet.SafetyNetApi.attest(mGoogleApiClient, nonce)
-                .setResultCallback(result);
+            Log.d(TAG, "Sending SafetyNet API request.");
+
+            byte[] nonce = getRequestNonce(nonceData);
+
+            // Call the SafetyNet API asynchronously. The result is returned through the result callback.
+            SafetyNet.getClient(context).attest(nonce, sApiKey).addOnSuccessListener(successListener).addOnFailureListener(failureListener);
+        }
     }
 
     /**
@@ -59,17 +71,6 @@ public class SafetyNetCheck
 
         return byteStream.toByteArray();
     }
-
-    /**
-     * Constructs an automanaged {@link GoogleApiClient} for the {@link SafetyNet#API}.
-     */
-    public static synchronized void buildGoogleApiClient(Context context) {
-        mGoogleApiClient = new GoogleApiClient.Builder(context)
-                .addApi(SafetyNet.API)
-                .build();
-        mGoogleApiClient.connect();
-    }
-
 
 
     @Override
