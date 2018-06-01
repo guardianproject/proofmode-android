@@ -25,3 +25,18 @@ android {
 
 }
 
+apply plugin: 'maven'
+
+uploadArchives {
+        repositories.mavenDeployer {
+                def deployPath = file(getProperty('aar.deployPath'))
+                repository(url: "file://${deployPath.absolutePath}")
+                pom.project {
+                        groupId 'com.eternitywall'
+                        artifactId 'opentimestamps'
+                        version "0.1.14"
+                }
+        }
+}
+
+
