@@ -30,7 +30,7 @@ public class ProofModeApp extends MultiDexApplication {
         super.onCreate();
 
 
-        SafetyNetCheck.setApiKey(getString(org.witness.proofmode.library.R.string.verification_api_key));
+        SafetyNetCheck.setApiKey(getString(R.string.verification_api_key));
 
 
         init(this);

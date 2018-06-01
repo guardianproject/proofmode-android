@@ -39,7 +39,7 @@ public class ProofMode {
         {
             context.startService(new Intent(context, MediaListenerService.class));
         }
-        
+
         mInit = true;
     }
 
