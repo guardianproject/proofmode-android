@@ -39,9 +39,7 @@ public class ProofMode {
         {
             context.startService(new Intent(context, MediaListenerService.class));
         }
-
-        SafetyNetCheck.buildGoogleApiClient(context);
-
+        
         mInit = true;
     }
 
