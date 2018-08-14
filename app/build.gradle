@@ -40,13 +40,14 @@ android {
 
 dependencies {
     testCompile 'junit:junit:4.12'
-    compile 'com.android.support:appcompat-v7:27.1.0'
-    compile 'com.android.support:support-compat:27.1.0'
-    compile 'com.android.support:design:27.1.0'
+    compile 'com.android.support:appcompat-v7:27.1.1'
+    compile 'com.android.support:support-compat:27.1.1'
+    compile 'com.android.support:design:27.1.1'
+    implementation 'com.google.android.gms:play-services-safetynet:15.0.1'
 
     compile 'com.github.paolorotolo:appintro:4.1.0'
-    compile "com.android.support:support-v4:27.1.0"
-    compile "com.android.support:support-v13:27.1.0"
+    compile "com.android.support:support-v4:27.1.1"
+    compile "com.android.support:support-v13:27.1.1"
     compile 'com.jakewharton.timber:timber:4.5.1'
     compile 'com.android.support:multidex:1.0.3'
     compile project(':android-libproofmode')

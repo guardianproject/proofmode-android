@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.net.Uri;
 
 import org.spongycastle.jce.provider.BouncyCastleProvider;
+import org.witness.proofmode.crypto.HashUtils;
 import org.witness.proofmode.service.MediaListenerService;
 import org.witness.proofmode.service.MediaWatcher;
 import org.witness.proofmode.service.PhotosContentJob;
@@ -13,6 +14,8 @@ import org.witness.proofmode.util.SafetyNetCheck;
 
 import java.io.File;
 import java.security.Security;
+
+import okhttp3.MediaType;
 
 public class ProofMode {
 
@@ -43,11 +46,17 @@ public class ProofMode {
         mInit = true;
     }
 
-    public static void generateProof (Context context, Uri uri)
+    public static String generateProof (Context context, Uri uri)
     {
         Intent intent = new Intent();
         intent.setData(uri);
-        new MediaWatcher().handleIntent(context, intent, true);
+        return new MediaWatcher().handleIntent(context, intent, true);
+    }
+
+
+    public static File getProofDir (String mediaHash)
+    {
+        return MediaWatcher.getHashStorageDir(mediaHash);
     }
 
 

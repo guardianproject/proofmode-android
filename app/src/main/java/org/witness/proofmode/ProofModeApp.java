@@ -5,14 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.support.multidex.MultiDexApplication;
 import android.util.Log;
-import org.spongycastle.jce.provider.BouncyCastleProvider;
-import org.witness.proofmode.service.MediaListenerService;
-import org.witness.proofmode.service.PhotosContentJob;
-import org.witness.proofmode.service.VideosContentJob;
 import org.witness.proofmode.util.SafetyNetCheck;
-
-import java.security.Security;
-import java.util.HashMap;
 
 import timber.log.Timber;
 

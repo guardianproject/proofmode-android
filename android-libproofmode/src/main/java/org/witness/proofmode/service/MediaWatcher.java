@@ -69,7 +69,7 @@ public class MediaWatcher extends BroadcastReceiver {
 
     }
 
-    public boolean handleIntent (final Context context, Intent intent, boolean forceDoProof) {
+    public String handleIntent (final Context context, Intent intent, boolean forceDoProof) {
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 
@@ -87,7 +87,7 @@ public class MediaWatcher extends BroadcastReceiver {
 
             if (!isExternalStorageWritable()) {
               //  Toast.makeText(context, R.string.no_external_storage, Toast.LENGTH_SHORT).show();
-                return false;
+                return null;
             }
 
             Uri uriMedia = intent.getData();
@@ -95,7 +95,7 @@ public class MediaWatcher extends BroadcastReceiver {
                 uriMedia = (Uri) intent.getParcelableExtra(Intent.EXTRA_STREAM);
 
             if (uriMedia == null) //still null?
-                return false;
+                return null;
 
             String mediaPathTmp = uriMedia.getPath();
 
@@ -119,13 +119,16 @@ public class MediaWatcher extends BroadcastReceiver {
 
             final String mediaPath = mediaPathTmp;
 
+            File fileMediaPath = new File(mediaPath);
+            if (!fileMediaPath.exists())
+                return null;
+
             final boolean showDeviceIds = prefs.getBoolean("trackDeviceId",true);
             final boolean showLocation = prefs.getBoolean("trackLocation",true);
-            final boolean autoNotarize = prefs.getBoolean("autoNotarize", true);
+            final boolean autoNotarize = prefs.getBoolean("autoNotarize", false);
             final boolean showMobileNetwork = prefs.getBoolean("trackMobileNetwork",false);
 
-
-            final String mediaHash = HashUtils.getSHA256FromFileContent(new File(mediaPath));
+            final String mediaHash = HashUtils.getSHA256FromFileContent(fileMediaPath);
 
             if (mediaHash != null) {
 
@@ -182,30 +185,9 @@ public class MediaWatcher extends BroadcastReceiver {
                         }
                     });
 
-
-                    /**
-                    final TimeBeatNotarizationProvider tbNotarize = new TimeBeatNotarizationProvider(context);
-                    tbNotarize.notarize("ProofMode Media Hash: " + mediaHash, new File(mediaPath), new NotarizationListener() {
-                        @Override
-                        public void notarizationSuccessful(String timestamp) {
-
-                            Timber.d("Got Timebeat success response timestamp: " + timestamp);
-                            writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, "TimeBeat: " + timestamp);
-                        }
-
-                        @Override
-                        public void notarizationFailed(int errCode, String message) {
-
-                            Timber.d("Got Timebeat error response: " + message);
-                            writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, "TimeBeat Error: " + message);
-
-                        }
-                    });
-                    **/
-
                 }
 
-                return true;
+                return mediaHash;
             }
             else
             {
@@ -215,7 +197,7 @@ public class MediaWatcher extends BroadcastReceiver {
 
         }
 
-        return false;
+        return null;
     }
 
     private SafetyNetResponse parseJsonWebSignature(String jwsResult) {
