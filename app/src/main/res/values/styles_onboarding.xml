@@ -1,0 +1,100 @@
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Onboarding styles       					   -->
+    <!--                                               -->
+    <!--                                               -->
+
+    <style name="OnboardingStyle">
+        <item name="android:background">#800000</item>
+    </style>
+
+    <style name="OnboardingIntroTextStyle">
+        <item name="android:padding">5dp</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textColor">@android:color/white</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:gravity">center_horizontal</item>
+    </style>
+
+    <style name="OnboardingIntroTitleTextStyle">
+        <item name="android:padding">5dp</item>
+        <item name="android:textSize">30sp</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:textColor">@android:color/white</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:gravity">center_horizontal</item>
+    </style>
+
+    <style name="OnboardingIntroContentTextStyle">
+        <item name="android:padding">5dp</item>
+        <item name="android:textSize">24sp</item>
+        <item name="android:textColor">@android:color/white</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:gravity">center_horizontal</item>
+    </style>
+
+    <style name="OnboardingStepTextStyle">
+        <item name="android:padding">5dp</item>
+        <item name="android:textSize">24sp</item>
+        <item name="android:textColor">#008000</item>
+        <item name="android:textAllCaps">true</item>
+    </style>
+
+    <style name="OnboardingStepTitleTextStyle">
+        <item name="android:padding">5dp</item>
+        <item name="android:textSize">30sp</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:textColor">@android:color/black</item>
+		<item name="android:textAllCaps">false</item>
+        <item name="android:gravity">center_horizontal</item>
+	</style>
+
+    <style name="OnboardingStepSubTitleTextStyle">
+        <item name="android:padding">5dp</item>
+        <item name="android:textSize">24sp</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:textColor">@android:color/black</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:gravity">center_horizontal</item>
+    </style>
+
+    <style name="OnboardingStepContentTextStyle">
+        <item name="android:padding">5dp</item>
+        <item name="android:textSize">24sp</item>
+        <item name="android:textColor">@color/onboarding_gray</item>
+		<item name="android:textAllCaps">false</item>
+        <item name="android:gravity">center_horizontal</item>
+	</style>
+
+    <style name="OnboardingButtonStyle">
+        <item name="android:height">50dp</item>
+        <item name="android:background">@drawable/rounded_button_background</item>
+        <item name="android:paddingLeft">15dp</item>
+        <item name="android:paddingStart">15dp</item>
+        <item name="android:paddingRight">15dp</item>
+        <item name="android:paddingEnd">15dp</item>
+        <item name="android:paddingTop">5dp</item>
+        <item name="android:paddingBottom">5dp</item>
+        <item name="android:textSize">20sp</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:textColor">@color/onboarding_gray</item>
+		<item name="android:textAllCaps">true</item>
+	</style>
+
+    <style name="OnboardingButtonDarkStyle" parent="OnboardingButtonStyle">
+        <item name="android:background">@drawable/rounded_button_dark_background</item>
+        <item name="android:textColor">@android:color/white</item>
+    </style>
+
+    <style name="OnboardingBottomBarStyle">
+        <item name="android:background">#cccccc</item>
+    </style>
+
+    <style name="OnboardingBottomBarTextStyle">
+        <item name="android:padding">5dp</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:textColor">#000000</item>
+        <item name="android:textAllCaps">false</item>
+    </style>
+</resources>

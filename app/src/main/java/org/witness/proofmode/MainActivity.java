@@ -112,8 +112,8 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        if (mPrefs.getBoolean("firsttime",true)) {
-            startActivityForResult(new Intent(this, PMAppIntro.class),REQUEST_CODE_INTRO);
+        if (BuildConfig.DEBUG || mPrefs.getBoolean("firsttime",true)) {
+            startActivityForResult(new Intent(this, OnboardingActivity.class),REQUEST_CODE_INTRO);
             mPrefs.edit().putBoolean("firsttime",false).commit();
         }
         else

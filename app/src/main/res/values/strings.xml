@@ -46,4 +46,35 @@
     <string name="share_proof_action">Share Proof</string>
     <string name="action_generate">Generate Proof</string>
     <string name="proof_error_message_final">We were unable to generate proof for this file.</string>
+
+    <string name="onboarding_learn_more">Learn More</string>
+    <string name="onboarding_get_started">Get started</string>
+
+    <string name="onboarding_intro_title">A picture may be worth a thousand words, but proof that it´s real is priceless.</string>
+    <string name="onboarding_intro_content">ProofMode captures information that makes your media more trustworthy.</string>
+
+    <string name="onboarding_step1">Step 1</string>
+    <string name="onboarding_step1_title">Getting proof is easy. Once ProofMode is on, take pictures as usual.</string>
+    <string name="onboarding_step1_content">ProofMode works in the background to generate and save proof. You don´t have to do anything special.</string>
+
+    <string name="onboarding_step2">Step 2</string>
+    <string name="onboarding_step2_title">Once you´ve taken a photo, find the picture in your camera gallery to share it.</string>
+    <string name="onboarding_step2_content">Select a photo, tap the share icon and choose `share proof´.</string>
+
+    <string name="onboarding_step3">Step 3</string>
+    <string name="onboarding_step3_title">Before you send, choose what level of proof to share.</string>
+    <string name="onboarding_step3_content">You´re always in control.</string>
+
+    <string name="onboarding_step4">Step 4</string>
+    <string name="onboarding_step4_title">Then choose how to send it.</string>
+    <string name="onboarding_step4_content">You can share lots of ways, from email to messaging services like WhatsApp!</string>
+
+    <string name="onboarding_privacy_title">ProofMode activates multiple sensors on your phone to generate proof.</string>
+    <string name="onboarding_privacy_content">Learn about what ProofMode captures in our Data Legend.</string>
+    <string name="onboarding_privacy_subtitle">We care about your privacy.</string>
+    <string name="onboarding_privacy_info">If you have security or privacy concerns, do not turn ProofMode on.</string>
+    <string name="onboarding_privacy_continue">Continue</string>
+    <string name="onboarding_privacy_options">Privacy Options</string>
+
+
 </resources>

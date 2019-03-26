@@ -4,4 +4,9 @@
     <color name="colorPrimaryDark">#083b00</color>
     <color name="colorAccent">#ffe70f</color>
     <color name="colorPrimaryAlt">#FFFFFF</color>
+
+    <color name="black_overlay">#66000000</color>
+
+    <color name="onboarding_gray">#505050</color>
+    <color name="onboarding_gray_light">#808080</color>
 </resources>
