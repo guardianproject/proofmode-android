@@ -4,25 +4,22 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
-import android.support.v4.content.PermissionChecker;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.SwitchCompat;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
-import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.CompoundButton;
-import android.widget.Switch;
 import android.widget.Toast;
 
 import org.witness.proofmode.crypto.PgpUtils;
+import org.witness.proofmode.onboarding.OnboardingActivity;
 import org.witness.proofmode.util.GPSTracker;
 
 import java.io.IOException;
@@ -177,7 +174,7 @@ public class MainActivity extends AppCompatActivity {
 
         if (id == R.id.action_about){
 
-            startActivity(new Intent(this,PMAppIntro.class));
+            startActivity(new Intent(this,OnboardingActivity.class));
 
             return true;
         }

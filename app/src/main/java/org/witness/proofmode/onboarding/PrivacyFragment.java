@@ -37,6 +37,16 @@ public class PrivacyFragment extends Fragment {
             }
         });
 
+        View btnContinue = mRootView.findViewById(R.id.btnContinue);
+        btnContinue.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (getActivity() instanceof OnboardingStepListener) {
+                    ((OnboardingStepListener) getActivity()).onNextPressed();
+                }
+            }
+        });
+
         return mRootView;
     }
 }

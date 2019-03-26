@@ -1,4 +1,4 @@
-package org.witness.proofmode;
+package org.witness.proofmode.onboarding;
 
 import android.annotation.SuppressLint;
 import android.support.v4.app.Fragment;
@@ -15,6 +15,7 @@ import android.widget.ImageButton;
 
 import com.github.paolorotolo.appintro.AppIntroFragment;
 
+import org.witness.proofmode.R;
 import org.witness.proofmode.onboarding.DottedProgressView;
 import org.witness.proofmode.onboarding.NoSwipeViewPager;
 import org.witness.proofmode.onboarding.OnboardingStepListener;
@@ -69,10 +70,10 @@ public class OnboardingActivity extends AppCompatActivity implements OnboardingS
         });
 
         fragmentList.add(WelcomeFragment.newInstance());
-        fragmentList.add(StepFragment.newInstance(R.string.onboarding_step1, R.string.onboarding_step1_title, R.string.onboarding_step1_content, R.raw.onboard_welcome));
-        fragmentList.add(StepFragment.newInstance(R.string.onboarding_step2, R.string.onboarding_step2_title, R.string.onboarding_step2_content, R.raw.onboard_welcome));
-        fragmentList.add(StepFragment.newInstance(R.string.onboarding_step3, R.string.onboarding_step3_title, R.string.onboarding_step3_content, R.raw.onboard_welcome));
-        fragmentList.add(StepFragment.newInstance(R.string.onboarding_step4, R.string.onboarding_step4_title, R.string.onboarding_step4_content, R.raw.onboard_welcome));
+        fragmentList.add(StepFragment.newInstance(R.string.onboarding_step1, R.string.onboarding_step1_title, R.string.onboarding_step1_content, R.raw.onboarding_step1));
+        fragmentList.add(StepFragment.newInstance(R.string.onboarding_step2, R.string.onboarding_step2_title, R.string.onboarding_step2_content, R.raw.onboarding_step1));
+        fragmentList.add(StepFragment.newInstance(R.string.onboarding_step3, R.string.onboarding_step3_title, R.string.onboarding_step3_content, R.raw.onboarding_step1));
+        fragmentList.add(StepFragment.newInstance(R.string.onboarding_step4, R.string.onboarding_step4_title, R.string.onboarding_step4_content, R.raw.onboarding_step1));
         fragmentList.add(PrivacyFragment.newInstance());
 
         // Set adapter
@@ -101,6 +102,9 @@ public class OnboardingActivity extends AppCompatActivity implements OnboardingS
     public void onNextPressed() {
         if (pager.getCurrentItem() < (fragmentList.size() - 1)) {
             pager.setCurrentItem(pager.getCurrentItem() + 1, true);
+        } else {
+            // Done
+            finish();
         }
     }
 

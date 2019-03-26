@@ -5,8 +5,8 @@
     <attr name="dot_current" format="integer" />
 
     <declare-styleable name="DottedProgressView">
-        <attr name="dot_distance" format="integer" />
-        <attr name="dot_radius" format="integer" />
+        <attr name="dot_distance" format="dimension" />
+        <attr name="dot_radius" format="dimension" />
         <attr name="dot_color" format="color" />
         <attr name="dot_rim_color" format="color" />
         <attr name="dot_color_current" format="color" />

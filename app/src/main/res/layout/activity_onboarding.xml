@@ -3,7 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".OnboardingActivity">
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    tools:context=".onboarding.OnboardingActivity">
     <org.witness.proofmode.onboarding.NoSwipeViewPager
         android:id="@+id/pager"
         android:layout_width="match_parent"
@@ -13,6 +14,12 @@
         android:layout_width="match_parent"
         android:layout_height="50dp"
         android:layout_gravity="bottom|center_horizontal"
+        app:dot_color="@color/onboarding_background"
+        app:dot_color_current="@color/onboarding_green"
+        app:dot_rim_color="@color/onboarding_green"
+        app:dot_rim_color_current="@color/onboarding_green"
+        app:dot_radius="3dp"
+        app:dot_distance="10dp"
     />
     <ImageButton
         android:id="@+id/btnNext"

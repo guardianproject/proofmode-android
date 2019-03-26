@@ -39,7 +39,7 @@
 
         <TextView
             android:id="@+id/title"
-            style="@style/OnboardingStepTitleTextStyle"
+            style="@style/OnboardingStepTitleStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceLarge"
@@ -47,7 +47,7 @@
 
         <TextView
             android:id="@+id/content"
-            style="@style/OnboardingStepContentTextStyle"
+            style="@style/OnboardingStepContentStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceLarge"
@@ -58,6 +58,7 @@
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
+            android:layout_marginTop="20dp"
             android:layout_marginBottom="100dp"
             />
     </LinearLayout>

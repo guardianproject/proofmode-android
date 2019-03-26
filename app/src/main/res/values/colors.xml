@@ -7,6 +7,8 @@
 
     <color name="black_overlay">#66000000</color>
 
+    <color name="onboarding_background">#efefef</color>
     <color name="onboarding_gray">#505050</color>
     <color name="onboarding_gray_light">#808080</color>
+    <color name="onboarding_green">#00a000</color>
 </resources>

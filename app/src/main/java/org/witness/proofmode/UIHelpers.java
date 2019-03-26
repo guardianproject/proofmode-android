@@ -7,6 +7,7 @@ import android.util.TypedValue;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.ImageView;
 
 import com.caverock.androidsvg.SVG;
 import com.caverock.androidsvg.SVGImageView;
@@ -33,6 +34,7 @@ public class UIHelpers
 			SVG svg = SVG.getFromResource(rootView.getContext(), idSVG);
 
 			SVGImageView svgImageView = new SVGImageView(rootView.getContext());
+			svgImageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
 			svgImageView.setSVG(svg);
 			svgImageView.setLayoutParams(new ViewGroup.LayoutParams(
 					ViewGroup.LayoutParams.MATCH_PARENT,

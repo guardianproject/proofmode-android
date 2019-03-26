@@ -5,12 +5,9 @@ import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.support.annotation.NonNull;
 import android.util.AttributeSet;
 import android.view.Gravity;
 import android.view.View;
-
-import com.github.paolorotolo.appintro.IndicatorController;
 
 import org.witness.proofmode.R;
 import org.witness.proofmode.UIHelpers;
@@ -63,8 +60,8 @@ public class DottedProgressView extends View
 		{
 			TypedArray a = getContext().obtainStyledAttributes(attrs, R.styleable.DottedProgressView);
 			mGravity = a.getInt(R.styleable.DottedProgressView_android_gravity, mGravity);
-			mDistance = a.getInt(R.styleable.DottedProgressView_dot_distance, mDistance);
-			mRadius = a.getInt(R.styleable.DottedProgressView_dot_radius, mRadius);
+			mDistance = a.getDimensionPixelSize(R.styleable.DottedProgressView_dot_distance, mDistance);
+			mRadius = a.getDimensionPixelSize(R.styleable.DottedProgressView_dot_radius, mRadius);
 			mColor = a.getColor(R.styleable.DottedProgressView_dot_color, mColor);
 			mRimColor = a.getColor(R.styleable.DottedProgressView_dot_rim_color, mRimColor);
 			mColorCurrent = a.getColor(R.styleable.DottedProgressView_dot_color_current, mColorCurrent);
