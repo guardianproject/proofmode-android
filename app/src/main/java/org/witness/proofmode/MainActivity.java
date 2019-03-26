@@ -109,7 +109,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        if (BuildConfig.DEBUG || mPrefs.getBoolean("firsttime",true)) {
+        if (mPrefs.getBoolean("firsttime",true)) {
             startActivityForResult(new Intent(this, OnboardingActivity.class),REQUEST_CODE_INTRO);
             mPrefs.edit().putBoolean("firsttime",false).commit();
         }
