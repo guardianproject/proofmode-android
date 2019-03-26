@@ -1,27 +1,18 @@
 package org.witness.proofmode;
 
 import android.Manifest;
-import android.animation.Animator;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
-import android.support.design.widget.NavigationView;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
-import android.support.v4.widget.DrawerLayout;
-import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.SwitchCompat;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 import android.widget.CompoundButton;
-import android.widget.ImageButton;
 import android.widget.Toast;
 
 import org.witness.proofmode.crypto.PgpUtils;
@@ -30,153 +21,99 @@ import org.witness.proofmode.util.GPSTracker;
 
 import java.io.IOException;
 
-public class MainActivity extends AppCompatActivity {
+public class SettingsActivity extends AppCompatActivity {
 
     private SharedPreferences mPrefs;
 
-    private final static int REQUEST_CODE_INTRO = 9999;
-
     private PgpUtils mPgpUtils;
-    private View layoutOn;
-    private View layoutOff;
-    private ActionBarDrawerToggle drawerToggle;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_settings);
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        getSupportActionBar().setTitle("");
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        getSupportActionBar().setDisplayShowHomeEnabled(true);
 
         mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
 
-        View rootView = findViewById(R.id.root);
-        layoutOn = rootView.findViewById(R.id.layout_on);
-        layoutOff = rootView.findViewById(R.id.layout_off);
-        UIHelpers.populateContainerWithSVG(rootView, R.raw.background_on, R.id.illustration_on);
-        UIHelpers.populateContainerWithSVG(rootView, R.raw.background_off, R.id.illustration_off);
+        SwitchCompat switchProof = findViewById(R.id.switchProof);
+        switchProof.setChecked(mPrefs.getBoolean("doProof",true));
 
-        layoutOn.setOnLongClickListener(new View.OnLongClickListener() {
+        switchProof.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
-            public boolean onLongClick(View v) {
-                setProofModeOn(false);
-                return true;
-            }
-        });
-        layoutOff.setOnLongClickListener(new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View v) {
-                setProofModeOn(true);
-                return true;
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+
+                mPrefs.edit().putBoolean("doProof",isChecked).commit();
+                if (isChecked)
+                {
+                    askForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE, 1);
+                }
             }
         });
 
-        if (mPrefs.getBoolean("firsttime",true)) {
-            startActivityForResult(new Intent(this, OnboardingActivity.class),REQUEST_CODE_INTRO);
-            mPrefs.edit().putBoolean("firsttime",false).commit();
-        }
-        else
-        {
-            askForPermission(Manifest.permission.ACCESS_FINE_LOCATION, 1);
-        }
-
-        //Setup drawer
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-        drawerToggle = new ActionBarDrawerToggle(
-                this, drawer, toolbar, 0, 0);
-        drawer.addDrawerListener(drawerToggle);
-        drawerToggle.syncState();
-
-        NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
-        //navigationView.setNavigationItemSelectedListener(this);
-
-        ImageButton btnSettings = findViewById(R.id.btnSettings);
-        btnSettings.setOnClickListener(new View.OnClickListener() {
+        SwitchCompat switchLocation = (SwitchCompat)findViewById(R.id.switchLocation);
+        switchLocation.setChecked(mPrefs.getBoolean("trackLocation",true));
+        switchLocation.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
-                startActivity(intent);
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+
+                mPrefs.edit().putBoolean("trackLocation",isChecked).commit();
+
+                if (isChecked)
+                {
+                    askForPermission(Manifest.permission.ACCESS_FINE_LOCATION, 1);
+                    refreshLocation();
+                }
             }
         });
 
-        updateOnOffState(false);
-    }
+        SwitchCompat switchMobile = (SwitchCompat)findViewById(R.id.switchCellInfo);
+        switchMobile.setChecked(mPrefs.getBoolean("trackMobileNetwork",false));
+        switchMobile.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 
-    private void setProofModeOn(boolean isOn) {
-        mPrefs.edit().putBoolean("doProof", isOn).commit();
-        if (isOn)
-        {
-            askForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE, 1);
-        }
-        updateOnOffState(true);
-    }
+                mPrefs.edit().putBoolean("trackMobileNetwork",isChecked).commit();
 
-    private void updateOnOffState(boolean animate) {
-        final boolean isOn = mPrefs.getBoolean("doProof",true);
-        if (animate) {
-            layoutOn.animate().alpha(isOn ? 1.0f : 0.0f).setDuration(300).setListener(new Animator.AnimatorListener() {
-                @Override
-                public void onAnimationStart(Animator animation) {
-                    if (isOn) {
-                        layoutOn.setVisibility(View.VISIBLE);
-                    }
+                if (isChecked)
+                {
+                    askForPermission(Manifest.permission.READ_PHONE_STATE, 1);
                 }
+            }
+        });
 
-                @Override
-                public void onAnimationEnd(Animator animation) {
-                    if (!isOn) {
-                        layoutOn.setVisibility(View.GONE);
-                    }
-                }
+        SwitchCompat switchDevice = (SwitchCompat)findViewById(R.id.switchDevice);
+        switchDevice.setChecked(mPrefs.getBoolean("trackDeviceId",true));
+        switchDevice.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 
-                @Override
-                public void onAnimationCancel(Animator animation) {
+                mPrefs.edit().putBoolean("trackDeviceId",isChecked).commit();
 
-                }
+            }
+        });
 
-                @Override
-                public void onAnimationRepeat(Animator animation) {
+        SwitchCompat switchNotarize = (SwitchCompat)findViewById(R.id.switchNotarize);
+        switchNotarize.setChecked(mPrefs.getBoolean("autoNotarize",true));
+        switchNotarize.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 
-                }
-            }).start();
-            layoutOff.animate().alpha(isOn ? 0.0f : 1.0f).setDuration(300).setListener(new Animator.AnimatorListener() {
-                @Override
-                public void onAnimationStart(Animator animation) {
-                    if (!isOn) {
-                        layoutOff.setVisibility(View.VISIBLE);
-                    }
-                }
+                mPrefs.edit().putBoolean("autoNotarize",isChecked).commit();
 
-                @Override
-                public void onAnimationEnd(Animator animation) {
-                    if (isOn) {
-                        layoutOff.setVisibility(View.GONE);
-                    }
-                }
-
-                @Override
-                public void onAnimationCancel(Animator animation) {
-
-                }
-
-                @Override
-                public void onAnimationRepeat(Animator animation) {
-
-                }
-            }).start();
-        } else {
-            layoutOn.setAlpha(isOn ? 1.0f : 0.0f);
-            layoutOn.setVisibility(isOn ? View.VISIBLE : View.GONE);
-            layoutOff.setAlpha(isOn ? 0.0f : 1.0f);
-            layoutOff.setVisibility(isOn ? View.GONE : View.VISIBLE);
-        }
+            }
+        });
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        updateOnOffState(false);
+
+        SwitchCompat switchProof = (SwitchCompat)findViewById(R.id.switchProof);
+        switchProof.setChecked(mPrefs.getBoolean("doProof",true));
+
     }
 
     @Override
@@ -215,13 +152,22 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    public void onBackPressed() {
+        finish();
+    }
+
+    @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
-        if (id == R.id.action_about){
+        if (id == android.R.id.home) {
+            finish();
+            return true;
+        }
+        else if (id == R.id.action_about){
 
             startActivity(new Intent(this,OnboardingActivity.class));
 
@@ -308,11 +254,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-
-        if (requestCode == REQUEST_CODE_INTRO)
-        {
-            askForPermission(Manifest.permission.ACCESS_FINE_LOCATION, 1);
-        }
+        //TODO
     }
 
     private void refreshLocation ()

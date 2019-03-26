@@ -12,17 +12,11 @@
     <string name="switch_enable_proofmode">Enable ProofMode</string>
     <string name="switch_auto_notarize">Enable Auto-Notarize</string>
 
-    <string name="intro1_title">Capture the Proof</string>
-    <string name="intro1_desc">You\'ve taken the first step to transform your photos and video into digital proof.</string>
-
-    <string name="intro2_title">Sensing Your World</string>
-    <string name="intro2_desc">ProofMode taps into all of the sensors on your device it can. Make sure to enable permissions as they are requested.</string>
-
-    <string name="intro3_title">Easy and Automatic</string>
-    <string name="intro3_desc">ProofMode is always running in the background, automatically adding proof to all photos and videos you take.</string>
-
-    <string name="intro4_title">Share Proof</string>
-    <string name="intro4_desc">When you need to share something with proof, just open the photo or video, and select SHARE PROOF from the Share menu.</string>
+    <string name="proofmode_is_on">ProofMode is on</string>
+    <string name="tap_hold_turn_off">Tap hold to turn off</string>
+    <string name="proofmode_is_capturing">ProofMode is capturing a strong set of metadata by default. Strengthen your media´s verifiability by adding more.</string>
+    <string name="proofmode_is_off">ProofMode is off and not capturing data</string>
+    <string name="tap_hold_turn_on">Tap hold to turn on</string>
     <string name="share_notarization">SHARE NOTARIZATION TO...</string>
     <string name="share_proof">SHARE PROOF TO...</string>
     <string name="proof_error_message">The proof does not exist</string>
@@ -46,6 +40,7 @@
     <string name="share_proof_action">Share Proof</string>
     <string name="action_generate">Generate Proof</string>
     <string name="proof_error_message_final">We were unable to generate proof for this file.</string>
+    <string name="choose_my_settings">Choose my settings</string>
     <string name="got_it">Got it</string>
 
     <string name="onboarding_learn_more">Learn More</string>

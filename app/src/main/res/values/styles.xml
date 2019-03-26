@@ -33,4 +33,39 @@
         <item name="android:background">@color/black_overlay</item>
     </style>
 
+    <style name="TitleStyle">
+        <item name="android:padding">5dp</item>
+        <item name="android:textSize">@dimen/title_size</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:textColor">@android:color/white</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:gravity">center_horizontal</item>
+    </style>
+
+    <style name="SubtitleStyle">
+        <item name="android:padding">5dp</item>
+        <item name="android:textSize">@dimen/subtitle_size</item>
+        <item name="android:textColor">@android:color/white</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:gravity">center_horizontal</item>
+    </style>
+
+    <style name="ContentStyle">
+        <item name="android:padding">5dp</item>
+        <item name="android:textSize">@dimen/content_size</item>
+        <item name="android:textColor">@android:color/white</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:gravity">center_horizontal</item>
+    </style>
+
+    <style name="InfoStyle">
+        <item name="android:padding">5dp</item>
+        <item name="android:textSize">@dimen/info_size</item>
+        <item name="android:textColor">@android:color/white</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textStyle">italic</item>
+        <item name="android:gravity">center_horizontal</item>
+    </style>
+
 </resources>

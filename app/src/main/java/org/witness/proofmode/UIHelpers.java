@@ -34,6 +34,8 @@ public class UIHelpers
 			SVG svg = SVG.getFromResource(rootView.getContext(), idSVG);
 
 			SVGImageView svgImageView = new SVGImageView(rootView.getContext());
+			svgImageView.setFocusable(false);
+			svgImageView.setFocusableInTouchMode(false);
 			svgImageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
 			svgImageView.setSVG(svg);
 			svgImageView.setLayoutParams(new ViewGroup.LayoutParams(

@@ -4,7 +4,13 @@
     <dimen name="activity_vertical_margin">16dp</dimen>
     <dimen name="fab_margin">16dp</dimen>
 
+    <dimen name="title_size">25sp</dimen>
+    <dimen name="subtitle_size">17sp</dimen>
+    <dimen name="content_size">17sp</dimen>
+    <dimen name="info_size">14sp</dimen>
+
     <dimen name="onboarding_title_size">25sp</dimen>
     <dimen name="onboarding_subtitle_size">17sp</dimen>
     <dimen name="onboarding_content_size">17sp</dimen>
+
 </resources>
