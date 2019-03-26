@@ -16,11 +16,11 @@ android {
     }
 
     dependencies {
-        compile project.ext.appcompat
+        implementation project.ext.appcompat
 
 
-        compile 'org.bitcoinj:bitcoinj-core:0.14.4'
-        compile 'org.json:org.json:chargebee-1.0'
+        implementation 'org.bitcoinj:bitcoinj-core:0.14.4'
+        implementation 'org.json:org.json:chargebee-1.0'
     }
 
 }
