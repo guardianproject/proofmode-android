@@ -46,6 +46,7 @@
     <string name="share_proof_action">Share Proof</string>
     <string name="action_generate">Generate Proof</string>
     <string name="proof_error_message_final">We were unable to generate proof for this file.</string>
+    <string name="got_it">Got it</string>
 
     <string name="onboarding_learn_more">Learn More</string>
     <string name="onboarding_get_started">Get started</string>
