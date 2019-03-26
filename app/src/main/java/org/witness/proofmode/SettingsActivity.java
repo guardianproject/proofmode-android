@@ -3,29 +3,26 @@ package org.witness.proofmode;
 import android.Manifest;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.SwitchCompat;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
-import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.CheckBox;
 import android.widget.CompoundButton;
-import android.widget.Toast;
 
 import org.witness.proofmode.crypto.PgpUtils;
-import org.witness.proofmode.onboarding.OnboardingActivity;
 import org.witness.proofmode.util.GPSTracker;
-
-import java.io.IOException;
 
 public class SettingsActivity extends AppCompatActivity {
 
     private SharedPreferences mPrefs;
 
     private PgpUtils mPgpUtils;
+    private CheckBox switchLocation;
+    private CheckBox switchMobile;
+    private CheckBox switchDevice;
+    private CheckBox switchNotarize;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,23 +35,12 @@ public class SettingsActivity extends AppCompatActivity {
 
         mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
 
-        SwitchCompat switchProof = findViewById(R.id.switchProof);
-        switchProof.setChecked(mPrefs.getBoolean("doProof",true));
+        switchLocation = (CheckBox)findViewById(R.id.switchLocation);
+        switchMobile = (CheckBox)findViewById(R.id.switchCellInfo);
+        switchDevice = (CheckBox)findViewById(R.id.switchDevice);
+        switchNotarize = (CheckBox) findViewById(R.id.switchNotarize);
+        updateUI();
 
-        switchProof.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-
-                mPrefs.edit().putBoolean("doProof",isChecked).commit();
-                if (isChecked)
-                {
-                    askForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE, 1);
-                }
-            }
-        });
-
-        SwitchCompat switchLocation = (SwitchCompat)findViewById(R.id.switchLocation);
-        switchLocation.setChecked(mPrefs.getBoolean("trackLocation",true));
         switchLocation.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -69,8 +55,6 @@ public class SettingsActivity extends AppCompatActivity {
             }
         });
 
-        SwitchCompat switchMobile = (SwitchCompat)findViewById(R.id.switchCellInfo);
-        switchMobile.setChecked(mPrefs.getBoolean("trackMobileNetwork",false));
         switchMobile.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -84,8 +68,6 @@ public class SettingsActivity extends AppCompatActivity {
             }
         });
 
-        SwitchCompat switchDevice = (SwitchCompat)findViewById(R.id.switchDevice);
-        switchDevice.setChecked(mPrefs.getBoolean("trackDeviceId",true));
         switchDevice.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -95,25 +77,25 @@ public class SettingsActivity extends AppCompatActivity {
             }
         });
 
-        SwitchCompat switchNotarize = (SwitchCompat)findViewById(R.id.switchNotarize);
-        switchNotarize.setChecked(mPrefs.getBoolean("autoNotarize",true));
         switchNotarize.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-
-                mPrefs.edit().putBoolean("autoNotarize",isChecked).commit();
-
+                mPrefs.edit().putBoolean("autoNotarize", switchNotarize.isChecked()).commit();
             }
         });
+    }
+
+    private void updateUI() {
+        switchLocation.setChecked(mPrefs.getBoolean("trackLocation",true));
+        switchMobile.setChecked(mPrefs.getBoolean("trackMobileNetwork",false));
+        switchDevice.setChecked(mPrefs.getBoolean("trackDeviceId",true));
+        switchNotarize.setChecked(mPrefs.getBoolean("autoNotarize",true));
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-
-        SwitchCompat switchProof = (SwitchCompat)findViewById(R.id.switchProof);
-        switchProof.setChecked(mPrefs.getBoolean("doProof",true));
-
+        updateUI();
     }
 
     @Override
@@ -145,13 +127,6 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
-
-    @Override
     public void onBackPressed() {
         finish();
     }
@@ -167,25 +142,6 @@ public class SettingsActivity extends AppCompatActivity {
             finish();
             return true;
         }
-        else if (id == R.id.action_about){
-
-            startActivity(new Intent(this,OnboardingActivity.class));
-
-            return true;
-        }
-        else if (id == R.id.action_publish_key){
-
-            publishKey();
-
-            return true;
-        }
-        else if (id == R.id.action_share_key){
-
-            shareKey();
-
-            return true;
-        }
-
         return super.onOptionsItemSelected(item);
     }
 
@@ -201,83 +157,11 @@ public class SettingsActivity extends AppCompatActivity {
         return false;
     }
 
-    private void publishKey ()
-    {
-
-        try {
-            if (mPgpUtils == null)
-                mPgpUtils = PgpUtils.getInstance(this,mPrefs.getString("password",PgpUtils.DEFAULT_PASSWORD));
-
-            mPgpUtils.publishPublicKey();
-            String fingerprint = mPgpUtils.getPublicKeyFingerprint();
-
-            Toast.makeText(this, R.string.open_public_key_page, Toast.LENGTH_LONG).show();
-
-            openUrl(PgpUtils.URL_LOOKUP_ENDPOINT + fingerprint);
-        }
-        catch (IOException ioe)
-        {
-            Log.e("Proofmode","error publishing key",ioe);
-        }
-    }
-
-    private void shareKey ()
-    {
-
-
-        try {
-
-            if (mPgpUtils == null)
-                mPgpUtils = PgpUtils.getInstance(this,mPrefs.getString("password",PgpUtils.DEFAULT_PASSWORD));
-
-            mPgpUtils.publishPublicKey();
-            String pubKey = mPgpUtils.getPublicKey();
-
-            Intent intent = new Intent(Intent.ACTION_SEND);
-            intent.setType("text/plain");
-            intent.putExtra(Intent.EXTRA_TEXT,pubKey);
-            startActivity(intent);
-        }
-        catch (IOException ioe)
-        {
-            Log.e("Proofmode","error publishing key",ioe);
-        }
-    }
-
-    private void openUrl (String url)
-    {
-        Intent i = new Intent(Intent.ACTION_VIEW);
-        i.setData(Uri.parse(url));
-        startActivity(i);
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        //TODO
-    }
-
     private void refreshLocation ()
     {
         GPSTracker gpsTracker = new GPSTracker(this);
         if (gpsTracker.canGetLocation()) {
             gpsTracker.getLocation();
         }
-    }
-
-
-    private void unregisterManagers(){
-    }
-
-    @Override
-    public void onPause() {
-        super.onPause();
-        unregisterManagers();
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        unregisterManagers();
     }
 }

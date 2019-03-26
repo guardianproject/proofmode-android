@@ -18,8 +18,9 @@
         android:textAllCaps="true"
         android:textAppearance="@style/TextAppearance.AppCompat.Body1"
         android:layout_margin="10dp"
-        android:textSize="30sp"
-        android:textColor="@color/onboarding_green"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="@color/colorPrimary"
     />
 
 </LinearLayout>
