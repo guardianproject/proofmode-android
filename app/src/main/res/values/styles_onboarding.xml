@@ -35,11 +35,12 @@
     </style>
 
     <style name="OnboardingStepTextStyle" parent="OnboardingIntroSubtitleStyle">
-        <item name="android:textColor">#008000</item>
+        <item name="android:textSize">@dimen/onboarding_info_size</item>
+        <item name="android:textColor">@color/colorPrimary</item>
     </style>
 
     <style name="OnboardingStepTitleStyle" parent="OnboardingIntroTitleStyle">
-        <item name="android:textColor">@android:color/black</item>
+        <item name="android:textColor">@color/onboarding_gray</item>
 	</style>
 
     <style name="OnboardingStepSubtitleStyle" parent="OnboardingIntroSubtitleStyle">
@@ -47,7 +48,7 @@
     </style>
 
     <style name="OnboardingStepContentStyle" parent="OnboardingIntroContentStyle">
-        <item name="android:textColor">@color/onboarding_gray</item>
+        <item name="android:textColor">@android:color/black</item>
 	</style>
 
     <style name="OnboardingButtonStyle">

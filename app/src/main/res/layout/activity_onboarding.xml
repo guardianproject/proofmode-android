@@ -12,14 +12,14 @@
     <org.witness.proofmode.onboarding.DottedProgressView
         android:id="@+id/indicator"
         android:layout_width="match_parent"
-        android:layout_height="50dp"
+        android:layout_height="54dp"
         android:layout_gravity="bottom|center_horizontal"
         app:dot_color="@color/onboarding_background"
         app:dot_color_current="@color/colorPrimary"
         app:dot_rim_color="@color/colorPrimary"
         app:dot_rim_color_current="@color/colorPrimary"
         app:dot_radius="3dp"
-        app:dot_distance="10dp"
+        app:dot_distance="14dp"
     />
     <ImageButton
         android:id="@+id/btnNext"
