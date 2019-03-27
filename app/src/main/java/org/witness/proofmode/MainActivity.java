@@ -37,6 +37,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     private SharedPreferences mPrefs;
 
     private final static int REQUEST_CODE_INTRO = 9999;
+    private final static int REQUEST_CODE_WRITE_EXTERNAL_STORAGE = 9998;
 
     private PgpUtils mPgpUtils;
     private View layoutOn;
@@ -76,12 +77,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         });
 
         if (mPrefs.getBoolean("firsttime",true)) {
-            startActivityForResult(new Intent(this, OnboardingActivity.class),REQUEST_CODE_INTRO);
-            mPrefs.edit().putBoolean("firsttime",false).commit();
-        }
-        else
-        {
-            askForPermission(Manifest.permission.ACCESS_FINE_LOCATION, 1);
+            startActivityForResult(new Intent(this, OnboardingActivity.class), REQUEST_CODE_INTRO);
         }
 
         //Setup drawer
@@ -106,16 +102,20 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     }
 
     private void setProofModeOn(boolean isOn) {
-        mPrefs.edit().putBoolean("doProof", isOn).commit();
         if (isOn)
         {
-            askForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE, 1);
+            if (!askForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE, REQUEST_CODE_WRITE_EXTERNAL_STORAGE)) {
+                mPrefs.edit().putBoolean("doProof", isOn).commit();
+                updateOnOffState(true);
+            }
+        } else {
+            mPrefs.edit().putBoolean("doProof", isOn).commit();
+            updateOnOffState(true);
         }
-        updateOnOffState(true);
     }
 
     private void updateOnOffState(boolean animate) {
-        final boolean isOn = mPrefs.getBoolean("doProof",true);
+        final boolean isOn = mPrefs.getBoolean("doProof",false);
         if (animate) {
             layoutOn.animate().alpha(isOn ? 1.0f : 0.0f).setDuration(300).setListener(new Animator.AnimatorListener() {
                 @Override
@@ -182,34 +182,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-
-        switch (requestCode) {
-            //Location
-            case 1:
-                askForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE,2);
-                break;
-            //Call
-            case 2:
-                askForPermission(Manifest.permission.READ_EXTERNAL_STORAGE,3);
-
-                break;
-
-            case 3:
-                askForPermission(Manifest.permission.ACCESS_NETWORK_STATE,4);
-
-                break;
-
-            case 4:
-                askForPermission(Manifest.permission.READ_PHONE_STATE, 5);
-                break;
-
-        }
-
-    }
-
-    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
@@ -245,12 +217,14 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         return super.onOptionsItemSelected(item);
     }
 
+    /**
+     * User the PermissionActivity to ask for permissions, but show no UI when calling from here.
+     */
     private boolean askForPermission(String permission, Integer requestCode) {
         String[] permissions = new String[] { permission };
         if (!PermissionActivity.hasPermissions(this, permissions)) {
             Intent intent = new Intent(this, PermissionActivity.class);
             intent.putExtra(PermissionActivity.ARG_PERMISSIONS, permissions);
-            intent.putExtra(PermissionActivity.ARG_LAYOUT_ID, R.layout.permission_location);
             startActivityForResult(intent, requestCode);
             return true;
         }
@@ -310,10 +284,23 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-
         if (requestCode == REQUEST_CODE_INTRO)
         {
-            askForPermission(Manifest.permission.ACCESS_FINE_LOCATION, 1);
+            mPrefs.edit().putBoolean("firsttime",false).commit();
+
+            // Ask for initial permissions
+            if (!askForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE, REQUEST_CODE_WRITE_EXTERNAL_STORAGE)) {
+                // We have permission
+                setProofModeOn(true);
+            }
+        } else if (requestCode == REQUEST_CODE_WRITE_EXTERNAL_STORAGE) {
+            // We call with REQUEST_CODE_WRITE_EXTERNAL_STORAGE to turn ProofMode on, so set it to on if we have the permissions
+            String[] permissions = new String[] { Manifest.permission.WRITE_EXTERNAL_STORAGE };
+            if (PermissionActivity.hasPermissions(this, permissions)) {
+                setProofModeOn(true);
+            } else {
+                setProofModeOn(false);
+            }
         }
     }
 

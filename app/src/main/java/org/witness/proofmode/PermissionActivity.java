@@ -1,9 +1,12 @@
 package org.witness.proofmode;
 
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -20,6 +23,9 @@ public class PermissionActivity extends AppCompatActivity {
     public static final String ARG_BUTTON_CONTINUE_ID = "button_continue_id";
     public static final String ARG_BUTTON_CLOSE_ID = "button_close_id";
 
+    private boolean uiMode = true;
+    private boolean showMissingPermissionsDialog = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -35,13 +41,7 @@ public class PermissionActivity extends AppCompatActivity {
                 btn.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        String[] permissions = getIntent().getStringArrayExtra(ARG_PERMISSIONS);
-                        String[] missingPermissions = missingPermissions(PermissionActivity.this, permissions);
-                        if (missingPermissions == null) {
-                            finish();
-                        } else {
-                            ActivityCompat.requestPermissions(PermissionActivity.this, missingPermissions, 1);
-                        }
+                        requestPermissions();
                     }
                 });
             }
@@ -57,7 +57,36 @@ public class PermissionActivity extends AppCompatActivity {
                 });
             }
         } else {
+            // No UI mode, just ask
+            uiMode = false;
+            requestPermissions();
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (showMissingPermissionsDialog) {
+            showMissingPermissionsDialog = false;
+            new AlertDialog.Builder(this)
+                    .setTitle(R.string.permissions_needed_title)
+                    .setMessage(R.string.permissions_needed_content)
+                    .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            finish();
+                        }
+                    }).show();
+        }
+    }
+
+    private void requestPermissions() {
+        String[] permissions = getIntent().getStringArrayExtra(ARG_PERMISSIONS);
+        String[] missingPermissions = missingPermissions(PermissionActivity.this, permissions);
+        if (missingPermissions == null) {
             finish();
+        } else {
+            ActivityCompat.requestPermissions(PermissionActivity.this, missingPermissions, 1);
         }
     }
 
@@ -65,8 +94,20 @@ public class PermissionActivity extends AppCompatActivity {
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         String[] wantedPermissions = getIntent().getStringArrayExtra(ARG_PERMISSIONS);
-        if (missingPermissions(this, wantedPermissions) == null) {
+        String[] missingPermissions = missingPermissions(PermissionActivity.this, wantedPermissions);
+        if (missingPermissions == null) {
             finish(); // Done!
+        } else {
+            for (String p : missingPermissions) {
+                // Should we show an explanation?
+                if (!ActivityCompat.shouldShowRequestPermissionRationale(this, p)) {
+                    showMissingPermissionsDialog = true;
+                    return;
+                }
+            }
+            if (!uiMode) {
+                finish();
+            }
         }
     }
 

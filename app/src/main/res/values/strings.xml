@@ -90,4 +90,7 @@
     <string name="menu_home">Home</string>
     <string name="menu_how_it_works">How It Works</string>
     <string name="menu_settings">Settings</string>
+
+    <string name="permissions_needed_title">Permissions needed</string>
+    <string name="permissions_needed_content">Please enable required permissions in system settings.</string>
 </resources>
