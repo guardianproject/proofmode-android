@@ -16,6 +16,10 @@ import org.witness.proofmode.util.GPSTracker;
 
 public class SettingsActivity extends AppCompatActivity {
 
+    private final static int REQUEST_CODE_LOCATION = 1;
+    private final static int REQUEST_CODE_NETWORK_STATE = 2;
+    private final static int REQUEST_CODE_READ_PHONE_STATE = 3;
+
     private SharedPreferences mPrefs;
 
     private PgpUtils mPgpUtils;
@@ -44,36 +48,46 @@ public class SettingsActivity extends AppCompatActivity {
         switchLocation.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-
-                mPrefs.edit().putBoolean("trackLocation",isChecked).commit();
-
                 if (isChecked)
                 {
-                    askForPermission(Manifest.permission.ACCESS_FINE_LOCATION, 1);
-                    refreshLocation();
+                    if (!askForPermission(Manifest.permission.ACCESS_FINE_LOCATION, REQUEST_CODE_LOCATION)) {
+                        mPrefs.edit().putBoolean("trackLocation",isChecked).commit();
+                        refreshLocation();
+                    }
+                } else {
+                    mPrefs.edit().putBoolean("trackLocation",isChecked).commit();
                 }
+                updateUI();
             }
         });
 
         switchMobile.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-
-                mPrefs.edit().putBoolean("trackMobileNetwork",isChecked).commit();
-
                 if (isChecked)
                 {
-                    askForPermission(Manifest.permission.READ_PHONE_STATE, 1);
+                    if (!askForPermission(Manifest.permission.ACCESS_NETWORK_STATE, REQUEST_CODE_NETWORK_STATE)) {
+                        mPrefs.edit().putBoolean("trackMobileNetwork",isChecked).commit();
+                    }
+                } else {
+                    mPrefs.edit().putBoolean("trackMobileNetwork",isChecked).commit();
                 }
+                updateUI();
             }
         });
 
         switchDevice.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-
-                mPrefs.edit().putBoolean("trackDeviceId",isChecked).commit();
-
+                if (isChecked)
+                {
+                    if (!askForPermission(Manifest.permission.READ_PHONE_STATE, REQUEST_CODE_READ_PHONE_STATE)) {
+                        mPrefs.edit().putBoolean("trackDeviceId",isChecked).commit();
+                    }
+                } else {
+                    mPrefs.edit().putBoolean("trackDeviceId",isChecked).commit();
+                }
+                updateUI();
             }
         });
 
@@ -81,6 +95,7 @@ public class SettingsActivity extends AppCompatActivity {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 mPrefs.edit().putBoolean("autoNotarize", switchNotarize.isChecked()).commit();
+                updateUI();
             }
         });
     }
@@ -104,24 +119,26 @@ public class SettingsActivity extends AppCompatActivity {
 
         switch (requestCode) {
             //Location
-            case 1:
-                askForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE,2);
+            case REQUEST_CODE_LOCATION:
+                if (PermissionActivity.hasPermissions(this, new String[] { Manifest.permission.ACCESS_FINE_LOCATION })) {
+                    mPrefs.edit().putBoolean("trackLocation", true).commit();
+                    refreshLocation();
+                }
+                updateUI();
                 break;
-            //Call
-            case 2:
-                askForPermission(Manifest.permission.READ_EXTERNAL_STORAGE,3);
-
-                break;
-
-            case 3:
-                askForPermission(Manifest.permission.ACCESS_NETWORK_STATE,4);
-
-                break;
-
-            case 4:
-                askForPermission(Manifest.permission.READ_PHONE_STATE, 5);
+            case REQUEST_CODE_NETWORK_STATE:
+                if (PermissionActivity.hasPermissions(this, new String[] { Manifest.permission.ACCESS_NETWORK_STATE })) {
+                    mPrefs.edit().putBoolean("trackMobileNetwork", true).commit();
+                }
+                updateUI();
                 break;
 
+            case REQUEST_CODE_READ_PHONE_STATE:
+                if (PermissionActivity.hasPermissions(this, new String[] { Manifest.permission.READ_PHONE_STATE })) {
+                    mPrefs.edit().putBoolean("trackDeviceId", true).commit();
+                }
+                updateUI();
+                break;
         }
 
     }
