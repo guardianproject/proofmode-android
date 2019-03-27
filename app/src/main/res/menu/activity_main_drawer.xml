@@ -1,41 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
-
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
     <group android:checkableBehavior="none">
         <item
-            android:id="@+id/nav_workout_list"
-            android:icon="@drawable/ic_assignment_white_48dp"
-            android:title="Test" />
+            android:id="@+id/menu_home"
+            android:icon="@drawable/ic_heart"
+            android:title="@string/menu_home" />
+        <item
+            android:id="@+id/menu_how_it_works"
+            android:icon="@drawable/ic_get_going"
+            android:title="@string/menu_how_it_works" />
+        <item
+            android:id="@+id/menu_settings"
+            android:icon="@drawable/ic_settings"
+            android:title="@string/menu_settings" />
     </group>
-<!--
-    <item android:title="@string/menu_devices_group">
-        <menu>
-            <item
-                android:id="@+id/connect_bt_device"
-                android:icon="@drawable/ic_devices_other_black_24dp"
-                android:title="@string/menu_manage_devices"
-                />
-        </menu>
-    </item>
-
-    <item android:title="">
-        <menu>
-            <item
-                android:id="@+id/theme"
-                android:icon="@drawable/ic_style_black_24dp"
-                android:title="@string/menu_theme"
-                />
-            <item
-                android:id="@+id/settings"
-                android:icon="@drawable/ic_settings_black_24dp"
-                android:title="@string/menu_settings"
-                />
-            <item
-                android:id="@+id/about_app"
-                android:icon="@drawable/ic_help_outline_black_24dp"
-                android:title="@string/menu_about"
-                />
-        </menu>
-    </item>-->
 </menu>

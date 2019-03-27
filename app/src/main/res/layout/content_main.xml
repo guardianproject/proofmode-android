@@ -57,11 +57,12 @@
 
             <ImageButton
                 android:id="@+id/btnSettings"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginTop="36dp"
+                android:scaleType="fitCenter"
                 android:background="@null"
-                android:src="@drawable/ic_settings_black_48dp" />
+                android:src="@drawable/ic_settings" />
 
             <TextView
                 style="@style/OnboardingStepTextStyle"

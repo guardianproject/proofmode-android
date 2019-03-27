@@ -8,6 +8,7 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.support.annotation.NonNull;
 import android.support.design.widget.NavigationView;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -17,6 +18,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.SwitchCompat;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -30,7 +32,7 @@ import org.witness.proofmode.util.GPSTracker;
 
 import java.io.IOException;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
 
     private SharedPreferences mPrefs;
 
@@ -39,6 +41,7 @@ public class MainActivity extends AppCompatActivity {
     private PgpUtils mPgpUtils;
     private View layoutOn;
     private View layoutOff;
+    private DrawerLayout drawer;
     private ActionBarDrawerToggle drawerToggle;
 
     @Override
@@ -82,21 +85,20 @@ public class MainActivity extends AppCompatActivity {
         }
 
         //Setup drawer
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawerToggle = new ActionBarDrawerToggle(
                 this, drawer, toolbar, 0, 0);
         drawer.addDrawerListener(drawerToggle);
         drawerToggle.syncState();
 
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
-        //navigationView.setNavigationItemSelectedListener(this);
+        navigationView.setNavigationItemSelectedListener(this);
 
         ImageButton btnSettings = findViewById(R.id.btnSettings);
         btnSettings.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
-                startActivity(intent);
+                openSettings();
             }
         });
 
@@ -323,19 +325,26 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-
-    private void unregisterManagers(){
+    private void openSettings() {
+        Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
+        startActivity(intent);
     }
 
     @Override
-    public void onPause() {
-        super.onPause();
-        unregisterManagers();
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        unregisterManagers();
+    public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
+        switch (menuItem.getItemId()) {
+            case R.id.menu_home:
+                drawer.closeDrawer(Gravity.START);
+                return true;
+            case R.id.menu_how_it_works:
+                drawer.closeDrawer(Gravity.START);
+                startActivityForResult(new Intent(this, OnboardingActivity.class),REQUEST_CODE_INTRO);
+                return true;
+            case R.id.menu_settings:
+                drawer.closeDrawer(Gravity.START);
+                openSettings();
+                return true;
+        }
+        return false;
     }
 }

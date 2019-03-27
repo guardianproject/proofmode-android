@@ -46,7 +46,7 @@ public class StepFragment extends Fragment {
         tv.setText(getArguments().getInt(ARG_CONTENT, 0));
         int illustration = getArguments().getInt(ARG_ILLUSTRATION, 0);
         if (illustration != 0 && mRootView.findViewById(R.id.illustration) != null) {
-            UIHelpers.populateContainerWithSVG(mRootView, illustration, R.id.illustration);
+            //UIHelpers.populateContainerWithSVG(mRootView, illustration, R.id.illustration);
         }
 
         View btnPrevious = mRootView.findViewById(R.id.btnPrevious);

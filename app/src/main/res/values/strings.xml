@@ -86,4 +86,8 @@
     <string name="permission_location_title">We need your location in order to document where your media is captured.</string>
     <string name="permission_location_content">Giving permission allows us to document your gps coordinates. We will not track you or store your location in any other way.</string>
     <string name="permission_location_info">If you do not want to capture this data for security or privacy purposes, do not allow permission.</string>
+
+    <string name="menu_home">Home</string>
+    <string name="menu_how_it_works">How It Works</string>
+    <string name="menu_settings">Settings</string>
 </resources>
