@@ -14,10 +14,13 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         >
-        <RelativeLayout
+        <com.caverock.androidsvg.SVGImageView
             android:id="@+id/illustration_on"
+            android:scaleType="centerCrop"
+            app:svg="background_on.svg"
             android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+            android:layout_height="match_parent"
+            />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -76,11 +79,15 @@
     <RelativeLayout
         android:id="@+id/layout_off"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
-        <RelativeLayout
+        android:layout_height="match_parent"
+        >
+        <com.caverock.androidsvg.SVGImageView
             android:id="@+id/illustration_off"
+            android:scaleType="centerCrop"
+            app:svg="background_off.svg"
             android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+            android:layout_height="match_parent"
+            />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -111,8 +118,8 @@
                 />
 
             <ImageView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
                 android:src="@drawable/ic_favorite_green_48dp"
                 />
 
@@ -120,6 +127,7 @@
                 style="@style/OnboardingStepSubtitleStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
                 android:textAppearance="?android:attr/textAppearanceLarge"
                 android:text="@string/onboarding_privacy_subtitle" />
 
@@ -127,6 +135,7 @@
                 style="@style/OnboardingStepContentStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
                 android:textAppearance="?android:attr/textAppearanceLarge"
                 android:text="@string/onboarding_privacy_info" />
 

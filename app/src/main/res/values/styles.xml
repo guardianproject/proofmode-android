@@ -68,6 +68,12 @@
         <item name="android:gravity">center_horizontal</item>
     </style>
 
+    <style name="MainToolBarStyle" parent="Theme.AppCompat">
+        <item name="android:textColorPrimary">#a0a0a0</item>
+        <item name="android:textColorSecondary">#a0a0a0</item>
+        <item name="actionMenuTextColor">#a0a0a0</item>
+    </style>
+
     <style name="SettingsToolBarStyle" parent="Theme.AppCompat">
         <item name="android:textColorPrimary">@color/colorPrimary</item>
         <item name="android:textColorSecondary">@android:color/black</item>

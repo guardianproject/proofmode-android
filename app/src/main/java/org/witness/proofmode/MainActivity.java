@@ -58,9 +58,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         View rootView = findViewById(R.id.root);
         layoutOn = rootView.findViewById(R.id.layout_on);
         layoutOff = rootView.findViewById(R.id.layout_off);
-        UIHelpers.populateContainerWithSVG(rootView, R.raw.background_on, R.id.illustration_on);
-        UIHelpers.populateContainerWithSVG(rootView, R.raw.background_off, R.id.illustration_off);
-
         layoutOn.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {

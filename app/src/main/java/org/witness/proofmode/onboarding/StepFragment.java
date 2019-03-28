@@ -18,14 +18,16 @@ public class StepFragment extends Fragment {
     private static final String ARG_TITLE = "title";
     private static final String ARG_CONTENT = "content";
     private static final String ARG_ILLUSTRATION = "illustration";
+    private static final String ARG_ILLUSTRATION_OFFSET = "illustration_offset";
 
-    public static StepFragment newInstance(int idStep, int idTitle, int idContent, int idIllustration) {
+    public static StepFragment newInstance(int idStep, int idTitle, int idContent, int idIllustration, int illustrationOffset) {
         StepFragment f = new StepFragment();
         Bundle args = new Bundle();
         args.putInt(ARG_STEP, idStep);
         args.putInt(ARG_TITLE, idTitle);
         args.putInt(ARG_CONTENT, idContent);
         args.putInt(ARG_ILLUSTRATION, idIllustration);
+        args.putInt(ARG_ILLUSTRATION_OFFSET, illustrationOffset);
         f.setArguments(args);
         return f;
     }
@@ -46,7 +48,7 @@ public class StepFragment extends Fragment {
         tv.setText(getArguments().getInt(ARG_CONTENT, 0));
         int illustration = getArguments().getInt(ARG_ILLUSTRATION, 0);
         if (illustration != 0 && mRootView.findViewById(R.id.illustration) != null) {
-            //UIHelpers.populateContainerWithSVG(mRootView, illustration, R.id.illustration);
+            UIHelpers.populateContainerWithSVG(mRootView, getArguments().getInt(ARG_ILLUSTRATION_OFFSET, 0), illustration, R.id.illustration);
         }
 
         View btnPrevious = mRootView.findViewById(R.id.btnPrevious);

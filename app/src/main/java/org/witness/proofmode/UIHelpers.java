@@ -3,6 +3,7 @@ package org.witness.proofmode;
 import android.app.Activity;
 import android.content.Context;
 import android.content.res.Resources;
+import android.graphics.RectF;
 import android.util.TypedValue;
 import android.view.View;
 import android.view.ViewGroup;
@@ -29,10 +30,14 @@ public class UIHelpers
 			inputMethodManager.hideSoftInputFromWindow(view.getWindowToken(), 0);
 	}
 
-	public static void populateContainerWithSVG(View rootView, int idSVG, int idContainer) {
+	public static void populateContainerWithSVG(View rootView, int offsetX, int idSVG, int idContainer) {
 		try {
 			SVG svg = SVG.getFromResource(rootView.getContext(), idSVG);
-
+			if (offsetX != 0) {
+				RectF viewBox = svg.getDocumentViewBox();
+				viewBox.offset(offsetX, 0);
+				svg.setDocumentViewBox(viewBox.left, viewBox.top, viewBox.width(), viewBox.height());
+			}
 			SVGImageView svgImageView = new SVGImageView(rootView.getContext());
 			svgImageView.setFocusable(false);
 			svgImageView.setFocusableInTouchMode(false);

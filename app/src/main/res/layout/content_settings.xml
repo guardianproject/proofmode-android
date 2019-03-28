@@ -80,7 +80,7 @@
                     android:id="@+id/switchLocation"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
-                    android:button="@drawable/checkbox_notary" />
+                    android:button="@drawable/option_location_selector" />
 
                 <TextView
                     style="@style/SettingsOptionStyle"
@@ -114,7 +114,7 @@
                     android:id="@+id/switchDevice"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
-                    android:button="@drawable/checkbox_notary" />
+                    android:button="@drawable/option_phone_selector" />
 
                 <TextView
                     style="@style/SettingsOptionStyle"
@@ -140,7 +140,7 @@
                     android:id="@+id/switchCellInfo"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
-                    android:button="@drawable/checkbox_notary" />
+                    android:button="@drawable/option_network_selector" />
 
                 <TextView
                     style="@style/SettingsOptionStyle"

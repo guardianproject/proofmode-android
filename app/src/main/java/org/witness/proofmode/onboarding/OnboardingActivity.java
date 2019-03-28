@@ -70,10 +70,10 @@ public class OnboardingActivity extends AppCompatActivity implements OnboardingS
         });
 
         fragmentList.add(WelcomeFragment.newInstance());
-        fragmentList.add(StepFragment.newInstance(R.string.onboarding_step1, R.string.onboarding_step1_title, R.string.onboarding_step1_content, R.raw.onboarding_step1));
-        fragmentList.add(StepFragment.newInstance(R.string.onboarding_step2, R.string.onboarding_step2_title, R.string.onboarding_step2_content, R.raw.onboarding_step1));
-        fragmentList.add(StepFragment.newInstance(R.string.onboarding_step3, R.string.onboarding_step3_title, R.string.onboarding_step3_content, R.raw.onboarding_step1));
-        fragmentList.add(StepFragment.newInstance(R.string.onboarding_step4, R.string.onboarding_step4_title, R.string.onboarding_step4_content, R.raw.onboarding_step1));
+        fragmentList.add(StepFragment.newInstance(R.string.onboarding_step1, R.string.onboarding_step1_title, R.string.onboarding_step1_content, R.raw.onboarding_step1, 0));
+        fragmentList.add(StepFragment.newInstance(R.string.onboarding_step2, R.string.onboarding_step2_title, R.string.onboarding_step2_content, R.raw.onboarding_step1, 20));
+        fragmentList.add(StepFragment.newInstance(R.string.onboarding_step3, R.string.onboarding_step3_title, R.string.onboarding_step3_content, R.raw.onboarding_step1, 40));
+        fragmentList.add(StepFragment.newInstance(R.string.onboarding_step4, R.string.onboarding_step4_title, R.string.onboarding_step4_content, R.raw.onboarding_step1, 60));
         fragmentList.add(PrivacyFragment.newInstance());
 
         // Set adapter
