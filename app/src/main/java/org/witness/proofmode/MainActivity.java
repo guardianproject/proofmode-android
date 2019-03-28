@@ -4,25 +4,20 @@ import android.Manifest;
 import android.animation.Animator;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.design.widget.NavigationView;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.SwitchCompat;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.CompoundButton;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
@@ -37,13 +32,21 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     private SharedPreferences mPrefs;
 
     private final static int REQUEST_CODE_INTRO = 9999;
-    private final static int REQUEST_CODE_WRITE_EXTERNAL_STORAGE = 9998;
+    private final static int REQUEST_CODE_REQUIRED_PERMISSIONS = 9998;
 
     private PgpUtils mPgpUtils;
     private View layoutOn;
     private View layoutOff;
     private DrawerLayout drawer;
     private ActionBarDrawerToggle drawerToggle;
+
+    /**
+     * The permissions needed for "base" ProofMode to work, without extra options.
+     */
+    private final static String[] requiredPermissions = new String[] {
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            Manifest.permission.CAMERA
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -101,7 +104,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     private void setProofModeOn(boolean isOn) {
         if (isOn)
         {
-            if (!askForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE, REQUEST_CODE_WRITE_EXTERNAL_STORAGE)) {
+            if (!askForPermissions(requiredPermissions, REQUEST_CODE_REQUIRED_PERMISSIONS)) {
                 mPrefs.edit().putBoolean("doProof", isOn).commit();
                 updateOnOffState(true);
             }
@@ -191,14 +194,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
-
-        if (id == R.id.action_about){
-
-            startActivity(new Intent(this,OnboardingActivity.class));
-
-            return true;
-        }
-        else if (id == R.id.action_publish_key){
+        if (id == R.id.action_publish_key){
 
             publishKey();
 
@@ -217,8 +213,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     /**
      * User the PermissionActivity to ask for permissions, but show no UI when calling from here.
      */
-    private boolean askForPermission(String permission, Integer requestCode) {
-        String[] permissions = new String[] { permission };
+    private boolean askForPermissions(String[] permissions, Integer requestCode) {
         if (!PermissionActivity.hasPermissions(this, permissions)) {
             Intent intent = new Intent(this, PermissionActivity.class);
             intent.putExtra(PermissionActivity.ARG_PERMISSIONS, permissions);
@@ -226,6 +221,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             return true;
         }
         return false;
+    }
+
+    private boolean askForPermission(String permission, Integer requestCode) {
+        return askForPermissions(new String[] { permission }, requestCode);
     }
 
     private void publishKey ()
@@ -286,14 +285,13 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             mPrefs.edit().putBoolean("firsttime",false).commit();
 
             // Ask for initial permissions
-            if (!askForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE, REQUEST_CODE_WRITE_EXTERNAL_STORAGE)) {
+            if (!askForPermissions(requiredPermissions, REQUEST_CODE_REQUIRED_PERMISSIONS)) {
                 // We have permission
                 setProofModeOn(true);
             }
-        } else if (requestCode == REQUEST_CODE_WRITE_EXTERNAL_STORAGE) {
-            // We call with REQUEST_CODE_WRITE_EXTERNAL_STORAGE to turn ProofMode on, so set it to on if we have the permissions
-            String[] permissions = new String[] { Manifest.permission.WRITE_EXTERNAL_STORAGE };
-            if (PermissionActivity.hasPermissions(this, permissions)) {
+        } else if (requestCode == REQUEST_CODE_REQUIRED_PERMISSIONS) {
+            // We call with REQUEST_CODE_REQUIRED_PERMISSIONS to turn ProofMode on, so set it to on if we have the permissions
+            if (PermissionActivity.hasPermissions(this, requiredPermissions)) {
                 setProofModeOn(true);
             } else {
                 setProofModeOn(false);
