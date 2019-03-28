@@ -102,10 +102,10 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void updateUI() {
-        switchLocation.setChecked(mPrefs.getBoolean("trackLocation",true));
+        switchLocation.setChecked(mPrefs.getBoolean("trackLocation",false));
         switchMobile.setChecked(mPrefs.getBoolean("trackMobileNetwork",false));
-        switchDevice.setChecked(mPrefs.getBoolean("trackDeviceId",true));
-        switchNotarize.setChecked(mPrefs.getBoolean("autoNotarize",true));
+        switchDevice.setChecked(mPrefs.getBoolean("trackDeviceId",false));
+        switchNotarize.setChecked(mPrefs.getBoolean("autoNotarize",false));
     }
 
     @Override
