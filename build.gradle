@@ -2,6 +2,7 @@
 buildscript {
     repositories {
         jcenter()
+        google()
 
     }
     dependencies {
@@ -16,6 +17,7 @@ allprojects {
             url "https://maven.google.com"
         }
         maven { url "https://raw.githubusercontent.com/guardianproject/gpmaven/master" }
+        google()
 
     }
     project.ext {
