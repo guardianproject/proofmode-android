@@ -50,13 +50,13 @@
                 android:textAppearance="?android:attr/textAppearanceLarge"
                 android:text="@string/tap_hold_turn_off" />
 
-            <TextView
+            <!-- <TextView
                 style="@style/ContentStyle"
                 android:textColor="@android:color/black"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textAppearance="?android:attr/textAppearanceLarge"
-                android:text="@string/proofmode_is_capturing" />
+                android:text="@string/proofmode_is_capturing" />-->
 
             <ImageButton
                 android:id="@+id/btnSettings"

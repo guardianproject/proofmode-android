@@ -11,18 +11,18 @@
     <string name="switch_include_location">Include GPS Location</string>
     <string name="switch_enable_proofmode">Enable ProofMode</string>
     <string name="settings_notary">Notary</string>
-    <string name="settings_notary_desc">A seal of authenticity</string>
+    <string name="settings_notary_desc">Registration with a third party that your media exists</string>
     <string name="settings_location">Location</string>
-    <string name="settings_location_desc">GPS coordinates when photo is taken</string>
+    <string name="settings_location_desc">GPS coordinates when media is taken</string>
     <string name="settings_phone">Phone</string>
     <string name="settings_phone_desc">Identification number of your phone</string>
     <string name="settings_network">Network</string>
-    <string name="settings_network_desc">Name of the network(s) you´re connected to</string>
+    <string name="settings_network_desc">Name of the network(s) you’re connected to</string>
 
-    <string name="proofmode_is_on">ProofMode is on</string>
+    <string name="proofmode_is_on">PROOFMODE IS ON AND CAPTURING DATA</string>
     <string name="tap_hold_turn_off">Tap hold to turn off</string>
     <string name="proofmode_is_capturing">ProofMode is capturing a strong set of metadata by default. Strengthen your media´s verifiability by adding more.</string>
-    <string name="proofmode_is_off">ProofMode is off and not capturing data</string>
+    <string name="proofmode_is_off">PROOFMODE IS OFF AND NOT CAPTURING DATA</string>
     <string name="tap_hold_turn_on">Tap hold to turn on</string>
     <string name="share_notarization">SHARE NOTARIZATION TO...</string>
     <string name="share_proof">SHARE PROOF TO...</string>
@@ -47,30 +47,30 @@
     <string name="share_proof_action">Share Proof</string>
     <string name="action_generate">Generate Proof</string>
     <string name="proof_error_message_final">We were unable to generate proof for this file.</string>
-    <string name="choose_my_settings">Choose my settings</string>
+    <string name="choose_my_settings">Change my settings</string>
     <string name="got_it">Got it</string>
-    <string name="activity_settings_title">Choose your settings</string>
+    <string name="activity_settings_title">CHOOSE YOUR SETTINGS</string>
 
-    <string name="settings_title">Strengthen your media´s verifiability by adding data to your proof.</string>
-    <string name="settings_description">Tap the icon to allow ProofMode to capture it.</string>
+    <string name="settings_title">Strengthen your media’s verifiability by adding data to your proof.</string>
+    <string name="settings_description">Tap the icons to add or remove.</string>
 
     <string name="onboarding_learn_more">Learn More</string>
-    <string name="onboarding_get_started">Get started</string>
+    <string name="onboarding_get_started">Get Started</string>
 
-    <string name="onboarding_intro_title">A picture may be worth a thousand words, but proof that it´s real is priceless.</string>
+    <string name="onboarding_intro_title">A picture may be worth a thousand words, but proof that it’s real is priceless.</string>
     <string name="onboarding_intro_content">ProofMode captures information that makes your media more trustworthy.</string>
 
     <string name="onboarding_step1">Step 1</string>
-    <string name="onboarding_step1_title">Getting proof is easy. Once ProofMode is on, take pictures as usual.</string>
-    <string name="onboarding_step1_content">ProofMode works in the background to generate and save proof. You don´t have to do anything special.</string>
+    <string name="onboarding_step1_title">Getting proof is easy. Once ProofMode is on, use your camera as usual.</string>
+    <string name="onboarding_step1_content">ProofMode works in the background to generate and save proof. You don\'t have to do anything special!</string>
 
     <string name="onboarding_step2">Step 2</string>
-    <string name="onboarding_step2_title">Once you´ve taken a photo, find the picture in your camera gallery to share it.</string>
-    <string name="onboarding_step2_content">Select a photo, tap the share icon and choose `share proof´.</string>
+    <string name="onboarding_step2_title">Once you’ve taken a photo or video, find it in your camera gallery to share it.</string>
+    <string name="onboarding_step2_content">Select a photo, tap the share icon and choose ‘Share Proof’.</string>
 
     <string name="onboarding_step3">Step 3</string>
     <string name="onboarding_step3_title">Before you send, choose what level of proof to share.</string>
-    <string name="onboarding_step3_content">You´re always in control.</string>
+    <string name="onboarding_step3_content">You’re always in control.</string>
 
     <string name="onboarding_step4">Step 4</string>
     <string name="onboarding_step4_title">Then choose how to send it.</string>
@@ -78,12 +78,12 @@
 
     <string name="onboarding_privacy_title">ProofMode activates multiple sensors on your phone to generate proof.</string>
     <string name="onboarding_privacy_content">Learn about what ProofMode captures in our Data Legend.</string>
-    <string name="onboarding_privacy_subtitle">We care about your privacy.</string>
-    <string name="onboarding_privacy_info">If you have security or privacy concerns, do not turn ProofMode on.</string>
+    <string name="onboarding_privacy_subtitle">WE CARE ABOUT YOUR PRIVACY</string>
+    <string name="onboarding_privacy_info">ProofMode captures your phone’s identity by default. If you’re not comfortable with this, go to settings to turn it off.</string>
     <string name="onboarding_privacy_continue">Continue</string>
     <string name="onboarding_privacy_options">Privacy Options</string>
 
-    <string name="permission_location_title">We need your location in order to document where your media is captured.</string>
+    <string name="permission_location_title">We need to your location in order to document where your media is captured.</string>
     <string name="permission_location_content">Giving permission allows us to document your gps coordinates. We will not track you or store your location in any other way.</string>
     <string name="permission_location_info">If you do not want to capture this data for security or privacy purposes, do not allow permission.</string>
 
