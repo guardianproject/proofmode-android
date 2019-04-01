@@ -54,7 +54,7 @@
                     android:id="@+id/switchNotarize"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
-                    android:button="@drawable/checkbox_notary" />
+                    android:button="@drawable/option_notary_selector" />
 
                 <TextView
                     style="@style/SettingsOptionStyle"
