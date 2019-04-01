@@ -40,6 +40,7 @@
         <item name="android:textColor">@android:color/white</item>
         <item name="android:textAllCaps">true</item>
         <item name="android:gravity">center_horizontal</item>
+        <item name="font">@font/hurme</item>
     </style>
 
     <style name="SubtitleStyle">
@@ -49,6 +50,7 @@
         <item name="android:textAllCaps">true</item>
         <item name="android:textStyle">bold</item>
         <item name="android:gravity">center_horizontal</item>
+        <item name="font">@font/hurme</item>
     </style>
 
     <style name="ContentStyle">
@@ -57,6 +59,7 @@
         <item name="android:textColor">@android:color/white</item>
         <item name="android:textAllCaps">false</item>
         <item name="android:gravity">center_horizontal</item>
+        <item name="font">@font/verdana</item>
     </style>
 
     <style name="InfoStyle">
@@ -66,6 +69,7 @@
         <item name="android:textAllCaps">false</item>
         <item name="android:textStyle">italic</item>
         <item name="android:gravity">center_horizontal</item>
+        <item name="font">@font/verdana</item>
     </style>
 
     <style name="MainToolBarStyle" parent="Theme.AppCompat">
