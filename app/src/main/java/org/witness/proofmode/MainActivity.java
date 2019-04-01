@@ -33,6 +33,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
     private final static int REQUEST_CODE_INTRO = 9999;
     private final static int REQUEST_CODE_REQUIRED_PERMISSIONS = 9998;
+    private final static int REQUEST_CODE_OPTIONAL_PERMISSIONS = 9997;
 
     private PgpUtils mPgpUtils;
     private View layoutOn;
@@ -46,6 +47,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     private final static String[] requiredPermissions = new String[] {
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
             Manifest.permission.CAMERA
+    };
+    private final static String[] optionalPermissions = new String[] {
+            Manifest.permission.READ_PHONE_STATE,
+            Manifest.permission.ACCESS_NETWORK_STATE
     };
 
     @Override
@@ -288,14 +293,34 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             if (!askForPermissions(requiredPermissions, REQUEST_CODE_REQUIRED_PERMISSIONS)) {
                 // We have permission
                 setProofModeOn(true);
+                askForOptionals();
             }
         } else if (requestCode == REQUEST_CODE_REQUIRED_PERMISSIONS) {
             // We call with REQUEST_CODE_REQUIRED_PERMISSIONS to turn ProofMode on, so set it to on if we have the permissions
             if (PermissionActivity.hasPermissions(this, requiredPermissions)) {
                 setProofModeOn(true);
+                askForOptionals();
             } else {
                 setProofModeOn(false);
             }
+        } else if (requestCode == REQUEST_CODE_OPTIONAL_PERMISSIONS) {
+            if (PermissionActivity.hasPermissions(this, new String[] { Manifest.permission.ACCESS_NETWORK_STATE })) {
+                mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_NETWORK, true).commit();
+            } else {
+                mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_NETWORK, false).commit();
+            }
+            if (PermissionActivity.hasPermissions(this, new String[] { Manifest.permission.READ_PHONE_STATE })) {
+                mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_PHONE, true).commit();
+            } else {
+                mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_PHONE, false).commit();
+            }
+        }
+    }
+
+    private void askForOptionals() {
+        if (!askForPermissions(optionalPermissions, REQUEST_CODE_OPTIONAL_PERMISSIONS)) {
+            mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_NETWORK, true).commit();
+            mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_PHONE, true).commit();
         }
     }
 

@@ -51,12 +51,12 @@ public class SettingsActivity extends AppCompatActivity {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked)
                 {
-                    if (!askForPermission(Manifest.permission.ACCESS_FINE_LOCATION, REQUEST_CODE_LOCATION)) {
-                        mPrefs.edit().putBoolean("trackLocation",isChecked).commit();
+                    if (!askForPermission(Manifest.permission.ACCESS_FINE_LOCATION, REQUEST_CODE_LOCATION, R.layout.permission_location)) {
+                        mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_LOCATION,isChecked).commit();
                         refreshLocation();
                     }
                 } else {
-                    mPrefs.edit().putBoolean("trackLocation",isChecked).commit();
+                    mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_LOCATION,isChecked).commit();
                 }
                 updateUI();
             }
@@ -67,11 +67,11 @@ public class SettingsActivity extends AppCompatActivity {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked)
                 {
-                    if (!askForPermission(Manifest.permission.ACCESS_NETWORK_STATE, REQUEST_CODE_NETWORK_STATE)) {
-                        mPrefs.edit().putBoolean("trackMobileNetwork",isChecked).commit();
+                    if (!askForPermission(Manifest.permission.ACCESS_NETWORK_STATE, REQUEST_CODE_NETWORK_STATE, 0)) {
+                        mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_NETWORK,isChecked).commit();
                     }
                 } else {
-                    mPrefs.edit().putBoolean("trackMobileNetwork",isChecked).commit();
+                    mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_NETWORK,isChecked).commit();
                 }
                 updateUI();
             }
@@ -82,11 +82,11 @@ public class SettingsActivity extends AppCompatActivity {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked)
                 {
-                    if (!askForPermission(Manifest.permission.READ_PHONE_STATE, REQUEST_CODE_READ_PHONE_STATE)) {
-                        mPrefs.edit().putBoolean("trackDeviceId",isChecked).commit();
+                    if (!askForPermission(Manifest.permission.READ_PHONE_STATE, REQUEST_CODE_READ_PHONE_STATE, 0)) {
+                        mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_PHONE,isChecked).commit();
                     }
                 } else {
-                    mPrefs.edit().putBoolean("trackDeviceId",isChecked).commit();
+                    mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_PHONE,isChecked).commit();
                 }
                 updateUI();
             }
@@ -95,17 +95,17 @@ public class SettingsActivity extends AppCompatActivity {
         switchNotarize.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                mPrefs.edit().putBoolean("autoNotarize", switchNotarize.isChecked()).commit();
+                mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_NOTARY, switchNotarize.isChecked()).commit();
                 updateUI();
             }
         });
     }
 
     private void updateUI() {
-        switchLocation.setChecked(mPrefs.getBoolean("trackLocation",false));
-        switchMobile.setChecked(mPrefs.getBoolean("trackMobileNetwork",false));
-        switchDevice.setChecked(mPrefs.getBoolean("trackDeviceId",false));
-        switchNotarize.setChecked(mPrefs.getBoolean("autoNotarize",false));
+        switchLocation.setChecked(mPrefs.getBoolean(ProofMode.PREF_OPTION_LOCATION,ProofMode.PREF_OPTION_LOCATION_DEFAULT));
+        switchMobile.setChecked(mPrefs.getBoolean(ProofMode.PREF_OPTION_NETWORK,ProofMode.PREF_OPTION_NETWORK_DEFAULT));
+        switchDevice.setChecked(mPrefs.getBoolean(ProofMode.PREF_OPTION_PHONE,ProofMode.PREF_OPTION_PHONE_DEFAULT));
+        switchNotarize.setChecked(mPrefs.getBoolean(ProofMode.PREF_OPTION_NOTARY,ProofMode.PREF_OPTION_NOTARY_DEFAULT));
     }
 
     @Override
@@ -121,21 +121,21 @@ public class SettingsActivity extends AppCompatActivity {
             //Location
             case REQUEST_CODE_LOCATION:
                 if (PermissionActivity.hasPermissions(this, new String[] { Manifest.permission.ACCESS_FINE_LOCATION })) {
-                    mPrefs.edit().putBoolean("trackLocation", true).commit();
+                    mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_LOCATION, true).commit();
                     refreshLocation();
                 }
                 updateUI();
                 break;
             case REQUEST_CODE_NETWORK_STATE:
                 if (PermissionActivity.hasPermissions(this, new String[] { Manifest.permission.ACCESS_NETWORK_STATE })) {
-                    mPrefs.edit().putBoolean("trackMobileNetwork", true).commit();
+                    mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_NETWORK, true).commit();
                 }
                 updateUI();
                 break;
 
             case REQUEST_CODE_READ_PHONE_STATE:
                 if (PermissionActivity.hasPermissions(this, new String[] { Manifest.permission.READ_PHONE_STATE })) {
-                    mPrefs.edit().putBoolean("trackDeviceId", true).commit();
+                    mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_PHONE, true).commit();
                 }
                 updateUI();
                 break;
@@ -161,12 +161,14 @@ public class SettingsActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    private boolean askForPermission(String permission, Integer requestCode) {
+    private boolean askForPermission(String permission, Integer requestCode, int layoutId) {
         String[] permissions = new String[] { permission };
         if (!PermissionActivity.hasPermissions(this, permissions)) {
             Intent intent = new Intent(this, PermissionActivity.class);
             intent.putExtra(PermissionActivity.ARG_PERMISSIONS, permissions);
-            intent.putExtra(PermissionActivity.ARG_LAYOUT_ID, R.layout.permission_location);
+            if (layoutId != 0) {
+                intent.putExtra(PermissionActivity.ARG_LAYOUT_ID, R.layout.permission_location);
+            }
             startActivityForResult(intent, requestCode);
             return true;
         }
