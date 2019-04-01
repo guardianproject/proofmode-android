@@ -4,6 +4,7 @@ package org.witness.proofmode.service;
  * Created by n8fr8 on 3/3/17.
  */
 import android.annotation.TargetApi;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.job.JobInfo;
 import android.app.job.JobParameters;
@@ -14,6 +15,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.provider.MediaStore;
@@ -127,11 +129,24 @@ public class VideosContentJob extends JobService {
 
         int notifyId = 2;
 
+        String channelId = "default";
+
         NotificationManager manager =
                 (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && manager != null) {
+            CharSequence channelName = "Default Notification Channel";
+            int importance = NotificationManager.IMPORTANCE_DEFAULT;
+            NotificationChannel notificationChannel = new NotificationChannel(channelId, channelName, importance);
+            notificationChannel.enableLights(false);
+            notificationChannel.enableVibration(false);
+            notificationChannel.setSound(null, null);
+            manager.createNotificationChannel(notificationChannel);
+        }
+
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this);
         builder.setContentTitle(getString(R.string.generating_proof_notify))
                 .setContentText(getString(R.string.inspect_videos))
+                .setChannelId(channelId)
                 .setSmallIcon(R.drawable.ic_proof_notify);
         manager.notify(notifyId, builder.build());
 
