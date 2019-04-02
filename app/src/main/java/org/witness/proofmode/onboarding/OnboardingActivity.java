@@ -140,7 +140,19 @@ public class OnboardingActivity extends AppCompatActivity implements OnboardingS
     public void onPreviousPressed() {
         if (pager.getCurrentItem() > 0) {
             pager.setCurrentItem(pager.getCurrentItem() - 1, true);
+        } else if (onlyTutorial) {
+            // Close
+            finish();
         }
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (pager.getCurrentItem() > 0) {
+            onPreviousPressed();
+            return;
+        }
+        super.onBackPressed();
     }
 
     @Override
