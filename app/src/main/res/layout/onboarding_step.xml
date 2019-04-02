@@ -62,15 +62,16 @@
             android:layout_marginEnd="20dp"
             tools:text="Content string goes here" />
 
-        <com.caverock.androidsvg.SVGImageView
+        <ImageView
             android:id="@+id/illustration"
             android:layout_width="match_parent"
             android:layout_height="0dp"
+            android:scaleType="centerCrop"
             android:layout_weight="1"
             android:layout_marginTop="20dp"
             android:layout_marginBottom="100dp"
             >
-        </com.caverock.androidsvg.SVGImageView>
+        </ImageView>
     </LinearLayout>
 
 </RelativeLayout>

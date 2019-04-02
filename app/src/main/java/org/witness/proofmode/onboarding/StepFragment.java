@@ -8,6 +8,7 @@ import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.caverock.androidsvg.RenderOptions;
@@ -31,13 +32,13 @@ public class StepFragment extends Fragment {
     private View mRootView;
     private Thread loaderThread;
 
-    public static StepFragment newInstance(int idStep, int idTitle, int idContent, String idIllustration, int illustrationOffset) {
+    public static StepFragment newInstance(int idStep, int idTitle, int idContent, int idIllustration, int illustrationOffset) {
         StepFragment f = new StepFragment();
         Bundle args = new Bundle();
         args.putInt(ARG_STEP, idStep);
         args.putInt(ARG_TITLE, idTitle);
         args.putInt(ARG_CONTENT, idContent);
-        args.putString(ARG_ILLUSTRATION, idIllustration);
+        args.putInt(ARG_ILLUSTRATION, idIllustration);
         args.putInt(ARG_ILLUSTRATION_OFFSET, illustrationOffset);
         f.setArguments(args);
         return f;
@@ -57,11 +58,10 @@ public class StepFragment extends Fragment {
         tv.setText(getArguments().getInt(ARG_TITLE, 0));
         tv = mRootView.findViewById(R.id.content);
         tv.setText(getArguments().getInt(ARG_CONTENT, 0));
-        String illustration = getArguments().getString(ARG_ILLUSTRATION);
-        if (!TextUtils.isEmpty(illustration) && mRootView.findViewById(R.id.illustration) != null) {
-            SVGImageView imageView = (SVGImageView)mRootView.findViewById(R.id.illustration);
-            imageView.setImageAsset(illustration);
-            //loadSVG(imageView, illustration);
+        int illustration = getArguments().getInt(ARG_ILLUSTRATION, 0);
+        if (illustration != 0 && mRootView.findViewById(R.id.illustration) != null) {
+            ImageView imageView = mRootView.findViewById(R.id.illustration);
+            imageView.setImageResource(illustration);
         }
 
         View btnPrevious = mRootView.findViewById(R.id.btnPrevious);
@@ -75,32 +75,5 @@ public class StepFragment extends Fragment {
         });
 
         return mRootView;
-    }
-
-    private void loadSVG(final SVGImageView imageView, final String illustration) {
-            loaderThread = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        final SVG svg = SVG.getFromAsset(getResources().getAssets(), illustration);
-                        if (svg == null)
-                            return;
-                        Picture picture = svg.renderToPicture(new RenderOptions());
-                        final PictureDrawable drawable = new PictureDrawable(picture);
-
-                        imageView.post(new Runnable() {
-                            @Override
-                            public void run() {
-                                imageView.setImageDrawable(drawable);
-                            }
-                        });
-                    } catch (SVGParseException e) {
-                        e.printStackTrace();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            });
-            loaderThread.start();
     }
 }

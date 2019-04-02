@@ -85,10 +85,10 @@ public class OnboardingActivity extends AppCompatActivity implements OnboardingS
         if (!onlyTutorial) {
             fragmentList.add(WelcomeFragment.newInstance());
         }
-        fragmentList.add(StepFragment.newInstance(R.string.onboarding_step1, R.string.onboarding_step1_title, R.string.onboarding_step1_content, "ill_tut01.svg", 0));
-        fragmentList.add(StepFragment.newInstance(R.string.onboarding_step2, R.string.onboarding_step2_title, R.string.onboarding_step2_content, "ill_tut02.svg", 20));
-        fragmentList.add(StepFragment.newInstance(R.string.onboarding_step3, R.string.onboarding_step3_title, R.string.onboarding_step3_content,"ill_tut03.svg", 40));
-        fragmentList.add(StepFragment.newInstance(R.string.onboarding_step4, R.string.onboarding_step4_title, R.string.onboarding_step4_content, "ill_tut04.svg", 60));
+        fragmentList.add(StepFragment.newInstance(R.string.onboarding_step1, R.string.onboarding_step1_title, R.string.onboarding_step1_content, R.drawable.ic_ill_tut01, 0));
+        fragmentList.add(StepFragment.newInstance(R.string.onboarding_step2, R.string.onboarding_step2_title, R.string.onboarding_step2_content, R.drawable.ic_ill_tut02, 20));
+        fragmentList.add(StepFragment.newInstance(R.string.onboarding_step3, R.string.onboarding_step3_title, R.string.onboarding_step3_content,R.drawable.ic_ill_tut03, 40));
+        fragmentList.add(StepFragment.newInstance(R.string.onboarding_step4, R.string.onboarding_step4_title, R.string.onboarding_step4_content, R.drawable.ic_ill_tut04, 60));
         if (!onlyTutorial) {
             fragmentList.add(PrivacyFragment.newInstance());
         }
