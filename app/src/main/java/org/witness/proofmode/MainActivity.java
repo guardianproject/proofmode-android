@@ -337,6 +337,11 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         startActivity(intent);
     }
 
+    private void openDataLegend() {
+        Intent intent = new Intent(MainActivity.this, DataLegendActivity.class);
+        startActivity(intent);
+    }
+
     @Override
     public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
         switch (menuItem.getItemId()) {
@@ -353,6 +358,11 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 drawer.closeDrawer(Gravity.START);
                 openSettings();
                 return true;
+            case R.id.menu_datalegend:
+                drawer.closeDrawer(Gravity.START);
+                openDataLegend();
+                return true;
+
         }
         return false;
     }

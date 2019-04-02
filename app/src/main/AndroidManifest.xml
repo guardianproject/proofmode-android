@@ -58,6 +58,11 @@
             android:label="@string/activity_settings_title"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name=".DataLegendActivity"
+            android:label="@string/activity_datalegend_title"
+            android:screenOrientation="portrait"
+            android:theme="@style/AppTheme.NoActionBar" />
 
         <receiver
             android:name=".OnBootReceiver"

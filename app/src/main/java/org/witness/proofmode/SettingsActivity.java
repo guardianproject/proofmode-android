@@ -11,6 +11,7 @@ import android.support.v7.widget.Toolbar;
 import android.view.MenuItem;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
+import android.widget.TextView;
 
 import org.witness.proofmode.crypto.PgpUtils;
 import org.witness.proofmode.util.GPSTracker;
@@ -37,6 +38,9 @@ public class SettingsActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setDisplayShowHomeEnabled(true);
+        getSupportActionBar().setDisplayShowTitleEnabled(false);
+        TextView title = toolbar.findViewById(R.id.toolbar_title);
+        title.setText(getTitle());
 
         mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
 
