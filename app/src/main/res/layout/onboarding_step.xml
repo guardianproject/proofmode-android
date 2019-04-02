@@ -62,7 +62,7 @@
             android:layout_marginEnd="20dp"
             tools:text="Content string goes here" />
 
-        <RelativeLayout
+        <com.caverock.androidsvg.SVGImageView
             android:id="@+id/illustration"
             android:layout_width="match_parent"
             android:layout_height="0dp"
@@ -70,7 +70,7 @@
             android:layout_marginTop="20dp"
             android:layout_marginBottom="100dp"
             >
-        </RelativeLayout>
+        </com.caverock.androidsvg.SVGImageView>
     </LinearLayout>
 
 </RelativeLayout>

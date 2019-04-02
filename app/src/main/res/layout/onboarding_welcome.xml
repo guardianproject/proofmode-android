@@ -8,10 +8,16 @@
     android:focusableInTouchMode="true"
     android:background="@color/onboarding_background"
     >
-    <RelativeLayout
+    <!--<RelativeLayout
         android:id="@+id/ivIllustration"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        />-->
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:src="@drawable/img_off"
         />
 
     <LinearLayout

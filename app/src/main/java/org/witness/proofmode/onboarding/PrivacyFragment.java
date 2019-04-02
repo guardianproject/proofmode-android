@@ -47,6 +47,17 @@ public class PrivacyFragment extends Fragment {
             }
         });
 
+        View btnSettings = mRootView.findViewById(R.id.btnSettings);
+        btnSettings.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (getActivity() instanceof OnboardingStepListener) {
+                    ((OnboardingStepListener) getActivity()).onSettingsPressed();
+                }
+            }
+        });
+
+
         return mRootView;
     }
 }

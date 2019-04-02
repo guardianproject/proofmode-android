@@ -6,5 +6,6 @@ package org.witness.proofmode.onboarding;
 public interface OnboardingStepListener {
     void onNextPressed();
     void onPreviousPressed();
+    void onSettingsPressed();
 }
 

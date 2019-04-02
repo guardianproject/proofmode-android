@@ -1,6 +1,7 @@
 package org.witness.proofmode.onboarding;
 
 import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
@@ -15,7 +16,9 @@ import android.widget.ImageButton;
 
 import com.github.paolorotolo.appintro.AppIntroFragment;
 
+import org.witness.proofmode.MainActivity;
 import org.witness.proofmode.R;
+import org.witness.proofmode.SettingsActivity;
 import org.witness.proofmode.onboarding.DottedProgressView;
 import org.witness.proofmode.onboarding.NoSwipeViewPager;
 import org.witness.proofmode.onboarding.OnboardingStepListener;
@@ -28,10 +31,14 @@ import java.util.List;
 
 public class OnboardingActivity extends AppCompatActivity implements OnboardingStepListener {
 
+    // Set this arg to "true" to only show the tutorial steps
+    public static final String ARG_ONLY_TUTORIAL = "only_tutorial";
+
     private NoSwipeViewPager pager;
     private DottedProgressView indicator;
     private ImageButton btnNext;
     private List<Fragment> fragmentList;
+    private boolean onlyTutorial;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,7 +59,11 @@ public class OnboardingActivity extends AppCompatActivity implements OnboardingS
 
             @Override
             public void onPageSelected(int i) {
-                indicator.setCurrentDot(i - 1);
+                if (onlyTutorial) {
+                    indicator.setCurrentDot(i);
+                } else {
+                    indicator.setCurrentDot(i - 1);
+                }
                 showHideIndicator();
             }
 
@@ -69,15 +80,26 @@ public class OnboardingActivity extends AppCompatActivity implements OnboardingS
             }
         });
 
-        fragmentList.add(WelcomeFragment.newInstance());
-        fragmentList.add(StepFragment.newInstance(R.string.onboarding_step1, R.string.onboarding_step1_title, R.string.onboarding_step1_content, R.raw.onboarding_step1, 0));
-        fragmentList.add(StepFragment.newInstance(R.string.onboarding_step2, R.string.onboarding_step2_title, R.string.onboarding_step2_content, R.raw.onboarding_step1, 20));
-        fragmentList.add(StepFragment.newInstance(R.string.onboarding_step3, R.string.onboarding_step3_title, R.string.onboarding_step3_content, R.raw.onboarding_step1, 40));
-        fragmentList.add(StepFragment.newInstance(R.string.onboarding_step4, R.string.onboarding_step4_title, R.string.onboarding_step4_content, R.raw.onboarding_step1, 60));
-        fragmentList.add(PrivacyFragment.newInstance());
+        onlyTutorial = getIntent().getBooleanExtra(ARG_ONLY_TUTORIAL, false);
+
+        if (!onlyTutorial) {
+            fragmentList.add(WelcomeFragment.newInstance());
+        }
+        fragmentList.add(StepFragment.newInstance(R.string.onboarding_step1, R.string.onboarding_step1_title, R.string.onboarding_step1_content, "ill_tut01.svg", 0));
+        fragmentList.add(StepFragment.newInstance(R.string.onboarding_step2, R.string.onboarding_step2_title, R.string.onboarding_step2_content, "ill_tut02.svg", 20));
+        fragmentList.add(StepFragment.newInstance(R.string.onboarding_step3, R.string.onboarding_step3_title, R.string.onboarding_step3_content,"ill_tut03.svg", 40));
+        fragmentList.add(StepFragment.newInstance(R.string.onboarding_step4, R.string.onboarding_step4_title, R.string.onboarding_step4_content, "ill_tut04.svg", 60));
+        if (!onlyTutorial) {
+            fragmentList.add(PrivacyFragment.newInstance());
+        }
 
         // Set adapter
-        indicator.setNumberOfDots(fragmentList.size() - 2);
+        if (onlyTutorial) {
+            indicator.setNumberOfDots(fragmentList.size());
+        } else {
+            indicator.setNumberOfDots(fragmentList.size() - 2);
+        }
+        indicator.setCurrentDot(0);
         pager.setOffscreenPageLimit(fragmentList.size());
         pager.setAdapter(new OnboardingPagerAdapter(getSupportFragmentManager()));
 
@@ -85,6 +107,12 @@ public class OnboardingActivity extends AppCompatActivity implements OnboardingS
     }
 
     private void showHideIndicator() {
+        if (onlyTutorial) {
+            indicator.setVisibility(View.VISIBLE);
+            btnNext.setVisibility(View.VISIBLE);
+            pager.setAllowedSwipeDirection(NoSwipeViewPager.SwipeDirection.all);
+            return;
+        }
         int lastItem = fragmentList.size() - 1;
         int currentItem = pager.getCurrentItem();
         indicator.setVisibility((currentItem == 0 || currentItem == lastItem) ? View.GONE : View.VISIBLE);
@@ -113,6 +141,13 @@ public class OnboardingActivity extends AppCompatActivity implements OnboardingS
         if (pager.getCurrentItem() > 0) {
             pager.setCurrentItem(pager.getCurrentItem() - 1, true);
         }
+    }
+
+    @Override
+    public void onSettingsPressed() {
+        Intent intent = new Intent(this, SettingsActivity.class);
+        startActivity(intent);
+        finish();
     }
 
     private class OnboardingPagerAdapter extends FragmentPagerAdapter {

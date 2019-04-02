@@ -14,12 +14,20 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         >
+        <!--
         <com.caverock.androidsvg.SVGImageView
             android:id="@+id/illustration_on"
             android:scaleType="centerCrop"
-            app:svg="background_on.svg"
+            app:svg="img_home-on.svg"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            />
+            -->
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:src="@drawable/img_on"
             />
 
         <LinearLayout
@@ -81,14 +89,19 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         >
-        <com.caverock.androidsvg.SVGImageView
+        <!--<com.caverock.androidsvg.SVGImageView
             android:id="@+id/illustration_off"
             android:scaleType="centerCrop"
-            app:svg="background_off.svg"
+            app:svg="img_home-off.svg"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            />-->
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:src="@drawable/img_off"
             />
-
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"

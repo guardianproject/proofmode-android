@@ -92,13 +92,13 @@
                 android:text="@string/onboarding_privacy_continue"
                 />
             <Button
-                android:id="@+id/btnOptions"
+                android:id="@+id/btnSettings"
                 style="@style/OnboardingButtonStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
                 android:layout_gravity="center_horizontal|bottom"
-                android:text="@string/onboarding_privacy_options"
+                android:text="@string/menu_settings"
                 />
         </LinearLayout>
     </LinearLayout>

@@ -93,4 +93,18 @@
 
     <string name="permissions_needed_title">Permissions needed</string>
     <string name="permissions_needed_content">Please enable required permissions in system settings.</string>
+
+    <string name="share_proof_found">Proof found! Choose what level of proof to share.</string>
+    <string name="share_mode_basic">Basic</string>
+    <string name="share_mode_basic_info">Shares a fingerprint of your media to establish that it exists.</string>
+    <string name="share_share_basic">Share basic</string>
+    <string name="share_mode_robust">Robust</string>
+    <string name="share_mode_robust_info">Shares everything that you\'ve enabled ProofMode to capture in a cryptographically signed file.</string>
+    <string name="share_share_robust">Share robust</string>
+
+    <string name="share_info_basic_title">Shares a fingerprint of your media to establish that it exists.</string>
+    <string name="share_info_basic_message">• Doesn’t include personal info\n• No trust is needed\n• Short enough to send in a text</string>
+    <string name="share_info_robust_title">Shares everything that you\'ve enabled ProofMode to capture in a cryptographically signed file.</string>
+    <string name="share_info_robust_message">• Reveals personal identifying info\n• Share with someone you trust\n• Requires internet access</string>
+    <string name="share_info_robust_send_media">Share media with proof</string>
 </resources>

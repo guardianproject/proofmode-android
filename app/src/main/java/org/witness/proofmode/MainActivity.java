@@ -340,12 +340,14 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     @Override
     public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
         switch (menuItem.getItemId()) {
-            case R.id.menu_home:
-                drawer.closeDrawer(Gravity.START);
-                return true;
+            //case R.id.menu_home:
+            //    drawer.closeDrawer(Gravity.START);
+            //    return true;
             case R.id.menu_how_it_works:
                 drawer.closeDrawer(Gravity.START);
-                startActivityForResult(new Intent(this, OnboardingActivity.class),REQUEST_CODE_INTRO);
+                Intent intent = new Intent(this, OnboardingActivity.class);
+                intent.putExtra(OnboardingActivity.ARG_ONLY_TUTORIAL, true);
+                startActivityForResult(intent, REQUEST_CODE_INTRO);
                 return true;
             case R.id.menu_settings:
                 drawer.closeDrawer(Gravity.START);

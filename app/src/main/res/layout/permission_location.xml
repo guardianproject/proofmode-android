@@ -6,13 +6,13 @@
     android:layout_height="match_parent"
     tools:context=".PermissionActivity">
 
-    <com.caverock.androidsvg.SVGImageView
+    <ImageView
         android:id="@+id/image"
+        android:src="@drawable/option_location_on"
         android:layout_width="match_parent"
         android:layout_height="150dp"
         android:layout_marginTop="?attr/actionBarSize"
-        android:scaleType="centerInside"
-        app:svg="permission_location.svg" />
+        android:scaleType="centerInside" />
 
     <TextView
         android:id="@+id/title"

@@ -27,7 +27,7 @@ public class WelcomeFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         mRootView = inflater.inflate(R.layout.onboarding_welcome, container, false);
-        UIHelpers.populateContainerWithSVG(mRootView, 0, R.raw.onboarding_welcome, R.id.ivIllustration);
+        //UIHelpers.populateContainerWithSVG(mRootView, 0, R.raw.onboarding_welcome, R.id.ivIllustration);
 
         View btnNext = mRootView.findViewById(R.id.btnNext);
         btnNext.setOnClickListener(new View.OnClickListener() {
