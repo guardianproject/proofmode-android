@@ -71,7 +71,7 @@
 
     <string name="onboarding_step3">Step 3</string>
     <string name="onboarding_step3_title">Before you send, choose what level of proof to share.</string>
-    <string name="onboarding_step3_content">You’re always in control.</string>
+    <string name="onboarding_step3_content">You\'re always in control. Basic shares minimal info to prove your media exists. Robust shares everything captured.</string>
 
     <string name="onboarding_step4">Step 4</string>
     <string name="onboarding_step4_title">Then choose how to send it.</string>

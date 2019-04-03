@@ -49,6 +49,7 @@
             android:textAppearance="?android:attr/textAppearanceLarge"
             android:text="@string/onboarding_intro_content" />
         <TextView
+            android:id="@+id/btnLearnMore"
             style="@style/OnboardingIntroSubtitleStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

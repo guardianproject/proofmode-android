@@ -10,24 +10,35 @@
         }
         img.large_image {
             margin-top: 40px;
-            width: 18%;
+            width: 22%;
         }
+
+        h2 + img {
+            margin-top: 1px;
+        }
+
         img {
             display: block;
-            margin-top: 20px;
+            margin-top: 60px;
             margin-left: auto;
             margin-right: auto;
             width: 10%;
         }
+        h1 {
+            color: #232323;
+            font-family: hurme !important;
+            margin-top: 20px !important;
+            margin-bottom: 30px !important;
+        }
         h2 {
             color: #232323;
-            font-family: hurme;
+            font-family: hurme !important;
             margin-top: 20px !important;
             margin-bottom: 30px !important;
         }
         h3 {
             color: #232323;
-            font-family: hurme;
+            font-family: hurme !important;
             margin-top: 20px !important;
             margin-bottom: 13px !important;
         }
@@ -38,19 +49,20 @@
         }
         p {
             color: #58595b;
-            font-family: verdana;
+            font-family: verdana !important;
         }
         i {
             color: #000000;
             display: block !important;
             margin-top: 10px !important;
-            font-family: verdana;
+            font-family: verdana !important;
         }
         hr {
             height: 1px !important;
             color: #dddddd !important;
             border-color: #dddddd !important;
             background-color: #dddddd !important;
+            margin-top: 40px !important;
         }
     </style>
 </head>
@@ -73,7 +85,7 @@ Date and time when the JPG or MP4 was modified.</p>
 <h2>Location</h2>
 <img src="./ic_locale.svg" />
 <h3>Locale</h3>
-<p>Your corner of the world</p>
+<p>The country your phone was set to when first started</p>
 
 <img src="./ic_towers.svg" />
 <h3>Towers</h3>
@@ -104,7 +116,7 @@ Who provided the location and when.<br/>
 
 <img src="./ic_notary.svg" />
 <h3>Notary</h3>
-<p>A blob of data that provides a timestamp on the hash of the media file signed by Google and information about whether your phone itself has been tampered with.<br/>
+<p>A chunk of data that provides a timestamp on the hash of the media file signed by Google and information about whether your phone itself has been tampered with.<br/>
     <i>Enabled with permission, Requires internet</i></p>
 
 <img src="./ic_stats.svg" />
@@ -113,7 +125,7 @@ Who provided the location and when.<br/>
 
 <img src="./ic_language.svg" />
 <h3>Language</h3>
-<p>Your phone's first language</p>
+<p>The language your phone was first set to</p>
 
 <hr/>
 
