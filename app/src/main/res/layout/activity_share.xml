@@ -40,22 +40,23 @@
         android:visibility="gone"
         tools:visibility="gone"
         >
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/proof_error_message"
-        android:layout_margin="10dp"
-        android:textSize="24sp"
-        android:gravity="center"
-        android:textColor="@color/colorPrimaryAlt"
-        />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/proof_error_message"
+            android:layout_margin="10dp"
+            style="@style/OnboardingStepTitleStyle"
+            />
 
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/action_generate"
-        android:onClick="generateProof"
-        />
+        <Button
+            style="@style/OnboardingButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="20dp"
+            android:text="@string/action_generate"
+            android:onClick="generateProof"
+            />
 
     </LinearLayout>
 
@@ -66,7 +67,7 @@
         android:orientation="vertical"
         android:gravity="center_horizontal|top"
         android:visibility="gone"
-        tools:visibility="visible"
+        tools:visibility="gone"
         android:paddingStart="10dp"
         android:paddingLeft="10dp"
         android:paddingEnd="10dp"
@@ -170,17 +171,15 @@
         android:orientation="vertical"
         android:gravity="center_horizontal|center_vertical"
         android:visibility="gone"
+        tools:visibility="visible"
         >
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/proof_error_message_final"
             android:layout_margin="10dp"
-            android:textSize="24sp"
-            android:gravity="center"
-
+            style="@style/OnboardingStepTitleStyle"
             />
-
 
 
     </LinearLayout>
