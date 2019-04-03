@@ -56,8 +56,8 @@
             android:text="@string/onboarding_privacy_content" />
 
         <ImageView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
             android:layout_marginTop="40dp"
             android:src="@drawable/ic_favorite_green_48dp"
             />
@@ -86,7 +86,7 @@
             <Button
                 android:id="@+id/btnContinue"
                 style="@style/OnboardingButtonDarkStyle"
-                android:layout_width="match_parent"
+                android:layout_width="170dp"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal|bottom"
                 android:text="@string/onboarding_privacy_continue"
@@ -94,7 +94,7 @@
             <Button
                 android:id="@+id/btnSettings"
                 style="@style/OnboardingButtonStyle"
-                android:layout_width="match_parent"
+                android:layout_width="170dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
                 android:layout_gravity="center_horizontal|bottom"

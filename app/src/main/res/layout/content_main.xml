@@ -14,20 +14,11 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         >
-        <!--
-        <com.caverock.androidsvg.SVGImageView
-            android:id="@+id/illustration_on"
-            android:scaleType="centerCrop"
-            app:svg="img_home-on.svg"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            />
-            -->
         <ImageView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:scaleType="centerCrop"
-            android:src="@drawable/img_on"
+            android:src="@drawable/ic_img_home_on"
             />
 
         <LinearLayout
@@ -37,9 +28,9 @@
             android:orientation="vertical"
             android:layout_marginTop="?attr/actionBarSize"
             android:paddingLeft="@dimen/activity_horizontal_margin"
-            android:paddingTop="@dimen/activity_vertical_margin"
+            android:paddingTop="124dp"
             android:paddingRight="@dimen/activity_horizontal_margin"
-            android:paddingBottom="@dimen/activity_vertical_margin"
+            android:paddingBottom="70dp"
             >
 
             <TextView
@@ -47,6 +38,10 @@
                 android:textColor="@android:color/black"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:paddingLeft="40dp"
+                android:paddingStart="40dp"
+                android:paddingRight="40dp"
+                android:paddingEnd="40dp"
                 android:text="@string/proofmode_is_on"
                 android:textAppearance="?android:attr/textAppearanceLarge" />
 
@@ -88,19 +83,14 @@
         android:id="@+id/layout_off"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        tools:visibility="gone"
         >
-        <!--<com.caverock.androidsvg.SVGImageView
-            android:id="@+id/illustration_off"
-            android:scaleType="centerCrop"
-            app:svg="img_home-off.svg"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            />-->
+
         <ImageView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:scaleType="centerCrop"
-            android:src="@drawable/img_off"
+            android:src="@drawable/ic_img_home_off"
             />
         <LinearLayout
             android:layout_width="match_parent"
@@ -109,15 +99,19 @@
             android:gravity="center_horizontal"
             android:orientation="vertical"
             android:paddingLeft="@dimen/activity_horizontal_margin"
-            android:paddingTop="@dimen/activity_vertical_margin"
+            android:paddingTop="124dp"
             android:paddingRight="@dimen/activity_horizontal_margin"
-            android:paddingBottom="@dimen/activity_vertical_margin"
+            android:paddingBottom="70dp"
             >
 
             <TextView
                 style="@style/TitleStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:paddingLeft="40dp"
+                android:paddingStart="40dp"
+                android:paddingRight="40dp"
+                android:paddingEnd="40dp"
                 android:text="@string/proofmode_is_off"
                 android:textAppearance="?android:attr/textAppearanceLarge" />
 
@@ -131,8 +125,8 @@
                 />
 
             <ImageView
-                android:layout_width="36dp"
-                android:layout_height="36dp"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
                 android:src="@drawable/ic_favorite_green_48dp"
                 />
 

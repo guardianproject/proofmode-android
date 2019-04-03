@@ -159,7 +159,6 @@ public class OnboardingActivity extends AppCompatActivity implements OnboardingS
     public void onSettingsPressed() {
         Intent intent = new Intent(this, SettingsActivity.class);
         startActivity(intent);
-        finish();
     }
 
     private class OnboardingPagerAdapter extends FragmentPagerAdapter {

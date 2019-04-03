@@ -8,11 +8,11 @@
     android:focusable="true"
     android:focusableInTouchMode="true"
     android:background="@color/onboarding_background">
-    <com.caverock.androidsvg.SVGImageView
+    <ImageView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scaleType="centerCrop"
-        app:svg="img_home-off.svg"
+        android:src="@drawable/ic_img_home_off"
         />
 
     <LinearLayout
