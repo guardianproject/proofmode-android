@@ -12,7 +12,7 @@ android {
         applicationId "org.witness.proofmode"
         minSdkVersion 16
         targetSdkVersion 28
-        versionCode 116
+        versionCode 117
         versionName "0.0.11-beta-5"
         multiDexEnabled true
     }
