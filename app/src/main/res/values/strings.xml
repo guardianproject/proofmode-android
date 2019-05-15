@@ -96,6 +96,8 @@
     <string name="permissions_needed_title">Permissions needed</string>
     <string name="permissions_needed_content">Please enable required permissions in system settings.</string>
 
+    <string name="share_no_proof">No proof exists yet. Try again in one minute.</string>
+    <string name="share_no_proof_info">If there is still no proof you can generate proof now. It may not reflect the time and location of when and where the media was created.</string>
     <string name="share_proof_found">Proof found! Choose what level of proof to share.</string>
     <string name="share_mode_basic">Basic</string>
     <string name="share_mode_basic_info">Shares a fingerprint of your media to establish that it exists.</string>
