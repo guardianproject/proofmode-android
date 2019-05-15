@@ -15,6 +15,10 @@
             android:icon="@drawable/ic_data_legend"
             android:title="@string/menu_datalegend" />
         <item
+            android:id="@+id/menu_digital_signatures"
+            android:icon="@drawable/ic_data_legend"
+            android:title="@string/menu_digital_signatures" />
+        <item
             android:id="@+id/menu_settings"
             android:icon="@drawable/ic_settings"
             android:title="@string/menu_settings" />

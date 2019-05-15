@@ -92,6 +92,7 @@
     <string name="menu_how_it_works">How It Works</string>
     <string name="menu_settings">Settings</string>
     <string name="menu_datalegend">Data Legend</string>
+    <string name="menu_digital_signatures">Digital Signatures</string>
 
     <string name="permissions_needed_title">Permissions needed</string>
     <string name="permissions_needed_content">Please enable required permissions in system settings.</string>
@@ -111,4 +112,11 @@
     <string name="share_info_robust_title">Shares everything that you\'ve enabled ProofMode to capture in a cryptographically signed file.</string>
     <string name="share_info_robust_message">• Reveals personal identifying info\n• Share with someone you trust\n• Requires internet access\n• Shares .csv file with data, PGP, and unique fingerprint</string>
     <string name="share_info_robust_send_media">Share media with proof</string>
+
+    <string name="digital_signatures_title">When you share proof, you will see digital signatures and your public key attached as “.asc” files.</string>
+    <string name="digital_signatures_info">Here is some more information on what those are.</string>
+    <string name="digital_signatures_whatis_title">What is my digital signature and public key?</string>
+    <string name="digital_signatures_whatis_info">Every time you install ProofMode, a unique digital identity, consisting of secret and public PGP keys is created. This is powered by the OpenPGP standard. It is used to cryptographically sign your media and supporting proof files. If the PGP signatures match the digital identity (PGP key) of your current ProofMode instance, then the signature was created by that instance of ProofMode.</string>
+    <string name="digital_signatures_whattodo_title">What do I do with it?</string>
+    <string name="digital_signatures_whattodo_info">A public version of your PGP key will be shared along with your media and proof.csv files. This allows a third party to verify the PGP “.asc” signature files that come with the proof data. Including your public PGP key with the proof ensures that it will be preserved in case your device is compromised or you reinstall the app. Remember each time you re-install the app, it will create a new digital identity (PGP key).</string>
 </resources>

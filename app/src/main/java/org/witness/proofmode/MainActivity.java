@@ -342,6 +342,11 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         startActivity(intent);
     }
 
+    private void openDigitalSignatures() {
+        Intent intent = new Intent(MainActivity.this, DigitalSignaturesActivity.class);
+        startActivity(intent);
+    }
+
     @Override
     public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
         switch (menuItem.getItemId()) {
@@ -361,6 +366,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             case R.id.menu_datalegend:
                 drawer.closeDrawer(Gravity.START);
                 openDataLegend();
+                return true;
+            case R.id.menu_digital_signatures:
+                drawer.closeDrawer(Gravity.START);
+                openDigitalSignatures();
                 return true;
 
         }
