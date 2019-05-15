@@ -107,6 +107,6 @@
     <string name="share_info_basic_title">Shares a fingerprint of your media to establish that it exists.</string>
     <string name="share_info_basic_message">• Doesn’t include personal info\n• No trust is needed\n• Short enough to send in a text</string>
     <string name="share_info_robust_title">Shares everything that you\'ve enabled ProofMode to capture in a cryptographically signed file.</string>
-    <string name="share_info_robust_message">• Reveals personal identifying info\n• Share with someone you trust\n• Requires internet access</string>
+    <string name="share_info_robust_message">• Reveals personal identifying info\n• Share with someone you trust\n• Requires internet access\n• Shares .csv file with data, PGP, and unique fingerprint</string>
     <string name="share_info_robust_send_media">Share media with proof</string>
 </resources>
