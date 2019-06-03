@@ -66,7 +66,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         View rootView = findViewById(R.id.root);
         layoutOn = rootView.findViewById(R.id.layout_on);
         layoutOff = rootView.findViewById(R.id.layout_off);
-        layoutOn.setOnLongClickListener(new View.OnLongClickListener() {
+/*        layoutOn.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
                 setProofModeOn(false);
@@ -79,7 +79,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 setProofModeOn(true);
                 return true;
             }
-        });
+        });*/
 
         if (mPrefs.getBoolean("firsttime",true)) {
             startActivityForResult(new Intent(this, OnboardingActivity.class), REQUEST_CODE_INTRO);
@@ -104,6 +104,14 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         });
 
         updateOnOffState(false);
+    }
+
+    public void toggleOnClicked(View view) {
+        setProofModeOn(true);
+    }
+
+    public void toggleOffClicked(View view) {
+        setProofModeOn(false);
     }
 
     private void setProofModeOn(boolean isOn) {

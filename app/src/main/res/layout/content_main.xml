@@ -6,68 +6,76 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context="org.witness.proofmode.MainActivity"
-    tools:showIn="@layout/activity_main"
-    >
+    tools:showIn="@layout/activity_main">
 
-    <RelativeLayout
+    <android.support.constraint.ConstraintLayout
         android:id="@+id/layout_on"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        >
+        tools:visibility="gone">
+
+        <android.support.constraint.Guideline
+            android:id="@+id/toggle_y_guideline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            app:layout_constraintGuide_percent=".40" />
+
+        <android.support.constraint.Guideline
+            android:id="@+id/content_y_guideline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            app:layout_constraintGuide_percent="0.55" />
+
         <ImageView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:scaleType="centerCrop"
-            android:src="@drawable/ic_img_home_on"
-            />
+            android:src="@drawable/ic_img_home_on" />
+
+        <ImageButton
+            android:id="@+id/toggleOff"
+            style="@style/InfoStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@null"
+            android:onClick="toggleOffClicked"
+            android:src="@drawable/ic_toggle_on"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:textColor="@android:color/black"
+            app:layout_constraintBottom_toTopOf="@id/toggle_y_guideline" />
+
+        <TextView
+            style="@style/TitleStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="40dp"
+            android:paddingStart="40dp"
+            android:paddingLeft="40dp"
+            android:paddingEnd="40dp"
+            android:paddingRight="40dp"
+            android:text="@string/proofmode_is_on"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:textColor="@android:color/black"
+            app:layout_constraintBottom_toTopOf="@id/toggleOff" />
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:gravity="center_horizontal"
             android:orientation="vertical"
-            android:layout_marginTop="?attr/actionBarSize"
             android:paddingLeft="@dimen/activity_horizontal_margin"
-            android:paddingTop="124dp"
             android:paddingRight="@dimen/activity_horizontal_margin"
-            android:paddingBottom="70dp"
-            >
-
-            <TextView
-                style="@style/TitleStyle"
-                android:textColor="@android:color/black"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingLeft="40dp"
-                android:paddingStart="40dp"
-                android:paddingRight="40dp"
-                android:paddingEnd="40dp"
-                android:text="@string/proofmode_is_on"
-                android:textAppearance="?android:attr/textAppearanceLarge" />
-
-            <TextView
-                style="@style/InfoStyle"
-                android:textColor="@android:color/black"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textAppearance="?android:attr/textAppearanceLarge"
-                android:text="@string/tap_hold_turn_off" />
-
-            <!-- <TextView
-                style="@style/ContentStyle"
-                android:textColor="@android:color/black"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textAppearance="?android:attr/textAppearanceLarge"
-                android:text="@string/proofmode_is_capturing" />-->
+            app:layout_constraintTop_toBottomOf="@id/content_y_guideline">
 
             <ImageButton
                 android:id="@+id/btnSettings"
                 android:layout_width="36dp"
                 android:layout_height="36dp"
                 android:layout_marginTop="36dp"
-                android:scaleType="fitCenter"
                 android:background="@null"
+                android:scaleType="fitCenter"
                 android:src="@drawable/ic_settings" />
 
             <TextView
@@ -77,75 +85,84 @@
                 android:text="@string/choose_my_settings"
                 android:textColor="@color/onboarding_gray" />
         </LinearLayout>
-    </RelativeLayout>
+    </android.support.constraint.ConstraintLayout>
 
-    <RelativeLayout
+    <android.support.constraint.ConstraintLayout
         android:id="@+id/layout_off"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        tools:visibility="gone"
-        >
+        tools:visibility="visible">
+
+        <android.support.constraint.Guideline
+            android:id="@+id/toggle_off_y_guideline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            app:layout_constraintGuide_percent=".40" />
 
         <ImageView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:scaleType="centerCrop"
-            android:src="@drawable/ic_img_home_off"
-            />
+            android:src="@drawable/ic_img_home_off" />
+
+        <ImageButton
+            android:id="@+id/toggleOn"
+            style="@style/InfoStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@null"
+            android:onClick="toggleOnClicked"
+            android:src="@drawable/ic_toggle_off"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:textColor="@android:color/black"
+            app:layout_constraintBottom_toTopOf="@id/toggle_off_y_guideline" />
+
+        <TextView
+            style="@style/TitleStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="40dp"
+            android:paddingStart="40dp"
+            android:paddingLeft="40dp"
+            android:paddingEnd="40dp"
+            android:paddingRight="40dp"
+            android:text="@string/proofmode_is_off"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            app:layout_constraintBottom_toTopOf="@id/toggleOn" />
+
+
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_marginTop="?attr/actionBarSize"
+            android:layout_height="wrap_content"
             android:gravity="center_horizontal"
             android:orientation="vertical"
             android:paddingLeft="@dimen/activity_horizontal_margin"
-            android:paddingTop="124dp"
             android:paddingRight="@dimen/activity_horizontal_margin"
             android:paddingBottom="70dp"
-            >
-
-            <TextView
-                style="@style/TitleStyle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingLeft="40dp"
-                android:paddingStart="40dp"
-                android:paddingRight="40dp"
-                android:paddingEnd="40dp"
-                android:text="@string/proofmode_is_off"
-                android:textAppearance="?android:attr/textAppearanceLarge" />
-
-            <TextView
-                style="@style/InfoStyle"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:textAppearance="?android:attr/textAppearanceLarge"
-                android:text="@string/tap_hold_turn_on"
-                android:layout_weight="1"
-                />
+            app:layout_constraintBottom_toBottomOf="@id/layout_off">
 
             <ImageView
                 android:layout_width="20dp"
                 android:layout_height="20dp"
-                android:src="@drawable/ic_favorite_green_48dp"
-                />
+                android:src="@drawable/ic_favorite_green_48dp" />
 
             <TextView
                 style="@style/OnboardingStepSubtitleStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="@android:color/white"
+                android:text="@string/onboarding_privacy_subtitle"
                 android:textAppearance="?android:attr/textAppearanceLarge"
-                android:text="@string/onboarding_privacy_subtitle" />
+                android:textColor="@android:color/white" />
 
             <TextView
                 style="@style/OnboardingStepContentStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="@android:color/white"
+                android:text="@string/onboarding_privacy_info"
                 android:textAppearance="?android:attr/textAppearanceLarge"
-                android:text="@string/onboarding_privacy_info" />
+                android:textColor="@android:color/white" />
 
         </LinearLayout>
-    </RelativeLayout>
+    </android.support.constraint.ConstraintLayout>
 </FrameLayout>
