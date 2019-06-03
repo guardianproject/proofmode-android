@@ -8,6 +8,14 @@ android {
         abortOnError false
     }
 
+    flavorDimensions 'default'
+
+    productFlavors {
+        artwork {
+            dimension 'default'
+        }
+    }
+
     defaultConfig {
         applicationId "org.witness.proofmode"
         minSdkVersion 16
