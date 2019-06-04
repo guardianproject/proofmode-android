@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <attr name="dot_total" format="integer" />
+    <attr name="dot_current" format="integer" />
+
+    <declare-styleable name="DottedProgressView">
+        <attr name="dot_distance" format="dimension" />
+        <attr name="dot_radius" format="dimension" />
+        <attr name="dot_color" format="color" />
+        <attr name="dot_rim_color" format="color" />
+        <attr name="dot_color_current" format="color" />
+        <attr name="dot_rim_color_current" format="color" />
+        <attr name="dot_total" />
+        <attr name="dot_current" />
+        <attr name="hide_if_only_one" />
+        <attr name="android:gravity" />
+    </declare-styleable>
+
+    <!-- Declare custom theme attributes that allow changing which styles are
+         used for button bars depending on the API level.
+         ?android:attr/buttonBarStyle is new as of API 11 so this is
+         necessary to support previous API levels. -->
+    <declare-styleable name="ButtonBarContainerTheme">
+        <attr name="metaButtonBarStyle" format="reference" />
+        <attr name="metaButtonBarButtonStyle" format="reference" />
+    </declare-styleable>
+</resources>

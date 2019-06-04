@@ -20,6 +20,7 @@ import com.google.android.gms.safetynet.SafetyNetApi;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 
+import org.witness.proofmode.ProofMode;
 import org.witness.proofmode.crypto.HashUtils;
 import org.witness.proofmode.crypto.PgpUtils;
 import org.witness.proofmode.library.R;
@@ -123,10 +124,10 @@ public class MediaWatcher extends BroadcastReceiver {
             if (!fileMediaPath.exists())
                 return null;
 
-            final boolean showDeviceIds = prefs.getBoolean("trackDeviceId",true);
-            final boolean showLocation = prefs.getBoolean("trackLocation",true);
-            final boolean autoNotarize = prefs.getBoolean("autoNotarize", false);
-            final boolean showMobileNetwork = prefs.getBoolean("trackMobileNetwork",false);
+            final boolean showDeviceIds = prefs.getBoolean(ProofMode.PREF_OPTION_PHONE,ProofMode.PREF_OPTION_PHONE_DEFAULT);
+            final boolean showLocation = prefs.getBoolean(ProofMode.PREF_OPTION_LOCATION,ProofMode.PREF_OPTION_LOCATION_DEFAULT);
+            final boolean autoNotarize = prefs.getBoolean(ProofMode.PREF_OPTION_NOTARY, ProofMode.PREF_OPTION_NOTARY_DEFAULT);
+            final boolean showMobileNetwork = prefs.getBoolean(ProofMode.PREF_OPTION_NETWORK,ProofMode.PREF_OPTION_NETWORK_DEFAULT);
 
             final String mediaHash = HashUtils.getSHA256FromFileContent(fileMediaPath);
 

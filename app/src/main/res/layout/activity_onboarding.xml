@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    tools:context=".onboarding.OnboardingActivity">
+    <org.witness.proofmode.onboarding.NoSwipeViewPager
+        android:id="@+id/pager"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+    <org.witness.proofmode.onboarding.DottedProgressView
+        android:id="@+id/indicator"
+        android:layout_width="match_parent"
+        android:layout_height="54dp"
+        android:layout_gravity="bottom|center_horizontal"
+        app:dot_color="@color/onboarding_background"
+        app:dot_color_current="@color/colorPrimary"
+        app:dot_rim_color="@color/colorPrimary"
+        app:dot_rim_color_current="@color/colorPrimary"
+        app:dot_radius="3dp"
+        app:dot_distance="14dp"
+    />
+    <ImageButton
+        android:id="@+id/btnNext"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_gravity="bottom|end"
+        android:background="@null"
+        android:src="@drawable/ic_navigate_next_black_24dp"
+        />
+</FrameLayout>

@@ -3,51 +3,82 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="org.witness.proofmode">
 
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"  tools:remove="android:maxSdkVersion" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"  tools:remove="android:maxSdkVersion" />
-    <uses-permission android:name="android.permission.CAMERA" tools:remove="android:maxSdkVersion" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" tools:remove="android:maxSdkVersion" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"  tools:remove="android:maxSdkVersion"/>
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:remove="android:maxSdkVersion" />
-    <uses-permission android:name="android.permission.INTERNET"  tools:remove="android:maxSdkVersion"/>
-    <uses-permission android:name="android.permission.READ_PHONE_STATE"   tools:remove="android:maxSdkVersion"/>
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        tools:remove="android:maxSdkVersion" />
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        tools:remove="android:maxSdkVersion" />
+    <uses-permission
+        android:name="android.permission.CAMERA"
+        tools:remove="android:maxSdkVersion" />
+    <uses-permission
+        android:name="android.permission.ACCESS_COARSE_LOCATION"
+        tools:remove="android:maxSdkVersion" />
+    <uses-permission
+        android:name="android.permission.ACCESS_FINE_LOCATION"
+        tools:remove="android:maxSdkVersion" />
+    <uses-permission
+        android:name="android.permission.ACCESS_NETWORK_STATE"
+        tools:remove="android:maxSdkVersion" />
+    <uses-permission
+        android:name="android.permission.INTERNET"
+        tools:remove="android:maxSdkVersion" />
+    <uses-permission
+        android:name="android.permission.READ_PHONE_STATE"
+        tools:remove="android:maxSdkVersion" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
+        android:name=".ProofModeApp"
         android:allowBackup="true"
-        android:name="org.witness.proofmode.ProofModeApp"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme"
-        >
+        android:theme="@style/AppTheme">
+        <activity android:name=".PermissionActivity"></activity>
+        <activity
+            android:name=".onboarding.OnboardingActivity"
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:label="@string/app_name"
+            android:theme="@style/FullscreenTheme" />
         <activity
             android:name=".MainActivity"
             android:label="@string/app_name"
-            android:theme="@style/AppTheme.NoActionBar"
             android:screenOrientation="portrait"
-            >
+            android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
         </activity>
         <activity
-            android:name=".PMAppIntro"
-           />
-                   <receiver
+            android:name=".SettingsActivity"
+            android:label="@string/activity_settings_title"
+            android:screenOrientation="portrait"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name=".DataLegendActivity"
+            android:label="@string/activity_datalegend_title"
+            android:screenOrientation="portrait"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name=".DigitalSignaturesActivity"
+            android:label="@string/menu_digital_signatures"
+            android:screenOrientation="portrait"
+            android:theme="@style/AppTheme.NoActionBar" />
+
+        <receiver
             android:name=".OnBootReceiver"
             android:enabled="true"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
-
         </receiver>
-
         <receiver
             android:name=".service.MediaWatcher"
             android:enabled="true"
@@ -80,11 +111,11 @@
             </intent-filter>
         </receiver>
 
-        <activity android:name=".ShareProofActivity"
+        <activity
+            android:name=".ShareProofActivity"
+            android:label="@string/share_proof_action"
             android:launchMode="singleTop"
-            android:theme="@style/AppTheme"
-            android:label="@string/share_proof_action">
-
+            android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>
                 <action
                     android:name="android.intent.action.SEND"
@@ -109,29 +140,24 @@
                     android:label="@string/share_proof_action" />
 
                 <category android:name="android.intent.category.DEFAULT" />
+
                 <data android:mimeType="image/*" />
                 <data android:mimeType="video/*" />
-
             </intent-filter>
-
-
         </activity>
+
         <service
             android:name=".service.MediaListenerService"
             android:enabled="true"
-            android:exported="false" >
-        </service>
-
+            android:exported="false" />
         <service
             android:name=".service.PhotosContentJob"
-            android:permission="android.permission.BIND_JOB_SERVICE"
-            android:exported="true"/>
-
+            android:exported="true"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
         <service
             android:name=".service.VideosContentJob"
-            android:permission="android.permission.BIND_JOB_SERVICE"
-            android:exported="true"/>
-
+            android:exported="true"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
         <service
             android:name=".ProofModeTileService"
             android:icon="@drawable/ic_stat_proofmodewhite"
@@ -142,8 +168,6 @@
             </intent-filter>
         </service>
 
-
-
         <provider
             android:name="android.support.v4.content.FileProvider"
             android:authorities="${applicationId}.provider"
@@ -151,7 +175,7 @@
             android:grantUriPermissions="true">
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/provider_paths"/>
+                android:resource="@xml/provider_paths" />
         </provider>
     </application>
 

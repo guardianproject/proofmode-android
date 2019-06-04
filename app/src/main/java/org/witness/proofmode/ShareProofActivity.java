@@ -1,8 +1,10 @@
 package org.witness.proofmode;
 
 import android.Manifest;
+import android.app.Dialog;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.LabeledIntent;
 import android.content.pm.PackageManager;
@@ -10,6 +12,8 @@ import android.content.pm.ResolveInfo;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -18,9 +22,15 @@ import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.FileProvider;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.Toolbar;
+import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
+import android.widget.SeekBar;
 
 import org.witness.proofmode.crypto.HashUtils;
 import org.witness.proofmode.crypto.PgpUtils;
@@ -49,6 +59,8 @@ import static org.witness.proofmode.ProofMode.PROOF_FILE_TAG;
 
 public class ShareProofActivity extends AppCompatActivity {
 
+    private boolean sendMedia = true;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -61,7 +73,26 @@ public class ShareProofActivity extends AppCompatActivity {
         askForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE,4);
 
         setContentView(R.layout.activity_share);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        getSupportActionBar().setTitle("");
+        getSupportActionBar().setDisplayShowHomeEnabled(false);
+        getSupportActionBar().setDisplayHomeAsUpEnabled(false);
+
+        View tvInfoBasic = findViewById(R.id.tvInfoBasic);
+        tvInfoBasic.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showInfoBasic();
+            }
+        });
+        View tvInfoRobust = findViewById(R.id.tvInfoRobust);
+        tvInfoRobust.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showInfoRobust();
+            }
+        });
 
         // Get intent, action and MIME type
         Intent intent = getIntent();
@@ -104,6 +135,13 @@ public class ShareProofActivity extends AppCompatActivity {
             displayGeneratePrompt();
         }
 
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.menu_share, menu);
+        return true;
     }
 
     @Override
@@ -175,7 +213,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
     public void clickAll (View button)
     {
-        shareProof (true, true);
+        shareProof (sendMedia, true);
 
     }
 
@@ -913,5 +951,43 @@ public class ShareProofActivity extends AppCompatActivity {
         inImage.compress(Bitmap.CompressFormat.JPEG, 100, bytes);
         String path = MediaStore.Images.Media.insertImage(inContext.getContentResolver(), inImage, "Title", null);
         return Uri.parse(path);
+    }
+
+    private void showInfoBasic() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+
+        builder.setView(R.layout.dialog_share_basic);
+        final Dialog currentDialog = builder.create();
+        currentDialog.show();
+        currentDialog.findViewById(R.id.btnClose).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                currentDialog.dismiss();
+            }
+        });
+        currentDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+    }
+
+    private void showInfoRobust() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+
+        builder.setView(R.layout.dialog_share_robust);
+        final Dialog currentDialog = builder.create();
+        currentDialog.show();
+        currentDialog.findViewById(R.id.btnClose).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                currentDialog.dismiss();
+            }
+        });
+        CheckBox checkBox = currentDialog.findViewById(R.id.checkSendMedia);
+        checkBox.setChecked(sendMedia);
+        checkBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                sendMedia = isChecked;
+            }
+        });
+        currentDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
     }
 }

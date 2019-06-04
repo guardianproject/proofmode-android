@@ -1,39 +1,57 @@
 package org.witness.proofmode;
 
 import android.Manifest;
+import android.animation.Animator;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
-import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
-import android.support.v4.content.PermissionChecker;
+import android.support.annotation.NonNull;
+import android.support.design.widget.NavigationView;
+import android.support.v4.widget.DrawerLayout;
+import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.SwitchCompat;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
-import android.view.View;
+import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.CompoundButton;
-import android.widget.Switch;
+import android.view.View;
+import android.widget.ImageButton;
 import android.widget.Toast;
 
 import org.witness.proofmode.crypto.PgpUtils;
+import org.witness.proofmode.onboarding.OnboardingActivity;
 import org.witness.proofmode.util.GPSTracker;
 
 import java.io.IOException;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
 
     private SharedPreferences mPrefs;
 
     private final static int REQUEST_CODE_INTRO = 9999;
+    private final static int REQUEST_CODE_REQUIRED_PERMISSIONS = 9998;
+    private final static int REQUEST_CODE_OPTIONAL_PERMISSIONS = 9997;
 
     private PgpUtils mPgpUtils;
+    private View layoutOn;
+    private View layoutOff;
+    private DrawerLayout drawer;
+    private ActionBarDrawerToggle drawerToggle;
+
+    /**
+     * The permissions needed for "base" ProofMode to work, without extra options.
+     */
+    private final static String[] requiredPermissions = new String[] {
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            Manifest.permission.CAMERA
+    };
+    private final static String[] optionalPermissions = new String[] {
+            Manifest.permission.READ_PHONE_STATE,
+            Manifest.permission.ACCESS_NETWORK_STATE
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,124 +59,139 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+        getSupportActionBar().setTitle("");
 
         mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
 
-        SwitchCompat switchProof = findViewById(R.id.switchProof);
-        switchProof.setChecked(mPrefs.getBoolean("doProof",true));
-
-        switchProof.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+        View rootView = findViewById(R.id.root);
+        layoutOn = rootView.findViewById(R.id.layout_on);
+        layoutOff = rootView.findViewById(R.id.layout_off);
+/*        layoutOn.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-
-                mPrefs.edit().putBoolean("doProof",isChecked).commit();
-                if (isChecked)
-                {
-                    askForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE, 1);
-                }
+            public boolean onLongClick(View v) {
+                setProofModeOn(false);
+                return true;
             }
         });
-
-        SwitchCompat switchLocation = (SwitchCompat)findViewById(R.id.switchLocation);
-        switchLocation.setChecked(mPrefs.getBoolean("trackLocation",true));
-        switchLocation.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+        layoutOff.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-
-                mPrefs.edit().putBoolean("trackLocation",isChecked).commit();
-
-                if (isChecked)
-                {
-                    askForPermission(Manifest.permission.ACCESS_FINE_LOCATION, 1);
-                    refreshLocation();
-                }
+            public boolean onLongClick(View v) {
+                setProofModeOn(true);
+                return true;
             }
-        });
-
-        SwitchCompat switchMobile = (SwitchCompat)findViewById(R.id.switchCellInfo);
-        switchMobile.setChecked(mPrefs.getBoolean("trackMobileNetwork",false));
-        switchMobile.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-
-                mPrefs.edit().putBoolean("trackMobileNetwork",isChecked).commit();
-
-                if (isChecked)
-                {
-                    askForPermission(Manifest.permission.READ_PHONE_STATE, 1);
-                }
-            }
-        });
-
-        SwitchCompat switchDevice = (SwitchCompat)findViewById(R.id.switchDevice);
-        switchDevice.setChecked(mPrefs.getBoolean("trackDeviceId",true));
-        switchDevice.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-
-                mPrefs.edit().putBoolean("trackDeviceId",isChecked).commit();
-
-            }
-        });
-
-        SwitchCompat switchNotarize = (SwitchCompat)findViewById(R.id.switchNotarize);
-        switchNotarize.setChecked(mPrefs.getBoolean("autoNotarize",true));
-        switchNotarize.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-
-                mPrefs.edit().putBoolean("autoNotarize",isChecked).commit();
-
-            }
-        });
+        });*/
 
         if (mPrefs.getBoolean("firsttime",true)) {
-            startActivityForResult(new Intent(this, PMAppIntro.class),REQUEST_CODE_INTRO);
-            mPrefs.edit().putBoolean("firsttime",false).commit();
+            startActivityForResult(new Intent(this, OnboardingActivity.class), REQUEST_CODE_INTRO);
         }
-        else
+
+        //Setup drawer
+        drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        drawerToggle = new ActionBarDrawerToggle(
+                this, drawer, toolbar, 0, 0);
+        drawer.addDrawerListener(drawerToggle);
+        drawerToggle.syncState();
+
+        NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
+        navigationView.setNavigationItemSelectedListener(this);
+
+        ImageButton btnSettings = findViewById(R.id.btnSettings);
+        btnSettings.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                openSettings();
+            }
+        });
+
+        updateOnOffState(false);
+    }
+
+    public void toggleOnClicked(View view) {
+        setProofModeOn(true);
+    }
+
+    public void toggleOffClicked(View view) {
+        setProofModeOn(false);
+    }
+
+    private void setProofModeOn(boolean isOn) {
+        if (isOn)
         {
-            askForPermission(Manifest.permission.ACCESS_FINE_LOCATION, 1);
+            if (!askForPermissions(requiredPermissions, REQUEST_CODE_REQUIRED_PERMISSIONS)) {
+                mPrefs.edit().putBoolean("doProof", isOn).commit();
+                updateOnOffState(true);
+            }
+        } else {
+            mPrefs.edit().putBoolean("doProof", isOn).commit();
+            updateOnOffState(true);
         }
+    }
 
+    private void updateOnOffState(boolean animate) {
+        final boolean isOn = mPrefs.getBoolean("doProof",false);
+        if (animate) {
+            layoutOn.animate().alpha(isOn ? 1.0f : 0.0f).setDuration(300).setListener(new Animator.AnimatorListener() {
+                @Override
+                public void onAnimationStart(Animator animation) {
+                    if (isOn) {
+                        layoutOn.setVisibility(View.VISIBLE);
+                    }
+                }
 
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    if (!isOn) {
+                        layoutOn.setVisibility(View.GONE);
+                    }
+                }
+
+                @Override
+                public void onAnimationCancel(Animator animation) {
+
+                }
+
+                @Override
+                public void onAnimationRepeat(Animator animation) {
+
+                }
+            }).start();
+            layoutOff.animate().alpha(isOn ? 0.0f : 1.0f).setDuration(300).setListener(new Animator.AnimatorListener() {
+                @Override
+                public void onAnimationStart(Animator animation) {
+                    if (!isOn) {
+                        layoutOff.setVisibility(View.VISIBLE);
+                    }
+                }
+
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    if (isOn) {
+                        layoutOff.setVisibility(View.GONE);
+                    }
+                }
+
+                @Override
+                public void onAnimationCancel(Animator animation) {
+
+                }
+
+                @Override
+                public void onAnimationRepeat(Animator animation) {
+
+                }
+            }).start();
+        } else {
+            layoutOn.setAlpha(isOn ? 1.0f : 0.0f);
+            layoutOn.setVisibility(isOn ? View.VISIBLE : View.GONE);
+            layoutOff.setAlpha(isOn ? 0.0f : 1.0f);
+            layoutOff.setVisibility(isOn ? View.GONE : View.VISIBLE);
+        }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-
-        SwitchCompat switchProof = (SwitchCompat)findViewById(R.id.switchProof);
-        switchProof.setChecked(mPrefs.getBoolean("doProof",true));
-
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-
-        switch (requestCode) {
-            //Location
-            case 1:
-                askForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE,2);
-                break;
-            //Call
-            case 2:
-                askForPermission(Manifest.permission.READ_EXTERNAL_STORAGE,3);
-
-                break;
-
-            case 3:
-                askForPermission(Manifest.permission.ACCESS_NETWORK_STATE,4);
-
-                break;
-
-            case 4:
-                askForPermission(Manifest.permission.READ_PHONE_STATE, 5);
-                break;
-
-        }
-
+        updateOnOffState(false);
     }
 
     @Override
@@ -174,14 +207,7 @@ public class MainActivity extends AppCompatActivity {
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
-
-        if (id == R.id.action_about){
-
-            startActivity(new Intent(this,PMAppIntro.class));
-
-            return true;
-        }
-        else if (id == R.id.action_publish_key){
+        if (id == R.id.action_publish_key){
 
             publishKey();
 
@@ -197,25 +223,21 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    private boolean askForPermission(String permission, Integer requestCode) {
-        if (ContextCompat.checkSelfPermission(this,permission) != PackageManager.PERMISSION_GRANTED) {
-
-            // Should we show an explanation?
-            if (ActivityCompat.shouldShowRequestPermissionRationale(this,permission)) {
-
-                //This is called if user has denied the permission before
-                //In this case I am just asking the permission again
-                ActivityCompat.requestPermissions( this,new String[]{permission}, requestCode);
-
-            } else {
-                ActivityCompat.requestPermissions(this,new String[]{permission}, requestCode);
-            }
-
+    /**
+     * User the PermissionActivity to ask for permissions, but show no UI when calling from here.
+     */
+    private boolean askForPermissions(String[] permissions, Integer requestCode) {
+        if (!PermissionActivity.hasPermissions(this, permissions)) {
+            Intent intent = new Intent(this, PermissionActivity.class);
+            intent.putExtra(PermissionActivity.ARG_PERMISSIONS, permissions);
+            startActivityForResult(intent, requestCode);
             return true;
-        } else {
-
-            return false;
         }
+        return false;
+    }
+
+    private boolean askForPermission(String permission, Integer requestCode) {
+        return askForPermissions(new String[] { permission }, requestCode);
     }
 
     private void publishKey ()
@@ -271,10 +293,42 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-
         if (requestCode == REQUEST_CODE_INTRO)
         {
-            askForPermission(Manifest.permission.ACCESS_FINE_LOCATION, 1);
+            mPrefs.edit().putBoolean("firsttime",false).commit();
+
+            // Ask for initial permissions
+            if (!askForPermissions(requiredPermissions, REQUEST_CODE_REQUIRED_PERMISSIONS)) {
+                // We have permission
+                setProofModeOn(true);
+                askForOptionals();
+            }
+        } else if (requestCode == REQUEST_CODE_REQUIRED_PERMISSIONS) {
+            // We call with REQUEST_CODE_REQUIRED_PERMISSIONS to turn ProofMode on, so set it to on if we have the permissions
+            if (PermissionActivity.hasPermissions(this, requiredPermissions)) {
+                setProofModeOn(true);
+                askForOptionals();
+            } else {
+                setProofModeOn(false);
+            }
+        } else if (requestCode == REQUEST_CODE_OPTIONAL_PERMISSIONS) {
+            if (PermissionActivity.hasPermissions(this, new String[] { Manifest.permission.ACCESS_NETWORK_STATE })) {
+                mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_NETWORK, true).commit();
+            } else {
+                mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_NETWORK, false).commit();
+            }
+            if (PermissionActivity.hasPermissions(this, new String[] { Manifest.permission.READ_PHONE_STATE })) {
+                mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_PHONE, true).commit();
+            } else {
+                mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_PHONE, false).commit();
+            }
+        }
+    }
+
+    private void askForOptionals() {
+        if (!askForPermissions(optionalPermissions, REQUEST_CODE_OPTIONAL_PERMISSIONS)) {
+            mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_NETWORK, true).commit();
+            mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_PHONE, true).commit();
         }
     }
 
@@ -286,19 +340,47 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void openSettings() {
+        Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
+        startActivity(intent);
+    }
 
-    private void unregisterManagers(){
+    private void openDataLegend() {
+        Intent intent = new Intent(MainActivity.this, DataLegendActivity.class);
+        startActivity(intent);
+    }
+
+    private void openDigitalSignatures() {
+        Intent intent = new Intent(MainActivity.this, DigitalSignaturesActivity.class);
+        startActivity(intent);
     }
 
     @Override
-    public void onPause() {
-        super.onPause();
-        unregisterManagers();
-    }
+    public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
+        switch (menuItem.getItemId()) {
+            //case R.id.menu_home:
+            //    drawer.closeDrawer(Gravity.START);
+            //    return true;
+            case R.id.menu_how_it_works:
+                drawer.closeDrawer(Gravity.START);
+                Intent intent = new Intent(this, OnboardingActivity.class);
+                intent.putExtra(OnboardingActivity.ARG_ONLY_TUTORIAL, true);
+                startActivityForResult(intent, REQUEST_CODE_INTRO);
+                return true;
+            case R.id.menu_settings:
+                drawer.closeDrawer(Gravity.START);
+                openSettings();
+                return true;
+            case R.id.menu_datalegend:
+                drawer.closeDrawer(Gravity.START);
+                openDataLegend();
+                return true;
+            case R.id.menu_digital_signatures:
+                drawer.closeDrawer(Gravity.START);
+                openDigitalSignatures();
+                return true;
 
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        unregisterManagers();
+        }
+        return false;
     }
 }

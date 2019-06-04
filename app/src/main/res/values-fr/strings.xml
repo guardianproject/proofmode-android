@@ -18,7 +18,7 @@
     <string name="intro1_desc">Vous avez accompli la première étape dans la transformation de vos photos ou vidéos en preuve numérique.</string>
 
     <string name="intro2_title">Détecte ton Monde</string>
-    <string name="intro2_desc">ProofMode puise dans tous les capteurs possible de votre appareil. Assurez-vous d'activer les permissions comme demandé.</string>
+    <string name="intro2_desc">ProofMode puise dans tous les capteurs possible de votre appareil. Assurez-vous d\'activer les permissions comme demandé.</string>
 
     <string name="intro3_title">Facile et automatique</string>
     <string name="intro3_desc">ProofMode fonctionne en permanence en arrière-plan, en ajoutant automatiquement une preuve à toutes les photos ou vidéos que vous prenez.</string>
@@ -36,12 +36,12 @@
     <string name="share_proof_with_media">Partager une preuve avec les supports numériques</string>
     <string name="open_public_key_page">Ouverture de la page de la clé publique</string>
     <string name="no_external_storage">AVERTISSEMENT: ProofMode activé, cependant aucun disque dur externe n\'est disponible!</string>
-    <string name="no_hash_generated">Alerte ProofMode: Impossible d'accéder aux supports numériques</string>
+    <string name="no_hash_generated">Alerte ProofMode: Impossible d\'accéder aux supports numériques</string>
     <string name="generating_proof_notify">Générateur de preuve...</string>
     <string name="inspect_photos">Examiner les photos</string>
     <string name="inspect_videos">Examiner les videos</string>
     <string name="select_app">Choisissez l\'application pour partager la preuve avec...</string>
     <string name="independent_notary">Certification indépendante par Enigio TimeBeat à:</string>
-    <string name="packaging_proof">Conditionner une preuve pour l'a faire partager...</string>
+    <string name="packaging_proof">Conditionner une preuve pour l\'a faire partager...</string>
 
 </resources>
