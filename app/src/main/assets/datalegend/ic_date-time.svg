@@ -1,16 +1,11 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<svg
-   xmlns="http://www.w3.org/2000/svg"
-   version="1.1"
-   viewBox="0 0 100 100"
-   height="100"
-   width="100">
-  <g>
-    <rect
-       y="0"
-       x="0"
-       height="100"
-       width="100"
-       style="opacity:1;fill:#c8c8c8;fill-opacity:1;stroke:#ffffff;stroke-width:0;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
-  </g>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="21px" height="22px" viewBox="0 0 21 22" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 53.2 (72643) - https://sketchapp.com -->
+    <title>ic_date-time</title>
+    <desc>Created with Sketch.</desc>
+    <g id="Version-4-Prototype" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="02Learn00" transform="translate(-168.000000, -288.000000)" fill="#000000" fill-rule="nonzero">
+            <path d="M178.5,288.093741 C172.706958,288.093741 168,292.966818 168,298.964334 C168,304.961845 172.706958,309.834922 178.5,309.834922 C184.293048,309.834922 189,304.961845 189,298.964334 C189,292.966818 184.293045,288.093741 178.5,288.093741 L178.5,288.093741 Z M178.5,289.129035 C183.7526,289.129035 188,293.526343 188,298.964334 C188,304.40232 183.752603,308.799628 178.5,308.799628 C173.247403,308.799628 169,304.40232 169,298.964334 C169,293.526343 173.247403,289.129035 178.5,289.129035 L178.5,289.129035 Z M178.5,291.199623 C178.22385,291.199623 178,291.431374 178,291.71727 L178,298.964334 C178,299.107282 178.057963,299.234624 178.148438,299.328292 L182.742188,304.092275 C182.937463,304.294416 183.25785,304.294442 183.453125,304.092275 C183.648375,303.890108 183.648375,303.5584 183.453125,303.356233 L179,298.75404 L179,291.71727 C179,291.431374 178.77615,291.199623 178.5,291.199623 Z" id="ic_date-time"></path>
+        </g>
+    </g>
 </svg>

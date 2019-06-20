@@ -1,16 +1,16 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<svg
-   xmlns="http://www.w3.org/2000/svg"
-   version="1.1"
-   viewBox="0 0 100 100"
-   height="100"
-   width="100">
-  <g>
-    <rect
-       y="0"
-       x="0"
-       height="100"
-       width="100"
-       style="opacity:1;fill:#c8c8c8;fill-opacity:1;stroke:#ffffff;stroke-width:0;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
-  </g>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="56px" height="56px" viewBox="0 0 56 56" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 53.2 (72643) - https://sketchapp.com -->
+    <title>ic_location</title>
+    <desc>Created with Sketch.</desc>
+    <g id="Version-4-Prototype" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="02Learn00" transform="translate(-151.000000, -418.000000)">
+            <g id="ic_location" transform="translate(151.000000, 418.000000)">
+                <circle id="Oval-Copy-8" fill="#F7F7F7" cx="28" cy="28" r="28"></circle>
+                <g id="noun_blank-drop-pin_1896533" transform="translate(16.000000, 15.000000)" fill="#000000">
+                    <path d="M3.51141161,3.63572632 C-1.17091499,8.48335965 -1.17025141,16.3635923 3.51208774,21.2112257 C3.56479012,21.265788 3.61979938,21.3164883 3.6732352,21.369823 C3.66101335,21.3576397 3.64827957,21.346373 3.63609861,21.3341193 L3.63278558,21.3375493 L11.9998378,30 L20.3529681,21.351968 L20.3496551,21.348538 C20.3955595,21.3024843 20.4428918,21.2588743 20.4882549,21.21191 C25.170582,16.364277 25.1705814,8.48335765 20.4882549,3.63572432 C15.8059291,-1.21190786 8.19375221,-1.21190836 3.51142578,3.63572432 L3.51141161,3.63572632 Z M4.46635816,4.62438665 C8.63250113,0.311161046 15.3671509,0.311161046 19.5332939,4.62438665 C23.6994369,8.93761332 23.6994369,15.9100253 19.5332939,20.2232517 C15.3671503,24.5364777 8.6331647,24.5357913 4.46702109,20.2225557 C0.300878124,15.9093297 0.300215195,8.93760399 4.46634915,4.62437732 L4.46635816,4.62438665 Z" id="Shape"></path>
+                </g>
+            </g>
+        </g>
+    </g>
 </svg>

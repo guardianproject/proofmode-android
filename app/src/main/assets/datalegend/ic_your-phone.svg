@@ -1,16 +1,16 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<svg
-   xmlns="http://www.w3.org/2000/svg"
-   version="1.1"
-   viewBox="0 0 100 100"
-   height="100"
-   width="100">
-  <g>
-    <rect
-       y="0"
-       x="0"
-       height="100"
-       width="100"
-       style="opacity:1;fill:#c8c8c8;fill-opacity:1;stroke:#ffffff;stroke-width:0;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
-  </g>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="57px" height="57px" viewBox="0 0 57 57" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 53.2 (72643) - https://sketchapp.com -->
+    <title>ic_your-phone</title>
+    <desc>Created with Sketch.</desc>
+    <g id="Version-4-Prototype" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="02Learn00" transform="translate(-151.000000, -952.000000)">
+            <g id="ic_your-phone" transform="translate(151.000000, 952.000000)">
+                <circle id="Oval-Copy-7" fill="#F7F7F7" cx="28.5" cy="28.5" r="28.5"></circle>
+                <g id="noun_Phone_1790535" opacity="0.699999988" transform="translate(19.000000, 13.000000)" fill="#000000" fill-rule="nonzero">
+                    <path d="M16.6043478,0 L2.39565217,0 C1.07294766,0.000909784303 0.000911267647,1.07120113 0,2.39175258 L0,29.6082474 C0.000911267647,30.9287989 1.07294766,31.9990902 2.39565217,32 L16.6043478,32 C17.9270523,31.9990902 18.9990887,30.9287989 19,29.6082474 L19,2.39175258 C18.9990887,1.07120113 17.9270523,0.000909784303 16.6043478,0 Z M18.173913,29.6082474 C18.1730024,30.4733065 17.4708173,31.1743486 16.6043478,31.1752577 L2.39565217,31.1752577 C1.52918272,31.1743486 0.826997593,30.4733065 0.826086957,29.6082474 L0.826086957,2.39175258 C0.826997593,1.52669354 1.52918272,0.825651422 2.39565217,0.824742268 L4.41956522,0.824742268 L5.31173913,3.28742268 C5.37086639,3.45069998 5.52609627,3.55951376 5.7,3.55958763 L13.3,3.55958763 C13.4739037,3.55951376 13.6291336,3.45069998 13.6882609,3.28742268 L14.5804348,0.824742268 L16.6043478,0.824742268 C17.4708173,0.825651422 18.1730024,1.52669354 18.173913,2.39175258 L18.173913,29.6082474 Z" id="Shape"></path>
+                </g>
+            </g>
+        </g>
+    </g>
 </svg>
