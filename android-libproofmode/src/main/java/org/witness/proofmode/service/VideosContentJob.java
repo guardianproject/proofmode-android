@@ -38,7 +38,7 @@ import timber.log.Timber;
 @TargetApi(24)
 public class VideosContentJob extends JobService {
 
-    public static int CONTENT_JOB_ID = 10002;
+    public static int VIDEO_JOB_ID = 10003;
 
     // The root URI of the media provider, to monitor for generic changes to its content.
     static final Uri MEDIA_URI = Uri.parse("content://" + MediaStore.AUTHORITY + "/");
@@ -58,22 +58,6 @@ public class VideosContentJob extends JobService {
     static final String DCIM_DIR = Environment.getExternalStoragePublicDirectory(
             Environment.DIRECTORY_DCIM).getPath();
 
-    // A pre-built JobInfo we use for scheduling our job.
-    static final JobInfo JOB_INFO;
-
-    static {
-        JobInfo.Builder builder = new JobInfo.Builder(CONTENT_JOB_ID,
-                new ComponentName("org.witness.proofmode", VideosContentJob.class.getName()));
-        // Look for specific changes to images in the provider.
-        builder.addTriggerContentUri(new JobInfo.TriggerContentUri(
-                MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
-                JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS));
-
-        // Also look for general reports of changes in the overall provider.
-      //  builder.addTriggerContentUri(new JobInfo.TriggerContentUri(MEDIA_URI, 0));
-        builder.setTriggerContentMaxDelay(3000);
-        JOB_INFO = builder.build();
-    }
 
     // Fake job work.  A real implementation would do some work on a separate thread.
     final Handler mHandler = new Handler();
@@ -87,11 +71,16 @@ public class VideosContentJob extends JobService {
 
     JobParameters mRunningParams;
 
-    // Schedule this job, replace any existing one.
     public static void scheduleJob(Context context) {
-        JobScheduler js = context.getSystemService(JobScheduler.class);
-        js.schedule(JOB_INFO);
-        Log.i("VideosContentJob", "JOB SCHEDULED!");
+        JobScheduler js =
+                (JobScheduler) context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+        JobInfo.Builder builder = new JobInfo.Builder(
+                VIDEO_JOB_ID,
+                new ComponentName(context, VideosContentJob.class));
+        builder.addTriggerContentUri(
+                new JobInfo.TriggerContentUri(MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+                        JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS));
+        js.schedule(builder.build());
     }
 
     // Check whether this job is currently scheduled.
@@ -102,7 +91,7 @@ public class VideosContentJob extends JobService {
             return false;
         }
         for (int i=0; i<jobs.size(); i++) {
-            if (jobs.get(i).getId() == CONTENT_JOB_ID) {
+            if (jobs.get(i).getId() == VIDEO_JOB_ID) {
                 return true;
             }
         }
@@ -112,12 +101,12 @@ public class VideosContentJob extends JobService {
     // Cancel this job, if currently scheduled.
     public static void cancelJob(Context context) {
         JobScheduler js = context.getSystemService(JobScheduler.class);
-        js.cancel(CONTENT_JOB_ID);
+        js.cancel(VIDEO_JOB_ID);
     }
 
     @Override
     public boolean onStartJob(JobParameters params) {
-//        Log.i("PhotosContentJob", "JOB STARTED!");
+        Log.i("VideosContentJob", "JOB STARTED!");
         mRunningParams = params;
 
         mHandler.postDelayed(mWorker, 100);
@@ -129,26 +118,8 @@ public class VideosContentJob extends JobService {
 
         int notifyId = 2;
 
-        String channelId = "default";
+     //   Toast.makeText(this,"Generating video proof...",Toast.LENGTH_SHORT).show();
 
-        NotificationManager manager =
-                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && manager != null) {
-            CharSequence channelName = "Default Notification Channel";
-            int importance = NotificationManager.IMPORTANCE_DEFAULT;
-            NotificationChannel notificationChannel = new NotificationChannel(channelId, channelName, importance);
-            notificationChannel.enableLights(false);
-            notificationChannel.enableVibration(false);
-            notificationChannel.setSound(null, null);
-            manager.createNotificationChannel(notificationChannel);
-        }
-
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this);
-        builder.setContentTitle(getString(R.string.generating_proof_notify))
-                .setContentText(getString(R.string.inspect_videos))
-                .setChannelId(channelId)
-                .setSmallIcon(R.drawable.ic_proof_notify);
-        manager.notify(notifyId, builder.build());
 
         // Did we trigger due to a content change?
         if (mRunningParams.getTriggeredContentAuthorities() != null) {
@@ -206,8 +177,6 @@ public class VideosContentJob extends JobService {
                                 haveFiles = true;
                                 Timber.d("found new video files for generating proof");
 
-                                builder.setProgress(ids.size(), mediaIdx++, false);
-                                manager.notify(notifyId, builder.build());
 
                                 Intent intent = new Intent();
                                 intent.setData(Uri.fromFile(new File(path)));
@@ -234,8 +203,6 @@ public class VideosContentJob extends JobService {
             }
 
         }
-
-        manager.cancel(notifyId);
 
     }
 

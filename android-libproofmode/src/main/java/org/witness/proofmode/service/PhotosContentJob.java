@@ -57,25 +57,6 @@ public class PhotosContentJob extends JobService {
     static final String DCIM_DIR = Environment.getExternalStoragePublicDirectory(
             Environment.DIRECTORY_DCIM).getPath();
 
-    // A pre-built JobInfo we use for scheduling our job.
-    static final JobInfo JOB_INFO;
-
-    static {
-        JobInfo.Builder builder = new JobInfo.Builder(PHOTOS_CONTENT_JOB,
-                new ComponentName("org.witness.proofmode", PhotosContentJob.class.getName()));
-        // Look for specific changes to images in the provider.
-        builder.addTriggerContentUri(new JobInfo.TriggerContentUri(
-                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS));
-
-        // Also look for general reports of changes in the overall provider.
-//        builder.addTriggerContentUri(new JobInfo.TriggerContentUri(MEDIA_URI, 0));
-        builder.addTriggerContentUri(new JobInfo.TriggerContentUri(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, 1));
-        builder.addTriggerContentUri(new JobInfo.TriggerContentUri(MediaStore.Images.Media.INTERNAL_CONTENT_URI, 1));
-        builder.setTriggerContentMaxDelay(500);
-
-        JOB_INFO = builder.build();
-    }
 
     // Fake job work.  A real implementation would do some work on a separate thread.
     final Handler mHandler = new Handler();
@@ -89,12 +70,6 @@ public class PhotosContentJob extends JobService {
 
     JobParameters mRunningParams;
 
-    // Schedule this job, replace any existing one.
-    public static void scheduleJob(Context context) {
-        JobScheduler js = context.getSystemService(JobScheduler.class);
-        js.schedule(JOB_INFO);
-        Timber.d("PhotosContentJob: JOB SCHEDULED!");
-    }
 
     // Check whether this job is currently scheduled.
     public static boolean isScheduled(Context context) {
@@ -130,27 +105,8 @@ public class PhotosContentJob extends JobService {
     private void doWork ()
     {
         int notifyId = 1;
+    //    Toast.makeText(this,"Generating photo proof...",Toast.LENGTH_SHORT).show();
 
-        String channelId = "default";
-
-        NotificationManager manager =
-                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && manager != null) {
-            CharSequence channelName = "Default Notification Channel";
-            int importance = NotificationManager.IMPORTANCE_DEFAULT;
-            NotificationChannel notificationChannel = new NotificationChannel(channelId, channelName, importance);
-            notificationChannel.enableLights(false);
-            notificationChannel.enableVibration(false);
-            notificationChannel.setSound(null, null);
-            manager.createNotificationChannel(notificationChannel);
-        }
-
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this);
-        builder.setContentTitle(getString(R.string.generating_proof_notify))
-                .setChannelId(channelId)
-                .setContentText(getString(R.string.inspect_photos))
-                .setSmallIcon(R.drawable.ic_proof_notify);
-        manager.notify(notifyId, builder.build());
 
         // Did we trigger due to a content change?
         if (mRunningParams.getTriggeredContentAuthorities() != null) {
@@ -174,7 +130,6 @@ public class PhotosContentJob extends JobService {
 
                 if (ids.size() > 0) {
 
-                    builder.setProgress(ids.size(), 0, false);
 
                     // If we found some ids that changed, we want to determine what they are.
                     // First, we do a query with content provider to ask about all of them.
@@ -215,8 +170,6 @@ public class PhotosContentJob extends JobService {
                                 intent.setData(Uri.fromFile(new File(path)));
                                 new MediaWatcher().onReceive(PhotosContentJob.this,intent);
 
-                                builder.setProgress(ids.size(), mediaIdx++, false);
-                                manager.notify(notifyId, builder.build());
                             }
                         }
                     } catch (SecurityException e) {
@@ -240,7 +193,6 @@ public class PhotosContentJob extends JobService {
 
         }
 
-        manager.cancel(notifyId);
 
     }
 
@@ -249,4 +201,18 @@ public class PhotosContentJob extends JobService {
         mHandler.removeCallbacks(mWorker);
         return false;
     }
+
+
+    public static void scheduleJob(Context context) {
+        JobScheduler js =
+                (JobScheduler) context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+        JobInfo.Builder builder = new JobInfo.Builder(
+                PHOTOS_CONTENT_JOB,
+                new ComponentName(context, PhotosContentJob.class));
+        builder.addTriggerContentUri(
+                new JobInfo.TriggerContentUri(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                        JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS));
+        js.schedule(builder.build());
+    }
+
 }
