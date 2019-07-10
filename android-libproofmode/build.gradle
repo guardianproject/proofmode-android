@@ -49,7 +49,7 @@ uploadArchives {
                 pom.project {
                         groupId 'org.witness'
                         artifactId 'android-libproofmode'
-                        version "0.0.3"
+                        version "0.0.4"
                 }
         }
 }
