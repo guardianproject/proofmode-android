@@ -1,1 +1,1 @@
-include ':app',':java-opentimestamps', ':android-libproofmode'
+include ':app', ':android-libproofmode'
