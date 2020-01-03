@@ -8,20 +8,20 @@
     tools:context="org.witness.proofmode.MainActivity"
     tools:showIn="@layout/activity_main">
 
-    <android.support.constraint.ConstraintLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/layout_on"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         tools:visibility="visible">
 
-        <android.support.constraint.Guideline
+        <androidx.constraintlayout.widget.Guideline
             android:id="@+id/toggle_y_guideline"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             app:layout_constraintGuide_percent=".40" />
 
-        <android.support.constraint.Guideline
+        <androidx.constraintlayout.widget.Guideline
             android:id="@+id/content_y_guideline"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -84,15 +84,15 @@
                 android:text="@string/choose_my_settings"
                 android:textColor="@color/onboarding_gray" />
         </LinearLayout>
-    </android.support.constraint.ConstraintLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <android.support.constraint.ConstraintLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/layout_off"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         tools:visibility="gone">
 
-        <android.support.constraint.Guideline
+        <androidx.constraintlayout.widget.Guideline
             android:id="@+id/toggle_off_y_guideline"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -163,5 +163,5 @@
                 android:textColor="@android:color/white" />
 
         </LinearLayout>
-    </android.support.constraint.ConstraintLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 </FrameLayout>

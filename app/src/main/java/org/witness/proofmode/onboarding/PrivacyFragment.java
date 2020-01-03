@@ -1,14 +1,12 @@
 package org.witness.proofmode.onboarding;
 
 import android.os.Bundle;
-import android.support.v4.app.Fragment;
+import androidx.fragment.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
 
 import org.witness.proofmode.R;
-import org.witness.proofmode.UIHelpers;
 
 
 public class PrivacyFragment extends Fragment {

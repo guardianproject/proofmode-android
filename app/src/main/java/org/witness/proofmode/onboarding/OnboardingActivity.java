@@ -1,30 +1,18 @@
 package org.witness.proofmode.onboarding;
 
-import android.annotation.SuppressLint;
 import android.content.Intent;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentPagerAdapter;
-import android.support.v4.view.ViewPager;
-import android.support.v7.app.ActionBar;
-import android.support.v7.app.AppCompatActivity;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentPagerAdapter;
+import androidx.viewpager.widget.ViewPager;
+import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
-import android.os.Handler;
-import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageButton;
 
-import com.github.paolorotolo.appintro.AppIntroFragment;
-
-import org.witness.proofmode.MainActivity;
 import org.witness.proofmode.R;
 import org.witness.proofmode.SettingsActivity;
-import org.witness.proofmode.onboarding.DottedProgressView;
-import org.witness.proofmode.onboarding.NoSwipeViewPager;
-import org.witness.proofmode.onboarding.OnboardingStepListener;
-import org.witness.proofmode.onboarding.PrivacyFragment;
-import org.witness.proofmode.onboarding.StepFragment;
-import org.witness.proofmode.onboarding.WelcomeFragment;
 
 import java.util.ArrayList;
 import java.util.List;
