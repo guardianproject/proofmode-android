@@ -1,9 +1,10 @@
 package org.witness.proofmode.util;
 
 
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.util.Log;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -105,6 +106,7 @@ public class SafetyNetResponse {
      *
      * @param decodedJWTPayload JSON String (always a json string according to JWT spec)
      * @return populated SafetyNetResponse
+     *
      */
     @Nullable
     public static SafetyNetResponse parse(@NonNull String decodedJWTPayload) {

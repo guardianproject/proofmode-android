@@ -2,7 +2,8 @@ package org.witness.proofmode.service;
 
 import android.content.Context;
 import android.content.Intent;
-import android.support.v4.app.JobIntentService;
+
+import androidx.core.app.JobIntentService;
 
 /**
  * Created by n8fr8 on 3/7/18.

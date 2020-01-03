@@ -2,6 +2,7 @@ package org.witness.proofmode.notarization;
 
 import com.eternitywall.ots.DetachedTimestampFile;
 import com.eternitywall.ots.OpenTimestamps;
+import com.eternitywall.ots.Timestamp;
 import com.eternitywall.ots.op.OpSHA256;
 
 import java.io.File;
@@ -18,7 +19,7 @@ public class OpenTimestampsNotarizationProvider implements NotarizationProvider 
 
         try {
             DetachedTimestampFile detached = DetachedTimestampFile.from(new OpSHA256(), fileMedia);
-            byte[] stampResult = OpenTimestamps.stamp(detached,null,0, null);
+            Timestamp stampResult = OpenTimestamps.stamp(detached,null,0, null);
             String infoResult = OpenTimestamps.info(stampResult);
             listener.notarizationSuccessful(infoResult);
         }
