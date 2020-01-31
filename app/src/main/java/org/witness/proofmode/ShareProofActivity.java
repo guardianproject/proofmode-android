@@ -47,6 +47,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -356,53 +358,36 @@ public class ShareProofActivity extends AppCompatActivity {
 
     private boolean proofExists (Uri mediaUri) throws FileNotFoundException {
         boolean result = false;
-        String[] projection = { MediaStore.Images.Media.DATA };
 
-        Cursor cursor = getContentResolver().query(getRealUri(mediaUri),      projection,null, null, null);
+        String hash = HashUtils.getSHA256FromFileContent(getContentResolver().openInputStream(mediaUri));
 
-        if (cursor.getCount() > 0) {
+        if (hash != null) {
 
-            cursor.moveToFirst();
-            final String mediaPath = cursor.getString(cursor.getColumnIndex(projection[0]));
+            File fileFolder = MediaWatcher.getHashStorageDir(hash);
 
-            if (mediaPath != null) {
+            if (fileFolder != null ) {
+                File fileMediaSig = new File(fileFolder, hash + OPENPGP_FILE_TAG);
+                File fileMediaProof = new File(fileFolder, hash + PROOF_FILE_TAG);
+                File fileMediaProofSig = new File(fileFolder, hash + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
 
-                String hash = HashUtils.getSHA256FromFileContent(getContentResolver().openInputStream(mediaUri));
-
-                if (hash != null) {
-                    File fileMedia = new File(mediaPath);
-                    File fileFolder = MediaWatcher.getHashStorageDir(hash);
-
-                    if (fileFolder != null ) {
-                        File fileMediaSig = new File(fileFolder, fileMedia.getName() + OPENPGP_FILE_TAG);
-                        File fileMediaProof = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG);
-                        File fileMediaProofSig = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
-
-                        if (fileMediaSig.exists() && fileMediaProof.exists() && fileMediaProofSig.exists()) {
-                            result = true;
-                        } else {
-                            //generate now?
-                            result = false;
+                if (fileMediaSig.exists() && fileMediaProof.exists() && fileMediaProofSig.exists()) {
+                    result = true;
+                } else {
+                    //generate now?
+                    result = false;
 
 
-
-
-
-                        }
-                    }
                 }
             }
         }
 
-        cursor.close();
-
         return result;
     }
 
-    private void generateProof (Uri mediaUri)
+    private void generateProof (final Uri mediaUri)
     {
         boolean result = false;
-        String[] projection = { MediaStore.Images.Media.DATA };
+        String[] projection = { MediaStore.Images.Media.DATA, MediaStore.Images.Media.DATE_TAKEN };
 
         Cursor cursor = getContentResolver().query(getRealUri(mediaUri),      projection,null, null, null);
 
@@ -415,7 +400,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
                 new AsyncTask<Void, Void, String>() {
                     protected String doInBackground(Void... params) {
-                        ProofMode.generateProof(ShareProofActivity.this,Uri.fromFile(new File(mediaPath)));
+                        ProofMode.generateProof(ShareProofActivity.this,mediaUri);
                         return "message";
                     }
 
@@ -503,7 +488,8 @@ public class ShareProofActivity extends AppCompatActivity {
         if (mediaPath != null) {
             //check proof metadata against original image
 
-            result = shareProof(mediaUri, mediaPath, shareUris, sb, fBatchProofOut, shareMedia);
+            File fileMedia = new File(mediaPath);
+            result = shareProof(mediaUri, fileMedia, shareUris, sb, fBatchProofOut, shareMedia);
 
             if (!result)
                 result = shareProofClassic(mediaUri, mediaPath, shareUris, sb, fBatchProofOut, shareMedia);
@@ -513,23 +499,22 @@ public class ShareProofActivity extends AppCompatActivity {
         return result;
     }
 
-    private boolean shareProof (Uri uriMedia, String mediaPath, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut, boolean shareMedia) throws FileNotFoundException {
+    private boolean shareProof (Uri uriMedia, File fileMedia, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut, boolean shareMedia) throws FileNotFoundException {
 
         String hash = HashUtils.getSHA256FromFileContent(getContentResolver().openInputStream(uriMedia));
 
         if (hash != null) {
-            File fileMedia = new File(mediaPath);
             File fileFolder = MediaWatcher.getHashStorageDir(hash);
 
             if (fileFolder == null)
                 return false;
 
-            File fileMediaSig = new File(fileFolder, fileMedia.getName() + OPENPGP_FILE_TAG);
-            File fileMediaProof = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG);
-            File fileMediaProofSig = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
+            File fileMediaSig = new File(fileFolder, hash + OPENPGP_FILE_TAG);
+            File fileMediaProof = new File(fileFolder, hash + PROOF_FILE_TAG);
+            File fileMediaProofSig = new File(fileFolder, hash + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
 
             if (fileMediaSig.exists() && fileMediaProof.exists() && fileMediaProofSig.exists()) {
-                generateProofOutput(fileMedia, fileMediaSig, fileMediaProof, fileMediaProofSig, hash, shareMedia, fBatchProofOut, shareUris, sb);
+                generateProofOutput(fileMedia, new Date(fileMedia.lastModified()), fileMediaSig, fileMediaProof, fileMediaProofSig, hash, shareMedia, fBatchProofOut, shareUris, sb);
                 return true;
             }
         }
@@ -567,7 +552,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
         if (fileMediaSig.exists() && fileMediaProof.exists() && fileMediaProofSig.exists()) {
 
-           generateProofOutput(fileMedia, fileMediaSig, fileMediaProof, fileMediaProofSig, hash, shareMedia, fBatchProofOut, shareUris, sb);
+           generateProofOutput(fileMedia, new Date(fileMedia.lastModified()), fileMediaSig, fileMediaProof, fileMediaProofSig, hash, shareMedia, fBatchProofOut, shareUris, sb);
 
             return true;
         }
@@ -575,12 +560,14 @@ public class ShareProofActivity extends AppCompatActivity {
         return false;
     }
 
-    private void generateProofOutput (File fileMedia, File fileMediaSig, File fileMediaProof, File fileMediaProofSig, String hash, boolean shareMedia, PrintWriter fBatchProofOut, ArrayList<Uri> shareUris, StringBuffer sb)
+    private void generateProofOutput (File fileMedia, Date lastModified, File fileMediaSig, File fileMediaProof, File fileMediaProofSig, String hash, boolean shareMedia, PrintWriter fBatchProofOut, ArrayList<Uri> shareUris, StringBuffer sb)
     {
+        DateFormat sdf = SimpleDateFormat.getDateTimeInstance();
+
         String fingerprint = PgpUtils.getInstance(this).getPublicKeyFingerprint();
 
         sb.append(fileMedia.getName()).append(' ');
-        sb.append(getString(R.string.last_modified)).append(' ').append(new Date(fileMedia.lastModified()).toGMTString());
+        sb.append(getString(R.string.last_modified)).append(' ').append(sdf.format(lastModified));
         sb.append(' ');
         sb.append(getString(R.string.has_hash)).append(' ').append(hash);
         sb.append("\n\n");

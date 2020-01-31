@@ -9,6 +9,7 @@ import android.location.Location;
 import android.net.Uri;
 import android.os.Environment;
 import android.preference.PreferenceManager;
+import android.provider.MediaStore;
 import android.text.TextUtils;
 import android.util.Base64;
 import android.util.Log;
@@ -90,13 +91,15 @@ public class MediaWatcher extends BroadcastReceiver {
                 return null;
             }
 
-            Uri uriMedia = intent.getData();
-            if (uriMedia == null)
-                uriMedia = (Uri) intent.getParcelableExtra(Intent.EXTRA_STREAM);
+            Uri tmpUriMedia = intent.getData();
+            if (tmpUriMedia == null)
+                tmpUriMedia = (Uri) intent.getParcelableExtra(Intent.EXTRA_STREAM);
 
-            if (uriMedia == null) //still null?
+            if (tmpUriMedia == null) //still null?
                 return null;
 
+            final Uri uriMedia = tmpUriMedia;
+            /**
             String mediaPathTmp = uriMedia.getPath();
 
             if (!new File(mediaPathTmp).exists())
@@ -119,6 +122,7 @@ public class MediaWatcher extends BroadcastReceiver {
 
 
             final String mediaPath = mediaPathTmp;
+            **/
 
             /**
             File fileMediaPath = new File(mediaPath);
@@ -141,10 +145,10 @@ public class MediaWatcher extends BroadcastReceiver {
 
             if (mediaHash != null) {
 
-                Timber.d("Writing proof for hash %s for path %s",mediaHash, mediaPath);
+                Timber.d("Writing proof for hash %s for path %s",mediaHash, uriMedia.toString());
 
                 //write immediate proof, w/o safety check result
-                writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, null);
+                writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, null);
 
                 if (autoNotarize) {
 
@@ -163,7 +167,7 @@ public class MediaWatcher extends BroadcastReceiver {
                                 boolean isCtsMatch = resp.isCtsProfileMatch();
 
                                 Timber.d("Success! SafetyNet result: isBasicIntegrity: " + isBasicIntegrity + " isCts:" + isCtsMatch);
-                                writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, showMobileNetwork, resultString, isBasicIntegrity, isCtsMatch, timestamp, null);
+                                writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, resultString, isBasicIntegrity, isCtsMatch, timestamp, null);
 
 
                         }
@@ -183,14 +187,14 @@ public class MediaWatcher extends BroadcastReceiver {
                             public void notarizationSuccessful(String timestamp) {
 
                                 Timber.d("Got OpenTimestamps success response timestamp: " + timestamp);
-                                writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, "OpenTimestamps: " + timestamp);
+                                writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, "OpenTimestamps: " + timestamp);
                             }
 
                             @Override
                             public void notarizationFailed(int errCode, String message) {
 
                                 Timber.d("Got OpenTimestamps error response: " + message);
-                                writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, "OpenTimestamps Error: " + message);
+                                writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, "OpenTimestamps Error: " + message);
 
                             }
                         });
@@ -230,27 +234,28 @@ public class MediaWatcher extends BroadcastReceiver {
         }
     }
 
-    private void writeProof (Context context, String mediaPath, String hash, boolean showDeviceIds, boolean showLocation, boolean showMobileNetwork, String safetyCheckResult, boolean isBasicIntegrity, boolean isCtsMatch, long notarizeTimestamp, String notes)
+    private void writeProof (Context context, Uri uriMedia, String hash, boolean showDeviceIds, boolean showLocation, boolean showMobileNetwork, String safetyCheckResult, boolean isBasicIntegrity, boolean isCtsMatch, long notarizeTimestamp, String notes)
     {
 
-        File fileMedia = new File(mediaPath);
+      //  File fileMedia = new File(mediaPath);
         File fileFolder = getHashStorageDir(hash);
 
         if (fileFolder != null) {
 
-            File fileMediaSig = new File(fileFolder, fileMedia.getName() + OPENPGP_FILE_TAG);
-            File fileMediaProof = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG);
-            File fileMediaProofSig = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
+            File fileMediaSig = new File(fileFolder, hash + OPENPGP_FILE_TAG);
+            File fileMediaProof = new File(fileFolder, hash + PROOF_FILE_TAG);
+            File fileMediaProofSig = new File(fileFolder, hash + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
 
             try {
 
                 //sign the media file
                 if (!fileMediaSig.exists())
-                    PgpUtils.getInstance(context).createDetachedSignature(fileMedia, fileMediaSig, PgpUtils.DEFAULT_PASSWORD);
+                    PgpUtils.getInstance(context).createDetachedSignature(context.getContentResolver().openInputStream(uriMedia), new FileOutputStream(fileMediaSig), PgpUtils.DEFAULT_PASSWORD);
 
                 //add data to proof csv and sign again
                 boolean writeHeaders = !fileMediaProof.exists();
-                writeTextToFile(context, fileMediaProof, buildProof(context, mediaPath, writeHeaders, showDeviceIds, showLocation, showMobileNetwork, safetyCheckResult, isBasicIntegrity, isCtsMatch, notarizeTimestamp, notes));
+                String buildProof = buildProof(context, uriMedia, writeHeaders, showDeviceIds, showLocation, showMobileNetwork, safetyCheckResult, isBasicIntegrity, isCtsMatch, notarizeTimestamp, notes);
+                writeTextToFile(context, fileMediaProof, buildProof);
 
                 if (fileMediaProof.exists()) {
                     //sign the proof file again
@@ -306,18 +311,44 @@ public class MediaWatcher extends BroadcastReceiver {
         return false;
     }
 
-    private String buildProof (Context context, String mediaPath, boolean writeHeaders, boolean showDeviceIds, boolean showLocation, boolean showMobileNetwork, String safetyCheckResult, boolean isBasicIntegrity, boolean isCtsMatch, long notarizeTimestamp, String notes)
+    private String buildProof (Context context, Uri uriMedia, boolean writeHeaders, boolean showDeviceIds, boolean showLocation, boolean showMobileNetwork, String safetyCheckResult, boolean isBasicIntegrity, boolean isCtsMatch, long notarizeTimestamp, String notes)
     {
-        File fileMedia = new File (mediaPath);
-        String hash = getSHA256FromFileContent(mediaPath);
+        String mediaPath = null;
+        String[] projection = { MediaStore.Images.Media.DATA };
+
+        Cursor cursor = context.getContentResolver().query(uriMedia,      projection,null, null, null);
+
+        if (cursor != null) {
+            if (cursor.getCount() > 0) {
+
+                cursor.moveToFirst();
+                mediaPath = cursor.getString(cursor.getColumnIndex(projection[0]));
+            }
+
+            cursor.close();
+        }
+
+        String hash = null;
+        try {
+            hash = getSHA256FromFileContent(context.getContentResolver().openInputStream(uriMedia));
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
 
         DateFormat df = DateFormat.getDateTimeInstance(DateFormat.FULL,DateFormat.FULL);
 
         HashMap<String, String> hmProof = new HashMap<>();
 
-        hmProof.put("File Path",mediaPath);
+        if (mediaPath != null)
+            hmProof.put("File Path",mediaPath);
+        else
+            hmProof.put("File Path",uriMedia.toString());
+
         hmProof.put("File Hash SHA256",hash);
-        hmProof.put("File Modified",df.format(new Date(fileMedia.lastModified())));
+
+        if (mediaPath != null)
+            hmProof.put("File Modified",df.format(new Date(new File(mediaPath).lastModified())));
+
         hmProof.put("Proof Generated",df.format(new Date()));
 
         if (showDeviceIds) {
@@ -435,6 +466,32 @@ public class MediaWatcher extends BroadcastReceiver {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] buffer = new byte[65536]; //created at start.
             InputStream fis = new FileInputStream(filename);
+            int n = 0;
+            while (n != -1)
+            {
+                n = fis.read(buffer);
+                if (n > 0)
+                {
+                    digest.update(buffer, 0, n);
+                }
+            }
+            byte[] digestResult = digest.digest();
+            return asHex(digestResult);
+        }
+        catch (Exception e)
+        {
+            return null;
+        }
+    }
+
+
+    private static String getSHA256FromFileContent(InputStream fis)
+    {
+
+        try
+        {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] buffer = new byte[65536]; //created at start.
             int n = 0;
             while (n != -1)
             {
