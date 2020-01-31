@@ -6,8 +6,8 @@ android {
     defaultConfig {
         minSdkVersion 15
         targetSdkVersion 29
-        versionCode 4
-        versionName "0.4"
+        versionCode 5
+        versionName "0.0.5"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
     }
@@ -56,7 +56,7 @@ uploadArchives {
                 pom.project {
                         groupId 'org.witness'
                         artifactId 'android-libproofmode'
-                        version "0.0.4"
+                        version "0.0.5"
                 }
         }
 }
