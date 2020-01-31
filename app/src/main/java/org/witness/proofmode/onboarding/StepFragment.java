@@ -1,24 +1,15 @@
 package org.witness.proofmode.onboarding;
 
-import android.graphics.Picture;
-import android.graphics.drawable.PictureDrawable;
 import android.os.Bundle;
-import android.support.v4.app.Fragment;
-import android.text.TextUtils;
+import androidx.fragment.app.Fragment;
+
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.caverock.androidsvg.RenderOptions;
-import com.caverock.androidsvg.SVG;
-import com.caverock.androidsvg.SVGImageView;
-import com.caverock.androidsvg.SVGParseException;
-
 import org.witness.proofmode.R;
-
-import java.io.IOException;
 
 
 public class StepFragment extends Fragment {

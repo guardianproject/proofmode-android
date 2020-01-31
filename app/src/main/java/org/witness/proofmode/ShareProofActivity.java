@@ -4,7 +4,6 @@ import android.Manifest;
 import android.app.Dialog;
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.LabeledIntent;
 import android.content.pm.PackageManager;
@@ -19,18 +18,18 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
-import android.support.v4.content.FileProvider;
-import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
+import androidx.core.app.ActivityCompat;
+import androidx.core.app.ShareCompat;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
-import android.widget.SeekBar;
 
 import org.witness.proofmode.crypto.HashUtils;
 import org.witness.proofmode.crypto.PgpUtils;
@@ -48,11 +47,15 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+
+import timber.log.Timber;
 
 import static org.witness.proofmode.ProofMode.OPENPGP_FILE_TAG;
 import static org.witness.proofmode.ProofMode.PROOF_FILE_TAG;
@@ -109,7 +112,12 @@ public class ShareProofActivity extends AppCompatActivity {
 
             for (Uri mediaUri : mediaUris)
             {
-                proofExists = proofExists(mediaUri);
+                try {
+                    proofExists = proofExists(mediaUri);
+                } catch (FileNotFoundException e) {
+                   Timber.w(e);
+                   proofExists = false;
+                }
 
                 if (!proofExists)
                     break;
@@ -123,7 +131,12 @@ public class ShareProofActivity extends AppCompatActivity {
 
             if (mediaUri != null)
             {
-                proofExists = proofExists(mediaUri);
+                try {
+                    proofExists = proofExists(mediaUri);
+                } catch (FileNotFoundException e) {
+                    Timber.w(e);
+                    proofExists = false;
+                }
             }
         }
 
@@ -155,8 +168,7 @@ public class ShareProofActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    public void generateProof (View button)
-    {
+    public void generateProof (View button) throws FileNotFoundException {
 
         findViewById(R.id.view_proof_progress).setVisibility(View.VISIBLE);
         findViewById(R.id.view_no_proof).setVisibility(View.GONE);
@@ -249,7 +261,11 @@ public class ShareProofActivity extends AppCompatActivity {
 
             public void run ()
             {
-                shareProofAsync(shareMedia, shareProof);
+                try {
+                    shareProofAsync(shareMedia, shareProof);
+                } catch (FileNotFoundException e) {
+                    Timber.e(e);
+                }
 
             }
         }).start();
@@ -257,8 +273,7 @@ public class ShareProofActivity extends AppCompatActivity {
         return true;
     }
 
-    private boolean shareProofAsync (boolean shareMedia, boolean shareProof)
-    {
+    private boolean shareProofAsync (boolean shareMedia, boolean shareProof) throws FileNotFoundException {
 
     // Get intent, action and MIME type
         Intent intent = getIntent();
@@ -341,56 +356,38 @@ public class ShareProofActivity extends AppCompatActivity {
         return true;
     }
 
-    private boolean proofExists (Uri mediaUri)
-    {
+    private boolean proofExists (Uri mediaUri) throws FileNotFoundException {
         boolean result = false;
-        String[] projection = { MediaStore.Images.Media.DATA };
 
-        Cursor cursor = getContentResolver().query(getRealUri(mediaUri),      projection,null, null, null);
+        String hash = HashUtils.getSHA256FromFileContent(getContentResolver().openInputStream(mediaUri));
 
-        if (cursor.getCount() > 0) {
+        if (hash != null) {
 
-            cursor.moveToFirst();
-            final String mediaPath = cursor.getString(cursor.getColumnIndex(projection[0]));
+            File fileFolder = MediaWatcher.getHashStorageDir(hash);
 
-            if (mediaPath != null) {
+            if (fileFolder != null ) {
+                File fileMediaSig = new File(fileFolder, hash + OPENPGP_FILE_TAG);
+                File fileMediaProof = new File(fileFolder, hash + PROOF_FILE_TAG);
+                File fileMediaProofSig = new File(fileFolder, hash + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
 
-                String hash = HashUtils.getSHA256FromFileContent(new File(mediaPath));
-
-                if (hash != null) {
-                    File fileMedia = new File(mediaPath);
-                    File fileFolder = MediaWatcher.getHashStorageDir(hash);
-
-                    if (fileFolder != null ) {
-                        File fileMediaSig = new File(fileFolder, fileMedia.getName() + OPENPGP_FILE_TAG);
-                        File fileMediaProof = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG);
-                        File fileMediaProofSig = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
-
-                        if (fileMediaSig.exists() && fileMediaProof.exists() && fileMediaProofSig.exists()) {
-                            result = true;
-                        } else {
-                            //generate now?
-                            result = false;
+                if (fileMediaSig.exists() && fileMediaProof.exists() && fileMediaProofSig.exists()) {
+                    result = true;
+                } else {
+                    //generate now?
+                    result = false;
 
 
-
-
-
-                        }
-                    }
                 }
             }
         }
 
-        cursor.close();
-
         return result;
     }
 
-    private void generateProof (Uri mediaUri)
+    private void generateProof (final Uri mediaUri)
     {
         boolean result = false;
-        String[] projection = { MediaStore.Images.Media.DATA };
+        String[] projection = { MediaStore.Images.Media.DATA, MediaStore.Images.Media.DATE_TAKEN };
 
         Cursor cursor = getContentResolver().query(getRealUri(mediaUri),      projection,null, null, null);
 
@@ -403,7 +400,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
                 new AsyncTask<Void, Void, String>() {
                     protected String doInBackground(Void... params) {
-                        ProofMode.generateProof(ShareProofActivity.this,Uri.fromFile(new File(mediaPath)));
+                        ProofMode.generateProof(ShareProofActivity.this,mediaUri);
                         return "message";
                     }
 
@@ -464,8 +461,7 @@ public class ShareProofActivity extends AppCompatActivity {
             return contentUri;
     }
 
-    private boolean processUri (Uri mediaUri, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut, boolean shareMedia)
-    {
+    private boolean processUri (Uri mediaUri, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut, boolean shareMedia) throws FileNotFoundException {
         String[] projection = { MediaStore.Images.Media.DATA };
         Cursor cursor = getContentResolver().query(getRealUri(mediaUri),      projection,null, null, null);
         boolean result = false;
@@ -492,34 +488,33 @@ public class ShareProofActivity extends AppCompatActivity {
         if (mediaPath != null) {
             //check proof metadata against original image
 
-            result = shareProof(mediaPath, shareUris, sb, fBatchProofOut, shareMedia);
+            File fileMedia = new File(mediaPath);
+            result = shareProof(mediaUri, fileMedia, shareUris, sb, fBatchProofOut, shareMedia);
 
             if (!result)
-                result = shareProofClassic(mediaPath, shareUris, sb, fBatchProofOut, shareMedia);
+                result = shareProofClassic(mediaUri, mediaPath, shareUris, sb, fBatchProofOut, shareMedia);
 
         }
 
         return result;
     }
 
-    private boolean shareProof (String mediaPath, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut, boolean shareMedia)
-    {
+    private boolean shareProof (Uri uriMedia, File fileMedia, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut, boolean shareMedia) throws FileNotFoundException {
 
-        String hash = HashUtils.getSHA256FromFileContent(new File(mediaPath));
+        String hash = HashUtils.getSHA256FromFileContent(getContentResolver().openInputStream(uriMedia));
 
         if (hash != null) {
-            File fileMedia = new File(mediaPath);
             File fileFolder = MediaWatcher.getHashStorageDir(hash);
 
             if (fileFolder == null)
                 return false;
 
-            File fileMediaSig = new File(fileFolder, fileMedia.getName() + OPENPGP_FILE_TAG);
-            File fileMediaProof = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG);
-            File fileMediaProofSig = new File(fileFolder, fileMedia.getName() + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
+            File fileMediaSig = new File(fileFolder, hash + OPENPGP_FILE_TAG);
+            File fileMediaProof = new File(fileFolder, hash + PROOF_FILE_TAG);
+            File fileMediaProofSig = new File(fileFolder, hash + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
 
             if (fileMediaSig.exists() && fileMediaProof.exists() && fileMediaProofSig.exists()) {
-                generateProofOutput(fileMedia, fileMediaSig, fileMediaProof, fileMediaProofSig, hash, shareMedia, fBatchProofOut, shareUris, sb);
+                generateProofOutput(fileMedia, new Date(fileMedia.lastModified()), fileMediaSig, fileMediaProof, fileMediaProofSig, hash, shareMedia, fBatchProofOut, shareUris, sb);
                 return true;
             }
         }
@@ -528,12 +523,11 @@ public class ShareProofActivity extends AppCompatActivity {
 
     }
 
-    private boolean shareProofClassic (String mediaPath, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut, boolean shareMedia)
-    {
+    private boolean shareProofClassic (Uri mediaUri, String mediaPath, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut, boolean shareMedia) throws FileNotFoundException {
 
         String baseFolder = "proofmode";
 
-        String hash = HashUtils.getSHA256FromFileContent(new File(mediaPath));
+        String hash = HashUtils.getSHA256FromFileContent(getContentResolver().openInputStream(mediaUri));
 
         File fileMedia = new File(mediaPath);
         File fileMediaSig = new File(mediaPath + ".asc");
@@ -558,7 +552,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
         if (fileMediaSig.exists() && fileMediaProof.exists() && fileMediaProofSig.exists()) {
 
-           generateProofOutput(fileMedia, fileMediaSig, fileMediaProof, fileMediaProofSig, hash, shareMedia, fBatchProofOut, shareUris, sb);
+           generateProofOutput(fileMedia, new Date(fileMedia.lastModified()), fileMediaSig, fileMediaProof, fileMediaProofSig, hash, shareMedia, fBatchProofOut, shareUris, sb);
 
             return true;
         }
@@ -566,12 +560,14 @@ public class ShareProofActivity extends AppCompatActivity {
         return false;
     }
 
-    private void generateProofOutput (File fileMedia, File fileMediaSig, File fileMediaProof, File fileMediaProofSig, String hash, boolean shareMedia, PrintWriter fBatchProofOut, ArrayList<Uri> shareUris, StringBuffer sb)
+    private void generateProofOutput (File fileMedia, Date lastModified, File fileMediaSig, File fileMediaProof, File fileMediaProofSig, String hash, boolean shareMedia, PrintWriter fBatchProofOut, ArrayList<Uri> shareUris, StringBuffer sb)
     {
+        DateFormat sdf = SimpleDateFormat.getDateTimeInstance();
+
         String fingerprint = PgpUtils.getInstance(this).getPublicKeyFingerprint();
 
         sb.append(fileMedia.getName()).append(' ');
-        sb.append(getString(R.string.last_modified)).append(' ').append(new Date(fileMedia.lastModified()).toGMTString());
+        sb.append(getString(R.string.last_modified)).append(' ').append(sdf.format(lastModified));
         sb.append(' ');
         sb.append(getString(R.string.has_hash)).append(' ').append(hash);
         sb.append("\n\n");
@@ -769,12 +765,15 @@ public class ShareProofActivity extends AppCompatActivity {
 
     private void shareFiltered(String shareMessage, String shareText, ArrayList<Uri> shareUris, Uri shareZipUri) {
 
+        int modeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION;
+
         Intent emailIntent = new Intent();
         emailIntent.setAction(Intent.ACTION_SEND_MULTIPLE);
         // Native email client doesn't currently support HTML, but it doesn't
         // hurt to try in case they fix it
         emailIntent.setType("*/*");
         emailIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, shareUris);
+        emailIntent.addFlags(modeFlags);
 
         PackageManager pm = getPackageManager();
         Intent sendIntent = new Intent(Intent.ACTION_SEND);
@@ -789,6 +788,8 @@ public class ShareProofActivity extends AppCompatActivity {
             String packageName = ri.activityInfo.packageName;
             if (packageName.contains("android.email")) {
                 emailIntent.setPackage(packageName);
+                emailIntent.addFlags(modeFlags);
+
             } else if (packageName.contains("com.whatsapp")) {
                 Intent intent = new Intent();
                 intent.setComponent(new ComponentName(packageName,
@@ -798,8 +799,14 @@ public class ShareProofActivity extends AppCompatActivity {
                 intent.putExtra(Intent.EXTRA_TEXT, shareText);
                 intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, shareUris);
 
-                intentList.add(new LabeledIntent(intent, packageName, ri
-                        .loadLabel(pm), ri.icon));
+                intent.addFlags(modeFlags);
+
+                LabeledIntent li = new LabeledIntent(intent, packageName, ri
+                        .loadLabel(pm), ri.icon);
+                li.addFlags(modeFlags);
+                intentList.add(li);
+
+
             }
             else if (packageName.contains("com.google.android.gm")) {
                 Intent intent = new Intent();
@@ -810,8 +817,14 @@ public class ShareProofActivity extends AppCompatActivity {
                 intent.putExtra(Intent.EXTRA_TEXT, shareText);
                 intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, shareUris);
 
-                intentList.add(new LabeledIntent(intent, packageName, ri
-                        .loadLabel(pm), ri.icon));
+                intent.addFlags(modeFlags);
+
+                LabeledIntent li = new LabeledIntent(intent, packageName, ri
+                        .loadLabel(pm), ri.icon);
+                li.addFlags(modeFlags);
+                intentList.add(li);
+
+
             }
             else if (packageName.contains("com.google.android.apps.docs")) {
                 Intent intent = new Intent();
@@ -822,8 +835,13 @@ public class ShareProofActivity extends AppCompatActivity {
                 intent.putExtra(Intent.EXTRA_TEXT, shareText);
                 intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, shareUris);
 
-                intentList.add(new LabeledIntent(intent, packageName, ri
-                        .loadLabel(pm), ri.icon));
+                intent.addFlags(modeFlags);
+
+                LabeledIntent li = new LabeledIntent(intent, packageName, ri
+                        .loadLabel(pm), ri.icon);
+                li.addFlags(modeFlags);
+                intentList.add(li);
+
             }
             else if (packageName.contains("com.dropbox")) {
                 Intent intent = new Intent();
@@ -834,8 +852,13 @@ public class ShareProofActivity extends AppCompatActivity {
                 intent.putExtra(Intent.EXTRA_TEXT, shareText);
                 intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, shareUris);
 
-                intentList.add(new LabeledIntent(intent, packageName, ri
-                        .loadLabel(pm), ri.icon));
+                intent.addFlags(modeFlags);
+
+                LabeledIntent li = new LabeledIntent(intent, packageName, ri
+                        .loadLabel(pm), ri.icon);
+                li.addFlags(modeFlags);
+                intentList.add(li);
+
             }
             else if (packageName.contains("org.thoughtcrime")) {
 
@@ -850,8 +873,12 @@ public class ShareProofActivity extends AppCompatActivity {
                 intent.putExtra(Intent.EXTRA_TITLE,shareZipUri.getLastPathSegment());
                 intent.putExtra(Intent.EXTRA_SUBJECT,shareZipUri.getLastPathSegment());
 
-                intentList.add(new LabeledIntent(intent, packageName, ri
-                        .loadLabel(pm), ri.icon));
+                intent.addFlags(modeFlags);
+
+                LabeledIntent li = new LabeledIntent(intent, packageName, ri
+                        .loadLabel(pm), ri.icon);
+                li.addFlags(modeFlags);
+                intentList.add(li);
             }
             else if (packageName.contains("conversations")) {
                 Intent intent = new Intent();
@@ -862,20 +889,47 @@ public class ShareProofActivity extends AppCompatActivity {
                 intent.putExtra(Intent.EXTRA_TEXT, shareText);
                 intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, shareUris);
 
-                intentList.add(new LabeledIntent(intent, packageName, ri
-                        .loadLabel(pm), ri.icon));
+                intent.addFlags(modeFlags);
+
+                LabeledIntent li = new LabeledIntent(intent, packageName, ri
+                        .loadLabel(pm), ri.icon);
+                li.addFlags(modeFlags);
+                intentList.add(li);
+
             }
 
+            if (shareUris != null)
+                for (Uri uri : shareUris)
+                    grantUriPermission(packageName, uri, modeFlags);
+
+            if (shareZipUri != null)
+                grantUriPermission(packageName, shareZipUri, modeFlags);
+
         }
-
-
 
         // convert intentList to array
         LabeledIntent[] extraIntents = intentList
                 .toArray(new LabeledIntent[intentList.size()]);
 
+
         Intent openInChooser = Intent.createChooser(emailIntent,shareMessage);
+        openInChooser.addFlags(modeFlags);
         openInChooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, extraIntents);
+
+        List<ResolveInfo> resInfoList = this.getPackageManager().queryIntentActivities(openInChooser, 0);
+
+        for (ResolveInfo resolveInfo : resInfoList) {
+            String packageName = resolveInfo.activityInfo.packageName;
+
+            if (shareUris != null)
+                for (Uri uri : shareUris)
+                    grantUriPermission(packageName, uri, modeFlags);
+
+            if (shareZipUri != null)
+                grantUriPermission(packageName, shareZipUri, modeFlags);
+
+        }
+
         startActivity(openInChooser);
     }
 

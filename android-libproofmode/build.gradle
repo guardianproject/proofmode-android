@@ -1,16 +1,20 @@
 apply plugin: 'com.android.library'
 
 android {
-    compileSdkVersion 27
+    compileSdkVersion 29
 
     defaultConfig {
         minSdkVersion 15
-        targetSdkVersion 27
-        versionCode 3 
-        versionName "0.3"
-        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        targetSdkVersion 29
+        versionCode 7
+        versionName "0.7"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
     }
+
+    lintOptions {
+          abortOnError false
+      }
 
     buildTypes {
         release {
@@ -23,16 +27,23 @@ android {
 
 dependencies {
 
-    implementation 'com.madgag.spongycastle:core:1.51.0.0'
-    implementation 'com.madgag.spongycastle:pg:1.51.0.0'
-    implementation 'com.madgag.spongycastle:pkix:1.51.0.0'
-    implementation 'com.madgag.spongycastle:prov:1.51.0.0'
-    implementation 'com.google.android.gms:play-services-safetynet:15.0.1'
-    implementation 'com.squareup.okhttp3:okhttp:3.10.0'
+    implementation 'com.google.android.gms:play-services-safetynet:17.0.0'
+
     implementation 'com.jakewharton.timber:timber:4.5.1'
 
-    implementation 'com.eternitywall:opentimestamps:0.1.14'
+    implementation('com.eternitywall:java-opentimestamps:1.17') {
+        exclude group: 'org.bitcoinj'
+        exclude group: 'com.google.protobuf'
+        exclude group: 'org.slf4j'
+        exclude group: 'net.jcip'
+        exclude group: 'commons-cli'
+        exclude group: 'org.json'
 
+    }
+
+    implementation('com.madgag.spongycastle:pg:1.51.0.0') {
+        exclude group: 'com.madgag.spongycastle',module: 'core'
+    }
 
 }
 
@@ -45,7 +56,7 @@ uploadArchives {
                 pom.project {
                         groupId 'org.witness'
                         artifactId 'android-libproofmode'
-                        version "0.0.3"
+                        version "0.7"
                 }
         }
 }

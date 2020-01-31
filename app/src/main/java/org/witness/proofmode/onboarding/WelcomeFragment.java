@@ -2,15 +2,13 @@ package org.witness.proofmode.onboarding;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.v4.app.Fragment;
+import androidx.fragment.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
 import org.witness.proofmode.DataLegendActivity;
-import org.witness.proofmode.MainActivity;
 import org.witness.proofmode.R;
-import org.witness.proofmode.UIHelpers;
 
 
 public class WelcomeFragment extends Fragment {

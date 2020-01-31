@@ -2,10 +2,12 @@ package org.witness.proofmode.notarization;
 
 import com.eternitywall.ots.DetachedTimestampFile;
 import com.eternitywall.ots.OpenTimestamps;
+import com.eternitywall.ots.Timestamp;
 import com.eternitywall.ots.op.OpSHA256;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.security.NoSuchAlgorithmException;
 
 /**
@@ -14,11 +16,11 @@ import java.security.NoSuchAlgorithmException;
 
 public class OpenTimestampsNotarizationProvider implements NotarizationProvider {
     @Override
-    public void notarize(String hash, File fileMedia, NotarizationListener listener) {
+    public void notarize(String hash, InputStream is, NotarizationListener listener) {
 
         try {
-            DetachedTimestampFile detached = DetachedTimestampFile.from(new OpSHA256(), fileMedia);
-            byte[] stampResult = OpenTimestamps.stamp(detached,null,0, null);
+            DetachedTimestampFile detached = DetachedTimestampFile.from(new OpSHA256(), is);
+            Timestamp stampResult = OpenTimestamps.stamp(detached,null,0, null);
             String infoResult = OpenTimestamps.info(stampResult);
             listener.notarizationSuccessful(infoResult);
         }

@@ -10,12 +10,10 @@ import org.witness.proofmode.service.MediaListenerService;
 import org.witness.proofmode.service.MediaWatcher;
 import org.witness.proofmode.service.PhotosContentJob;
 import org.witness.proofmode.service.VideosContentJob;
-import org.witness.proofmode.util.SafetyNetCheck;
 
 import java.io.File;
 import java.security.Security;
 
-import okhttp3.MediaType;
 
 public class ProofMode {
 

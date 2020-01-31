@@ -6,7 +6,7 @@ buildscript {
 
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.3.2'
+        classpath 'com.android.tools.build:gradle:3.5.3'
     }
 }
 
@@ -17,10 +17,11 @@ ext {
 allprojects {
     repositories {
         jcenter()
+        /**
         maven {
             url "https://maven.google.com"
-        }
-        maven { url "https://raw.githubusercontent.com/guardianproject/gpmaven/master" }
+        }**/
+     //   maven { url "https://raw.githubusercontent.com/guardianproject/gpmaven/master" }
         google()
 
     }
@@ -30,7 +31,6 @@ allprojects {
         compileSdkVersion=28
         minSdkVersion=15
         targetSdkVersion=28
-        appcompat="com.android.support:appcompat-v7:${supportLibVersion}"
     }
 }
 

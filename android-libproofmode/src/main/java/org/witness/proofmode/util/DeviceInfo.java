@@ -1,8 +1,10 @@
 package org.witness.proofmode.util;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.ActivityManager;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.net.ConnectivityManager;
 import android.os.Build;
@@ -270,12 +272,12 @@ public class DeviceInfo {
             return "";
         } // for now eat exceptions
         return "";
-            /*
-             * try { // this is so Linux hack return
-             * loadFileAsString("/sys/class/net/" +interfaceName +
-             * "/address").toUpperCase().trim(); } catch (IOException ex) { return
-             * null; }
-             */
+        /*
+         * try { // this is so Linux hack return
+         * loadFileAsString("/sys/class/net/" +interfaceName +
+         * "/address").toUpperCase().trim(); } catch (IOException ex) { return
+         * null; }
+         */
     }
 
     /**
@@ -574,7 +576,7 @@ public class DeviceInfo {
         return "02:00:00:00:00:00";
     }
 
-    public static String getCellInfo(Context ctx){
+    public static String getCellInfo(Context ctx) throws SecurityException {
         TelephonyManager tel = (TelephonyManager) ctx.getSystemService(Context.TELEPHONY_SERVICE);
 
         JSONArray cellList = new JSONArray();
@@ -586,30 +588,16 @@ public class DeviceInfo {
         phoneType = phoneTypeInt == TelephonyManager.PHONE_TYPE_CDMA ? "cdma" : phoneType;
 
         //from Android M up must use getAllCellInfo
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN_MR1) {
 
+            List<CellInfo> infos = null;
+            infos = tel.getAllCellInfo();
 
-
-            List<NeighboringCellInfo> neighCells = tel.getNeighboringCellInfo();
-            for (int i = 0; i < neighCells.size(); i++) {
-                try {
-                    JSONObject cellObj = new JSONObject();
-                    NeighboringCellInfo thisCell = neighCells.get(i);
-                    cellObj.put("cellId", thisCell.getCid());
-                    cellObj.put("lac", thisCell.getLac());
-                    cellObj.put("rssi", thisCell.getRssi());
-                    cellList.put(cellObj);
-                } catch (Exception e) {
-                }
-            }
-
-        } else {
-            List<CellInfo> infos = tel.getAllCellInfo();
-            for (int i = 0; i<infos.size(); ++i) {
+            for (int i = 0; i < infos.size(); ++i) {
                 try {
                     JSONObject cellObj = new JSONObject();
                     CellInfo info = infos.get(i);
-                    if (info instanceof CellInfoGsm){
+                    if (info instanceof CellInfoGsm) {
                         CellSignalStrengthGsm gsm = ((CellInfoGsm) info).getCellSignalStrength();
                         CellIdentityGsm identityGsm = ((CellInfoGsm) info).getCellIdentity();
                         cellObj.put("cellId", identityGsm.getCid());
@@ -630,6 +618,7 @@ public class DeviceInfo {
                 }
             }
         }
+
 
         return cellList.toString();
     }
