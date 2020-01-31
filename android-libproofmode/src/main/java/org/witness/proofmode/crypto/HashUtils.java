@@ -15,14 +15,14 @@ import timber.log.Timber;
  */
 public class HashUtils {
 
-    public static String getSHA256FromFileContent(File filename)
+    public static String getSHA256FromFileContent(InputStream fis)
     {
 
         try
         {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] buffer = new byte[65536]; //created at start.
-            InputStream fis = new FileInputStream(filename);
+         //   InputStream fis = new FileInputStream(filename);
             int n = 0;
             while (n != -1)
             {
@@ -37,7 +37,7 @@ public class HashUtils {
         }
         catch (FileNotFoundException e)
         {
-            Timber.e("Could not find the file to generate hash %s",filename.getAbsolutePath());
+            Timber.e("Could not find the file to generate hash %s");
             return null;
         }
         catch (IOException e)
