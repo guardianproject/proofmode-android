@@ -6,6 +6,8 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.location.Location;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Environment;
 import android.preference.PreferenceManager;
@@ -152,12 +154,13 @@ public class MediaWatcher extends BroadcastReceiver {
 
                 if (autoNotarize) {
 
-                    //if we can do safetycheck, then add that in as well
-                    new SafetyNetCheck().sendSafetyNetRequest(context, mediaHash, new OnSuccessListener<SafetyNetApi.AttestationResponse>() {
-                        @Override
-                        public void onSuccess(SafetyNetApi.AttestationResponse response) {
-                            // Indicates communication with the service was successful.
-                            // Use response.getJwsResult() to get the result data.
+                    if (isOnline(context)) {
+                        //if we can do safetycheck, then add that in as well
+                        new SafetyNetCheck().sendSafetyNetRequest(context, mediaHash, new OnSuccessListener<SafetyNetApi.AttestationResponse>() {
+                            @Override
+                            public void onSuccess(SafetyNetApi.AttestationResponse response) {
+                                // Indicates communication with the service was successful.
+                                // Use response.getJwsResult() to get the result data.
 
                                 String resultString = response.getJwsResult();
                                 SafetyNetResponse resp = parseJsonWebSignature(resultString);
@@ -170,36 +173,37 @@ public class MediaWatcher extends BroadcastReceiver {
                                 writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, resultString, isBasicIntegrity, isCtsMatch, timestamp, null);
 
 
-                        }
-                    }, new OnFailureListener() {
-                        @Override
-                        public void onFailure(@NonNull Exception e) {
-                            // An error occurred while communicating with the service.
-                            Timber.d("SafetyNet check failed",e);
-                        }
-                    });
-
-
-                    final NotarizationProvider nProvider = new OpenTimestampsNotarizationProvider();
-                    try {
-                        nProvider.notarize("ProofMode Media Hash: " + mediaHash, context.getContentResolver().openInputStream(uriMedia), new NotarizationListener() {
-                            @Override
-                            public void notarizationSuccessful(String timestamp) {
-
-                                Timber.d("Got OpenTimestamps success response timestamp: " + timestamp);
-                                writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, "OpenTimestamps: " + timestamp);
                             }
-
+                        }, new OnFailureListener() {
                             @Override
-                            public void notarizationFailed(int errCode, String message) {
-
-                                Timber.d("Got OpenTimestamps error response: " + message);
-                                writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, "OpenTimestamps Error: " + message);
-
+                            public void onFailure(@NonNull Exception e) {
+                                // An error occurred while communicating with the service.
+                                Timber.d("SafetyNet check failed", e);
                             }
                         });
-                    } catch (FileNotFoundException e) {
-                        Timber.e(e);
+
+
+                        final NotarizationProvider nProvider = new OpenTimestampsNotarizationProvider();
+                        try {
+                            nProvider.notarize("ProofMode Media Hash: " + mediaHash, context.getContentResolver().openInputStream(uriMedia), new NotarizationListener() {
+                                @Override
+                                public void notarizationSuccessful(String timestamp) {
+
+                                    Timber.d("Got OpenTimestamps success response timestamp: " + timestamp);
+                                    writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, "OpenTimestamps: " + timestamp);
+                                }
+
+                                @Override
+                                public void notarizationFailed(int errCode, String message) {
+
+                                    Timber.d("Got OpenTimestamps error response: " + message);
+                                    writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, "OpenTimestamps Error: " + message);
+
+                                }
+                            });
+                        } catch (FileNotFoundException e) {
+                            Timber.e(e);
+                        }
                     }
 
                 }
@@ -215,6 +219,13 @@ public class MediaWatcher extends BroadcastReceiver {
         }
 
         return null;
+    }
+
+    public boolean isOnline(Context context) {
+        ConnectivityManager cm =
+                (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo netInfo = cm.getActiveNetworkInfo();
+        return netInfo != null && netInfo.isConnected();
     }
 
     private SafetyNetResponse parseJsonWebSignature(String jwsResult) {
@@ -398,7 +409,7 @@ public class MediaWatcher extends BroadcastReceiver {
                     hmProof.put("Location.Speed", loc.getSpeed() + "");
                     hmProof.put("Location.Time", loc.getTime() + "");
                 }
-                
+
             }
 
             if (showMobileNetwork)
