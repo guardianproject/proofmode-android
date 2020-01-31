@@ -370,33 +370,43 @@ public class MediaWatcher extends BroadcastReceiver {
         hmProof.put("Language",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_LANGUAGE));
         hmProof.put("Locale",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_LOCALE));
 
-        GPSTracker gpsTracker = new GPSTracker(context);
 
-        if (showLocation
-                && gpsTracker.canGetLocation())
+        if (showLocation)
         {
-            Location loc = gpsTracker.getLocation();
-            int waitIdx = 0;
-            while (loc == null && waitIdx < 3)
-            {
-                waitIdx++;
-                try { Thread.sleep (500); }
-                catch (Exception e){}
-                loc = gpsTracker.getLocation();
+            GPSTracker gpsTracker = new GPSTracker(context);
+
+            if (gpsTracker.canGetLocation()) {
+
+                Location loc = gpsTracker.getLocation();
+                int waitIdx = 0;
+                while (loc == null && waitIdx < 3) {
+                    waitIdx++;
+                    try {
+                        Thread.sleep(500);
+                    } catch (Exception e) {
+                    }
+                    loc = gpsTracker.getLocation();
+                }
+
+                if (loc != null) {
+                    hmProof.put("Location.Latitude", loc.getLatitude() + "");
+                    hmProof.put("Location.Longitude", loc.getLongitude() + "");
+                    hmProof.put("Location.Provider", loc.getProvider());
+                    hmProof.put("Location.Accuracy", loc.getAccuracy() + "");
+                    hmProof.put("Location.Altitude", loc.getAltitude() + "");
+                    hmProof.put("Location.Bearing", loc.getBearing() + "");
+                    hmProof.put("Location.Speed", loc.getSpeed() + "");
+                    hmProof.put("Location.Time", loc.getTime() + "");
+                }
+                
             }
 
-            if (loc != null) {
-                hmProof.put("Location.Latitude",loc.getLatitude()+"");
-                hmProof.put("Location.Longitude",loc.getLongitude()+"");
-                hmProof.put("Location.Provider",loc.getProvider());
-                hmProof.put("Location.Accuracy",loc.getAccuracy()+"");
-                hmProof.put("Location.Altitude",loc.getAltitude()+"");
-                hmProof.put("Location.Bearing",loc.getBearing()+"");
-                hmProof.put("Location.Speed",loc.getSpeed()+"");
-                hmProof.put("Location.Time",loc.getTime()+"");
-            }
+            if (showMobileNetwork)
+                hmProof.put("CellInfo", DeviceInfo.getCellInfo(context));
 
         }
+
+
 
         if (!TextUtils.isEmpty(safetyCheckResult)) {
             hmProof.put("SafetyCheck", safetyCheckResult);
@@ -417,8 +427,6 @@ public class MediaWatcher extends BroadcastReceiver {
         else
             hmProof.put("Notes","");
 
-        if (showMobileNetwork)
-            hmProof.put("CellInfo",DeviceInfo.getCellInfo(context));
 
         StringBuffer sb = new StringBuffer();
 
