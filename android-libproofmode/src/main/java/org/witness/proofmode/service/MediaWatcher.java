@@ -32,6 +32,7 @@ import org.witness.proofmode.util.SafetyNetResponse;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -116,18 +117,27 @@ public class MediaWatcher extends BroadcastReceiver {
                 }
             }
 
+
             final String mediaPath = mediaPathTmp;
 
+            /**
             File fileMediaPath = new File(mediaPath);
             if (!fileMediaPath.exists())
                 return null;
+             **/
 
             final boolean showDeviceIds = prefs.getBoolean(ProofMode.PREF_OPTION_PHONE,ProofMode.PREF_OPTION_PHONE_DEFAULT);
             final boolean showLocation = prefs.getBoolean(ProofMode.PREF_OPTION_LOCATION,ProofMode.PREF_OPTION_LOCATION_DEFAULT);
             final boolean autoNotarize = prefs.getBoolean(ProofMode.PREF_OPTION_NOTARY, ProofMode.PREF_OPTION_NOTARY_DEFAULT);
             final boolean showMobileNetwork = prefs.getBoolean(ProofMode.PREF_OPTION_NETWORK,ProofMode.PREF_OPTION_NETWORK_DEFAULT);
 
-            final String mediaHash = HashUtils.getSHA256FromFileContent(fileMediaPath);
+            final String mediaHash;
+            try {
+                mediaHash = HashUtils.getSHA256FromFileContent(context.getContentResolver().openInputStream(uriMedia));
+            } catch (FileNotFoundException e) {
+                Timber.e(e);
+                return null;
+            }
 
             if (mediaHash != null) {
 
@@ -167,22 +177,26 @@ public class MediaWatcher extends BroadcastReceiver {
 
 
                     final NotarizationProvider nProvider = new OpenTimestampsNotarizationProvider();
-                    nProvider.notarize("ProofMode Media Hash: " + mediaHash, new File(mediaPath), new NotarizationListener() {
-                        @Override
-                        public void notarizationSuccessful(String timestamp) {
+                    try {
+                        nProvider.notarize("ProofMode Media Hash: " + mediaHash, context.getContentResolver().openInputStream(uriMedia), new NotarizationListener() {
+                            @Override
+                            public void notarizationSuccessful(String timestamp) {
 
-                            Timber.d("Got OpenTimestamps success response timestamp: " + timestamp);
-                            writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, "OpenTimestamps: " + timestamp);
-                        }
+                                Timber.d("Got OpenTimestamps success response timestamp: " + timestamp);
+                                writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, "OpenTimestamps: " + timestamp);
+                            }
 
-                        @Override
-                        public void notarizationFailed(int errCode, String message) {
+                            @Override
+                            public void notarizationFailed(int errCode, String message) {
 
-                            Timber.d("Got OpenTimestamps error response: " + message);
-                            writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, "OpenTimestamps Error: " + message);
+                                Timber.d("Got OpenTimestamps error response: " + message);
+                                writeProof(context, mediaPath, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, "OpenTimestamps Error: " + message);
 
-                        }
-                    });
+                            }
+                        });
+                    } catch (FileNotFoundException e) {
+                        Timber.e(e);
+                    }
 
                 }
 
