@@ -1,5 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
-
 <resources>
     <string name="app_name">ProofMode</string>
 
@@ -12,22 +10,23 @@
     <string name="switch_include_device">Inclure l\'identité de l\'appareil</string>
     <string name="switch_include_location">Inclure la localisation</string>
     <string name="switch_enable_proofmode">Activer ProofMode</string>
-    <string name="switch_auto_notarize">Activer la certification automatique</string>
-
-    <string name="intro1_title">Capturer la preuve</string>
-    <string name="intro1_desc">Vous avez accompli la première étape dans la transformation de vos photos ou vidéos en preuve numérique.</string>
-
-    <string name="intro2_title">Détecte ton Monde</string>
-    <string name="intro2_desc">ProofMode puise dans tous les capteurs possible de votre appareil. Assurez-vous d'activer les permissions comme demandé.</string>
-
-    <string name="intro3_title">Facile et automatique</string>
-    <string name="intro3_desc">ProofMode fonctionne en permanence en arrière-plan, en ajoutant automatiquement une preuve à toutes les photos ou vidéos que vous prenez.</string>
-
-    <string name="intro4_title">Partager une preuve</string>
-    <string name="intro4_desc">Quand vous avez besoin de partager quelque chose avec une preuve, ouvrez simplement la photo ou vidéo et choisissez PARTAGER LA PREUVE depuis le menu Partager.</string>
+    <string name="settings_notary">Certification</string>
+    <string name="settings_notary_desc">Registration with a third party that your media exists</string>
+    <string name="settings_location">Localisation</string>
+    <string name="settings_location_desc">Coordonnées GPS quand les supports numériques sont pris en charge</string>
+    <string name="settings_phone">Téléphone</string>
+    <string name="settings_phone_desc">Numéro d\'identification de votre téléphone</string>
+    <string name="settings_network">Réseau</string>
+    <string name="settings_network_desc">Nom du (des) réseau(x) auquel (auxquels) vous êtes connecté</string>
+    
+    <string name="proofmode_is_on">PROOFMODE EST ACTIVÉ ET CAPTURE DES DONNÉES</string>
+    <string name="tap_hold_turn_off">Maintenir enfoncé pour éteindre</string>
+    <string name="proofmode_is_capturing">ProofMode capture un grand ensemble de métadonnées par défaut. Renforcez la vérifiabilité de vos supports numériques en en ajoutant d'autres.</string>
+    <string name="proofmode_is_off">PROOFMODE EST DÉSACTIVÉ ET NE CAPTURE PAS DE DONNÉES</string>
+    <string name="tap_hold_turn_on">Maintenir enfoncé pour allumer</string>
     <string name="share_notarization">PARTAGER UNE CERTIFICATION À...</string>
     <string name="share_proof">PARTAGER UNE PREUVE À...</string>
-    <string name="proof_error_message">ERREUR: La preuve n\'existe pas ou a été modifiée</string>
+    <string name="proof_error_message">La preuve n\'existe pas</string>
     <string name="last_modified">a été modifié pour la dernière fois à</string>
     <string name="has_hash">et utilise un hachage de SHA-256</string>
     <string name="proof_signed">Cette preuve est signée par la clé PGP de valeur 0x</string>
@@ -36,12 +35,88 @@
     <string name="share_proof_with_media">Partager une preuve avec les supports numériques</string>
     <string name="open_public_key_page">Ouverture de la page de la clé publique</string>
     <string name="no_external_storage">AVERTISSEMENT: ProofMode activé, cependant aucun disque dur externe n\'est disponible!</string>
-    <string name="no_hash_generated">Alerte ProofMode: Impossible d'accéder aux supports numériques</string>
+    <string name="no_hash_generated">Alerte ProofMode: Impossible d\'accéder aux supports numériques</string>
     <string name="generating_proof_notify">Générateur de preuve...</string>
     <string name="inspect_photos">Examiner les photos</string>
-    <string name="inspect_videos">Examiner les videos</string>
+    <string name="inspect_videos">Examiner les vidéos</string>
     <string name="select_app">Choisissez l\'application pour partager la preuve avec...</string>
     <string name="independent_notary">Certification indépendante par Enigio TimeBeat à:</string>
-    <string name="packaging_proof">Conditionner une preuve pour l'a faire partager...</string>
+    <string name="packaging_proof">Conditionner une preuve pour l\'a faire partager...</string>
+    <string name="view_public_key">Voir la clé publique à: http://pgp.mit.edu/pks/lookup?search=0x</string>
+    <string name="include_mobile_network">Inclure le réseau de téléphonie mobile</string>
+    <string name="share_proof_action">Partager une preuve</string>
+    <string name="action_generate">Générer une preuve</string>
+    <string name="proof_error_message_final">Nous n\'avons pas pu générer de preuve pour ce fichier.</string>
+    <string name="choose_my_settings">Modifier mes paramètres</string>
+    <string name="got_it">J\'ai compris</string>
+    <string name="activity_settings_title">CHOISISSEZ VOS PARAMÈTRES</string>
+    <string name="activity_datalegend_title">LÉGENDE DE DONNÉES</string>
+    
+    <string name="settings_title">Renforcez la vérifiabilité de vos supports numériques en ajoutant des données à votre preuve.</string>
+    <string name="settings_description">Pointez sur les icônes à ajouter ou supprimer.</string>
 
+    <string name="onboarding_learn_more">En savoir plus</string>
+    <string name="onboarding_get_started">Commencer</string>
+
+    <string name="onboarding_intro_title">Une image peut valoir mille mots mais la preuve qu\'elle est réelle n\'a pas de prix.</string>
+    <string name="onboarding_intro_content">ProofMode capture des informations rendant vos supports numériques plus fiables.</string>
+
+    <string name="onboarding_step1">Étape 1</string>
+    <string name="onboarding_step1_title">Obtenir une preuve est facile. Une fois le ProofMode activé, utilisez votre appareil photo comme d\'habitude.</string>
+    <string name="onboarding_step1_content">ProofMode fonctionne en arrière-plan pour générer et enregistrer une preuve. Vous n\'avez rien de plus à faire!</string>
+
+    <string name="onboarding_step2">Étape 2</string>
+    <string name="onboarding_step2_title">Une fois que vous avez pris une photo ou une vidéo, trouvez-la dans l\'album photos de votre appareil pour la faire partager.</string>
+    <string name="onboarding_step2_content">Sélectionnez une photo, appuyez sur l\'icône de partage et choisissez "Partager la preuve".</string>
+
+    <string name="onboarding_step3">Étape 3</string>
+    <string name="onboarding_step3_title">Avant de l\'envoyer, choisissez le niveau de preuve à partager.</string>
+    <string name="onboarding_step3_content">Vous gardez toujours le contrôle. Les actions de base partage un minimum d\'information pour prouver que votre support numérique existe. Le robuste partage tout ce qui est capturé.</string>
+
+    <string name="onboarding_step4">Étape 4</string>
+    <string name="onboarding_step4_title">Choisissez ensuite comment l\'envoyer.</string>
+    <string name="onboarding_step4_content">Vous pouvez partager de nombreuses manières, de l\'email aux services de messagerie comme WhatsApp!</string>
+
+    <string name="onboarding_privacy_title">ProofMode active plusieurs capteurs sur votre téléphone pour générer une preuve.</string>
+    <string name="onboarding_privacy_content">Découvrez ce que ProofMode capture dans notre légende de données.</string>
+    <string name="onboarding_privacy_subtitle">NOUS NOUS SOUCIONS DE VOTRE VIE PRIVÉE</string>
+    <string name="onboarding_privacy_info">ProofMode capture l\'identité de votre téléphone par défaut. Si vous n\'êtes pas à l\'aise avec cette fonction, allez dans les paramètres pour la désactiver.</string>
+    <string name="onboarding_privacy_continue">Continuer</string>
+    <string name="onboarding_privacy_options">Options de confidentialité</string>
+
+    <string name="permission_location_title">Nous avons besoin de votre localisation afin de connaître l\'endroit où votre support numérique est capturé.</string>
+    <string name="permission_location_content">Le fait de donner l\'autorisation nous permet d\'obtenir vos coordonnées GPS. Nous ne vous pisterons pas, ni ne conserverons votre position de toute autre manière.</string>
+    <string name="permission_location_info">Si vous ne souhaitez pas saisir ces données pour des raisons de sécurité ou de confidentialité, n\'en donnez pas l\'autorisation.</string>
+
+    <string name="menu_home">Page d\'accueil</string>
+    <string name="menu_how_it_works">Comment ça marche</string>
+    <string name="menu_settings">Paramètres</string>
+    <string name="menu_datalegend">Légende de données</string>
+    <string name="menu_digital_signatures">Signatures numériques</string>
+
+    <string name="permissions_needed_title">Autorisations nécessaires</string>
+    <string name="permissions_needed_content">Veuillez activer les autorisations requises dans les paramètres du système.</string>
+
+    <string name="share_no_proof">Aucune preuve n\'existe encore. Essayez encore dans une minute.</string>
+    <string name="share_no_proof_info">S\'il n\'y a toujours pas de preuve, vous pouvez en générer une maintenant. Il peut ne pas refléter l\'heure et l\'endroit où le média a été créé.</string>
+    <string name="share_proof_found">Preuve trouvée ! Choisissez le niveau de preuve à partager.</string>
+    <string name="share_mode_basic">Basique</string>
+    <string name="share_mode_basic_info">Partagez une empreinte de vos supports numériques pour établir qu\'elle existe.</string>
+    <string name="share_share_basic">Partage basique</string>
+    <string name="share_mode_robust">Robuste</string>
+    <string name="share_mode_robust_info">Partage tout ce que vous avez permis à ProofMode de capturer dans un fichier signé cryptographiquement.</string>
+    <string name="share_share_robust">Partage robuste</string>
+
+    <string name="share_info_basic_title">Partage une empreinte de vos supports numériques pour établir qu\'elle existe.</string>
+    <string name="share_info_basic_message">• N\'inclut pas d\'informations personnelles\n• Aucune confiance n\'est nécessaire\n• Suffisamment court pour envoyer un texte</string>
+    <string name="share_info_robust_title">Partage tout ce que vous avez permis à ProofMode de capturer dans un fichier signé cryptographiquement.</string>
+    <string name="share_info_robust_message">• Révèle des informations d\'identification personnelle\n• Partagez avec une personne de confiance\n• Nécessite un accès à Internet\n• Partage le fichier .csv avec les données, le PGP et l\'empreinte digitale unique</string>
+    <string name="share_info_robust_send_media">Partager les supports numériques avec une preuve</string>
+
+    <string name="digital_signatures_title">Lorsque vous partagez votre preuve, vous verrez les signatures numériques et votre clé publique jointes sous forme de fichiers ".asc".</string>
+    <string name="digital_signatures_info">Voici quelques informations supplémentaires de ce qu\'il en est.</string>
+    <string name="digital_signatures_whatis_title">Quelle est ma signature numérique et ma clé publique?</string>
+    <string name="digital_signatures_whatis_info">Chaque fois que vous installez ProofMode, une identité numérique unique, composée de clés PGP secrètes et publiques est créé. Elle est alimentée par la norme de chiffrement OpenPGP. Elle est utilisée pour signer cryptographiquement vos supports numériques et les fichiers de preuve à l\'appui. Si les signatures PGP correspondent à l\'identité numérique (clé PGP) de votre instance actuelle de ProofMode, alors la signature a été créée par cette instance de ProofMode.</string>
+    <string name="digital_signatures_whattodo_title">Qu\'est-ce que j\'en fais ?</string>
+    <string name="digital_signatures_whattodo_info">Une version publique de votre clé PGP sera partagée avec vos supports numériques et les fichiers proof.csv. Celà permet à une tierce partie de vérifier les fichiers ".asc" de signature PGP qui accompagnent les données de preuve. L\'inclusion de votre clé PGP publique avec la preuve, garantit qu\'elle sera préservée au cas où votre appareil serait compromis ou si vous réinstallez l\'application. N\'oubliez pas que chaque fois que vous réinstallez l\'application, elle crée une nouvelle identité numérique (clé PGP).</string>
 </resources>
