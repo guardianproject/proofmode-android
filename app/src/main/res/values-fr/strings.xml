@@ -9,7 +9,7 @@
 
     <string name="switch_include_device">Inclure l\'identité de l\'appareil</string>
     <string name="switch_include_location">Inclure la localisation</string>
-    <string name="switch_enable_proofmode">Activer ProofMode</string>
+    <string name="switch_enable_proofmode">Activer ProofMode</string> 
     <string name="settings_notary">Certification</string>
     <string name="settings_notary_desc">Registration with a third party that your media exists</string>
     <string name="settings_location">Localisation</string>

@@ -1,0 +1,11 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="org.witness.proofmode.ShareProofActivity">
+    <item
+        android:id="@android:id/home"
+        android:orderInCategory="100"
+        android:icon="@drawable/ic_close_black_24dp"
+        android:title="@android:string/cancel"
+        app:showAsAction="always" />
+</menu>

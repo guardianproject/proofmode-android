@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/ProofMode.iml" filepath="$PROJECT_DIR$/ProofMode.iml" />
+      <module fileurl="file://$PROJECT_DIR$/android-libproofmode/android-libproofmode.iml" filepath="$PROJECT_DIR$/android-libproofmode/android-libproofmode.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
     </modules>
   </component>

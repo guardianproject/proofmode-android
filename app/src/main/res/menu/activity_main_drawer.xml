@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <group android:checkableBehavior="none">
+        <!--
+        <item
+            android:id="@+id/menu_home"
+            android:icon="@drawable/ic_heart"
+            android:title="@string/menu_home" /> -->
+        <item
+            android:id="@+id/menu_how_it_works"
+            android:icon="@drawable/ic_how_it_works"
+            android:title="@string/menu_how_it_works" />
+        <item
+            android:id="@+id/menu_datalegend"
+            android:icon="@drawable/ic_data_legend"
+            android:title="@string/menu_datalegend" />
+        <item
+            android:id="@+id/menu_digital_signatures"
+            android:icon="@drawable/ic_digital_signatures"
+            android:title="@string/menu_digital_signatures" />
+        <item
+            android:id="@+id/menu_settings"
+            android:icon="@drawable/ic_settings"
+            android:title="@string/menu_settings" />
+    </group>
+</menu>

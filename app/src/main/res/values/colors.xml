@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#109b21</color>
+    <color name="colorPrimary">#0f8b5f</color>
     <color name="colorPrimaryDark">#083b00</color>
-    <color name="colorAccent">#f75200</color>
+    <color name="colorAccent">#3CB371</color>
+    <color name="colorPrimaryAlt">#FFFFFF</color>
+
+    <color name="black_overlay">#66000000</color>
+
+    <color name="onboarding_background">#f8f8f8</color>
+    <color name="onboarding_gray">#232323</color>
+    <color name="onboarding_gray_light">#737373</color>
 </resources>
