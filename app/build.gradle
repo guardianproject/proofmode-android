@@ -23,6 +23,7 @@ android {
         versionCode 133
         versionName "0.0.13-RC-3"
         multiDexEnabled true
+        archivesBaseName = "ProofMode-$versionName"
     }
     buildTypes {
         release {
