@@ -1,11 +1,13 @@
 apply plugin: 'com.android.library'
 
 android {
-    compileSdkVersion 29
+    compileSdkVersion 30
+    buildToolsVersion "30.0.3"
+
 
     defaultConfig {
         minSdkVersion 15
-        targetSdkVersion 29
+        targetSdkVersion 30
         versionCode 7
         versionName "0.7"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -27,9 +29,9 @@ android {
 
 dependencies {
 
-    implementation 'com.google.android.gms:play-services-safetynet:17.0.0'
+    implementation 'com.google.android.gms:play-services-safetynet:17.0.1'
 
-    implementation 'com.jakewharton.timber:timber:4.5.1'
+    implementation 'com.jakewharton.timber:timber:4.7.1'
 
     implementation('com.eternitywall:java-opentimestamps:1.17') {
         exclude group: 'org.bitcoinj'
@@ -41,9 +43,11 @@ dependencies {
 
     }
 
-    implementation('com.madgag.spongycastle:pg:1.51.0.0') {
-        exclude group: 'com.madgag.spongycastle',module: 'core'
-    }
+    //implementation('com.madgag.spongycastle:pg:1.54.0.0')
+    implementation 'org.bouncycastle:bcpkix-jdk15to18:1.68'
+    implementation 'org.bouncycastle:bcprov-jdk15to18:1.68'
+    implementation 'org.bouncycastle:bcpg-jdk15to18:1.68'
+
 
 }
 

@@ -4,8 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 
-import org.spongycastle.jce.provider.BouncyCastleProvider;
-import org.witness.proofmode.crypto.HashUtils;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.witness.proofmode.service.MediaListenerService;
 import org.witness.proofmode.service.MediaWatcher;
 import org.witness.proofmode.service.PhotosContentJob;
@@ -31,8 +30,9 @@ public class ProofMode {
     public final static String PROOF_FILE_TAG = ".proof.csv";
     public final static String OPENPGP_FILE_TAG = ".asc";
 
+    public final static BouncyCastleProvider sProvider = new BouncyCastleProvider();
     static {
-        Security.addProvider(new BouncyCastleProvider());
+        Security.addProvider(sProvider);
     }
 
     private static boolean mInit = false;
@@ -54,6 +54,11 @@ public class ProofMode {
         mInit = true;
     }
 
+    public static BouncyCastleProvider getProvider ()
+    {
+        return sProvider;
+    }
+
     public static String generateProof (Context context, Uri uri)
     {
         Intent intent = new Intent();
@@ -62,9 +67,9 @@ public class ProofMode {
     }
 
 
-    public static File getProofDir (String mediaHash)
+    public static File getProofDir (Context context, String mediaHash)
     {
-        return MediaWatcher.getHashStorageDir(mediaHash);
+        return MediaWatcher.getHashStorageDir(context, mediaHash);
     }
 
 

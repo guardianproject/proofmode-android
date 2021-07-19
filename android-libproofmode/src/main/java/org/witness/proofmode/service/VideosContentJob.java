@@ -53,11 +53,6 @@ public class VideosContentJob extends JobService {
     static final int PROJECTION_ID = 0;
     static final int PROJECTION_DATA = 1;
 
-    // This is the external storage directory where cameras place pictures.
-    static final String DCIM_DIR = Environment.getExternalStoragePublicDirectory(
-            Environment.DIRECTORY_DCIM).getPath();
-
-
     // Fake job work.  A real implementation would do some work on a separate thread.
     final Handler mHandler = new Handler();
     final Runnable mWorker = new Runnable() {
@@ -170,18 +165,16 @@ public class VideosContentJob extends JobService {
 
                             // We only care about files in the DCIM directory.
                             String path = cursor.getString(PROJECTION_DATA);
-                            if (path.startsWith(DCIM_DIR)) {
 
-                                //NEW PHOTOS FOUND!
-                                haveFiles = true;
-                                Timber.d("found new video files for generating proof");
+                            //NEW PHOTOS FOUND!
+                            haveFiles = true;
+                            Timber.d("found new video files for generating proof");
+
+                            Intent intent = new Intent();
+                            intent.setData(Uri.fromFile(new File(path)));
+                            new MediaWatcher().onReceive(VideosContentJob.this,intent);
 
 
-                                Intent intent = new Intent();
-                                intent.setData(Uri.fromFile(new File(path)));
-                                new MediaWatcher().onReceive(VideosContentJob.this,intent);
-
-                            }
                         }
                     } catch (SecurityException e) {
                         //sb.append("Error: no access to media!");

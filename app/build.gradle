@@ -1,8 +1,8 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 29
-    buildToolsVersion "29.0.2"
+    compileSdkVersion 30
+    buildToolsVersion "30.0.3"
 
     lintOptions {
         abortOnError false
@@ -19,7 +19,7 @@ android {
     defaultConfig {
         applicationId "org.witness.proofmode"
         minSdkVersion 16
-        targetSdkVersion 29
+        targetSdkVersion 30
         versionCode 133
         versionName "0.0.13-RC-3"
         multiDexEnabled true

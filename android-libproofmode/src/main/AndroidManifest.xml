@@ -2,12 +2,9 @@
     package="org.witness.proofmode.library"
 xmlns:tools="http://schemas.android.com/tools"
  >
- <uses-permission
-        android:name="android.permission.READ_EXTERNAL_STORAGE"
-        tools:remove="android:maxSdkVersion" />
-    <uses-permission
-        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        tools:remove="android:maxSdkVersion" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        tools:remove="android:maxSdkVersion"
+        />
     <uses-permission
         android:name="android.permission.ACCESS_COARSE_LOCATION"
         tools:remove="android:maxSdkVersion" />
@@ -26,6 +23,5 @@ xmlns:tools="http://schemas.android.com/tools"
     <uses-permission
         android:name="android.permission.READ_PHONE_STATE"
         tools:remove="android:maxSdkVersion" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
 </manifest>
 

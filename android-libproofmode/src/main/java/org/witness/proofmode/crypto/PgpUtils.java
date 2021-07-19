@@ -3,50 +3,46 @@ package org.witness.proofmode.crypto;
 import android.content.Context;
 import android.util.Log;
 
-import org.spongycastle.bcpg.ArmoredInputStream;
-import org.spongycastle.bcpg.ArmoredOutputStream;
-import org.spongycastle.bcpg.HashAlgorithmTags;
-import org.spongycastle.bcpg.SymmetricKeyAlgorithmTags;
-import org.spongycastle.bcpg.sig.Features;
-import org.spongycastle.bcpg.sig.KeyFlags;
-import org.spongycastle.crypto.generators.RSAKeyPairGenerator;
-import org.spongycastle.crypto.params.RSAKeyGenerationParameters;
-import org.spongycastle.openpgp.PGPCompressedData;
-import org.spongycastle.openpgp.PGPCompressedDataGenerator;
-import org.spongycastle.openpgp.PGPEncryptedData;
-import org.spongycastle.openpgp.PGPEncryptedDataGenerator;
-import org.spongycastle.openpgp.PGPEncryptedDataList;
-import org.spongycastle.openpgp.PGPException;
-import org.spongycastle.openpgp.PGPKeyPair;
-import org.spongycastle.openpgp.PGPKeyRingGenerator;
-import org.spongycastle.openpgp.PGPLiteralData;
-import org.spongycastle.openpgp.PGPLiteralDataGenerator;
-import org.spongycastle.openpgp.PGPObjectFactory;
-import org.spongycastle.openpgp.PGPPrivateKey;
-import org.spongycastle.openpgp.PGPPublicKey;
-import org.spongycastle.openpgp.PGPPublicKeyEncryptedData;
-import org.spongycastle.openpgp.PGPPublicKeyRing;
-import org.spongycastle.openpgp.PGPSecretKey;
-import org.spongycastle.openpgp.PGPSecretKeyRing;
-import org.spongycastle.openpgp.PGPSignature;
-import org.spongycastle.openpgp.PGPSignatureSubpacketGenerator;
-import org.spongycastle.openpgp.PGPUtil;
-import org.spongycastle.openpgp.operator.PBESecretKeyDecryptor;
-import org.spongycastle.openpgp.operator.PBESecretKeyEncryptor;
-import org.spongycastle.openpgp.operator.PGPDigestCalculator;
-import org.spongycastle.openpgp.operator.bc.BcKeyFingerprintCalculator;
-import org.spongycastle.openpgp.operator.bc.BcPBESecretKeyDecryptorBuilder;
-import org.spongycastle.openpgp.operator.bc.BcPBESecretKeyEncryptorBuilder;
-import org.spongycastle.openpgp.operator.bc.BcPGPContentSignerBuilder;
-import org.spongycastle.openpgp.operator.bc.BcPGPDigestCalculatorProvider;
-import org.spongycastle.openpgp.operator.bc.BcPGPKeyPair;
-import org.spongycastle.openpgp.operator.bc.BcPublicKeyDataDecryptorFactory;
-import org.spongycastle.openpgp.operator.jcajce.JcaPGPContentSignerBuilder;
-import org.spongycastle.openpgp.operator.jcajce.JcaPGPDigestCalculatorProviderBuilder;
-import org.spongycastle.openpgp.operator.jcajce.JcePBESecretKeyEncryptorBuilder;
-import org.spongycastle.openpgp.operator.jcajce.JcePGPDataEncryptorBuilder;
-import org.spongycastle.openpgp.operator.jcajce.JcePublicKeyKeyEncryptionMethodGenerator;
-import org.spongycastle.util.encoders.Hex;
+
+import org.bouncycastle.bcpg.ArmoredInputStream;
+import org.bouncycastle.bcpg.ArmoredOutputStream;
+import org.bouncycastle.bcpg.HashAlgorithmTags;
+import org.bouncycastle.bcpg.SymmetricKeyAlgorithmTags;
+import org.bouncycastle.bcpg.sig.Features;
+import org.bouncycastle.bcpg.sig.KeyFlags;
+import org.bouncycastle.crypto.generators.RSAKeyPairGenerator;
+import org.bouncycastle.crypto.params.RSAKeyGenerationParameters;
+import org.bouncycastle.openpgp.PGPCompressedDataGenerator;
+import org.bouncycastle.openpgp.PGPEncryptedData;
+import org.bouncycastle.openpgp.PGPEncryptedDataGenerator;
+import org.bouncycastle.openpgp.PGPException;
+import org.bouncycastle.openpgp.PGPKeyPair;
+import org.bouncycastle.openpgp.PGPKeyRingGenerator;
+import org.bouncycastle.openpgp.PGPLiteralData;
+import org.bouncycastle.openpgp.PGPLiteralDataGenerator;
+import org.bouncycastle.openpgp.PGPPrivateKey;
+import org.bouncycastle.openpgp.PGPPublicKey;
+import org.bouncycastle.openpgp.PGPPublicKeyRing;
+import org.bouncycastle.openpgp.PGPSecretKey;
+import org.bouncycastle.openpgp.PGPSecretKeyRing;
+import org.bouncycastle.openpgp.PGPSignature;
+import org.bouncycastle.openpgp.PGPSignatureSubpacketGenerator;
+import org.bouncycastle.openpgp.operator.PBESecretKeyDecryptor;
+import org.bouncycastle.openpgp.operator.PBESecretKeyEncryptor;
+import org.bouncycastle.openpgp.operator.PGPDigestCalculator;
+import org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator;
+import org.bouncycastle.openpgp.operator.bc.BcPBESecretKeyDecryptorBuilder;
+import org.bouncycastle.openpgp.operator.bc.BcPBESecretKeyEncryptorBuilder;
+import org.bouncycastle.openpgp.operator.bc.BcPGPContentSignerBuilder;
+import org.bouncycastle.openpgp.operator.bc.BcPGPDigestCalculatorProvider;
+import org.bouncycastle.openpgp.operator.bc.BcPGPKeyPair;
+import org.bouncycastle.openpgp.operator.jcajce.JcaPGPContentSignerBuilder;
+import org.bouncycastle.openpgp.operator.jcajce.JcaPGPDigestCalculatorProviderBuilder;
+import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyEncryptorBuilder;
+import org.bouncycastle.openpgp.operator.jcajce.JcePGPDataEncryptorBuilder;
+import org.bouncycastle.openpgp.operator.jcajce.JcePublicKeyKeyEncryptionMethodGenerator;
+import org.bouncycastle.util.encoders.Hex;
+import org.witness.proofmode.ProofMode;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -72,9 +68,6 @@ import java.util.Iterator;
 import java.util.Map;
 
 public class PgpUtils {
-
-    private static final String PROVIDER = "SC";
-//    private static final String KEY_RING_ID = "asdf@asdf.com";
 
     private static PgpUtils mInstance;
 
@@ -121,43 +114,6 @@ public class PgpUtils {
         return fullKey.substring(fullKey.length()-16);
     }
 
-    public String decrypt(String encryptedText, String password) throws Exception {
-
-        byte[] encrypted = encryptedText.getBytes();
-        InputStream in = new ByteArrayInputStream(encrypted);
-        in = PGPUtil.getDecoderStream(in);
-        PGPObjectFactory pgpF = new PGPObjectFactory(in);
-        PGPEncryptedDataList enc;
-        Object o = pgpF.nextObject();
-        if (o instanceof PGPEncryptedDataList) {
-            enc = (PGPEncryptedDataList) o;
-        } else {
-            enc = (PGPEncryptedDataList) pgpF.nextObject();
-        }
-        PGPPrivateKey sKey = null;
-        PGPPublicKeyEncryptedData pbe = null;
-        while (sKey == null && enc.getEncryptedDataObjects().hasNext()) {
-            pbe = (PGPPublicKeyEncryptedData)enc.getEncryptedDataObjects().next();
-            sKey = getPrivateKey(skr, pbe.getKeyID(), password.toCharArray());
-        }
-        if (pbe != null) {
-            InputStream clear = pbe.getDataStream(new BcPublicKeyDataDecryptorFactory(sKey));
-            PGPObjectFactory pgpFact = new PGPObjectFactory(clear);
-            PGPCompressedData cData = (PGPCompressedData) pgpFact.nextObject();
-            pgpFact = new PGPObjectFactory(cData.getDataStream());
-            PGPLiteralData ld = (PGPLiteralData) pgpFact.nextObject();
-            InputStream unc = ld.getInputStream();
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            int ch;
-            while ((ch = unc.read()) >= 0) {
-                out.write(ch);
-            }
-            byte[] returnBytes = out.toByteArray();
-            out.close();
-            return new String(returnBytes);
-        }
-        return null;
-    }
 
     private static PGPPublicKey getPublicKey(PGPPublicKeyRing publicKeyRing) {
         Iterator<?> kIt = publicKeyRing.getPublicKeys();
@@ -192,9 +148,9 @@ public class PgpUtils {
         PGPEncryptedDataGenerator encGen =
                 new PGPEncryptedDataGenerator(
                         new JcePGPDataEncryptorBuilder(PGPEncryptedData.AES_256).setWithIntegrityPacket(true).setSecureRandom(
-                                new SecureRandom()).setProvider(PROVIDER));
+                                new SecureRandom()).setProvider(ProofMode.getProvider()));
         if (encKey != null) {
-            encGen.addMethod(new JcePublicKeyKeyEncryptionMethodGenerator(encKey).setProvider(PROVIDER));
+            encGen.addMethod(new JcePublicKeyKeyEncryptionMethodGenerator(encKey).setProvider(ProofMode.getProvider()));
             byte[] bytes = bOut.toByteArray();
             OutputStream cOut = encGen.open(out, bytes.length);
             cOut.write(bytes);
@@ -266,7 +222,7 @@ public class PgpUtils {
 
         PGPDigestCalculator sha1Calc = new JcaPGPDigestCalculatorProviderBuilder().build().get(HashAlgorithmTags.SHA1);
         PGPKeyPair          keyPair = new PGPKeyPair(publicKey, privateKey);
-        PGPSecretKey        secretKey = new PGPSecretKey(PGPSignature.DEFAULT_CERTIFICATION, keyPair, identity, sha1Calc, null, null, new JcaPGPContentSignerBuilder(keyPair.getPublicKey().getAlgorithm(), HashAlgorithmTags.SHA1), new JcePBESecretKeyEncryptorBuilder(PGPEncryptedData.CAST5, sha1Calc).setProvider("SC").build(passPhrase));
+        PGPSecretKey        secretKey = new PGPSecretKey(PGPSignature.DEFAULT_CERTIFICATION, keyPair, identity, sha1Calc, null, null, new JcaPGPContentSignerBuilder(keyPair.getPublicKey().getAlgorithm(), HashAlgorithmTags.SHA1), new JcePBESecretKeyEncryptorBuilder(PGPEncryptedData.CAST5, sha1Calc).setProvider(ProofMode.getProvider()).build(passPhrase));
 
         secretKey.encode(secretOut);
 

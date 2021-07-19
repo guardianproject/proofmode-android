@@ -48,11 +48,6 @@ public class PhotosContentJob extends JobService {
     static final int PROJECTION_ID = 0;
     static final int PROJECTION_DATA = 1;
 
-    // This is the external storage directory where cameras place pictures.
-    static final String DCIM_DIR = Environment.getExternalStoragePublicDirectory(
-            Environment.DIRECTORY_DCIM).getPath();
-
-
     // Fake job work.  A real implementation would do some work on a separate thread.
     final Handler mHandler = new Handler();
     final Runnable mWorker = new Runnable() {
@@ -108,6 +103,15 @@ public class PhotosContentJob extends JobService {
             boolean rescanNeeded = false;
 
             if (mRunningParams.getTriggeredContentUris() != null) {
+
+                for (Uri uri : mRunningParams.getTriggeredContentUris()) {
+                    Intent intent = new Intent();
+                    intent.setData(uri);
+                    new MediaWatcher().onReceive(PhotosContentJob.this, intent);
+                }
+
+
+                /**
                 // If we have details about which URIs changed, then iterate through them
                 // and collect either the ids that were impacted or note that a generic
                 // change has happened.
@@ -142,7 +146,6 @@ public class PhotosContentJob extends JobService {
                     // Now we iterate through the query, looking at the filenames of
                     // the items to determine if they are ones we are interested in.
                     Cursor cursor = null;
-                    boolean haveFiles = false;
                     try {
                         cursor = getContentResolver().query(
                                 MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
@@ -153,19 +156,10 @@ public class PhotosContentJob extends JobService {
 
                         while (cursor.moveToNext()) {
 
-                            // We only care about files in the DCIM directory.
-                            String path = cursor.getString(PROJECTION_DATA);
-                            if (path.startsWith(DCIM_DIR)) {
+                            Timber.d("found new photo files for generating proof");
+                            //NEW PHOTOS FOUND!
 
-                                Timber.d("found new photo files for generating proof");
-                                //NEW PHOTOS FOUND!
-                                haveFiles = true;
 
-                                Intent intent = new Intent();
-                                intent.setData(Uri.fromFile(new File(path)));
-                                new MediaWatcher().onReceive(PhotosContentJob.this,intent);
-
-                            }
                         }
                     } catch (SecurityException e) {
                         Timber.e(e, "Error: no access to media!");
@@ -175,7 +169,8 @@ public class PhotosContentJob extends JobService {
                             cursor.close();
                         }
                     }
-                }
+                }**/
+
 
             } else {
                 // We don't have any details about URIs (because too many changed at once),

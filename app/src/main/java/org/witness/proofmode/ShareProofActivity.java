@@ -73,8 +73,6 @@ public class ShareProofActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
 
-        askForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE,4);
-
         setContentView(R.layout.activity_share);
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -293,7 +291,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
             try
             {
-                File fileFolder = MediaWatcher.getHashStorageDir("batch");
+                File fileFolder = MediaWatcher.getHashStorageDir(this, "batch");
 
                 if (fileFolder == null)
                     return false;
@@ -337,7 +335,7 @@ public class ShareProofActivity extends AppCompatActivity {
                 shareNotarization(shareText.toString());
             else {
 
-                File fileFolder = MediaWatcher.getHashStorageDir("zip");
+                File fileFolder = MediaWatcher.getHashStorageDir(this,"zip");
                 File fileZip = new File(fileFolder,"proofmode." + new Date().getTime() + ".zip");
                 zip(shareUris,fileZip);
                 fileZip.setReadable(true);
@@ -363,7 +361,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
         if (hash != null) {
 
-            File fileFolder = MediaWatcher.getHashStorageDir(hash);
+            File fileFolder = MediaWatcher.getHashStorageDir(this,hash);
 
             if (fileFolder != null ) {
                 File fileMediaSig = new File(fileFolder, hash + OPENPGP_FILE_TAG);
@@ -504,7 +502,7 @@ public class ShareProofActivity extends AppCompatActivity {
         String hash = HashUtils.getSHA256FromFileContent(getContentResolver().openInputStream(uriMedia));
 
         if (hash != null) {
-            File fileFolder = MediaWatcher.getHashStorageDir(hash);
+            File fileFolder = MediaWatcher.getHashStorageDir(this,hash);
 
             if (fileFolder == null)
                 return false;

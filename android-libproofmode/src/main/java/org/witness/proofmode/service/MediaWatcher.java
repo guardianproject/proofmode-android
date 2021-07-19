@@ -88,11 +88,6 @@ public class MediaWatcher extends BroadcastReceiver {
 
         if (doProof || forceDoProof) {
 
-            if (!isExternalStorageWritable()) {
-              //  Toast.makeText(context, R.string.no_external_storage, Toast.LENGTH_SHORT).show();
-                return null;
-            }
-
             Uri tmpUriMedia = intent.getData();
             if (tmpUriMedia == null)
                 tmpUriMedia = (Uri) intent.getParcelableExtra(Intent.EXTRA_STREAM);
@@ -111,7 +106,11 @@ public class MediaWatcher extends BroadcastReceiver {
             try {
                 mediaHash = HashUtils.getSHA256FromFileContent(context.getContentResolver().openInputStream(uriMedia));
             } catch (FileNotFoundException e) {
-                Timber.e(e);
+                Timber.e(e, "unable to open inputstream for hashing: %s", uriMedia);
+                return null;
+            }
+             catch (SecurityException e) {
+                Timber.e(e,"security exception accessing URI: %s",uriMedia);
                 return null;
             }
 
@@ -148,7 +147,7 @@ public class MediaWatcher extends BroadcastReceiver {
                             @Override
                             public void onFailure(@NonNull Exception e) {
                                 // An error occurred while communicating with the service.
-                                Timber.d("SafetyNet check failed", e);
+                                Timber.d(e,"SafetyNet check failed");
                             }
                         });
 
@@ -159,14 +158,14 @@ public class MediaWatcher extends BroadcastReceiver {
                                 @Override
                                 public void notarizationSuccessful(String timestamp) {
 
-                                    Timber.d("Got OpenTimestamps success response timestamp: " + timestamp);
+                                    Timber.d("Got OpenTimestamps success response timestamp: %s", timestamp);
                                     writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, "OpenTimestamps: " + timestamp);
                                 }
 
                                 @Override
                                 public void notarizationFailed(int errCode, String message) {
 
-                                    Timber.d("Got OpenTimestamps error response: " + message);
+                                    Timber.d("Got OpenTimestamps error response: %s", message);
                                     writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, "OpenTimestamps Error: " + message);
 
                                 }
@@ -219,7 +218,7 @@ public class MediaWatcher extends BroadcastReceiver {
     {
 
       //  File fileMedia = new File(mediaPath);
-        File fileFolder = getHashStorageDir(hash);
+        File fileFolder = getHashStorageDir(context,hash);
 
         if (fileFolder != null) {
 
@@ -244,16 +243,20 @@ public class MediaWatcher extends BroadcastReceiver {
                 }
 
             } catch (Exception e) {
-                Log.e("MediaWatcher", "Error signing media or proof", e);
+                Timber.d( "Error signing media or proof: %s", e.getLocalizedMessage());
             }
         }
     }
 
-    public static File getHashStorageDir(String hash) {
+    public static File getHashStorageDir(Context context, String hash) {
 
         // Get the directory for the user's public pictures directory.
-        File fileParentDir = null;
+        File fileParentDir = new File(context.getFilesDir(),PROOF_BASE_FOLDER);
+        if (!fileParentDir.exists()) {
+            fileParentDir.mkdir();
+        }
 
+        /**
         if (android.os.Build.VERSION.SDK_INT >= 19) {
             fileParentDir = new File(Environment.getExternalStoragePublicDirectory(
                     Environment.DIRECTORY_DOCUMENTS), PROOF_BASE_FOLDER);
@@ -273,7 +276,7 @@ public class MediaWatcher extends BroadcastReceiver {
                     if (!fileParentDir.mkdir())
                         return null;
             }
-        }
+        }**/
 
         File fileHashDir = new File(fileParentDir, hash + '/');
         if (!fileHashDir.exists())

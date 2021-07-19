@@ -5,10 +5,8 @@
 
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
-        tools:remove="android:maxSdkVersion" />
-    <uses-permission
-        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        tools:remove="android:maxSdkVersion" />
+        tools:remove="android:maxSdkVersion"
+        />
     <uses-permission
         android:name="android.permission.CAMERA"
         tools:remove="android:maxSdkVersion" />
@@ -30,7 +28,6 @@
     <uses-permission
         android:name="android.permission.READ_PHONE_STATE"
         tools:remove="android:maxSdkVersion" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
         android:name=".ProofModeApp"
@@ -38,8 +35,8 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
+        android:largeHeap="true"
         android:theme="@style/AppTheme"
-        android:requestLegacyExternalStorage="true"
         >
         <activity android:name=".PermissionActivity"></activity>
         <activity
@@ -88,28 +85,6 @@
             android:name=".service.MediaWatcher"
             android:enabled="true"
             android:exported="true">
-            <intent-filter>
-                <action android:name="com.android.camera.NEW_PICTURE" />
-                <action android:name="android.hardware.action.NEW_PICTURE" />
-
-                <data android:mimeType="image/*" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="com.android.camera.NEW_VIDEO" />
-
-                <data android:mimeType="video/*" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.hardware.action.NEW_VIDEO" />
-
-                <data android:mimeType="video/*" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.UMS_CONNECTED" />
                 <action android:name="android.intent.action.UMS_DISCONNECTED" />
