@@ -13,7 +13,7 @@
         <attr name="dot_rim_color_current" format="color" />
         <attr name="dot_total" />
         <attr name="dot_current" />
-        <attr name="hide_if_only_one" />
+      <!--  <attr name="hide_if_only_one" />-->
         <attr name="android:gravity" />
     </declare-styleable>
 

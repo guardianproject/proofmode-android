@@ -68,7 +68,7 @@ public class DottedProgressView extends View
 			mRimColorCurrent = a.getColor(R.styleable.DottedProgressView_dot_rim_color_current, mRimColorCurrent);
 			mNumDots = a.getInt(R.styleable.DottedProgressView_dot_total, 3);
 			mCurrentDot = a.getInt(R.styleable.DottedProgressView_dot_current, 1);
-			mHideIfOnlyOne = a.getBoolean(R.styleable.DottedProgressView_hide_if_only_one, mHideIfOnlyOne);
+	//		mHideIfOnlyOne = a.getBoolean(R.styleable.DottedProgressView_hide_if_only_one, mHideIfOnlyOne);
 			a.recycle();
 		}
 		mPaint = new Paint();
