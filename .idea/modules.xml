@@ -2,9 +2,9 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/ProofMode.iml" filepath="$PROJECT_DIR$/ProofMode.iml" group="ProofMode" />
-      <module fileurl="file://$PROJECT_DIR$/android-libproofmode/android-libproofmode.iml" filepath="$PROJECT_DIR$/android-libproofmode/android-libproofmode.iml" group="ProofMode/android-libproofmode" />
-      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" group="ProofMode/app" />
+      <module fileurl="file://$PROJECT_DIR$/ProofMode.iml" filepath="$PROJECT_DIR$/ProofMode.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/android-libproofmode/ProofMode.android-libproofmode.iml" filepath="$PROJECT_DIR$/.idea/modules/android-libproofmode/ProofMode.android-libproofmode.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/ProofMode.app.iml" filepath="$PROJECT_DIR$/.idea/modules/app/ProofMode.app.iml" />
     </modules>
   </component>
 </project>
