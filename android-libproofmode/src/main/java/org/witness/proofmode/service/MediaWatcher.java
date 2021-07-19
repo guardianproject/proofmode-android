@@ -101,36 +101,6 @@ public class MediaWatcher extends BroadcastReceiver {
                 return null;
 
             final Uri uriMedia = tmpUriMedia;
-            /**
-            String mediaPathTmp = uriMedia.getPath();
-
-            if (!new File(mediaPathTmp).exists())
-            {
-                //do a better job of handling a null situation
-                try {
-                    Cursor cursor = context.getContentResolver().query(uriMedia, null, null, null, null);
-                    if (cursor != null) {
-                        cursor.moveToFirst();
-                        mediaPathTmp = cursor.getString(cursor.getColumnIndex("_data"));
-                        cursor.close();
-                    } else {
-                        mediaPathTmp = uriMedia.getPath();
-                    }
-                } catch (Exception e) {
-                    //error looking up file?
-                    Timber.w("unable to find source media file for: " + mediaPathTmp,e);
-                }
-            }
-
-
-            final String mediaPath = mediaPathTmp;
-            **/
-
-            /**
-            File fileMediaPath = new File(mediaPath);
-            if (!fileMediaPath.exists())
-                return null;
-             **/
 
             final boolean showDeviceIds = prefs.getBoolean(ProofMode.PREF_OPTION_PHONE,ProofMode.PREF_OPTION_PHONE_DEFAULT);
             final boolean showLocation = prefs.getBoolean(ProofMode.PREF_OPTION_LOCATION,ProofMode.PREF_OPTION_LOCATION_DEFAULT);

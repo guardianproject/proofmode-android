@@ -18,6 +18,9 @@
     <uses-permission
         android:name="android.permission.ACCESS_FINE_LOCATION"
         tools:remove="android:maxSdkVersion" />
+
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"
+        tools:remove="android:maxSdkVersion"/>
     <uses-permission
         android:name="android.permission.ACCESS_NETWORK_STATE"
         tools:remove="android:maxSdkVersion" />

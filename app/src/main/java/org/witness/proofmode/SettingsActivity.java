@@ -21,6 +21,7 @@ public class SettingsActivity extends AppCompatActivity {
     private final static int REQUEST_CODE_LOCATION = 1;
     private final static int REQUEST_CODE_NETWORK_STATE = 2;
     private final static int REQUEST_CODE_READ_PHONE_STATE = 3;
+    private final static int REQUEST_CODE_LOCATION_BACKGROUND = 4;
 
     private SharedPreferences mPrefs;
 
@@ -56,12 +57,16 @@ public class SettingsActivity extends AppCompatActivity {
                 if (isChecked)
                 {
                     if (!askForPermission(Manifest.permission.ACCESS_FINE_LOCATION, REQUEST_CODE_LOCATION, R.layout.permission_location)) {
-                        mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_LOCATION,isChecked).commit();
-                        refreshLocation();
+                        if (!askForPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION, REQUEST_CODE_LOCATION_BACKGROUND, 0)) {
+                            mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_LOCATION,isChecked).commit();
+                            refreshLocation();
+                        }
                     }
+
                 } else {
                     mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_LOCATION,isChecked).commit();
                 }
+
                 updateUI();
             }
         });
@@ -125,8 +130,20 @@ public class SettingsActivity extends AppCompatActivity {
             //Location
             case REQUEST_CODE_LOCATION:
                 if (PermissionActivity.hasPermissions(this, new String[] { Manifest.permission.ACCESS_FINE_LOCATION })) {
+
+                    askForPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION, REQUEST_CODE_LOCATION_BACKGROUND, 0);
+
+
+
+                }
+                updateUI();
+                break;
+            case REQUEST_CODE_LOCATION_BACKGROUND:
+                if (PermissionActivity.hasPermissions(this, new String[] { Manifest.permission.ACCESS_FINE_LOCATION })) {
+
                     mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_LOCATION, true).commit();
                     refreshLocation();
+
                 }
                 updateUI();
                 break;
