@@ -106,8 +106,7 @@ public class VideosContentJob extends JobService {
                 // so just note that we need to do a full rescan.
 
                 Timber.w("rescan is needed since many videos changed at once");
-                Toast.makeText(this,"Rescan is needed!",Toast.LENGTH_SHORT).show();
-
+            
             }
 
         }
