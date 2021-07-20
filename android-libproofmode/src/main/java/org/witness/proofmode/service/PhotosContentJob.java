@@ -48,15 +48,6 @@ public class PhotosContentJob extends JobService {
     static final int PROJECTION_ID = 0;
     static final int PROJECTION_DATA = 1;
 
-    // Fake job work.  A real implementation would do some work on a separate thread.
-    final Handler mHandler = new Handler();
-    final Runnable mWorker = new Runnable() {
-        @Override public void run() {
-            doWork ();
-            jobFinished(mRunningParams, false);
-            scheduleJob(PhotosContentJob.this);
-        }
-    };
 
     JobParameters mRunningParams;
 
@@ -87,20 +78,17 @@ public class PhotosContentJob extends JobService {
         Timber.d("JOB STARTED!");
         mRunningParams = params;
 
-        mHandler.postDelayed(mWorker, 100);
+        doWork ();
+        jobFinished(mRunningParams, false);
+        scheduleJob(PhotosContentJob.this);
 
         return true;
     }
 
     private void doWork ()
     {
-        int notifyId = 1;
-    //    Toast.makeText(this,"Generating photo proof...",Toast.LENGTH_SHORT).show();
 
-
-        // Did we trigger due to a content change?
         if (mRunningParams.getTriggeredContentAuthorities() != null) {
-            boolean rescanNeeded = false;
 
             if (mRunningParams.getTriggeredContentUris() != null) {
 
@@ -110,72 +98,10 @@ public class PhotosContentJob extends JobService {
                     new MediaWatcher().onReceive(PhotosContentJob.this, intent);
                 }
 
-
-                /**
-                // If we have details about which URIs changed, then iterate through them
-                // and collect either the ids that were impacted or note that a generic
-                // change has happened.
-                ArrayList<String> ids = new ArrayList<>();
-                for (Uri uri : mRunningParams.getTriggeredContentUris()) {
-                    List<String> path = uri.getPathSegments();
-                    if (path != null && path.size() == EXTERNAL_PATH_SEGMENTS.size()+1) {
-                        // This is a specific file.
-                        ids.add(path.get(path.size()-1));
-                    } else {
-                        // Oops, there is some general change!
-                        rescanNeeded = true;
-                    }
-                }
-
-                if (ids.size() > 0) {
-
-
-                    // If we found some ids that changed, we want to determine what they are.
-                    // First, we do a query with content provider to ask about all of them.
-                    StringBuilder selection = new StringBuilder();
-                    for (int i=0; i<ids.size(); i++) {
-                        if (selection.length() > 0) {
-                            selection.append(" OR ");
-                        }
-                        selection.append(MediaStore.Images.ImageColumns._ID);
-                        selection.append("='");
-                        selection.append(ids.get(i));
-                        selection.append("'");
-                    }
-
-                    // Now we iterate through the query, looking at the filenames of
-                    // the items to determine if they are ones we are interested in.
-                    Cursor cursor = null;
-                    try {
-                        cursor = getContentResolver().query(
-                                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                                PROJECTION, selection.toString(), null, null);
-
-                        int mediaIdx=0;
-                        mediaIdx++;
-
-                        while (cursor.moveToNext()) {
-
-                            Timber.d("found new photo files for generating proof");
-                            //NEW PHOTOS FOUND!
-
-
-                        }
-                    } catch (SecurityException e) {
-                        Timber.e(e, "Error: no access to media!");
-
-                    } finally {
-                        if (cursor != null) {
-                            cursor.close();
-                        }
-                    }
-                }**/
-
-
             } else {
                 // We don't have any details about URIs (because too many changed at once),
                 // so just note that we need to do a full rescan.
-                rescanNeeded = true;
+
                 Timber.w("rescan is needed since many photos changed at once");
                 Toast.makeText(this,"Rescan is needed!",Toast.LENGTH_SHORT).show();
 
@@ -188,7 +114,6 @@ public class PhotosContentJob extends JobService {
 
     @Override
     public boolean onStopJob(JobParameters params) {
-        mHandler.removeCallbacks(mWorker);
         return false;
     }
 
@@ -201,6 +126,9 @@ public class PhotosContentJob extends JobService {
                 new ComponentName(context, PhotosContentJob.class));
         builder.addTriggerContentUri(
                 new JobInfo.TriggerContentUri(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                        JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS));
+        builder.addTriggerContentUri(
+                new JobInfo.TriggerContentUri(MediaStore.Images.Media.INTERNAL_CONTENT_URI,
                         JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS));
         js.schedule(builder.build());
     }

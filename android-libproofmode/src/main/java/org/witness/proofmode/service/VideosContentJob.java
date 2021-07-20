@@ -53,16 +53,6 @@ public class VideosContentJob extends JobService {
     static final int PROJECTION_ID = 0;
     static final int PROJECTION_DATA = 1;
 
-    // Fake job work.  A real implementation would do some work on a separate thread.
-    final Handler mHandler = new Handler();
-    final Runnable mWorker = new Runnable() {
-        @Override public void run() {
-            doWork ();
-            jobFinished(mRunningParams, false);
-            scheduleJob(VideosContentJob.this);
-        }
-    };
-
     JobParameters mRunningParams;
 
     public static void scheduleJob(Context context) {
@@ -74,6 +64,10 @@ public class VideosContentJob extends JobService {
         builder.addTriggerContentUri(
                 new JobInfo.TriggerContentUri(MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
                         JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS));
+        builder.addTriggerContentUri(
+                new JobInfo.TriggerContentUri(MediaStore.Video.Media.INTERNAL_CONTENT_URI,
+                        JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS));
+
         js.schedule(builder.build());
     }
 
@@ -102,8 +96,9 @@ public class VideosContentJob extends JobService {
     public boolean onStartJob(JobParameters params) {
         Log.i("VideosContentJob", "JOB STARTED!");
         mRunningParams = params;
+        doWork ();
+        jobFinished(mRunningParams, false);
 
-        mHandler.postDelayed(mWorker, 100);
         return true;
     }
 
@@ -200,7 +195,7 @@ public class VideosContentJob extends JobService {
 
     @Override
     public boolean onStopJob(JobParameters params) {
-        mHandler.removeCallbacks(mWorker);
+
         return false;
     }
 }

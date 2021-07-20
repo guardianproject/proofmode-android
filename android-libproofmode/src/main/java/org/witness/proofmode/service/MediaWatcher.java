@@ -242,6 +242,8 @@ public class MediaWatcher extends BroadcastReceiver {
                     PgpUtils.getInstance(context).createDetachedSignature(fileMediaProof, fileMediaProofSig, PgpUtils.DEFAULT_PASSWORD);
                 }
 
+                Timber.d("Proof written for hash %s", hash);
+
             } catch (Exception e) {
                 Timber.d( "Error signing media or proof: %s", e.getLocalizedMessage());
             }
