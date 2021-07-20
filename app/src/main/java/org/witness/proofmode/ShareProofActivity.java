@@ -127,28 +127,10 @@ public class ShareProofActivity extends AppCompatActivity {
             if (mediaUri == null)
                 mediaUri = intent.getData();
 
-            //content://com.google.android.apps.photos.contentprovider/0/1/content%3A%2F%2Fmedia%2Fexternal%2Fimages%2Fmedia%2F3517/ORIGINAL/NONE/image%2Fjpeg/765892976
-
-            String contentEnc = "content://";
-            List<String> paths = mediaUri.getPathSegments();
-            for (String path: paths)
-            {
-                if (path.startsWith(contentEnc))
-                {
-                    try {
-                        String pathDec = URLDecoder.decode(path,"UTF-8");
-                        mediaUri = Uri.parse(pathDec);
-                        break;
-                    } catch (UnsupportedEncodingException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-
-
-
             if (mediaUri != null)
             {
+                mediaUri = cleanUri (mediaUri);
+
                 try {
                     proofExists = proofExists(mediaUri);
                 } catch (FileNotFoundException e) {
@@ -166,6 +148,30 @@ public class ShareProofActivity extends AppCompatActivity {
             displayGeneratePrompt();
         }
 
+    }
+
+    private Uri cleanUri (Uri mediaUri)
+    {
+        //content://com.google.android.apps.photos.contentprovider/0/1/content%3A%2F%2Fmedia%2Fexternal%2Fimages%2Fmedia%2F3517/ORIGINAL/NONE/image%2Fjpeg/765892976
+        Uri resultUri = mediaUri;
+
+        String contentEnc = "content://";
+        List<String> paths = mediaUri.getPathSegments();
+        for (String path: paths)
+        {
+            if (path.startsWith(contentEnc))
+            {
+                try {
+                    String pathDec = URLDecoder.decode(path,"UTF-8");
+                    resultUri = Uri.parse(pathDec);
+                    break;
+                } catch (UnsupportedEncodingException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        return resultUri;
     }
 
     @Override
@@ -206,6 +212,8 @@ public class ShareProofActivity extends AppCompatActivity {
 
             for (Uri mediaUri : mediaUris)
             {
+                mediaUri = cleanUri(mediaUri);
+
                 proofExists = proofExists(mediaUri);
 
                 if (!proofExists) {
@@ -221,6 +229,8 @@ public class ShareProofActivity extends AppCompatActivity {
 
             if (mediaUri != null)
             {
+                mediaUri = cleanUri(mediaUri);
+
                 proofExists = proofExists(mediaUri);
 
                 if (!proofExists)
@@ -283,6 +293,8 @@ public class ShareProofActivity extends AppCompatActivity {
                     shareProofAsync(shareMedia, shareProof);
                 } catch (FileNotFoundException e) {
                     Timber.e(e);
+                    displayGeneratePrompt();
+
                 }
 
             }
@@ -324,6 +336,8 @@ public class ShareProofActivity extends AppCompatActivity {
 
             for (Uri mediaUri : mediaUris)
             {
+                mediaUri = cleanUri(mediaUri);
+
                 if (!processUri (mediaUri, shareUris, shareText, fBatchProofOut, shareMedia))
                     return false;
             }
@@ -343,9 +357,12 @@ public class ShareProofActivity extends AppCompatActivity {
             if (mediaUri == null)
                 mediaUri = intent.getData();
 
-            if (mediaUri != null)
-                if (!processUri (mediaUri, shareUris, shareText, null, shareMedia))
+            if (mediaUri != null) {
+                mediaUri = cleanUri(mediaUri);
+
+                if (!processUri(mediaUri, shareUris, shareText, null, shareMedia))
                     return false;
+            }
 
         }
 

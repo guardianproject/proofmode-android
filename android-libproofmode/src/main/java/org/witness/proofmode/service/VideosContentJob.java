@@ -39,20 +39,6 @@ public class VideosContentJob extends JobService {
 
     public static int VIDEO_JOB_ID = 10003;
 
-    // The root URI of the media provider, to monitor for generic changes to its content.
-    static final Uri MEDIA_URI = Uri.parse("content://" + MediaStore.AUTHORITY + "/");
-
-    // Path segments for image-specific URIs in the provider.
-    static final List<String> EXTERNAL_PATH_SEGMENTS
-            = MediaStore.Video.Media.EXTERNAL_CONTENT_URI.getPathSegments();
-
-    // The columns we want to retrieve about a particular image.
-    static final String[] PROJECTION = new String[] {
-            MediaStore.Video.VideoColumns._ID, MediaStore.Video.VideoColumns.DATA
-    };
-    static final int PROJECTION_ID = 0;
-    static final int PROJECTION_DATA = 1;
-
     JobParameters mRunningParams;
 
     public static void scheduleJob(Context context) {
@@ -105,88 +91,23 @@ public class VideosContentJob extends JobService {
     private void doWork ()
     {
 
-        int notifyId = 2;
-
-     //   Toast.makeText(this,"Generating video proof...",Toast.LENGTH_SHORT).show();
-
-
-        // Did we trigger due to a content change?
         if (mRunningParams.getTriggeredContentAuthorities() != null) {
-            boolean rescanNeeded = false;
 
             if (mRunningParams.getTriggeredContentUris() != null) {
-                // If we have details about which URIs changed, then iterate through them
-                // and collect either the ids that were impacted or note that a generic
-                // change has happened.
-                ArrayList<String> ids = new ArrayList<>();
+
                 for (Uri uri : mRunningParams.getTriggeredContentUris()) {
-                    List<String> path = uri.getPathSegments();
-                    if (path != null && path.size() == EXTERNAL_PATH_SEGMENTS.size()+1) {
-                        // This is a specific file.
-                        ids.add(path.get(path.size()-1));
-                    } else {
-                        // Oops, there is some general change!
-                        rescanNeeded = true;
-                    }
-                }
-
-                if (ids.size() > 0) {
-                    // If we found some ids that changed, we want to determine what they are.
-                    // First, we do a query with content provider to ask about all of them.
-                    StringBuilder selection = new StringBuilder();
-                    for (int i=0; i<ids.size(); i++) {
-                        if (selection.length() > 0) {
-                            selection.append(" OR ");
-                        }
-                        selection.append(MediaStore.Video.VideoColumns._ID);
-                        selection.append("='");
-                        selection.append(ids.get(i));
-                        selection.append("'");
-                    }
-
-                    // Now we iterate through the query, looking at the filenames of
-                    // the items to determine if they are ones we are interested in.
-                    Cursor cursor = null;
-                    boolean haveFiles = false;
-                    try {
-                        cursor = getContentResolver().query(
-                                MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
-                                PROJECTION, selection.toString(), null, null);
-
-                        int mediaIdx=0;
-                        mediaIdx++;
-
-                        while (cursor.moveToNext()) {
-
-                            // We only care about files in the DCIM directory.
-                            String path = cursor.getString(PROJECTION_DATA);
-
-                            //NEW PHOTOS FOUND!
-                            haveFiles = true;
-                            Timber.d("found new video files for generating proof");
-
-                            Intent intent = new Intent();
-                            intent.setData(Uri.fromFile(new File(path)));
-                            new MediaWatcher().onReceive(VideosContentJob.this,intent);
-
-
-                        }
-                    } catch (SecurityException e) {
-                        //sb.append("Error: no access to media!");
-
-                    } finally {
-                        if (cursor != null) {
-                            cursor.close();
-                        }
-                    }
+                    Intent intent = new Intent();
+                    intent.setData(uri);
+                    new MediaWatcher().onReceive(VideosContentJob.this, intent);
                 }
 
             } else {
                 // We don't have any details about URIs (because too many changed at once),
                 // so just note that we need to do a full rescan.
-                rescanNeeded = true;
+
                 Timber.w("rescan is needed since many videos changed at once");
                 Toast.makeText(this,"Rescan is needed!",Toast.LENGTH_SHORT).show();
+
             }
 
         }

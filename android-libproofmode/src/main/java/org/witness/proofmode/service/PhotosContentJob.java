@@ -34,23 +34,7 @@ public class PhotosContentJob extends JobService {
 
     public static int PHOTOS_CONTENT_JOB = 10001;
 
-    // The root URI of the media provider, to monitor for generic changes to its content.
-    static final Uri MEDIA_URI = Uri.parse("content://" + MediaStore.AUTHORITY + "/");
-
-    // Path segments for image-specific URIs in the provider.
-    static final List<String> EXTERNAL_PATH_SEGMENTS
-            = MediaStore.Images.Media.EXTERNAL_CONTENT_URI.getPathSegments();
-
-    // The columns we want to retrieve about a particular image.
-    static final String[] PROJECTION = new String[] {
-            MediaStore.Images.ImageColumns._ID, MediaStore.Images.ImageColumns.DATA
-    };
-    static final int PROJECTION_ID = 0;
-    static final int PROJECTION_DATA = 1;
-
-
     JobParameters mRunningParams;
-
 
     // Check whether this job is currently scheduled.
     public static boolean isScheduled(Context context) {
