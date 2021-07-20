@@ -20,8 +20,8 @@ android {
         applicationId "org.witness.proofmode"
         minSdkVersion 16
         targetSdkVersion 30
-        versionCode 133
-        versionName "0.0.13-RC-3"
+        versionCode 1411
+        versionName "0.0.14-BETA-1"
         multiDexEnabled true
         archivesBaseName = "ProofMode-$versionName"
     }
@@ -49,22 +49,22 @@ android {
 }
 
 dependencies {
-    testImplementation 'junit:junit:4.12'
+    testImplementation 'junit:junit:4.13.2'
 
     implementation project(':android-libproofmode')
 
-    implementation 'androidx.appcompat:appcompat:1.1.0'
-    implementation 'androidx.core:core:1.1.0'
-    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
+    implementation 'androidx.appcompat:appcompat:1.3.0'
+    implementation 'androidx.core:core:1.6.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
     implementation 'androidx.legacy:legacy-support-v13:1.0.0'
 
-    implementation 'com.google.android.material:material:1.0.0'
-    implementation 'com.google.android.gms:play-services-safetynet:17.0.0'
+    implementation 'com.google.android.material:material:1.4.0'
+    implementation 'com.google.android.gms:play-services-safetynet:17.0.1'
 
     implementation 'com.github.paolorotolo:appintro:4.1.0'
 
-    implementation 'com.jakewharton.timber:timber:4.5.1'
+    implementation 'com.jakewharton.timber:timber:4.7.1'
     implementation 'androidx.multidex:multidex:2.0.1'
 
     implementation 'com.caverock:androidsvg-aar:1.3'
