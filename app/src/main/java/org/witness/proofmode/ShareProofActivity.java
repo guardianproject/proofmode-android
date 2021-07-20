@@ -47,6 +47,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -100,9 +103,6 @@ public class ShareProofActivity extends AppCompatActivity {
         String action = intent.getAction();
         String type = intent.getType();
 
-        ArrayList<Uri> shareUris = new ArrayList<Uri>();
-        StringBuffer shareText = new StringBuffer();
-
         boolean proofExists = false;
 
         if (Intent.ACTION_SEND_MULTIPLE.equals(action)) {
@@ -126,6 +126,26 @@ public class ShareProofActivity extends AppCompatActivity {
             Uri mediaUri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
             if (mediaUri == null)
                 mediaUri = intent.getData();
+
+            //content://com.google.android.apps.photos.contentprovider/0/1/content%3A%2F%2Fmedia%2Fexternal%2Fimages%2Fmedia%2F3517/ORIGINAL/NONE/image%2Fjpeg/765892976
+
+            String contentEnc = "content://";
+            List<String> paths = mediaUri.getPathSegments();
+            for (String path: paths)
+            {
+                if (path.startsWith(contentEnc))
+                {
+                    try {
+                        String pathDec = URLDecoder.decode(path,"UTF-8");
+                        mediaUri = Uri.parse(pathDec);
+                        break;
+                    } catch (UnsupportedEncodingException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+
+
 
             if (mediaUri != null)
             {
@@ -360,6 +380,9 @@ public class ShareProofActivity extends AppCompatActivity {
         String hash = HashUtils.getSHA256FromFileContent(getContentResolver().openInputStream(mediaUri));
 
         if (hash != null) {
+
+            Timber.d("Checking if proof exists for URI %s and hash %s", mediaUri, hash);
+
 
             File fileFolder = MediaWatcher.getHashStorageDir(this,hash);
 
