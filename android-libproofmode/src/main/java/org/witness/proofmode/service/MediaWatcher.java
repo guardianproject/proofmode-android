@@ -47,6 +47,9 @@ import java.util.HashMap;
 
 import timber.log.Timber;
 
+import static org.witness.proofmode.ProofMode.PREFS_DOPROOF;
+import static org.witness.proofmode.ProofMode.PROOF_FILE_TAG;
+
 public class MediaWatcher extends BroadcastReceiver {
 
     private final static String PROOF_FILE_TAG = ".proof.csv";
@@ -76,7 +79,7 @@ public class MediaWatcher extends BroadcastReceiver {
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 
-        boolean doProof = prefs.getBoolean("doProof", true);
+        boolean doProof = prefs.getBoolean(PREFS_DOPROOF, true);
 
         if (intent.getAction() != null) {
             if (intent.getAction().equals(Intent.ACTION_UMS_CONNECTED)) {
@@ -116,7 +119,14 @@ public class MediaWatcher extends BroadcastReceiver {
 
             if (mediaHash != null) {
 
-                Timber.d("Writing proof for hash %s for path %s",mediaHash, uriMedia.toString());
+                try {
+                    if (proofExists(context,uriMedia,mediaHash))
+                        return mediaHash;
+                } catch (FileNotFoundException e) {
+                    //must not exist!
+                }
+
+                Timber.d("Writing proof for hash %s for path %s",mediaHash, uriMedia);
 
                 //write immediate proof, w/o safety check result
                 writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, null);
@@ -190,6 +200,36 @@ public class MediaWatcher extends BroadcastReceiver {
         return null;
     }
 
+    private boolean proofExists (Context context, Uri mediaUri, String hash) throws FileNotFoundException {
+        boolean result = false;
+
+        if (hash != null) {
+
+
+            File fileFolder = MediaWatcher.getHashStorageDir(context,hash);
+
+            if (fileFolder != null ) {
+                File fileMediaProof = new File(fileFolder, hash + PROOF_FILE_TAG);
+
+
+                if (fileMediaProof.exists()) {
+                    Timber.d("Proof EXISTS for URI %s and hash %s", mediaUri, hash);
+
+                    result = true;
+                } else {
+                    //generate now?
+                    result = false;
+                    Timber.d("Proof DOES NOT EXIST for URI %s and hash %s", mediaUri, hash);
+
+
+                }
+            }
+        }
+
+        return result;
+    }
+
+
     public boolean isOnline(Context context) {
         ConnectivityManager cm =
                 (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -228,10 +268,6 @@ public class MediaWatcher extends BroadcastReceiver {
 
             try {
 
-                //sign the media file
-                if (!fileMediaSig.exists())
-                    PgpUtils.getInstance(context).createDetachedSignature(context.getContentResolver().openInputStream(uriMedia), new FileOutputStream(fileMediaSig), PgpUtils.DEFAULT_PASSWORD);
-
                 //add data to proof csv and sign again
                 boolean writeHeaders = !fileMediaProof.exists();
                 String buildProof = buildProof(context, uriMedia, writeHeaders, showDeviceIds, showLocation, showMobileNetwork, safetyCheckResult, isBasicIntegrity, isCtsMatch, notarizeTimestamp, notes);
@@ -242,7 +278,11 @@ public class MediaWatcher extends BroadcastReceiver {
                     PgpUtils.getInstance(context).createDetachedSignature(fileMediaProof, fileMediaProofSig, PgpUtils.DEFAULT_PASSWORD);
                 }
 
-                Timber.d("Proof written for hash %s", hash);
+                //sign the media file
+               if (!fileMediaSig.exists())
+                  PgpUtils.getInstance(context).createDetachedSignature(context.getContentResolver().openInputStream(uriMedia), new FileOutputStream(fileMediaSig), PgpUtils.DEFAULT_PASSWORD);
+
+                Timber.d("Proof written/updated for uri %s and hash %s", uriMedia, hash);
 
             } catch (Exception e) {
                 Timber.d( "Error signing media or proof: %s", e.getLocalizedMessage());

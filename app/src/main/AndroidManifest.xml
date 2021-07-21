@@ -5,8 +5,7 @@
 
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
-        tools:remove="android:maxSdkVersion"
-        />
+        tools:remove="android:maxSdkVersion" />
     <uses-permission
         android:name="android.permission.CAMERA"
         tools:remove="android:maxSdkVersion" />
@@ -16,9 +15,9 @@
     <uses-permission
         android:name="android.permission.ACCESS_FINE_LOCATION"
         tools:remove="android:maxSdkVersion" />
-
-    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"
-        tools:remove="android:maxSdkVersion"/>
+    <uses-permission
+        android:name="android.permission.ACCESS_BACKGROUND_LOCATION"
+        tools:remove="android:maxSdkVersion" />
     <uses-permission
         android:name="android.permission.ACCESS_NETWORK_STATE"
         tools:remove="android:maxSdkVersion" />
@@ -28,17 +27,22 @@
     <uses-permission
         android:name="android.permission.READ_PHONE_STATE"
         tools:remove="android:maxSdkVersion" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
 
     <application
         android:name=".ProofModeApp"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:supportsRtl="true"
         android:largeHeap="true"
-        android:theme="@style/AppTheme"
-        >
-        <activity android:name=".PermissionActivity"></activity>
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+        <service
+            android:name=".ProofService"
+            android:enabled="true"
+            android:exported="true"></service>
+
+        <activity android:name=".PermissionActivity" />
         <activity
             android:name=".onboarding.OnboardingActivity"
             android:configChanges="orientation|keyboardHidden|screenSize"

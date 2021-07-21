@@ -3,6 +3,7 @@ package org.witness.proofmode;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.witness.proofmode.service.MediaListenerService;
@@ -30,6 +31,8 @@ public class ProofMode {
     public final static String PROOF_FILE_TAG = ".proof.csv";
     public final static String OPENPGP_FILE_TAG = ".asc";
 
+    public final static String PREFS_DOPROOF = "doProof";
+
     public final static BouncyCastleProvider sProvider = new BouncyCastleProvider();
     static {
         Security.addProvider(sProvider);
@@ -42,16 +45,28 @@ public class ProofMode {
         if (mInit)
             return;
 
-        if (android.os.Build.VERSION.SDK_INT >= 24) {
+        if (Build.VERSION.SDK_INT >= 24) {
             PhotosContentJob.scheduleJob(context);
             VideosContentJob.scheduleJob(context);
         }
-        else
-        {
-            context.startService(new Intent(context, MediaListenerService.class));
+        else {
+            Intent intentService = new Intent(context, MediaListenerService.class);
+            context.startService(intentService);
         }
 
         mInit = true;
+    }
+
+    public static void stop (Context context)
+    {
+        if (Build.VERSION.SDK_INT >= 24) {
+            PhotosContentJob.cancelJob(context);
+            VideosContentJob.cancelJob(context);
+        }
+        else {
+            Intent intentService = new Intent(context, MediaListenerService.class);
+            context.stopService(intentService);
+        }
     }
 
     public static BouncyCastleProvider getProvider ()

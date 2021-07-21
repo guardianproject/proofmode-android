@@ -3,6 +3,7 @@ package org.witness.proofmode;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 
 import org.witness.proofmode.ProofModeApp;
 

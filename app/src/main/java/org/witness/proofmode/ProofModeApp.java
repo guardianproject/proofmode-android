@@ -3,6 +3,9 @@ package org.witness.proofmode;
 import android.content.Context;
 
 import androidx.multidex.MultiDexApplication;
+
+import android.content.Intent;
+import android.os.Build;
 import android.util.Log;
 import org.witness.proofmode.util.SafetyNetCheck;
 
@@ -38,6 +41,27 @@ public class ProofModeApp extends MultiDexApplication {
         }
 
         ProofMode.init(context);
+
+
+        Intent intentService = new Intent(context, ProofService.class);
+
+        if (Build.VERSION.SDK_INT >= 26) {
+            context.startForegroundService(intentService);
+
+        }
+        else
+        {
+            context.startService(intentService);
+        }
+
+    }
+
+    public static void cancel (Context context)
+    {
+        ProofMode.stop(context);
+        Intent intentService = new Intent(context, ProofService.class);
+        context.stopService(intentService);
+
     }
 
     /** A tree which logs important information for crash reporting. */

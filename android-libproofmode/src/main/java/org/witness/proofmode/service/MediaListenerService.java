@@ -3,6 +3,7 @@ package org.witness.proofmode.service;
 import android.app.Service;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Environment;
 import android.os.FileObserver;
 import android.os.Handler;
@@ -30,6 +31,9 @@ public class MediaListenerService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+
+
+
     }
 
     @Override
@@ -51,14 +55,10 @@ public class MediaListenerService extends Service {
             public void onEvent(int event, final String mediaPath) {
                 if (mediaPath != null && (!mediaPath.equals(".probe"))) { // check that it's not equal to .probe because thats created every time camera is launched
 
-                    new Handler(Looper.getMainLooper()).post(new Runnable() {
-                        @Override
-                        public void run() {
+                    Intent intent = new Intent();
+                    intent.setData(Uri.fromFile(new File(mediaPath)));
+                    new MediaWatcher().onReceive(MediaListenerService.this,intent);
 
-                            if (mediaPath.endsWith(".mp4"))
-                                handleNewVideo(mediaPath);
-                        }
-                    });
                 }
             }
         };
@@ -67,10 +67,4 @@ public class MediaListenerService extends Service {
 
     }
 
-    private void handleNewVideo (String mediaPath)
-    {
-        Intent intent = new Intent();
-        intent.setData(Uri.fromFile(new File(mediaPath)));
-        new MediaWatcher().onReceive(MediaListenerService.this,intent);
-    }
 }

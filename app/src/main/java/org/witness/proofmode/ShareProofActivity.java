@@ -398,17 +398,16 @@ public class ShareProofActivity extends AppCompatActivity {
 
         if (hash != null) {
 
-            Timber.d("Checking if proof exists for URI %s and hash %s", mediaUri, hash);
+            Timber.d("Proof check if exists for URI %s and hash %s", mediaUri, hash);
 
 
             File fileFolder = MediaWatcher.getHashStorageDir(this,hash);
 
             if (fileFolder != null ) {
-                File fileMediaSig = new File(fileFolder, hash + OPENPGP_FILE_TAG);
                 File fileMediaProof = new File(fileFolder, hash + PROOF_FILE_TAG);
-                File fileMediaProofSig = new File(fileFolder, hash + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
 
-                if (fileMediaSig.exists() && fileMediaProof.exists() && fileMediaProofSig.exists()) {
+
+                if (fileMediaProof.exists()) {
                     result = true;
                 } else {
                     //generate now?
@@ -551,7 +550,7 @@ public class ShareProofActivity extends AppCompatActivity {
             File fileMediaProof = new File(fileFolder, hash + PROOF_FILE_TAG);
             File fileMediaProofSig = new File(fileFolder, hash + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
 
-            if (fileMediaSig.exists() && fileMediaProof.exists() && fileMediaProofSig.exists()) {
+            if (fileMediaProof.exists()) {
                 generateProofOutput(fileMedia, new Date(fileMedia.lastModified()), fileMediaSig, fileMediaProof, fileMediaProofSig, hash, shareMedia, fBatchProofOut, shareUris, sb);
                 return true;
             }
@@ -588,12 +587,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
         }
 
-        if (fileMediaSig.exists() && fileMediaProof.exists() && fileMediaProofSig.exists()) {
-
-           generateProofOutput(fileMedia, new Date(fileMedia.lastModified()), fileMediaSig, fileMediaProof, fileMediaProofSig, hash, shareMedia, fBatchProofOut, shareUris, sb);
-
-            return true;
-        }
+        generateProofOutput(fileMedia, new Date(fileMedia.lastModified()), fileMediaSig, fileMediaProof, fileMediaProofSig, hash, shareMedia, fBatchProofOut, shareUris, sb);
 
         return false;
     }
@@ -629,9 +623,14 @@ public class ShareProofActivity extends AppCompatActivity {
         shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider",fileMediaProof));
 
         if (shareMedia) {
-            shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider",fileMedia));
-            shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider",fileMediaSig));
-            shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider",fileMediaProofSig));
+            if (fileMedia.exists())
+                shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider",fileMedia));
+
+            if (fileMediaSig.exists())
+                shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider",fileMediaSig));
+
+            if (fileMediaProofSig.exists())
+                shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider",fileMediaProofSig));
         }
 
         if (fBatchProofOut != null)

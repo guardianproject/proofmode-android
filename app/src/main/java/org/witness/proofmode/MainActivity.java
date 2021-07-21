@@ -27,6 +27,8 @@ import org.witness.proofmode.util.GPSTracker;
 
 import java.io.IOException;
 
+import static org.witness.proofmode.ProofMode.PREFS_DOPROOF;
+
 public class MainActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
 
     private SharedPreferences mPrefs;
@@ -118,12 +120,14 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         if (isOn)
         {
             if (!askForPermissions(requiredPermissions, REQUEST_CODE_REQUIRED_PERMISSIONS)) {
-                mPrefs.edit().putBoolean("doProof", isOn).commit();
+                mPrefs.edit().putBoolean(PREFS_DOPROOF, isOn).commit();
                 updateOnOffState(true);
+                ProofModeApp.init(this);
             }
         } else {
-            mPrefs.edit().putBoolean("doProof", isOn).commit();
+            mPrefs.edit().putBoolean(PREFS_DOPROOF, isOn).commit();
             updateOnOffState(true);
+            ProofModeApp.cancel(this);
         }
     }
 
