@@ -8,8 +8,6 @@ android {
     defaultConfig {
         minSdkVersion 16
         targetSdkVersion 30
-        versionCode 10
-        versionName "10"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
     }
@@ -48,19 +46,5 @@ dependencies {
     implementation 'org.bouncycastle:bcpg-jdk15to18:1.69'
 
 
-}
-
-apply plugin: 'maven'
-
-uploadArchives {
-        repositories.mavenDeployer {
-                def deployPath = file(getProperty('aar.deployPath'))
-                repository(url: "file://${deployPath.absolutePath}")
-                pom.project {
-                        groupId 'org.witness'
-                        artifactId 'android-libproofmode'
-                        version "0.8"
-                }
-        }
 }
 
