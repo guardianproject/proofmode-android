@@ -78,7 +78,7 @@ public class ProofMode {
     {
         Intent intent = new Intent();
         intent.setData(uri);
-        return new MediaWatcher().handleIntent(context, intent, true);
+        return new MediaWatcher().handleIntent(context, intent);
     }
 
 

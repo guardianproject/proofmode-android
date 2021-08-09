@@ -57,29 +57,35 @@ public class MediaWatcher extends BroadcastReceiver {
     private final static String PROOF_BASE_FOLDER = "proofmode/";
 
     private static boolean mStorageMounted = false;
+    private SharedPreferences mPrefs;
+
 
     public MediaWatcher() {
+
     }
 
     @Override
     public void onReceive(final Context context, final Intent intent) {
+
+        if (mPrefs == null)
+            mPrefs = PreferenceManager.getDefaultSharedPreferences(context);
 
 
         new Thread ()
         {
             public void run ()
             {
-                handleIntent(context, intent, false);
+
+                boolean doProof = mPrefs.getBoolean(PREFS_DOPROOF, true);
+
+                if (doProof)
+                    handleIntent(context, intent);
             }
         }.start();
 
     }
 
-    public String handleIntent (final Context context, Intent intent, boolean forceDoProof) {
-
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-
-        boolean doProof = prefs.getBoolean(PREFS_DOPROOF, true);
+    public String handleIntent (final Context context, Intent intent) {
 
         if (intent.getAction() != null) {
             if (intent.getAction().equals(Intent.ACTION_UMS_CONNECTED)) {
@@ -89,111 +95,107 @@ public class MediaWatcher extends BroadcastReceiver {
             }
         }
 
-        if (doProof || forceDoProof) {
+        Uri tmpUriMedia = intent.getData();
+        if (tmpUriMedia == null)
+            tmpUriMedia = (Uri) intent.getParcelableExtra(Intent.EXTRA_STREAM);
 
-            Uri tmpUriMedia = intent.getData();
-            if (tmpUriMedia == null)
-                tmpUriMedia = (Uri) intent.getParcelableExtra(Intent.EXTRA_STREAM);
+        if (tmpUriMedia == null) //still null?
+            return null;
 
-            if (tmpUriMedia == null) //still null?
-                return null;
+        final Uri uriMedia = tmpUriMedia;
 
-            final Uri uriMedia = tmpUriMedia;
+        final boolean showDeviceIds = mPrefs.getBoolean(ProofMode.PREF_OPTION_PHONE,ProofMode.PREF_OPTION_PHONE_DEFAULT);
+        final boolean showLocation = mPrefs.getBoolean(ProofMode.PREF_OPTION_LOCATION,ProofMode.PREF_OPTION_LOCATION_DEFAULT);
+        final boolean autoNotarize = mPrefs.getBoolean(ProofMode.PREF_OPTION_NOTARY, ProofMode.PREF_OPTION_NOTARY_DEFAULT);
+        final boolean showMobileNetwork = mPrefs.getBoolean(ProofMode.PREF_OPTION_NETWORK,ProofMode.PREF_OPTION_NETWORK_DEFAULT);
 
-            final boolean showDeviceIds = prefs.getBoolean(ProofMode.PREF_OPTION_PHONE,ProofMode.PREF_OPTION_PHONE_DEFAULT);
-            final boolean showLocation = prefs.getBoolean(ProofMode.PREF_OPTION_LOCATION,ProofMode.PREF_OPTION_LOCATION_DEFAULT);
-            final boolean autoNotarize = prefs.getBoolean(ProofMode.PREF_OPTION_NOTARY, ProofMode.PREF_OPTION_NOTARY_DEFAULT);
-            final boolean showMobileNetwork = prefs.getBoolean(ProofMode.PREF_OPTION_NETWORK,ProofMode.PREF_OPTION_NETWORK_DEFAULT);
+        final String mediaHash;
+        try {
+            mediaHash = HashUtils.getSHA256FromFileContent(context.getContentResolver().openInputStream(uriMedia));
+        } catch (FileNotFoundException e) {
+            Timber.e(e, "unable to open inputstream for hashing: %s", uriMedia);
+            return null;
+        }
+         catch (SecurityException e) {
+            Timber.e(e,"security exception accessing URI: %s",uriMedia);
+            return null;
+        }
 
-            final String mediaHash;
+        if (mediaHash != null) {
+
             try {
-                mediaHash = HashUtils.getSHA256FromFileContent(context.getContentResolver().openInputStream(uriMedia));
+                if (proofExists(context,uriMedia,mediaHash))
+                    return mediaHash;
             } catch (FileNotFoundException e) {
-                Timber.e(e, "unable to open inputstream for hashing: %s", uriMedia);
-                return null;
-            }
-             catch (SecurityException e) {
-                Timber.e(e,"security exception accessing URI: %s",uriMedia);
-                return null;
+                //must not exist!
             }
 
-            if (mediaHash != null) {
+            Timber.d("Writing proof for hash %s for path %s",mediaHash, uriMedia);
 
-                try {
-                    if (proofExists(context,uriMedia,mediaHash))
-                        return mediaHash;
-                } catch (FileNotFoundException e) {
-                    //must not exist!
-                }
+            //write immediate proof, w/o safety check result
+            writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, null);
 
-                Timber.d("Writing proof for hash %s for path %s",mediaHash, uriMedia);
+            if (autoNotarize) {
 
-                //write immediate proof, w/o safety check result
-                writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, null);
+                if (isOnline(context)) {
+                    //if we can do safetycheck, then add that in as well
+                    new SafetyNetCheck().sendSafetyNetRequest(context, mediaHash, new OnSuccessListener<SafetyNetApi.AttestationResponse>() {
+                        @Override
+                        public void onSuccess(SafetyNetApi.AttestationResponse response) {
+                            // Indicates communication with the service was successful.
+                            // Use response.getJwsResult() to get the result data.
 
-                if (autoNotarize) {
+                            String resultString = response.getJwsResult();
+                            SafetyNetResponse resp = parseJsonWebSignature(resultString);
 
-                    if (isOnline(context)) {
-                        //if we can do safetycheck, then add that in as well
-                        new SafetyNetCheck().sendSafetyNetRequest(context, mediaHash, new OnSuccessListener<SafetyNetApi.AttestationResponse>() {
+                            long timestamp = resp.getTimestampMs();
+                            boolean isBasicIntegrity = resp.isBasicIntegrity();
+                            boolean isCtsMatch = resp.isCtsProfileMatch();
+
+                            Timber.d("Success! SafetyNet result: isBasicIntegrity: " + isBasicIntegrity + " isCts:" + isCtsMatch);
+                            writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, resultString, isBasicIntegrity, isCtsMatch, timestamp, null);
+
+
+                        }
+                    }, new OnFailureListener() {
+                        @Override
+                        public void onFailure(@NonNull Exception e) {
+                            // An error occurred while communicating with the service.
+                            Timber.d(e,"SafetyNet check failed");
+                        }
+                    });
+
+
+                    final NotarizationProvider nProvider = new OpenTimestampsNotarizationProvider();
+                    try {
+                        nProvider.notarize("ProofMode Media Hash: " + mediaHash, context.getContentResolver().openInputStream(uriMedia), new NotarizationListener() {
                             @Override
-                            public void onSuccess(SafetyNetApi.AttestationResponse response) {
-                                // Indicates communication with the service was successful.
-                                // Use response.getJwsResult() to get the result data.
+                            public void notarizationSuccessful(String timestamp) {
 
-                                String resultString = response.getJwsResult();
-                                SafetyNetResponse resp = parseJsonWebSignature(resultString);
-
-                                long timestamp = resp.getTimestampMs();
-                                boolean isBasicIntegrity = resp.isBasicIntegrity();
-                                boolean isCtsMatch = resp.isCtsProfileMatch();
-
-                                Timber.d("Success! SafetyNet result: isBasicIntegrity: " + isBasicIntegrity + " isCts:" + isCtsMatch);
-                                writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, resultString, isBasicIntegrity, isCtsMatch, timestamp, null);
-
-
+                                Timber.d("Got OpenTimestamps success response timestamp: %s", timestamp);
+                                writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, "OpenTimestamps: " + timestamp);
                             }
-                        }, new OnFailureListener() {
+
                             @Override
-                            public void onFailure(@NonNull Exception e) {
-                                // An error occurred while communicating with the service.
-                                Timber.d(e,"SafetyNet check failed");
+                            public void notarizationFailed(int errCode, String message) {
+
+                                Timber.d("Got OpenTimestamps error response: %s", message);
+                                writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, "OpenTimestamps Error: " + message);
+
                             }
                         });
-
-
-                        final NotarizationProvider nProvider = new OpenTimestampsNotarizationProvider();
-                        try {
-                            nProvider.notarize("ProofMode Media Hash: " + mediaHash, context.getContentResolver().openInputStream(uriMedia), new NotarizationListener() {
-                                @Override
-                                public void notarizationSuccessful(String timestamp) {
-
-                                    Timber.d("Got OpenTimestamps success response timestamp: %s", timestamp);
-                                    writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, "OpenTimestamps: " + timestamp);
-                                }
-
-                                @Override
-                                public void notarizationFailed(int errCode, String message) {
-
-                                    Timber.d("Got OpenTimestamps error response: %s", message);
-                                    writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, "OpenTimestamps Error: " + message);
-
-                                }
-                            });
-                        } catch (FileNotFoundException e) {
-                            Timber.e(e);
-                        }
+                    } catch (FileNotFoundException e) {
+                        Timber.e(e);
                     }
-
                 }
 
-                return mediaHash;
             }
-            else
-            {
-                Timber.d("Unable to access media files, no proof generated");
 
-            }
+            return mediaHash;
+        }
+        else
+        {
+            Timber.d("Unable to access media files, no proof generated");
 
         }
 
