@@ -15,18 +15,12 @@ import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
 
 public class ProofService extends Service {
-    public ProofService() {
-
-
-    }
 
     @Override
     public void onCreate() {
         super.onCreate();
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            showNotification();
-        }
+
     }
 
     private void showNotification () {
@@ -66,6 +60,11 @@ public class ProofService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            showNotification();
+        }
+
         return super.onStartCommand(intent, flags, startId);
     }
 

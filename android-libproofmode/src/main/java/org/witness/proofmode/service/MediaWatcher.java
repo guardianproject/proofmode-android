@@ -116,6 +116,10 @@ public class MediaWatcher extends BroadcastReceiver {
             Timber.e(e, "unable to open inputstream for hashing: %s", uriMedia);
             return null;
         }
+        catch (IllegalStateException ise) {
+            Timber.e(ise, "unable to open inputstream for hashing: %s", uriMedia);
+            return null;
+        }
          catch (SecurityException e) {
             Timber.e(e,"security exception accessing URI: %s",uriMedia);
             return null;

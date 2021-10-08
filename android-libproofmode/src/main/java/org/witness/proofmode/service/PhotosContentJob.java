@@ -87,7 +87,8 @@ public class PhotosContentJob extends JobService {
                 // so just note that we need to do a full rescan.
 
                 Timber.w("rescan is needed since many photos changed at once");
-                Toast.makeText(this,"Rescan is needed!",Toast.LENGTH_SHORT).show();
+          //      Toast.makeText(this,"Rescan is needed!",Toast.LENGTH_SHORT).show();
+
 
             }
 
@@ -114,6 +115,12 @@ public class PhotosContentJob extends JobService {
         builder.addTriggerContentUri(
                 new JobInfo.TriggerContentUri(MediaStore.Images.Media.INTERNAL_CONTENT_URI,
                         JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS));
+
+
+        // Get all media changes within a tenth of a second.
+        builder.setTriggerContentUpdateDelay(1);
+        builder.setTriggerContentMaxDelay(100);
+        
         js.schedule(builder.build());
     }
 
