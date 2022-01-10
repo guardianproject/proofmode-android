@@ -6,10 +6,12 @@ import android.net.Uri;
 import android.os.Build;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.witness.proofmode.library.R;
 import org.witness.proofmode.service.MediaListenerService;
 import org.witness.proofmode.service.MediaWatcher;
 import org.witness.proofmode.service.PhotosContentJob;
 import org.witness.proofmode.service.VideosContentJob;
+import org.witness.proofmode.util.SafetyNetCheck;
 
 import java.io.File;
 import java.security.Security;
@@ -55,6 +57,10 @@ public class ProofMode {
         }
 
         mInit = true;
+
+
+        SafetyNetCheck.setApiKey(context.getString(R.string.verification_api_key));
+
     }
 
     public static void stop (Context context)

@@ -87,6 +87,10 @@ public class MediaWatcher extends BroadcastReceiver {
 
     public String handleIntent (final Context context, Intent intent) {
 
+        if (mPrefs == null)
+            mPrefs = PreferenceManager.getDefaultSharedPreferences(context);
+
+
         if (intent.getAction() != null) {
             if (intent.getAction().equals(Intent.ACTION_UMS_CONNECTED)) {
                 mStorageMounted = true;

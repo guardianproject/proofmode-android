@@ -38,7 +38,7 @@ public class ProofService extends Service {
             Intent notificationIntent = new Intent(this, MainActivity.class);
 
             PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
-                    notificationIntent, 0);
+                    notificationIntent, PendingIntent.FLAG_IMMUTABLE);
 
             Notification notification = new NotificationCompat.Builder(this,NOTIFICATION_CHANNEL_ID)
                     .setOngoing(true)
