@@ -358,7 +358,9 @@ public class MediaWatcher extends BroadcastReceiver {
             if (cursor.getCount() > 0) {
 
                 cursor.moveToFirst();
-                mediaPath = cursor.getString(cursor.getColumnIndex(projection[0]));
+                int colIdx = cursor.getColumnIndex(projection[0]);
+                if (colIdx > -1)
+                    mediaPath = cursor.getString(colIdx);
             }
 
             cursor.close();
@@ -414,6 +416,7 @@ public class MediaWatcher extends BroadcastReceiver {
             if (gpsTracker.canGetLocation()) {
 
                 Location loc = gpsTracker.getLocation();
+
                 int waitIdx = 0;
                 while (loc == null && waitIdx < 3) {
                     waitIdx++;
@@ -434,12 +437,36 @@ public class MediaWatcher extends BroadcastReceiver {
                     hmProof.put("Location.Speed", loc.getSpeed() + "");
                     hmProof.put("Location.Time", loc.getTime() + "");
                 }
+                else
+                {
+                    hmProof.put("Location.Latitude", "0");
+                    hmProof.put("Location.Longitude", "0");
+                    hmProof.put("Location.Provider", "none");
+                    hmProof.put("Location.Accuracy", "0");
+                    hmProof.put("Location.Altitude", "0");
+                    hmProof.put("Location.Bearing", "0");
+                    hmProof.put("Location.Speed", "0");
+                    hmProof.put("Location.Time", "0");
+                }
 
             }
 
             if (showMobileNetwork)
                 hmProof.put("CellInfo", DeviceInfo.getCellInfo(context));
+            else
+                hmProof.put("CellInfo", "");
 
+        }
+        else
+        {
+            hmProof.put("Location.Latitude", "0");
+            hmProof.put("Location.Longitude", "0");
+            hmProof.put("Location.Provider", "none");
+            hmProof.put("Location.Accuracy", "0");
+            hmProof.put("Location.Altitude", "0");
+            hmProof.put("Location.Bearing", "0");
+            hmProof.put("Location.Speed", "0");
+            hmProof.put("Location.Time", "0");
         }
 
 

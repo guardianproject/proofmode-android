@@ -1,16 +1,22 @@
 package org.witness.proofmode.util;
 
 
+import android.Manifest;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.util.Log;
+
+import androidx.core.app.ActivityCompat;
+
+import timber.log.Timber;
 
 public final class GPSTracker implements LocationListener {
 
@@ -39,7 +45,10 @@ public final class GPSTracker implements LocationListener {
     protected LocationManager locationManager;
 
     public GPSTracker(Context context) {
-        this.mContext = context;
+        mContext = context;
+
+        locationManager = (LocationManager) mContext
+                .getSystemService(Context.LOCATION_SERVICE);
 
         getLocation();
 
@@ -50,58 +59,56 @@ public final class GPSTracker implements LocationListener {
      *
      * @return
      */
-    public Location getLocation() throws SecurityException {
-        try {
-            locationManager = (LocationManager) mContext
-                    .getSystemService(Context.LOCATION_SERVICE);
+    public Location getLocation() {
 
-            // getting GPS status
-            isGPSEnabled = locationManager
-                    .isProviderEnabled(LocationManager.GPS_PROVIDER);
+        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                || ActivityCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            Timber.d("permission not granted for location check");
+            return null;
+        }
 
-            Log.v("isGPSEnabled", "=" + isGPSEnabled);
+        // getting GPS status
+        isGPSEnabled = locationManager
+                .isProviderEnabled(LocationManager.GPS_PROVIDER);
 
-            // getting network status
-            isNetworkEnabled = locationManager
-                    .isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+        Timber.d(isGPSEnabled + "=" + isGPSEnabled);
 
-            Log.v("isNetworkEnabled", "=" + isNetworkEnabled);
+        // getting network status
+        isNetworkEnabled = locationManager
+                .isProviderEnabled(LocationManager.NETWORK_PROVIDER);
 
-            if (isGPSEnabled == false && isNetworkEnabled == false) {
-                // no network provider is enabled
-            } else {
-                this.canGetLocation = true;
-                if (isNetworkEnabled) {
-                    location=null;
-                    Log.d("Network", "Network");
-                    if (locationManager != null) {
-                        location = locationManager
-                                .getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-                        if (location != null) {
-                            latitude = location.getLatitude();
-                            longitude = location.getLongitude();
-                        }
-                    }
-                }
-                // if GPS Enabled get lat/long using GPS Services
-                if (isGPSEnabled) {
-                    location=null;
-                    if (location == null) {
-                        Log.d("GPS Enabled", "GPS Enabled");
-                        if (locationManager != null) {
-                            location = locationManager
-                                    .getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                            if (location != null) {
-                                latitude = location.getLatitude();
-                                longitude = location.getLongitude();
-                            }
-                        }
+        Timber.d(isNetworkEnabled + "=" + isNetworkEnabled);
+
+        if (!isGPSEnabled && !isNetworkEnabled) {
+            // no network provider is enabled
+        } else {
+            this.canGetLocation = true;
+
+            //first try network based GPS
+            if (isNetworkEnabled) {
+                location = null;
+                if (locationManager != null) {
+
+                    location = locationManager
+                            .getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+                    if (location != null) {
+                        latitude = location.getLatitude();
+                        longitude = location.getLongitude();
                     }
                 }
             }
 
-        } catch (Exception e) {
-            e.printStackTrace();
+            // if true GPS Enabled get lat/long using GPS Services
+            if (isGPSEnabled && location == null) {
+                if (locationManager != null) {
+                    location = locationManager
+                            .getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                    if (location != null) {
+                        latitude = location.getLatitude();
+                        longitude = location.getLongitude();
+                    }
+                }
+            }
         }
 
         return location;
