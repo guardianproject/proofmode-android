@@ -21,7 +21,7 @@
     
     <string name="proofmode_is_on">PROOFMODE EST ACTIVÉ ET CAPTURE DES DONNÉES</string>
     <string name="tap_hold_turn_off">Maintenir enfoncé pour éteindre</string>
-    <string name="proofmode_is_capturing">ProofMode capture un grand ensemble de métadonnées par défaut. Renforcez la vérifiabilité de vos supports numériques en en ajoutant d'autres.</string>
+    <string name="proofmode_is_capturing">ProofMode capture un grand ensemble de métadonnées par défaut. Renforcez la vérifiabilité de vos supports numériques en en ajoutant d\'autres.</string>
     <string name="proofmode_is_off">PROOFMODE EST DÉSACTIVÉ ET NE CAPTURE PAS DE DONNÉES</string>
     <string name="tap_hold_turn_on">Maintenir enfoncé pour allumer</string>
     <string name="share_notarization">PARTAGER UNE CERTIFICATION À...</string>
