@@ -10,6 +10,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Environment;
+import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.provider.MediaStore;
 import android.text.TextUtils;
@@ -59,7 +60,9 @@ public class MediaWatcher extends BroadcastReceiver {
     private static boolean mStorageMounted = false;
     private SharedPreferences mPrefs;
 
+    private Handler mHandler = new Handler();
 
+    private final static int PROOF_GENERATION_DELAY_TIME_MS = 30 * 1000; // 30 seconds
     public MediaWatcher() {
 
     }
@@ -70,18 +73,14 @@ public class MediaWatcher extends BroadcastReceiver {
         if (mPrefs == null)
             mPrefs = PreferenceManager.getDefaultSharedPreferences(context);
 
+        //wait 10 seconds for any final modifications to the media file, like injection of GPS coordinations into EXIF
 
-        new Thread ()
-        {
-            public void run ()
-            {
+        mHandler.postDelayed(() -> {
+            boolean doProof = mPrefs.getBoolean(PREFS_DOPROOF, true);
 
-                boolean doProof = mPrefs.getBoolean(PREFS_DOPROOF, true);
-
-                if (doProof)
-                    handleIntent(context, intent);
-            }
-        }.start();
+            if (doProof)
+                handleIntent(context, intent);
+        },PROOF_GENERATION_DELAY_TIME_MS);
 
     }
 
