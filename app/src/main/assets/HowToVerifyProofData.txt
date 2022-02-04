@@ -26,7 +26,7 @@ Primary key fingerprint: 094F 9BAE 1895 8C23 8F55  F793 560C C828 C726 365F
 
 4) verify signature of ProofMode data using actual photo to test GOOD signature
 
-gpg --verify 64cac4a75cfae360dac185c6a91844c4770f8dad9138051a8a0eb9d0c87a4893.proof.csv.asc 64cac4a75cfae360dac185c6a91844c4770f8dad9138051a8a0eb9d0c87a4893.proof.csv
+gpg --verify THEHASHVALUEFORYOURPHOTO.proof.csv.asc THEHASHVALUEFORYOURPHOTO.proof.csv
 gpg: Signature made Thu 03 Feb 2022 10:51:18 PM EST
 gpg:                using RSA key 560CC828C726365F
 gpg: Good signature from "noone@proofmode.witness.org" [unknown]
@@ -34,4 +34,5 @@ gpg: WARNING: This key is not certified with a trusted signature!
 gpg:          There is no indication that the signature belongs to the owner.
 Primary key fingerprint: 094F 9BAE 1895 8C23 8F55  F793 560C C828 C726 365F
 
-
+5) If a .OTS file is present, you can visit https://opentimestamps.org/ and upload the OTF to verify the notarization
+(It can take awhile for the notarization timestamp to make its way fully to the Bitcoin blockchain)
