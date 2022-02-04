@@ -1,3 +1,5 @@
+Brief information on how to verify the media file, proof and signatures contained in a ProofMode ZIP file.
+Please visit https://proofmode.org or email support@guardianproject.info for more information.
 
 1) Import public key shared from ProofMode:
 
