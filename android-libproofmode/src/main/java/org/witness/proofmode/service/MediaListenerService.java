@@ -13,6 +13,8 @@ import android.os.Looper;
 import org.witness.proofmode.util.RecursiveFileObserver;
 
 import java.io.File;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import timber.log.Timber;
 
@@ -50,14 +52,19 @@ public class MediaListenerService extends Service {
     private void startWatching() {
         final String pathToWatch = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).getAbsolutePath();
 
-        observer = new RecursiveFileObserver(pathToWatch, FileObserver.CLOSE_WRITE| FileObserver.MOVED_TO) { // set up a file observer to watch this directory on sd card
+        observer = new RecursiveFileObserver(pathToWatch, FileObserver.ALL_EVENTS) { // set up a file observer to watch this directory on sd card
             @Override
             public void onEvent(int event, final String mediaPath) {
                 if (mediaPath != null && (!mediaPath.equals(".probe"))) { // check that it's not equal to .probe because thats created every time camera is launched
 
-                    Intent intent = new Intent();
-                    intent.setData(Uri.fromFile(new File(mediaPath)));
-                    new MediaWatcher().onReceive(MediaListenerService.this,intent);
+                    Timer t = new Timer();
+                    t.schedule(new TimerTask() {
+                        @Override
+                        public void run() {
+                            MediaWatcher.getInstance(MediaListenerService.this).processFile(new File(mediaPath));
+                        }
+                    }, MediaWatcher.PROOF_GENERATION_DELAY_TIME_MS);
+
 
                 }
             }

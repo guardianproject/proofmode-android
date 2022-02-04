@@ -1,4 +1,6 @@
 apply plugin: 'com.android.library'
+apply plugin: 'maven-publish'
+
 
 android {
     compileSdkVersion 31
@@ -46,5 +48,18 @@ dependencies {
     implementation 'org.bouncycastle:bcpg-jdk15to18:1.69'
 
 
+}
+
+project.afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                groupId 'org.witness'
+                artifactId 'android-libproofmode'
+                version '1.0.11'
+                from components.release
+            }
+        }
+    }
 }
 

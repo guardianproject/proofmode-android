@@ -45,6 +45,10 @@ import java.security.MessageDigest;
 import java.text.DateFormat;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import timber.log.Timber;
 
@@ -60,28 +64,55 @@ public class MediaWatcher extends BroadcastReceiver {
     private static boolean mStorageMounted = false;
     private SharedPreferences mPrefs;
 
-    private Handler mHandler = new Handler();
+    public final static int PROOF_GENERATION_DELAY_TIME_MS = 30 * 1000; // 30 seconds
+    private static MediaWatcher mInstance;
 
-    private final static int PROOF_GENERATION_DELAY_TIME_MS = 30 * 1000; // 30 seconds
-    public MediaWatcher() {
+    private ExecutorService mExec = Executors.newFixedThreadPool(5);
 
+    private Context mContext = null;
+
+    private MediaWatcher (Context context) {
+        if (mPrefs == null)
+            mPrefs = PreferenceManager.getDefaultSharedPreferences(context);
+
+        mContext = context;
+    }
+
+    public static synchronized MediaWatcher getInstance (Context context)
+    {
+        if (mInstance == null)
+            mInstance = new MediaWatcher(context);
+
+        return mInstance;
     }
 
     @Override
     public void onReceive(final Context context, final Intent intent) {
 
-        if (mPrefs == null)
-            mPrefs = PreferenceManager.getDefaultSharedPreferences(context);
 
         //wait 10 seconds for any final modifications to the media file, like injection of GPS coordinations into EXIF
 
-        mHandler.postDelayed(() -> {
+        mExec.submit(() -> {
+
             boolean doProof = mPrefs.getBoolean(PREFS_DOPROOF, true);
 
             if (doProof)
                 handleIntent(context, intent);
-        },PROOF_GENERATION_DELAY_TIME_MS);
+        });
 
+
+    }
+
+    public String processFile (File file) {
+        Intent intent = new Intent();
+        intent.setData(Uri.fromFile(file));
+        return handleIntent(mContext,intent);
+    }
+
+    public String processUri (Uri fileUri) {
+        Intent intent = new Intent();
+        intent.setData(fileUri);
+        return handleIntent(mContext,intent);
     }
 
     public String handleIntent (final Context context, Intent intent) {

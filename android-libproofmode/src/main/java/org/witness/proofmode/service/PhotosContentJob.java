@@ -22,6 +22,8 @@ import android.widget.Toast;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import timber.log.Timber;
 
@@ -35,6 +37,7 @@ public class PhotosContentJob extends JobService {
     public static int PHOTOS_CONTENT_JOB = 10001;
 
     JobParameters mRunningParams;
+
 
     // Check whether this job is currently scheduled.
     public static boolean isScheduled(Context context) {
@@ -77,9 +80,15 @@ public class PhotosContentJob extends JobService {
             if (mRunningParams.getTriggeredContentUris() != null) {
 
                 for (Uri uri : mRunningParams.getTriggeredContentUris()) {
-                    Intent intent = new Intent();
-                    intent.setData(uri);
-                    new MediaWatcher().onReceive(PhotosContentJob.this, intent);
+
+                    Timer t = new Timer();
+                    t.schedule(new TimerTask() {
+                        @Override
+                        public void run() {
+                            MediaWatcher.getInstance(PhotosContentJob.this).processUri(uri);
+                        }
+                    }, MediaWatcher.PROOF_GENERATION_DELAY_TIME_MS);
+
                 }
 
             } else {

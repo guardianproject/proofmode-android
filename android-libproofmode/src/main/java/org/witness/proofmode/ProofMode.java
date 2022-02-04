@@ -82,9 +82,9 @@ public class ProofMode {
 
     public static String generateProof (Context context, Uri uri)
     {
-        Intent intent = new Intent();
-        intent.setData(uri);
-        return new MediaWatcher().handleIntent(context, intent);
+
+        return MediaWatcher.getInstance(context).processUri (uri);
+
     }
 
 

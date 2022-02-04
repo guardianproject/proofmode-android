@@ -27,6 +27,8 @@ import org.witness.proofmode.library.R;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import timber.log.Timber;
 
@@ -96,9 +98,15 @@ public class VideosContentJob extends JobService {
             if (mRunningParams.getTriggeredContentUris() != null) {
 
                 for (Uri uri : mRunningParams.getTriggeredContentUris()) {
-                    Intent intent = new Intent();
-                    intent.setData(uri);
-                    new MediaWatcher().onReceive(VideosContentJob.this, intent);
+
+                    Timer t = new Timer();
+                    t.schedule(new TimerTask() {
+                        @Override
+                        public void run() {
+                            MediaWatcher.getInstance(VideosContentJob.this).processUri(uri);
+                        }
+                    }, MediaWatcher.PROOF_GENERATION_DELAY_TIME_MS);
+
                 }
 
             } else {
