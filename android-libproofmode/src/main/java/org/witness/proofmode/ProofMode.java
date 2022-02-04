@@ -32,6 +32,7 @@ public class ProofMode {
 
     public final static String PROOF_FILE_TAG = ".proof.csv";
     public final static String OPENPGP_FILE_TAG = ".asc";
+    public final static String OPENTIMESTAMPS_FILE_TAG = ".ots";
 
     public final static String PREFS_DOPROOF = "doProof";
 

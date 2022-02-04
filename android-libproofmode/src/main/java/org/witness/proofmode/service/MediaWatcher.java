@@ -34,12 +34,14 @@ import org.witness.proofmode.util.GPSTracker;
 import org.witness.proofmode.util.SafetyNetCheck;
 import org.witness.proofmode.util.SafetyNetResponse;
 
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.PrintStream;
 import java.security.MessageDigest;
 import java.text.DateFormat;
@@ -52,13 +54,13 @@ import java.util.concurrent.Executors;
 
 import timber.log.Timber;
 
+import static org.witness.proofmode.ProofMode.OPENPGP_FILE_TAG;
+import static org.witness.proofmode.ProofMode.OPENTIMESTAMPS_FILE_TAG;
 import static org.witness.proofmode.ProofMode.PREFS_DOPROOF;
 import static org.witness.proofmode.ProofMode.PROOF_FILE_TAG;
 
 public class MediaWatcher extends BroadcastReceiver {
 
-    private final static String PROOF_FILE_TAG = ".proof.csv";
-    private final static String OPENPGP_FILE_TAG = ".asc";
     private final static String PROOF_BASE_FOLDER = "proofmode/";
 
     private static boolean mStorageMounted = false;
@@ -110,9 +112,22 @@ public class MediaWatcher extends BroadcastReceiver {
     }
 
     public String processUri (Uri fileUri) {
-        Intent intent = new Intent();
-        intent.setData(fileUri);
-        return handleIntent(mContext,intent);
+        try {
+            Intent intent = new Intent();
+            intent.setData(fileUri);
+            return handleIntent(mContext, intent);
+        }
+        catch (RuntimeException re)
+        {
+            Log.e("ProofMode","RUNTIME EXCEPTION processing media file: " + re);
+            return null;
+        }
+        catch (Error err)
+        {
+            Log.e("ProofMode","FATAL ERROR processing media file: " + err);
+
+            return null;
+        }
     }
 
     public String handleIntent (final Context context, Intent intent) {
@@ -206,19 +221,23 @@ public class MediaWatcher extends BroadcastReceiver {
 
                     final NotarizationProvider nProvider = new OpenTimestampsNotarizationProvider();
                     try {
-                        nProvider.notarize("ProofMode Media Hash: " + mediaHash, context.getContentResolver().openInputStream(uriMedia), new NotarizationListener() {
+                        nProvider.notarize(mediaHash, context.getContentResolver().openInputStream(uriMedia), new NotarizationListener() {
                             @Override
                             public void notarizationSuccessful(String timestamp) {
 
+
                                 Timber.d("Got OpenTimestamps success response timestamp: %s", timestamp);
-                                writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, "OpenTimestamps: " + timestamp);
+                                writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, new Date().getTime(), timestamp);
+
+
+
                             }
 
                             @Override
                             public void notarizationFailed(int errCode, String message) {
 
                                 Timber.d("Got OpenTimestamps error response: %s", message);
-                                writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, "OpenTimestamps Error: " + message);
+                                writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, "Opentimestamps.org error: " + message);
 
                             }
                         });
@@ -294,7 +313,7 @@ public class MediaWatcher extends BroadcastReceiver {
         }
     }
 
-    private void writeProof (Context context, Uri uriMedia, String hash, boolean showDeviceIds, boolean showLocation, boolean showMobileNetwork, String safetyCheckResult, boolean isBasicIntegrity, boolean isCtsMatch, long notarizeTimestamp, String notes)
+    private void writeProof (Context context, Uri uriMedia, String hash, boolean showDeviceIds, boolean showLocation, boolean showMobileNetwork, String safetyCheckResult, boolean isBasicIntegrity, boolean isCtsMatch, long notarizeTimestamp, String notarizeData)
     {
 
       //  File fileMedia = new File(mediaPath);
@@ -305,12 +324,13 @@ public class MediaWatcher extends BroadcastReceiver {
             File fileMediaSig = new File(fileFolder, hash + OPENPGP_FILE_TAG);
             File fileMediaProof = new File(fileFolder, hash + PROOF_FILE_TAG);
             File fileMediaProofSig = new File(fileFolder, hash + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
+            File fileMediaOpentimestamp = new File(fileFolder, hash + OPENTIMESTAMPS_FILE_TAG);
 
             try {
 
                 //add data to proof csv and sign again
                 boolean writeHeaders = !fileMediaProof.exists();
-                String buildProof = buildProof(context, uriMedia, writeHeaders, showDeviceIds, showLocation, showMobileNetwork, safetyCheckResult, isBasicIntegrity, isCtsMatch, notarizeTimestamp, notes);
+                String buildProof = buildProof(context, uriMedia, writeHeaders, showDeviceIds, showLocation, showMobileNetwork, safetyCheckResult, isBasicIntegrity, isCtsMatch, notarizeTimestamp, notarizeData);
                 writeTextToFile(context, fileMediaProof, buildProof);
 
                 if (fileMediaProof.exists()) {
@@ -323,6 +343,18 @@ public class MediaWatcher extends BroadcastReceiver {
                   PgpUtils.getInstance(context).createDetachedSignature(context.getContentResolver().openInputStream(uriMedia), new FileOutputStream(fileMediaSig), PgpUtils.DEFAULT_PASSWORD);
 
                 Timber.d("Proof written/updated for uri %s and hash %s", uriMedia, hash);
+
+                try {
+                    //try to save opentimestamps data to raw file
+                    if (notarizeData != null) {
+                        byte[] rawNotarizeData = Base64.decode(notarizeData, Base64.DEFAULT);
+                        writeBytesToFile(context, fileMediaOpentimestamp, rawNotarizeData);
+                    }
+                }
+                catch (Exception e)
+                {
+                    Timber.d("unable to save notarization data to file: " + e);
+                }
 
             } catch (Exception e) {
                 Timber.d( "Error signing media or proof: %s", e.getLocalizedMessage());
@@ -541,6 +573,21 @@ public class MediaWatcher extends BroadcastReceiver {
         sb.append("\n");
 
         return sb.toString();
+
+    }
+
+    private static void writeBytesToFile (Context context, File fileOut, byte[] data)
+    {
+        try {
+            DataOutputStream os = new DataOutputStream(new FileOutputStream(fileOut,true));
+            os.write(data);
+            os.flush();
+            os.close();
+        }
+        catch (IOException ioe)
+        {
+            ioe.printStackTrace();
+        }
 
     }
 

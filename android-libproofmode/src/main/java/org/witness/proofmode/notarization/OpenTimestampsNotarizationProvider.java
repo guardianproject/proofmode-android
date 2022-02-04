@@ -1,8 +1,12 @@
 package org.witness.proofmode.notarization;
 
+import android.util.Base64;
+
 import com.eternitywall.ots.DetachedTimestampFile;
+import com.eternitywall.ots.Hash;
 import com.eternitywall.ots.OpenTimestamps;
 import com.eternitywall.ots.Timestamp;
+import com.eternitywall.ots.Utils;
 import com.eternitywall.ots.op.OpSHA256;
 
 import java.io.File;
@@ -15,22 +19,27 @@ import java.security.NoSuchAlgorithmException;
  */
 
 public class OpenTimestampsNotarizationProvider implements NotarizationProvider {
+
+    private final static String ALGO = "SHA256";
+
     @Override
-    public void notarize(String hash, InputStream is, NotarizationListener listener) {
+    public void notarize(String mediaHash, InputStream is, NotarizationListener listener) {
 
         try {
-            DetachedTimestampFile detached = DetachedTimestampFile.from(new OpSHA256(), is);
+            Hash hash = new Hash(Utils.hexToBytes(mediaHash), ALGO);
+
+            DetachedTimestampFile detached = DetachedTimestampFile.from(hash);
             Timestamp stampResult = OpenTimestamps.stamp(detached,null,0, null);
-            String infoResult = OpenTimestamps.info(stampResult);
-            listener.notarizationSuccessful(infoResult);
+            DetachedTimestampFile detachedToSerialize = new DetachedTimestampFile(hash.getOp(), stampResult);
+
+            String result = new String(Base64.encode(detachedToSerialize.serialize(),Base64.DEFAULT));
+
+            listener.notarizationSuccessful(result);
         }
         catch (IOException ioe)
         {
             listener.notarizationFailed(-1,ioe.getMessage());
 
-        } catch (NoSuchAlgorithmException e) {
-
-            listener.notarizationFailed(-2,e.getMessage());
         }
     }
 

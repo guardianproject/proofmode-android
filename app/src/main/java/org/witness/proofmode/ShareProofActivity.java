@@ -2,6 +2,7 @@ package org.witness.proofmode;
 
 import static org.witness.proofmode.ProofMode.OPENPGP_FILE_TAG;
 import static org.witness.proofmode.ProofMode.PROOF_FILE_TAG;
+import static org.witness.proofmode.ProofMode.OPENTIMESTAMPS_FILE_TAG;
 
 import android.app.Dialog;
 import android.content.ComponentName;
@@ -571,9 +572,11 @@ public class ShareProofActivity extends AppCompatActivity {
             File fileMediaSig = new File(fileFolder, hash + OPENPGP_FILE_TAG);
             File fileMediaProof = new File(fileFolder, hash + PROOF_FILE_TAG);
             File fileMediaProofSig = new File(fileFolder, hash + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
+            File fileMediaOpentimestamps = new File(fileFolder, hash + OPENTIMESTAMPS_FILE_TAG);
+
 
             if (fileMediaProof.exists()) {
-                generateProofOutput(fileMedia, new Date(fileMedia.lastModified()), fileMediaSig, fileMediaProof, fileMediaProofSig, hash, shareMedia, fBatchProofOut, shareUris, sb);
+                generateProofOutput(fileMedia, new Date(fileMedia.lastModified()), fileMediaSig, fileMediaProof, fileMediaProofSig, fileMediaOpentimestamps, hash, shareMedia, fBatchProofOut, shareUris, sb);
                 return true;
             }
         }
@@ -609,12 +612,12 @@ public class ShareProofActivity extends AppCompatActivity {
 
         }
 
-        generateProofOutput(fileMedia, new Date(fileMedia.lastModified()), fileMediaSig, fileMediaProof, fileMediaProofSig, hash, shareMedia, fBatchProofOut, shareUris, sb);
+        generateProofOutput(fileMedia, new Date(fileMedia.lastModified()), fileMediaSig, fileMediaProof, fileMediaProofSig, null, hash, shareMedia, fBatchProofOut, shareUris, sb);
 
         return false;
     }
 
-    private void generateProofOutput (File fileMedia, Date lastModified, File fileMediaSig, File fileMediaProof, File fileMediaProofSig, String hash, boolean shareMedia, PrintWriter fBatchProofOut, ArrayList<Uri> shareUris, StringBuffer sb)
+    private void generateProofOutput (File fileMedia, Date lastModified, File fileMediaSig, File fileMediaProof, File fileMediaProofSig, File fileMediaNotary, String hash, boolean shareMedia, PrintWriter fBatchProofOut, ArrayList<Uri> shareUris, StringBuffer sb)
     {
         DateFormat sdf = SimpleDateFormat.getDateTimeInstance();
 
@@ -639,6 +642,10 @@ public class ShareProofActivity extends AppCompatActivity {
 
             if (fileMediaProofSig.exists())
                 shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider",fileMediaProofSig));
+
+            if (fileMediaNotary.exists())
+                shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider",fileMediaNotary));
+
         }
 
         if (fBatchProofOut != null)
