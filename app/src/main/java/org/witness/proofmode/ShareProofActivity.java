@@ -8,6 +8,7 @@ import android.app.Dialog;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.LabeledIntent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
@@ -20,6 +21,7 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
+import android.preference.PreferenceManager;
 import android.provider.MediaStore;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -885,6 +887,12 @@ public class ShareProofActivity extends AppCompatActivity {
                 origin.close();
             }
 
+            //add public key
+            String pubKey = getPublicKey();
+            ZipEntry entry = new ZipEntry("pubkey.asc");
+            out.putNextEntry(entry);
+            out.write(pubKey.getBytes());
+
             out.close();
         } catch (Exception e) {
             e.printStackTrace();
@@ -939,5 +947,19 @@ public class ShareProofActivity extends AppCompatActivity {
         checkBox.setChecked(sendMedia);
         checkBox.setOnCheckedChangeListener((buttonView, isChecked) -> sendMedia = isChecked);
         currentDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+    }
+
+    private String getPublicKey () {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        PgpUtils pu = PgpUtils.getInstance(this,prefs.getString("password",PgpUtils.DEFAULT_PASSWORD));
+        String pubKey = null;
+
+        try {
+            pubKey = pu.getPublicKey();
+        } catch (IOException e) {
+            Timber.d("error getting public key");
+        }
+
+        return pubKey;
     }
 }
