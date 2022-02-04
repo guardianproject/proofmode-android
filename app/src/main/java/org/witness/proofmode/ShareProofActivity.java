@@ -389,10 +389,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
                 Uri uriZip = FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider",fileZip);
 
-                if (shareUris.size() == 1)
-                    shareFilteredSingle(getString(R.string.select_app), shareText.toString(), shareUris.get(0),"*/*");
-                else
-                    shareFiltered(getString(R.string.select_app), shareText.toString(), shareUris, uriZip);
+                shareFiltered(getString(R.string.select_app), shareText.toString(), shareUris, uriZip);
 
             }
         }
@@ -676,14 +673,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
     private void shareFilteredSingle(String shareMessage, String shareText, Uri shareUri, String shareMimeType) {
 
-        Intent emailIntent = new Intent();
-        emailIntent.setAction(Intent.ACTION_SEND);
-        // Native email client doesn't currently support HTML, but it doesn't
-        // hurt to try in case they fix it
-        emailIntent.setDataAndType(shareUri, shareMimeType);
-        emailIntent.putExtra(Intent.EXTRA_STREAM,shareUri);
-        emailIntent.putExtra(Intent.EXTRA_TITLE,shareUri.getLastPathSegment());
-        emailIntent.putExtra(Intent.EXTRA_SUBJECT,shareUri.getLastPathSegment());
+
 
         PackageManager pm = getPackageManager();
         Intent sendIntent = new Intent(Intent.ACTION_SEND);
@@ -697,7 +687,17 @@ public class ShareProofActivity extends AppCompatActivity {
             ResolveInfo ri = resInfo.get(i);
             String packageName = ri.activityInfo.packageName;
             if (packageName.contains("android.email")) {
-                emailIntent.setPackage(packageName);
+                Intent intent = new Intent();
+                intent.setPackage(packageName);
+
+                intent.setDataAndType(shareUri, shareMimeType);
+                intent.putExtra(Intent.EXTRA_STREAM,shareUri);
+                intent.putExtra(Intent.EXTRA_TITLE,shareUri.getLastPathSegment());
+                intent.putExtra(Intent.EXTRA_SUBJECT,shareUri.getLastPathSegment());
+
+                intentList.add(new LabeledIntent(intent, packageName, ri
+                        .loadLabel(pm), ri.icon));
+
             } else if (packageName.contains("com.whatsapp")) {
                 Intent intent = new Intent();
                 intent.setComponent(new ComponentName(packageName,
@@ -756,6 +756,7 @@ public class ShareProofActivity extends AppCompatActivity {
                         .loadLabel(pm), ri.icon));
             }
             else if (packageName.contains("org.thoughtcrime")) {
+
                 Intent intent = new Intent();
                 intent.setComponent(new ComponentName(packageName,
                         ri.activityInfo.name));
@@ -803,13 +804,14 @@ public class ShareProofActivity extends AppCompatActivity {
 
         }
 
-
+        Intent baseIntent = new Intent();
+        baseIntent.setAction(Intent.ACTION_SEND);
 
         // convert intentList to array
         LabeledIntent[] extraIntents = intentList
                 .toArray(new LabeledIntent[intentList.size()]);
 
-        Intent openInChooser = Intent.createChooser(emailIntent,shareMessage);
+        Intent openInChooser = Intent.createChooser(baseIntent,shareMessage);
         openInChooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, extraIntents);
         startActivity(openInChooser);
     }
@@ -818,157 +820,17 @@ public class ShareProofActivity extends AppCompatActivity {
 
         int modeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION;
 
-        Intent emailIntent = new Intent();
-        emailIntent.setAction(Intent.ACTION_SEND_MULTIPLE);
-        // Native email client doesn't currently support HTML, but it doesn't
-        // hurt to try in case they fix it
-        emailIntent.setType("*/*");
-        emailIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, shareUris);
-        emailIntent.addFlags(modeFlags);
+        Intent shareIntent = new Intent();
+        shareIntent.setAction(Intent.ACTION_SEND);
 
-        PackageManager pm = getPackageManager();
-        Intent sendIntent = new Intent(Intent.ACTION_SEND);
-        sendIntent.setType("*/*");
+        shareIntent.setDataAndType(shareZipUri,"application/zip");
+        shareIntent.putExtra(Intent.EXTRA_TEXT, shareText);
+        shareIntent.putExtra(Intent.EXTRA_STREAM, shareZipUri);
 
-        List<ResolveInfo> resInfo = pm.queryIntentActivities(sendIntent, 0);
-        ArrayList<LabeledIntent> intentList = new ArrayList<>();
-
-        for (int i = 0; i < resInfo.size(); i++) {
-            // Extract the label, append it, and repackage it in a LabeledIntent
-            ResolveInfo ri = resInfo.get(i);
-            String packageName = ri.activityInfo.packageName;
-            if (packageName.contains("android.email")) {
-                emailIntent.setPackage(packageName);
-                emailIntent.addFlags(modeFlags);
-
-            } else if (packageName.contains("com.whatsapp")) {
-                Intent intent = new Intent();
-                intent.setComponent(new ComponentName(packageName,
-                        ri.activityInfo.name));
-                intent.setAction(Intent.ACTION_SEND_MULTIPLE);
-                intent.setType("*/*");
-                intent.putExtra(Intent.EXTRA_TEXT, shareText);
-                intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, shareUris);
-
-                intent.addFlags(modeFlags);
-
-                LabeledIntent li = new LabeledIntent(intent, packageName, ri
-                        .loadLabel(pm), ri.icon);
-                li.addFlags(modeFlags);
-                intentList.add(li);
-
-
-            }
-            else if (packageName.contains("com.google.android.gm")) {
-                Intent intent = new Intent();
-                intent.setComponent(new ComponentName(packageName,
-                        ri.activityInfo.name));
-                intent.setAction(Intent.ACTION_SEND_MULTIPLE);
-                intent.setType("*/*");
-                intent.putExtra(Intent.EXTRA_TEXT, shareText);
-                intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, shareUris);
-
-                intent.addFlags(modeFlags);
-
-                LabeledIntent li = new LabeledIntent(intent, packageName, ri
-                        .loadLabel(pm), ri.icon);
-                li.addFlags(modeFlags);
-                intentList.add(li);
-
-
-            }
-            else if (packageName.contains("com.google.android.apps.docs")) {
-                Intent intent = new Intent();
-                intent.setComponent(new ComponentName(packageName,
-                        ri.activityInfo.name));
-                intent.setAction(Intent.ACTION_SEND_MULTIPLE);
-                intent.setType("*/*");
-                intent.putExtra(Intent.EXTRA_TEXT, shareText);
-                intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, shareUris);
-
-                intent.addFlags(modeFlags);
-
-                LabeledIntent li = new LabeledIntent(intent, packageName, ri
-                        .loadLabel(pm), ri.icon);
-                li.addFlags(modeFlags);
-                intentList.add(li);
-
-            }
-            else if (packageName.contains("com.dropbox")) {
-                Intent intent = new Intent();
-                intent.setComponent(new ComponentName(packageName,
-                        ri.activityInfo.name));
-                intent.setAction(Intent.ACTION_SEND_MULTIPLE);
-                intent.setType("*/*");
-                intent.putExtra(Intent.EXTRA_TEXT, shareText);
-                intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, shareUris);
-
-                intent.addFlags(modeFlags);
-
-                LabeledIntent li = new LabeledIntent(intent, packageName, ri
-                        .loadLabel(pm), ri.icon);
-                li.addFlags(modeFlags);
-                intentList.add(li);
-
-            }
-            else if (packageName.contains("org.thoughtcrime")) {
-
-                Intent intent = new Intent();
-                intent.setComponent(new ComponentName(packageName,
-                        ri.activityInfo.name));
-
-                intent.setAction(Intent.ACTION_SEND);
-                //     intent.setDataAndType(shareUri, shareMimeType);
-                intent.putExtra(Intent.EXTRA_TEXT, shareText);
-
-                if (shareZipUri != null) {
-                    intent.putExtra(Intent.EXTRA_STREAM, shareZipUri);
-                    intent.putExtra(Intent.EXTRA_TITLE, shareZipUri.getLastPathSegment());
-                    intent.putExtra(Intent.EXTRA_SUBJECT, shareZipUri.getLastPathSegment());
-
-                    intent.addFlags(modeFlags);
-
-                    LabeledIntent li = new LabeledIntent(intent, packageName, ri
-                            .loadLabel(pm), ri.icon);
-                    li.addFlags(modeFlags);
-                    intentList.add(li);
-                }
-            }
-            else if (packageName.contains("conversations")) {
-                Intent intent = new Intent();
-                intent.setComponent(new ComponentName(packageName,
-                        ri.activityInfo.name));
-                intent.setAction(Intent.ACTION_SEND_MULTIPLE);
-                intent.setType("*/*");
-                intent.putExtra(Intent.EXTRA_TEXT, shareText);
-                intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, shareUris);
-
-                intent.addFlags(modeFlags);
-
-                LabeledIntent li = new LabeledIntent(intent, packageName, ri
-                        .loadLabel(pm), ri.icon);
-                li.addFlags(modeFlags);
-                intentList.add(li);
-
-            }
-
-            if (shareUris != null)
-                for (Uri uri : shareUris)
-                    grantUriPermission(packageName, uri, modeFlags);
-
-            if (shareZipUri != null)
-                grantUriPermission(packageName, shareZipUri, modeFlags);
-
-        }
-
-        // convert intentList to array
-        LabeledIntent[] extraIntents = intentList
-                .toArray(new LabeledIntent[intentList.size()]);
-
-
-        Intent openInChooser = Intent.createChooser(emailIntent,shareMessage);
+        shareIntent.addFlags(modeFlags);
+        
+        Intent openInChooser = Intent.createChooser(shareIntent,shareMessage);
         openInChooser.addFlags(modeFlags);
-        openInChooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, extraIntents);
 
         List<ResolveInfo> resInfoList = this.getPackageManager().queryIntentActivities(openInChooser, 0);
 
