@@ -627,8 +627,6 @@ public class ShareProofActivity extends AppCompatActivity {
         sb.append("\n\n");
         sb.append(getString(R.string.proof_signed)).append(fingerprint);
         sb.append("\n");
-        sb.append(getString(R.string.view_public_key)).append(fingerprint);
-        sb.append("\n\n");
 
         shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider",fileMediaProof));
 
@@ -828,7 +826,7 @@ public class ShareProofActivity extends AppCompatActivity {
         shareIntent.putExtra(Intent.EXTRA_STREAM, shareZipUri);
 
         shareIntent.addFlags(modeFlags);
-        
+
         Intent openInChooser = Intent.createChooser(shareIntent,shareMessage);
         openInChooser.addFlags(modeFlags);
 
