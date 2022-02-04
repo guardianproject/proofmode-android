@@ -11,13 +11,23 @@ gpg:               imported: 1
 
 sha256sum PXL_20220204_035043227.jpg
 
-64cac4a75cfae360dac185c6a91844c4770f8dad9138051a8a0eb9d0c87a4893  PXL_20220204_035043227.jpg
+THEHASHVALUEFORYOURPHOTO  PXL_20220204_035043227.jpg
 
 3) verify signature using actual photo to test GOOD signature
 
-gpg --verify 64cac4a75cfae360dac185c6a91844c4770f8dad9138051a8a0eb9d0c87a4893.asc PXL_20220204_035043227.jpg
+gpg --verify THEHASHVALUEFORYOURPHOTO.asc PXL_20220204_035043227.jpg
 
 gpg: Signature made Thu 03 Feb 2022 10:51:16 PM EST
+gpg:                using RSA key 560CC828C726365F
+gpg: Good signature from "noone@proofmode.witness.org" [unknown]
+gpg: WARNING: This key is not certified with a trusted signature!
+gpg:          There is no indication that the signature belongs to the owner.
+Primary key fingerprint: 094F 9BAE 1895 8C23 8F55  F793 560C C828 C726 365F
+
+4) verify signature of ProofMode data using actual photo to test GOOD signature
+
+gpg --verify 64cac4a75cfae360dac185c6a91844c4770f8dad9138051a8a0eb9d0c87a4893.proof.csv.asc 64cac4a75cfae360dac185c6a91844c4770f8dad9138051a8a0eb9d0c87a4893.proof.csv
+gpg: Signature made Thu 03 Feb 2022 10:51:18 PM EST
 gpg:                using RSA key 560CC828C726365F
 gpg: Good signature from "noone@proofmode.witness.org" [unknown]
 gpg: WARNING: This key is not certified with a trusted signature!
