@@ -61,13 +61,41 @@
             app:layout_constraintBottom_toTopOf="@id/toggleOff" />
 
         <LinearLayout
+            android:id="@+id/viewShareProof"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_horizontal"
             android:orientation="vertical"
             android:paddingLeft="@dimen/activity_horizontal_margin"
             android:paddingRight="@dimen/activity_horizontal_margin"
+            android:visibility="gone"
             app:layout_constraintTop_toBottomOf="@id/content_y_guideline">
+
+            <ImageButton
+                android:id="@+id/btnShareProof"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="@null"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_baseline_photo_library_24" />
+
+            <TextView
+                style="@style/OnboardingStepTextStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/share_proof_action"
+                android:textColor="@color/onboarding_gray" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:paddingLeft="@dimen/activity_horizontal_margin"
+            android:paddingRight="@dimen/activity_horizontal_margin"
+            android:paddingTop="@dimen/appIntroDefaultPaddingTop"
+            app:layout_constraintTop_toBottomOf="@id/viewShareProof">
 
             <ImageButton
                 android:id="@+id/btnSettings"

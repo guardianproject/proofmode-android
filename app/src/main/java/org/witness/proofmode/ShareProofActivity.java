@@ -93,7 +93,6 @@ public class ShareProofActivity extends AppCompatActivity {
         // Get intent, action and MIME type
         Intent intent = getIntent();
         String action = intent.getAction();
-        String type = intent.getType();
 
         boolean proofExists = false;
 
@@ -113,7 +112,15 @@ public class ShareProofActivity extends AppCompatActivity {
                     break;
             }
 
-        } else if (Intent.ACTION_SEND.equals(action) && type != null) {
+            if (proofExists)
+            {
+                displaySharePrompt();
+            }
+            else {
+                displayGeneratePrompt();
+            }
+
+        } else if (Intent.ACTION_SEND.equals(action)) {
 
             Uri mediaUri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
             if (mediaUri == null)
@@ -130,15 +137,18 @@ public class ShareProofActivity extends AppCompatActivity {
                     proofExists = false;
                 }
             }
-        }
 
-        if (proofExists)
-        {
-            displaySharePrompt();
+            if (proofExists)
+            {
+                displaySharePrompt();
+            }
+            else {
+                displayGeneratePrompt();
+            }
+
         }
-        else {
-            displayGeneratePrompt();
-        }
+        else
+            finish();
 
     }
 
@@ -191,7 +201,6 @@ public class ShareProofActivity extends AppCompatActivity {
         // Get intent, action and MIME type
         Intent intent = getIntent();
         String action = intent.getAction();
-        String type = intent.getType();
 
         boolean proofExists;
 
@@ -223,7 +232,7 @@ public class ShareProofActivity extends AppCompatActivity {
                 displaySharePrompt ();
 
 
-        } else if (Intent.ACTION_SEND.equals(action) && type != null) {
+        } else if (Intent.ACTION_SEND.equals(action)) {
 
             Uri mediaUri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
             if (mediaUri == null)
@@ -233,7 +242,13 @@ public class ShareProofActivity extends AppCompatActivity {
             {
                 mediaUri = cleanUri(mediaUri);
 
-                proofExists = proofExists(mediaUri);
+                try {
+                    proofExists = proofExists(mediaUri);
+                }
+                catch (FileNotFoundException fe)
+                {
+                    proofExists = false;
+                }
 
                 if (!proofExists)
                     generateProof(mediaUri);
@@ -305,7 +320,6 @@ public class ShareProofActivity extends AppCompatActivity {
     // Get intent, action and MIME type
         Intent intent = getIntent();
         String action = intent.getAction();
-        String type = intent.getType();
 
         ArrayList<Uri> shareUris = new ArrayList<>();
         StringBuffer shareText = new StringBuffer ();
@@ -348,7 +362,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
 
         }
-        else if (Intent.ACTION_SEND.equals(action) && type != null) {
+        else if (Intent.ACTION_SEND.equals(action)) {
 
             Uri mediaUri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
             if (mediaUri == null)
@@ -544,6 +558,8 @@ public class ShareProofActivity extends AppCompatActivity {
 
         return result;
     }
+
+
 
     private boolean shareProof (Uri uriMedia, File fileMedia, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut, boolean shareMedia) throws FileNotFoundException {
 

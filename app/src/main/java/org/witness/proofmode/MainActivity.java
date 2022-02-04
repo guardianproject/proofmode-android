@@ -1,10 +1,15 @@
 package org.witness.proofmode;
 
+import static android.content.Intent.ACTION_SEND;
+import static android.content.Intent.ACTION_SEND_MULTIPLE;
+
 import android.Manifest;
 import android.animation.Animator;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.database.Cursor;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import androidx.annotation.NonNull;
@@ -13,6 +18,9 @@ import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+
+import android.provider.MediaStore;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.Menu;
@@ -25,6 +33,7 @@ import org.witness.proofmode.crypto.PgpUtils;
 import org.witness.proofmode.onboarding.OnboardingActivity;
 import org.witness.proofmode.util.GPSTracker;
 
+import java.io.File;
 import java.io.IOException;
 
 import static org.witness.proofmode.ProofMode.PREFS_DOPROOF;
@@ -36,6 +45,9 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     private final static int REQUEST_CODE_INTRO = 9999;
     private final static int REQUEST_CODE_REQUIRED_PERMISSIONS = 9998;
     private final static int REQUEST_CODE_OPTIONAL_PERMISSIONS = 9997;
+    private final static int REQUEST_CODE_CHOOSE_MEDIA = 9996;
+
+
 
     private PgpUtils mPgpUtils;
     private View layoutOn;
@@ -98,11 +110,17 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         navigationView.setNavigationItemSelectedListener(this);
 
         ImageButton btnSettings = findViewById(R.id.btnSettings);
-        btnSettings.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                openSettings();
+        btnSettings.setOnClickListener(v -> openSettings());
+
+        View btnShareProof = findViewById(R.id.btnShareProof);
+        btnShareProof.setOnClickListener(v -> {
+            Intent intent = new Intent();
+            intent.setType("image/*");
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+                intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
             }
+            intent.setAction(Intent.ACTION_GET_CONTENT);
+            startActivityForResult(Intent.createChooser(intent,getString(R.string.share_proof_action)), REQUEST_CODE_CHOOSE_MEDIA);
         });
 
         updateOnOffState(false);
@@ -276,7 +294,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             mPgpUtils.publishPublicKey();
             String pubKey = mPgpUtils.getPublicKey();
 
-            Intent intent = new Intent(Intent.ACTION_SEND);
+            Intent intent = new Intent(ACTION_SEND);
             intent.setType("text/plain");
             intent.putExtra(Intent.EXTRA_TEXT,pubKey);
             startActivity(intent);
@@ -326,8 +344,23 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             } else {
                 mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_PHONE, false).commit();
             }
+        } else if (requestCode == REQUEST_CODE_CHOOSE_MEDIA) {
+            Intent intentShare = new Intent(this,ShareProofActivity.class);
+            intentShare.setType(data.getType());
+
+            if (data.getData() != null) {
+                intentShare.setAction(ACTION_SEND);
+                intentShare.setData(data.getData());
+            }
+            if (data.getClipData() != null) {
+                intentShare.setAction(ACTION_SEND_MULTIPLE);
+                intentShare.setClipData(data.getClipData());
+            }
+            startActivity(intentShare);
+
         }
     }
+
 
     private void askForOptionals() {
         if (!askForPermissions(optionalPermissions, REQUEST_CODE_OPTIONAL_PERMISSIONS)) {

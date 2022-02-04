@@ -20,8 +20,8 @@ android {
         applicationId "org.witness.proofmode"
         minSdkVersion 16
         targetSdkVersion 31
-        versionCode 1421
-        versionName "0.0.14-RC-1"
+        versionCode 1422
+        versionName "0.0.14-RC-2"
         multiDexEnabled true
         archivesBaseName = "ProofMode-$versionName"
     }
@@ -60,7 +60,6 @@ dependencies {
     implementation 'androidx.legacy:legacy-support-v13:1.0.0'
 
     implementation 'com.google.android.material:material:1.4.0'
-   // implementation 'com.google.android.gms:play-services-safetynet:18.0.1'
 
     implementation 'com.github.paolorotolo:appintro:4.1.0'
 
