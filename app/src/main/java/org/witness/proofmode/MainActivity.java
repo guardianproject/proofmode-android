@@ -270,11 +270,14 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 mPgpUtils = PgpUtils.getInstance(this,mPrefs.getString("password",PgpUtils.DEFAULT_PASSWORD));
 
             mPgpUtils.publishPublicKey();
-            String fingerprint = mPgpUtils.getPublicKeyFingerprint();
+            Toast.makeText(this, getString(R.string.publish_key_to) + PgpUtils.URL_LOOKUP_ENDPOINT, Toast.LENGTH_LONG).show();
 
-            Toast.makeText(this, R.string.open_public_key_page, Toast.LENGTH_LONG).show();
+            //String fingerprint = mPgpUtils.getPublicKeyFingerprint();
 
-            openUrl(PgpUtils.URL_LOOKUP_ENDPOINT + fingerprint);
+            //Toast.makeText(this, R.string.open_public_key_page, Toast.LENGTH_LONG).show();
+
+            //openUrl(PgpUtils.URL_LOOKUP_ENDPOINT + fingerprint);
+
         }
         catch (IOException ioe)
         {

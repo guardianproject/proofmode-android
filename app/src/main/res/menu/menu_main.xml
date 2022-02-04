@@ -8,7 +8,9 @@
         android:id="@+id/action_publish_key"
         android:orderInCategory="100"
         android:title="@string/action_publish_key"
-        app:showAsAction="never" />
+        app:showAsAction="never"
+        android:visible="false"
+        />
 
     <item
         android:id="@+id/action_share_key"

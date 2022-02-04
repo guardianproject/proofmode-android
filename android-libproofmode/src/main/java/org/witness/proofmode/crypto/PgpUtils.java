@@ -1,6 +1,8 @@
 package org.witness.proofmode.crypto;
 
 import android.content.Context;
+import android.util.Base64;
+import android.util.Base64OutputStream;
 import android.util.Log;
 
 
@@ -81,9 +83,9 @@ public class PgpUtils {
     private final static String FILE_PUBLIC_KEY_RING = "pub.asc";
 
     public final static String DEFAULT_PASSWORD = "password"; //static string for local keystore
-    private final static String URL_POST_KEY_ENDPOINT = "https://pgp.mit.edu/pks/add";
+    private final static String URL_POST_KEY_ENDPOINT = "https://keys.openpgp.org/vks/v1/upload";
 
-    public final static String URL_LOOKUP_ENDPOINT = "https://pgp.mit.edu/pks/lookup?op=get&search=0x";
+    public final static String URL_LOOKUP_ENDPOINT = "https://keys.openpgp.org/search?q=0x";
 
     private PgpUtils ()
     {
@@ -302,27 +304,26 @@ public class PgpUtils {
     public void publishPublicKey () throws IOException
     {
         ByteArrayOutputStream baosPkr = new ByteArrayOutputStream();
-        ArmoredOutputStream armoredStreamPkr = new ArmoredOutputStream(baosPkr);
-        pkr.encode(armoredStreamPkr);
-        armoredStreamPkr.close();
-        final String pubKey = new String(baosPkr.toByteArray(), Charset.defaultCharset());
+        Base64OutputStream bos = new Base64OutputStream(baosPkr, Base64.DEFAULT);
+        pkr.encode(bos);
+        bos.close();
+
+        final String pubKey = new String(baosPkr.toByteArray(), Charset.forName("UTF-8"));
 
         new Thread () {
 
             public void run() {
 
                 try {
-                    HashMap<String,String> hmParams = new HashMap<String,String>();
-                    hmParams.put("keytext",pubKey);
-                    String queryString = createQueryStringForParameters(hmParams);
+
+                    String queryString = "{\"keytext\":\"" + pubKey + "\"}";
 
                     URL url = new URL(URL_POST_KEY_ENDPOINT);
                     HttpURLConnection client = null;
                     client = (HttpURLConnection) url.openConnection();
                     client.setRequestMethod("POST");
-                    client.setFixedLengthStreamingMode(queryString.getBytes().length);
                     client.setRequestProperty("Content-Type",
-                            "application/x-www-form-urlencoded");
+                            "application/json");
                     client.setDoOutput(true);
                     client.setDoInput(true);
                     client.setReadTimeout(20000);
@@ -337,7 +338,13 @@ public class PgpUtils {
                     int statusCode = client.getResponseCode();
                     if (statusCode != HttpURLConnection.HTTP_OK) {
                         // throw some exception
-                        Log.w("PGP","key did not upload: " + statusCode);
+                        Log.w("PGP","key did not upload: " + statusCode + " = " + client.getResponseMessage());
+                    }
+                    else
+                    {
+                        Log.w("PGP", "Published key: " + client.getResponseMessage());
+
+
                     }
 
 

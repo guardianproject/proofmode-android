@@ -42,7 +42,6 @@
     <string name="select_app">Select the app to share proof to...</string>
     <string name="independent_notary">Independent notarization by Enigio TimeBeat at:</string>
     <string name="packaging_proof">Packaging proof for sharing...</string>
-    <string name="view_public_key">View public key at: http://pgp.mit.edu/pks/lookup?search=0x</string>
     <string name="include_mobile_network">Include Mobile Network</string>
     <string name="share_proof_action">Share Proof</string>
     <string name="action_generate">Generate Proof</string>
@@ -119,4 +118,5 @@
     <string name="digital_signatures_whatis_info">Every time you install ProofMode, a unique digital identity, consisting of secret and public PGP keys is created. This is powered by the OpenPGP standard. It is used to cryptographically sign your media and supporting proof files. If the PGP signatures match the digital identity (PGP key) of your current ProofMode instance, then the signature was created by that instance of ProofMode.</string>
     <string name="digital_signatures_whattodo_title">What do I do with it?</string>
     <string name="digital_signatures_whattodo_info">A public version of your PGP key will be shared along with your media and proof.csv files. This allows a third party to verify the PGP “.asc” signature files that come with the proof data. Including your public PGP key with the proof ensures that it will be preserved in case your device is compromised or you reinstall the app. Remember each time you re-install the app, it will create a new digital identity (PGP key).</string>
+    <string name="publish_key_to">\"Publishing key to: \"</string>
 </resources>
