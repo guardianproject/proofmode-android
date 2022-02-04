@@ -14,6 +14,7 @@ import org.bouncycastle.bcpg.sig.Features;
 import org.bouncycastle.bcpg.sig.KeyFlags;
 import org.bouncycastle.crypto.generators.RSAKeyPairGenerator;
 import org.bouncycastle.crypto.params.RSAKeyGenerationParameters;
+import org.bouncycastle.jcajce.provider.symmetric.util.PBE;
 import org.bouncycastle.openpgp.PGPCompressedDataGenerator;
 import org.bouncycastle.openpgp.PGPEncryptedData;
 import org.bouncycastle.openpgp.PGPEncryptedDataGenerator;
@@ -191,9 +192,9 @@ public class PgpUtils {
         ArmoredOutputStream armoredStreamPkr = new ArmoredOutputStream(baosPkr);
         pkr.encode(armoredStreamPkr);
         armoredStreamPkr.close();
+
         return new String(baosPkr.toByteArray(), Charset.defaultCharset());
     }
-
 
     public final static String genPGPPrivKey (PGPKeyRingGenerator krgen) throws IOException {
             // String pgpPublicKey = PgpUtils.genPGPPublicKey(krgen);

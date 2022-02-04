@@ -387,8 +387,16 @@ public class ShareProofActivity extends AppCompatActivity {
             else {
 
                 File fileFolder = MediaWatcher.getHashStorageDir(this,"zip");
-                File fileZip = new File(fileFolder,"proofmode." + new Date().getTime() + ".zip");
-                zip(shareUris,fileZip);
+
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd-hh-mm-ss");
+                String dateString = sdf.format(new Date());
+
+                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+                PgpUtils pu = PgpUtils.getInstance(this,prefs.getString("password",PgpUtils.DEFAULT_PASSWORD));
+                String userId = pu.getPublicKeyFingerprint();
+
+                File fileZip = new File(fileFolder,"proofmode-" + userId + "-" + dateString + ".zip");
+                zipProof(shareUris,fileZip);
 
                 Uri uriZip = FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider",fileZip);
 
@@ -866,7 +874,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
     private final static int BUFFER = 1024*8;
 
-    public void zip(ArrayList<Uri> uris, File fileZip) {
+    public void zipProof(ArrayList<Uri> uris, File fileZip) {
         try {
             BufferedInputStream origin;
             FileOutputStream dest = new FileOutputStream(fileZip);
