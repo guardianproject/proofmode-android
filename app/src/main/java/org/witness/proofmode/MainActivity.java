@@ -140,12 +140,12 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             if (!askForPermissions(requiredPermissions, REQUEST_CODE_REQUIRED_PERMISSIONS)) {
                 mPrefs.edit().putBoolean(PREFS_DOPROOF, isOn).commit();
                 updateOnOffState(true);
-                ProofModeApp.init(this);
+                ((ProofModeApp)getApplication()).init(this);
             }
         } else {
             mPrefs.edit().putBoolean(PREFS_DOPROOF, isOn).commit();
             updateOnOffState(true);
-            ProofModeApp.cancel(this);
+            ((ProofModeApp)getApplication()).cancel(this);
         }
     }
 

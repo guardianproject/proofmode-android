@@ -1,6 +1,7 @@
 package org.witness.proofmode;
 
 import static org.witness.proofmode.ProofMode.PREFS_DOPROOF;
+import static org.witness.proofmode.ProofService.ACTION_START;
 
 import android.content.Context;
 
@@ -33,22 +34,19 @@ public class ProofModeApp extends MultiDexApplication {
 
     }
 
-    public static void init (Context context)
+    public void init (Context context)
     {
 
         if (BuildConfig.DEBUG) {
             Timber.plant(new Timber.DebugTree());
-        } else {
-            Timber.plant(new CrashReportingTree());
         }
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 
         if (prefs.getBoolean(PREFS_DOPROOF,false)) {
 
-            ProofMode.init(context);
-
             Intent intentService = new Intent(context, ProofService.class);
+            intentService.setAction(ACTION_START);
 
             if (Build.VERSION.SDK_INT >= 26) {
                 context.startForegroundService(intentService);
@@ -60,9 +58,9 @@ public class ProofModeApp extends MultiDexApplication {
         }
     }
 
-    public static void cancel (Context context)
+    public void cancel (Context context)
     {
-        ProofMode.stop(context);
+
         Intent intentService = new Intent(context, ProofService.class);
         context.stopService(intentService);
 

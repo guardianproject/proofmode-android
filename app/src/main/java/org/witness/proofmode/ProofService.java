@@ -16,12 +16,9 @@ import androidx.core.app.NotificationCompat;
 
 public class ProofService extends Service {
 
-    @Override
-    public void onCreate() {
-        super.onCreate();
+    public final static String ACTION_START = "start";
+    public final static String ACTION_STOP = "stop";
 
-
-    }
 
     private void showNotification () {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -56,16 +53,26 @@ public class ProofService extends Service {
         }
     }
 
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
 
+
+        ProofMode.stop(this);
+    }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            showNotification();
+        if (intent.getAction()!= null && intent.getAction().equals(ACTION_START)) {
+            ProofMode.init(this);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                showNotification();
+            }
         }
 
-        return super.onStartCommand(intent, flags, startId);
+        return START_REDELIVER_INTENT;
     }
 
     @Override
