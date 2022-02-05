@@ -12,6 +12,7 @@ import android.content.SharedPreferences;
 import android.content.pm.LabeledIntent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.content.res.AssetManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -900,6 +901,17 @@ public class ShareProofActivity extends AppCompatActivity {
             ZipEntry entry = new ZipEntry("pubkey.asc");
             out.putNextEntry(entry);
             out.write(pubKey.getBytes());
+
+            String howToFile = "HowToVerifyProofData.txt";
+            entry = new ZipEntry(howToFile);
+            out.putNextEntry(entry);
+            InputStream is = getResources().getAssets().open(howToFile);
+            byte[] buffer = new byte[1024];
+            for (int length = is.read(buffer); length != -1; length = is.read(buffer)) {
+                out.write(buffer, 0, length);
+            }
+            is.close();
+
 
             out.close();
         } catch (Exception e) {
