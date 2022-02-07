@@ -71,6 +71,8 @@ public class ShareProofActivity extends AppCompatActivity {
 
     private boolean sendMedia = true;
 
+    private final static String ZIP_FILE_DATETIME_FORMAT = "yyyy-MM-dd-HH-mm-ssz";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -389,7 +391,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
                 File fileFolder = MediaWatcher.getHashStorageDir(this,"zip");
 
-                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd-hh-mm-ss");
+                SimpleDateFormat sdf = new SimpleDateFormat(ZIP_FILE_DATETIME_FORMAT);
                 String dateString = sdf.format(new Date());
 
                 SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
