@@ -1,26 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">ProofMode</string>
-
     <string name="action_settings">Configuracion</string>
     <string name="action_share_key">Compartir la llave pública</string>
     <string name="action_publish_key">Publicar la llave pública</string>
-
     <string name="action_about">Acerca de ProofMode </string>
-
     <string name="switch_include_device">Incluir la identidad del dispositivo</string>
     <string name="switch_include_location">Ubicacion GPS incluida</string>
     <string name="switch_enable_proofmode">Habilitar ProofMode</string>
     <string name="switch_auto_notarize">Habilitar Notarización Automatica</string>
-
     <string name="intro1_title">Capturar la Prueba</string>
     <string name="intro1_desc">Has tomado el primer paso para transformar tus fotos y video en una prueba digital.</string>
-
     <string name="intro2_title">Registrando tu Mundo</string>
     <string name="intro2_desc">ProofMode registra todos los sensores disponibles en tu dispositivo. Asegurate de habilitar los permisos cuando son requeridos.</string>
-
     <string name="intro3_title">Fácil y automático</string>
     <string name="intro3_desc">ProofMode esta siempre activado en tu dispositivo, agregando evidencias a todas las fotos y videos que tu tomas.</string>
-
     <string name="intro4_title">Comparte la evidencia</string>
     <string name="intro4_desc">Cuando necesitas compartir un archivo con evidencia, abre la foto o el video, y selecciona COMPARTIR EVIDENCIA de el menu  SHARE. </string>
     <string name="share_notarization">COMPARTIR LA NOTARIZACION CON</string>
@@ -43,4 +37,83 @@
     <string name="packaging_proof">Colectando evidencia para compartir...</string>
     <string name="view_public_key">Ver la llave publica en:  http://pgp.mit.edu/pks/lookup?search=0x</string>
     <string name="include_mobile_network">Red Movil Incluida</string>
-    </resources>
+    <string name="settings_location">Ubicación</string>
+    <string name="settings_network">Red</string>
+    <string name="proofmode_is_off">PROOFMODE ESTÁ DESACTIVADO Y NO CAPTURA DATOS</string>
+    <string name="settings_phone">Teléfono</string>
+    <string name="settings_phone_desc">Número de identificación de tu teléfono</string>
+    <string name="settings_network_desc">Nombre de la(s) red(es) a las que estás conectado</string>
+    <string name="proofmode_is_on">PROOFMODE ESTÁ ENCENDIDO Y CAPTURANDO DATOS</string>
+    <string name="tap_hold_turn_off">Manten presionado para apagar</string>
+    <string name="tap_hold_turn_on">Manten presionado para encender</string>
+    <string name="proof_error_message_final">No pudimos generar pruebas para este archivo.</string>
+    <string name="got_it">Entiendo</string>
+    <string name="activity_settings_title">ELIGE TU CONFIGURACIÓN</string>
+    <string name="activity_datalegend_title">LEYENDA DE DATOS</string>
+    <string name="settings_title">Fortalezca la verificabilidad de tus medios agregando datos a tu prueba.</string>
+    <string name="onboarding_get_started">Empezar</string>
+    <string name="onboarding_intro_title">Una imagen puede valer más que mil palabras, pero la prueba de que es real no tiene precio.</string>
+    <string name="onboarding_intro_content">ProofMode captura información que hace que tus medios sean más confiables.</string>
+    <string name="onboarding_step1">Paso 1</string>
+    <string name="onboarding_step1_title">Obtener pruebas es fácil. Una vez que ProofMode esté activado, usa tu cámara como de costumbre.</string>
+    <string name="onboarding_step2">Paso 2</string>
+    <string name="onboarding_step2_title">Una vez que hayas tomado una foto o un video, búscalo en la galería de tu cámara para compartirlo.</string>
+    <string name="onboarding_step2_content">Seleccione una foto, toca el icono de compartir y elige \"Compartir prueba\".</string>
+    <string name="onboarding_step3_title">Antes de enviar, elige qué nivel de prueba deseas compartir.</string>
+    <string name="onboarding_step3_content">Siempre tienes el control. Comparte información mínima para demostrar que tu archivo existe. Robusto comparte todo lo capturado.</string>
+    <string name="onboarding_step4_title">Luego elige cómo enviarlo.</string>
+    <string name="onboarding_step4_content">¡Puedes compartir de muchas maneras, desde correo electrónico hasta servicios de mensajería como WhatsApp!</string>
+    <string name="onboarding_privacy_content">Obten información sobre lo que captura ProofMode en nuestra Leyenda de datos.</string>
+    <string name="onboarding_privacy_subtitle">NOS PREOCUPAMOS POR TU PRIVACIDAD</string>
+    <string name="onboarding_privacy_continue">Continuar</string>
+    <string name="onboarding_privacy_options">Opciones de privacidad</string>
+    <string name="permission_location_title">Necesitamos tu ubicación para documentar dónde se capturan tus medios.</string>
+    <string name="permission_location_content">Dar permiso nos permite documentar tus coordenadas gps. No lo rastrearemos ni almacenaremos tu ubicación de ninguna otra manera.</string>
+    <string name="menu_how_it_works">Cómo funciona</string>
+    <string name="menu_datalegend">Leyenda de datos</string>
+    <string name="permissions_needed_title">Permisos necesarios</string>
+    <string name="share_no_proof">No existe ninguna prueba todavía. Vuelve a intentarlo en un minuto.</string>
+    <string name="share_no_proof_info">Si todavía no hay ninguna prueba, puedes generar una prueba ahora. Es posible que no refleje la hora y la ubicación de cuándo y dónde se crearon los medios.</string>
+    <string name="share_proof_found">¡Prueba encontrada! Elige qué nivel de prueba desea compartir.</string>
+    <string name="share_mode_basic_info">Comparte una huella digital de tu medio para establecer que existe.</string>
+    <string name="share_share_basic">Compartir básica</string>
+    <string name="share_mode_robust">Robusto</string>
+    <string name="share_mode_robust_info">Comparte todo lo que has habilitado ProofMode para capturar en un archivo firmado criptográficamente.</string>
+    <string name="share_share_robust">Compartir prueba robusta</string>
+    <string name="share_info_basic_message">• No incluye información personal
+\n• No se necesita confianza
+\n• Lo suficientemente breve como para enviar un mensaje de texto</string>
+    <string name="share_info_robust_send_media">Compartir medios con prueba</string>
+    <string name="digital_signatures_title">Cuando compartas pruebas, verás firmas digitales y tu clave pública adjuntas como archivos \".asc\".</string>
+    <string name="digital_signatures_info">Aquí hay más información sobre cuáles son.</string>
+    <string name="digital_signatures_whatis_title">¿Cual es mi firma digital y clave pública\?</string>
+    <string name="digital_signatures_whattodo_title">¿Que hago con esto\?</string>
+    <string name="settings_notary">Notaria</string>
+    <string name="settings_notary_desc">Registro con un tercero de que tu medio existe</string>
+    <string name="settings_location_desc">Coordenadas GPS cuando se toman los medios</string>
+    <string name="onboarding_step4">Paso 4</string>
+    <string name="action_generate">Generar prueba</string>
+    <string name="onboarding_learn_more">Aprende más</string>
+    <string name="share_proof_action">Compartir prueba</string>
+    <string name="choose_my_settings">Cambiar mi configuración</string>
+    <string name="settings_description">Toca los iconos para agregar o eliminar.</string>
+    <string name="onboarding_step1_content">ProofMode funciona en segundo plano para generar y guardar pruebas. ¡No tienes que hacer nada especial!</string>
+    <string name="proofmode_is_capturing">ProofMode captura un conjunto sólido de metadatos de forma predeterminada. Fortalece la verificabilidad de tus medios agregando más.</string>
+    <string name="onboarding_step3">Paso 3</string>
+    <string name="onboarding_privacy_title">ProofMode activa múltiples sensores en tu teléfono para generar pruebas.</string>
+    <string name="onboarding_privacy_info">ProofMode captura la identidad de tu teléfono de forma predeterminada. Si no te sientes cómodo con esto, ve a la configuración para desactivarlo.</string>
+    <string name="permission_location_info">Si no deseas capturar estos datos por motivos de seguridad o privacidad, no habilites el permiso.</string>
+    <string name="menu_home">Inicio</string>
+    <string name="menu_digital_signatures">Firmas digitales</string>
+    <string name="menu_settings">Ajustes</string>
+    <string name="share_info_basic_title">Comparte una huella digital de tu medio para establecer que existe.</string>
+    <string name="digital_signatures_whattodo_info">Se compartirá una versión pública de tu clave PGP junto con sus archivos multimedia y proof.csv. Esto permite que un tercero verifique los archivos de firma PGP “.asc” que vienen con los datos de prueba. Incluir tu clave PGP pública con la prueba garantiza que se conservará en caso de que tu dispositivo se vea comprometido o reinstale la aplicación. Recuerde que cada vez que vuelva a instalar la aplicación, se creará una nueva identidad digital (clave PGP).</string>
+    <string name="share_mode_basic">Basico</string>
+    <string name="permissions_needed_content">Habilite los permisos requeridos en la configuración del sistema.</string>
+    <string name="share_info_robust_title">Comparte todo lo que ha habilitado ProofMode para capturar en un archivo firmado criptográficamente.</string>
+    <string name="share_info_robust_message">• Revela información de identificación personal
+\n• Comparte con alguien en quien confíes
+\n• Requiere acceso a Internet
+\n• Comparte archivos .csv con datos, PGP y huellas dactilares únicas</string>
+    <string name="digital_signatures_whatis_info">Cada vez que instala ProofMode, se crea una identidad digital única, que consta de claves PGP públicas y secretas. Esto funciona con el estándar OpenPGP. Se utiliza para firmar criptográficamente tus medios y archivos de prueba de apoyo. Si las firmas PGP coinciden con la identidad digital (clave PGP) de su instancia actual de ProofMode, entonces la firma fue creada por esa instancia de ProofMode.</string>
+</resources>
