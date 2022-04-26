@@ -3,6 +3,7 @@ package org.witness.proofmode;
 import static org.witness.proofmode.ProofMode.OPENPGP_FILE_TAG;
 import static org.witness.proofmode.ProofMode.PROOF_FILE_TAG;
 import static org.witness.proofmode.ProofMode.OPENTIMESTAMPS_FILE_TAG;
+import static org.witness.proofmode.ProofMode.PROVIDER_TAG;
 
 import android.app.Dialog;
 import android.content.ComponentName;
@@ -605,22 +606,22 @@ public class ShareProofActivity extends AppCompatActivity {
         String hash = HashUtils.getSHA256FromFileContent(getContentResolver().openInputStream(mediaUri));
 
         File fileMedia = new File(mediaPath);
-        File fileMediaSig = new File(mediaPath + ".asc");
+        File fileMediaSig = new File(mediaPath + OPENPGP_FILE_TAG);
         File fileMediaProof = new File(mediaPath + PROOF_FILE_TAG);
-        File fileMediaProofSig = new File(fileMediaProof.getAbsolutePath() + ".asc");
+        File fileMediaProofSig = new File(fileMediaProof.getAbsolutePath() + OPENPGP_FILE_TAG);
 
         //if not there try alternate locations
         if (!fileMediaSig.exists())
         {
             fileMediaSig = new File(Environment.getExternalStorageDirectory(),baseFolder + mediaPath + ".asc");
             fileMediaProof = new File(Environment.getExternalStorageDirectory(),baseFolder + mediaPath + PROOF_FILE_TAG);
-            fileMediaProofSig = new File(fileMediaProof.getAbsolutePath() + ".asc");
+            fileMediaProofSig = new File(fileMediaProof.getAbsolutePath() + OPENPGP_FILE_TAG);
 
             if (!fileMediaSig.exists())
             {
-                fileMediaSig = new File(getExternalFilesDir(null),mediaPath + ".asc");
+                fileMediaSig = new File(getExternalFilesDir(null),mediaPath + OPENPGP_FILE_TAG);
                 fileMediaProof = new File(getExternalFilesDir(null),mediaPath + PROOF_FILE_TAG);
-                fileMediaProofSig = new File(fileMediaProof.getAbsolutePath() + ".asc");
+                fileMediaProofSig = new File(fileMediaProof.getAbsolutePath() + OPENPGP_FILE_TAG);
             }
 
         }
@@ -644,20 +645,24 @@ public class ShareProofActivity extends AppCompatActivity {
         sb.append(getString(R.string.proof_signed)).append(fingerprint);
         sb.append("\n");
 
-        shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider",fileMediaProof));
+        shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMediaProof));
 
         if (shareMedia) {
-            if (fileMedia.exists())
-                shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider",fileMedia));
+            if (fileMedia != null
+                    && fileMedia.exists())
+                shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMedia));
 
-            if (fileMediaSig.exists())
-                shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider",fileMediaSig));
+            if (fileMediaSig != null
+               && fileMediaSig.exists())
+                shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMediaSig));
 
-            if (fileMediaProofSig.exists())
-                shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider",fileMediaProofSig));
+            if (fileMediaProofSig != null
+              && fileMediaProofSig.exists())
+                shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMediaProofSig));
 
-            if (fileMediaNotary.exists())
-                shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider",fileMediaNotary));
+            if (fileMediaNotary != null
+                    && fileMediaNotary.exists())
+                shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMediaNotary));
 
         }
 
