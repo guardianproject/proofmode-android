@@ -26,6 +26,7 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import org.witness.proofmode.ProofMode;
 import org.witness.proofmode.crypto.HashUtils;
 import org.witness.proofmode.crypto.PgpUtils;
+import org.witness.proofmode.notarization.GoogleSafetyNetNotarizationProvider;
 import org.witness.proofmode.notarization.NotarizationListener;
 import org.witness.proofmode.notarization.NotarizationProvider;
 import org.witness.proofmode.notarization.OpenTimestampsNotarizationProvider;
@@ -191,36 +192,37 @@ public class MediaWatcher extends BroadcastReceiver {
             if (autoNotarize) {
 
                 if (isOnline(context)) {
-                    //if we can do safetycheck, then add that in as well
-                    new SafetyNetCheck().sendSafetyNetRequest(context, mediaHash, new OnSuccessListener<SafetyNetApi.AttestationResponse>() {
-                        @Override
-                        public void onSuccess(SafetyNetApi.AttestationResponse response) {
-                            // Indicates communication with the service was successful.
-                            // Use response.getJwsResult() to get the result data.
 
-                            String resultString = response.getJwsResult();
-                            SafetyNetResponse resp = parseJsonWebSignature(resultString);
+                    final GoogleSafetyNetNotarizationProvider gProvider = new GoogleSafetyNetNotarizationProvider(context);
 
-                            long timestamp = resp.getTimestampMs();
-                            boolean isBasicIntegrity = resp.isBasicIntegrity();
-                            boolean isCtsMatch = resp.isCtsProfileMatch();
-
-                            Timber.d("Success! SafetyNet result: isBasicIntegrity: " + isBasicIntegrity + " isCts:" + isCtsMatch);
-                            writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, resultString, isBasicIntegrity, isCtsMatch, timestamp, null);
+                    try
+                    {
+                        gProvider.notarize(mediaHash, context.getContentResolver().openInputStream(uriMedia), new NotarizationListener() {
+                            @Override
+                            public void notarizationSuccessful(String result) {
 
 
-                        }
-                    }, new OnFailureListener() {
-                        @Override
-                        public void onFailure(@NonNull Exception e) {
-                            // An error occurred while communicating with the service.
-                            Timber.d(e,"SafetyNet check failed");
-                        }
-                    });
+                                SafetyNetResponse resp = gProvider.parseJsonWebSignature(result);
+
+                                String apkDigest = "apkDigest:" + resp.getApkDigestSha256();
+                                long timestamp = resp.getTimestampMs();
+                                boolean isBasicIntegrity = resp.isBasicIntegrity();
+                                boolean isCtsMatch = resp.isCtsProfileMatch();
+
+                                writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork,
+                                        apkDigest, isBasicIntegrity, isCtsMatch, timestamp, null);
+
+                            }
+
+                            @Override
+                            public void notarizationFailed(int errCode, String message) {
+                                Timber.d("Got Google SafetyNet error response: %s", message);
+
+                            }
+                        });
 
 
-                    final NotarizationProvider nProvider = new OpenTimestampsNotarizationProvider();
-                    try {
+                        final NotarizationProvider nProvider = new OpenTimestampsNotarizationProvider();
                         nProvider.notarize(mediaHash, context.getContentResolver().openInputStream(uriMedia), new NotarizationListener() {
                             @Override
                             public void notarizationSuccessful(String timestamp) {
@@ -237,7 +239,7 @@ public class MediaWatcher extends BroadcastReceiver {
                             public void notarizationFailed(int errCode, String message) {
 
                                 Timber.d("Got OpenTimestamps error response: %s", message);
-                                writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, "Opentimestamps.org error: " + message);
+                         //       writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, "Opentimestamps.org error: " + message);
 
                             }
                         });
@@ -296,22 +298,6 @@ public class MediaWatcher extends BroadcastReceiver {
         return netInfo != null && netInfo.isConnected();
     }
 
-    private SafetyNetResponse parseJsonWebSignature(String jwsResult) {
-        if (jwsResult == null) {
-            return null;
-        }
-        //the JWT (JSON WEB TOKEN) is just a 3 base64 encoded parts concatenated by a . character
-        final String[] jwtParts = jwsResult.split("\\.");
-
-        if (jwtParts.length == 3) {
-            //we're only really interested in the body/payload
-            String decodedPayload = new String(Base64.decode(jwtParts[1], Base64.DEFAULT));
-
-            return SafetyNetResponse.parse(decodedPayload);
-        } else {
-            return null;
-        }
-    }
 
     private void writeProof (Context context, Uri uriMedia, String hash, boolean showDeviceIds, boolean showLocation, boolean showMobileNetwork, String safetyCheckResult, boolean isBasicIntegrity, boolean isCtsMatch, long notarizeTimestamp, String notarizeData)
     {
