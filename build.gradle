@@ -21,6 +21,9 @@ allprojects {
         jcenter()
         google()
 
+        maven { url 'https://dl.bintray.com/textile/maven' }
+        maven { url 'https://jitpack.io' }
+
     }
     project.ext {
         // these are common variables used in */build.gradle
