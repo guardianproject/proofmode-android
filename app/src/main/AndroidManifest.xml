@@ -99,7 +99,6 @@
         <activity
             android:name=".ShareProofActivity"
             android:label="@string/share_proof_action"
-            android:launchMode="singleTop"
             android:theme="@style/AppTheme.NoActionBar"
             android:exported="true">
             <intent-filter>

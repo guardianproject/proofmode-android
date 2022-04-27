@@ -17,10 +17,13 @@ import androidx.core.app.NotificationCompat;
 public class ProofService extends Service {
 
     public final static String ACTION_START = "start";
+    public final static String ACTION_UPDATE_NOTIFICATION = "notify";
+    public final static String EXTRA_UPDATE_NOTIFICATION = "msg";
+
     public final static String ACTION_STOP = "stop";
 
 
-    private void showNotification () {
+    private void showNotification (String notifyMsg) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 
             String NOTIFICATION_CHANNEL_ID = getPackageName();
@@ -41,7 +44,7 @@ public class ProofService extends Service {
                     .setOngoing(true)
                     .setSmallIcon(R.drawable.ic_notify)
                     .setContentTitle(getString(R.string.app_name))
-                    .setContentText(getString(R.string.generating_proof_notify))
+                    .setContentText(notifyMsg)
                     .setPriority(NotificationManager.IMPORTANCE_MIN)
                     .setCategory(Notification.CATEGORY_SERVICE)
                     .setVisibility(NotificationCompat.VISIBILITY_SECRET)
@@ -64,11 +67,18 @@ public class ProofService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
-        if (intent.getAction()!= null && intent.getAction().equals(ACTION_START)) {
-            ProofMode.init(this);
+        if (intent.getAction()!= null) {
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                showNotification();
+            if (intent.getAction().equals(ACTION_START))
+            {
+                ProofMode.init(this);
+
+                showNotification(getString(R.string.waiting_proof_notify));
+
+            }
+            else if (intent.getAction().equals(ACTION_UPDATE_NOTIFICATION))
+            {
+                showNotification(intent.getStringExtra(EXTRA_UPDATE_NOTIFICATION));
             }
         }
 

@@ -26,11 +26,14 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.provider.MediaStore;
+import android.provider.OpenableColumns;
+import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
+import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -63,6 +66,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -74,6 +78,8 @@ public class ShareProofActivity extends AppCompatActivity {
     private boolean sendMedia = true;
 
     private final static String ZIP_FILE_DATETIME_FORMAT = "yyyy-MM-dd-HH-mm-ssz";
+
+    private HashMap<String, String> hashCache = new HashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -102,33 +108,20 @@ public class ShareProofActivity extends AppCompatActivity {
         Intent intent = getIntent();
         String action = intent.getAction();
 
-        boolean proofExists = false;
 
         if (Intent.ACTION_SEND_MULTIPLE.equals(action)) {
             ArrayList<Uri> mediaUris = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
 
-            for (Uri mediaUri : mediaUris)
+            //just check the first file
+            if (mediaUris.size() > 0)
             {
-                try {
-                    proofExists = proofExists(mediaUri);
-                } catch (FileNotFoundException e) {
-                   Timber.w(e);
-                   proofExists = false;
-                }
-
-                if (!proofExists)
-                    break;
+                displayProgress(getString(R.string.progress_checking_proof));
+                new CheckProofTasks(this).execute(mediaUris.get(0));
             }
 
-            if (proofExists)
-            {
-                displaySharePrompt();
-            }
-            else {
-                displayGeneratePrompt();
-            }
 
         } else if (Intent.ACTION_SEND.equals(action)) {
+
 
             Uri mediaUri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
             if (mediaUri == null)
@@ -136,23 +129,10 @@ public class ShareProofActivity extends AppCompatActivity {
 
             if (mediaUri != null)
             {
-                mediaUri = cleanUri (mediaUri);
-
-                try {
-                    proofExists = proofExists(mediaUri);
-                } catch (FileNotFoundException e) {
-                    Timber.w(e);
-                    proofExists = false;
-                }
+                displayProgress(getString(R.string.progress_checking_proof));
+                new CheckProofTasks(this).execute(mediaUri);
             }
 
-            if (proofExists)
-            {
-                displaySharePrompt();
-            }
-            else {
-                displayGeneratePrompt();
-            }
 
         }
         else
@@ -210,24 +190,20 @@ public class ShareProofActivity extends AppCompatActivity {
         Intent intent = getIntent();
         String action = intent.getAction();
 
-        boolean proofExists;
+        String proofHash = null;
 
         if (Intent.ACTION_SEND_MULTIPLE.equals(action)) {
             ArrayList<Uri> mediaUris = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
-
-            boolean proofGenerated = false;
 
             for (Uri mediaUri : mediaUris)
             {
                 mediaUri = cleanUri(mediaUri);
 
                 try {
-                    proofExists = proofExists(mediaUri);
+                    proofHash = HashUtils.getSHA256FromFileContent(getContentResolver().openInputStream(mediaUri));
+                    hashCache.put(mediaUri.toString(),proofHash);
+                    generateProof(mediaUri, proofHash);
 
-                    if (!proofExists) {
-                        generateProof(mediaUri);
-                        proofGenerated = true;
-                    }
                 }
                 catch (FileNotFoundException fe)
                 {
@@ -236,8 +212,11 @@ public class ShareProofActivity extends AppCompatActivity {
 
             }
 
-            if (!proofGenerated)
+            if (proofHash != null)
                 displaySharePrompt ();
+            else
+                showProofError();
+
 
 
         } else if (Intent.ACTION_SEND.equals(action)) {
@@ -251,15 +230,18 @@ public class ShareProofActivity extends AppCompatActivity {
                 mediaUri = cleanUri(mediaUri);
 
                 try {
-                    proofExists = proofExists(mediaUri);
+                    proofHash = hashCache.get(mediaUri.toString());
+
+                    if (proofHash != null)
+                        proofHash = HashUtils.getSHA256FromFileContent(getContentResolver().openInputStream(mediaUri));
+
+                    generateProof(mediaUri, proofHash);
                 }
                 catch (FileNotFoundException fe)
                 {
-                    proofExists = false;
+                    proofHash = null;
                 }
 
-                if (!proofExists)
-                    generateProof(mediaUri);
             }
         }
     }
@@ -268,20 +250,29 @@ public class ShareProofActivity extends AppCompatActivity {
     {
         shareProof (false, false);
 
+
     }
 
     public void clickAll (View button)
     {
         shareProof (sendMedia, true);
 
+
     }
 
-    private void displayProgress ()
+    private void displayProgress (String progressText)
     {
 
         findViewById(R.id.view_proof_progress).setVisibility(View.VISIBLE);
         findViewById(R.id.view_no_proof).setVisibility(View.GONE);
         findViewById(R.id.view_proof).setVisibility(View.GONE);
+
+        if (!TextUtils.isEmpty(progressText)) {
+            ((TextView)findViewById(R.id.progressText)).setVisibility(View.VISIBLE);
+            ((TextView) findViewById(R.id.progressText)).setText(progressText);
+        }
+        else
+            ((TextView)findViewById(R.id.progressText)).setVisibility(View.GONE);
 
     }
 
@@ -302,24 +293,10 @@ public class ShareProofActivity extends AppCompatActivity {
 
     private void shareProof (final boolean shareMedia, final boolean shareProof) {
 
-        displayProgress();
+        displayProgress(getString(R.string.progress_building_proof));
 
-        new Thread(() -> {
-            try {
-                boolean result = shareProofAsync(shareMedia, shareProof);
-                if (!result)
-                {
-                    //do something
-                    Timber.d("unable to shareProofAsync");
-                }
+        new ShareProofTask(this).execute(shareMedia, shareProof);
 
-            } catch (FileNotFoundException e) {
-                Timber.e(e);
-                displayGeneratePrompt();
-
-            }
-
-        }).start();
 
     }
 
@@ -359,7 +336,7 @@ public class ShareProofActivity extends AppCompatActivity {
             {
                 mediaUri = cleanUri(mediaUri);
 
-                if (!processUri (mediaUri, shareUris, shareText, fBatchProofOut, shareMedia))
+                if (!processUri (null, mediaUri, shareUris, shareText, fBatchProofOut, shareMedia))
                     return false;
             }
 
@@ -379,7 +356,8 @@ public class ShareProofActivity extends AppCompatActivity {
             if (mediaUri != null) {
                 mediaUri = cleanUri(mediaUri);
 
-                if (!processUri(mediaUri, shareUris, shareText, null, shareMedia))
+                String mediaHash = hashCache.get(mediaUri);
+                if (!processUri(mediaHash, mediaUri, shareUris, shareText, null, shareMedia))
                     return false;
             }
 
@@ -391,7 +369,8 @@ public class ShareProofActivity extends AppCompatActivity {
                 shareNotarization(shareText.toString());
             else {
 
-                File fileFolder = MediaWatcher.getHashStorageDir(this,"zip");
+                File fileCacheFolder = new File(getCacheDir(),"zips");
+                fileCacheFolder.mkdir();
 
                 SimpleDateFormat sdf = new SimpleDateFormat(ZIP_FILE_DATETIME_FORMAT);
                 String dateString = sdf.format(new Date());
@@ -400,8 +379,13 @@ public class ShareProofActivity extends AppCompatActivity {
                 PgpUtils pu = PgpUtils.getInstance(this,prefs.getString("password",PgpUtils.DEFAULT_PASSWORD));
                 String userId = pu.getPublicKeyFingerprint();
 
-                File fileZip = new File(fileFolder,"proofmode-" + userId + "-" + dateString + ".zip");
+                File fileZip = new File(fileCacheFolder,"proofmode-" + userId + "-" + dateString + ".zip");
+
+                Timber.d("Preparing proof bundle zip: " + fileZip.getAbsolutePath());
+
                 zipProof(shareUris,fileZip);
+
+                Timber.d("Proof zip completed. Size:" + fileZip.length());
 
                 Uri uriZip = FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider",fileZip);
 
@@ -414,12 +398,14 @@ public class ShareProofActivity extends AppCompatActivity {
         return true;
     }
 
-    private boolean proofExists (Uri mediaUri) throws FileNotFoundException {
-        boolean result = false;
+    private String proofExists (Uri mediaUri) throws FileNotFoundException {
+
 
         String hash = HashUtils.getSHA256FromFileContent(getContentResolver().openInputStream(mediaUri));
 
         if (hash != null) {
+
+            hashCache.put (mediaUri.toString(), mediaUri.getLastPathSegment());
 
             Timber.d("Proof check if exists for URI %s and hash %s", mediaUri, hash);
 
@@ -428,82 +414,140 @@ public class ShareProofActivity extends AppCompatActivity {
             if (fileFolder != null) {
                 File fileMediaProof = new File(fileFolder, hash + PROOF_FILE_TAG);
                 //generate now?
-                result = fileMediaProof.exists();
+                if (fileMediaProof.exists())
+                    return hash;
+                else
+                    return null;
             }
+            else
+                return null;
         }
 
-        return result;
+        return null;
 
 
     }
 
-    private static class ProofTask extends AsyncTask<Uri, Void, String> {
+    private static class GenerateProofTask extends AsyncTask<Uri, Void, String> {
 
-        private final WeakReference<ShareProofActivity> activityReference;
+        private final ShareProofActivity activity;
+        private final String proofHash;
 
         // only retain a weak reference to the activity
-        ProofTask(ShareProofActivity context) {
+        GenerateProofTask(ShareProofActivity context, String newProofHash) {
             super();
-            activityReference = new WeakReference<>(context);
+            activity = context;
+            proofHash = newProofHash;
         }
 
         protected String doInBackground(Uri... params) {
-            ProofMode.generateProof(activityReference.get(), params[0]);
-            return "message";
+            return ProofMode.generateProof(activity, params[0], proofHash);
         }
 
-        protected void onPostExecute(String msg) {
+        protected void onPostExecute(String proofMediaHash) {
 
-            activityReference.get().displaySharePrompt();
+            if (proofMediaHash != null)
+                activity.displaySharePrompt();
+            else
+            {
+                activity.showProofError();
+            }
         }
     }
 
-    private void generateProof (final Uri mediaUri)
-    {
-        String[] projection = { MediaStore.Images.Media.DATA, MediaStore.Images.Media.DATE_TAKEN };
+    private static class CheckProofTasks extends AsyncTask<Uri, Void, String> {
 
-        Cursor cursor = getContentResolver().query(getRealUri(mediaUri),      projection,null, null, null);
+        private final ShareProofActivity activity;
 
-        if (cursor.getCount() > 0) {
-
-            cursor.moveToFirst();
-
-            int mediaPathCol = cursor.getColumnIndex(projection[0]);
-            String mediaPath = null;
-
-            if (mediaPathCol >= 0)
-                mediaPath = cursor.getString(mediaPathCol);
-
-            if (mediaPath != null) {
-
-                new ProofTask(this).execute(Uri.fromFile(new File(mediaPath)));
-
-            }
-            else
-            {
-                final String tmpMediaPath = getImageUrlWithAuthority(getApplicationContext(),mediaUri);
-                if (tmpMediaPath != null) {
-                    final Intent intent = new Intent();
-                    Uri tmpMediaUri = Uri.fromFile(new File(tmpMediaPath));
-                    intent.setAction(Intent.ACTION_SEND);
-                    intent.setDataAndType(tmpMediaUri, getIntent().getType());
-                    setIntent(intent);
-
-                    new ProofTask(this).execute(Uri.fromFile(new File(tmpMediaPath)));
-                }
-                else
-                    showProofError();
-
-            }
+        CheckProofTasks(ShareProofActivity context) {
+            super();
+            activity = context;
         }
 
-        cursor.close();
+        protected String doInBackground (Uri... params) {
+
+            Uri mediaUri = params[0];
+            String proofHash = null;
+
+            if (mediaUri != null)
+            {
+                mediaUri = activity.cleanUri (mediaUri);
+
+                try {
+                    proofHash = activity.proofExists(mediaUri);
+                } catch (FileNotFoundException e) {
+                    Timber.w(e);
+                    proofHash = null;
+                }
+            }
+
+            return proofHash;
+
+        }
+
+        protected void onPostExecute(String proofHash) {
+
+            if (proofHash != null)
+            {
+                activity.displaySharePrompt();
+            }
+            else {
+                activity.displayGeneratePrompt();
+            }
+        }
+    }
+
+    private static class ShareProofTask extends AsyncTask<Boolean, Void, Boolean> {
+
+        private final ShareProofActivity activity;
+
+        // only retain a weak reference to the activity
+        ShareProofTask(ShareProofActivity context) {
+            super();
+            activity = context;
+        }
+
+        protected Boolean doInBackground(Boolean... params) {
+
+            boolean result = false;
+            try {
+                result = activity.shareProofAsync(params[0],params[1]);
+                return result;
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+                return false;
+            }
+
+
+        }
+
+        protected void onPostExecute(Boolean result) {
+
+                if (!result)
+                {
+                    //do something
+                    Timber.d("unable to shareProofAsync");
+                    activity.showProofError();
+                }
+                else
+                {
+                    activity.finish();
+                }
+        }
+    }
+
+    private void generateProof (final Uri mediaUri, final String proofHash)
+    {
+        displayProgress(getString(R.string.progress_generating_proof));
+        new GenerateProofTask(this, proofHash).execute(mediaUri);
+
     }
 
     private void showProofError ()
     {
         findViewById(R.id.view_proof).setVisibility(View.GONE);
         findViewById(R.id.view_no_proof).setVisibility(View.GONE);
+        findViewById(R.id.view_proof_progress).setVisibility(View.GONE);
         findViewById(R.id.view_proof_failed).setVisibility(View.VISIBLE);
     }
 
@@ -524,8 +568,8 @@ public class ShareProofActivity extends AppCompatActivity {
             return contentUri;
     }
 
-    private boolean processUri (Uri mediaUri, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut, boolean shareMedia) throws FileNotFoundException {
-        String[] projection = { MediaStore.Images.Media.DATA };
+    private boolean processUri (String mediaHash, Uri mediaUri, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut, boolean shareMedia) throws FileNotFoundException {
+        String[] projection = {MediaStore.Images.Media.DATA};
         Cursor cursor = getContentResolver().query(getRealUri(mediaUri),      projection,null, null, null);
         boolean result = false;
         String mediaPath = null;
@@ -552,10 +596,15 @@ public class ShareProofActivity extends AppCompatActivity {
             //check proof metadata against original image
 
             File fileMedia = new File(mediaPath);
-            result = shareProof(mediaUri, fileMedia, shareUris, sb, fBatchProofOut, shareMedia);
+            result = shareProof(mediaHash, mediaUri, fileMedia, shareUris, sb, fBatchProofOut, shareMedia);
 
             if (!result)
                 result = shareProofClassic(mediaUri, mediaPath, shareUris, sb, fBatchProofOut, shareMedia);
+
+        }
+        else
+        {
+            result = shareProof(mediaHash, mediaUri, null, shareUris, sb, fBatchProofOut, shareMedia);
 
         }
 
@@ -564,9 +613,10 @@ public class ShareProofActivity extends AppCompatActivity {
 
 
 
-    private boolean shareProof (Uri uriMedia, File fileMedia, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut, boolean shareMedia) throws FileNotFoundException {
+    private boolean shareProof (String hash, Uri uriMedia, File fileMedia, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut, boolean shareMedia) throws FileNotFoundException {
 
-        String hash = HashUtils.getSHA256FromFileContent(getContentResolver().openInputStream(uriMedia));
+        if (hash == null)
+            hash = HashUtils.getSHA256FromFileContent(getContentResolver().openInputStream(uriMedia));
 
         if (hash != null) {
             File fileFolder = MediaWatcher.getHashStorageDir(this,hash);
@@ -582,7 +632,11 @@ public class ShareProofActivity extends AppCompatActivity {
 
 
             if (fileMediaProof.exists()) {
-                generateProofOutput(fileMedia, new Date(fileMedia.lastModified()), fileMediaSig, fileMediaProof, fileMediaProofSig, fileMediaOpentimestamps, fileMediaGoogleSafetyNet, hash, shareMedia, fBatchProofOut, shareUris, sb);
+                Date lastModified = null;
+                if (fileMedia != null)
+                    lastModified = new Date(fileMedia.lastModified());
+
+                generateProofOutput(uriMedia, fileMedia, lastModified, fileMediaSig, fileMediaProof, fileMediaProofSig, fileMediaOpentimestamps, fileMediaGoogleSafetyNet, hash, shareMedia, fBatchProofOut, shareUris, sb);
                 return true;
             }
         }
@@ -618,20 +672,23 @@ public class ShareProofActivity extends AppCompatActivity {
 
         }
 
-        generateProofOutput(fileMedia, new Date(fileMedia.lastModified()), fileMediaSig, fileMediaProof, fileMediaProofSig, null, null, hash, shareMedia, fBatchProofOut, shareUris, sb);
+        generateProofOutput(mediaUri, fileMedia, new Date(fileMedia.lastModified()), fileMediaSig, fileMediaProof, fileMediaProofSig, null, null, hash, shareMedia, fBatchProofOut, shareUris, sb);
 
         return false;
     }
 
-    private void generateProofOutput (File fileMedia, Date lastModified, File fileMediaSig, File fileMediaProof, File fileMediaProofSig, File fileMediaNotary, File fileMediaNotary2, String hash, boolean shareMedia, PrintWriter fBatchProofOut, ArrayList<Uri> shareUris, StringBuffer sb)
+    private void generateProofOutput (Uri uriMedia, File fileMedia, Date fileLastModified, File fileMediaSig, File fileMediaProof, File fileMediaProofSig, File fileMediaNotary, File fileMediaNotary2, String hash, boolean shareMedia, PrintWriter fBatchProofOut, ArrayList<Uri> shareUris, StringBuffer sb)
     {
         DateFormat sdf = SimpleDateFormat.getDateTimeInstance();
 
         String fingerprint = PgpUtils.getInstance(this).getPublicKeyFingerprint();
 
-        sb.append(fileMedia.getName()).append(' ');
-        sb.append(getString(R.string.last_modified)).append(' ').append(sdf.format(lastModified));
-        sb.append(' ');
+        if (fileMedia != null) {
+            sb.append(fileMedia.getName()).append(' ');
+            sb.append(getString(R.string.last_modified)).append(' ').append(sdf.format(fileLastModified));
+            sb.append(' ');
+        }
+
         sb.append(getString(R.string.has_hash)).append(' ').append(hash);
         sb.append("\n\n");
         sb.append(getString(R.string.proof_signed)).append(fingerprint);
@@ -640,9 +697,12 @@ public class ShareProofActivity extends AppCompatActivity {
         shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMediaProof));
 
         if (shareMedia) {
+
             if (fileMedia != null
                     && fileMedia.exists())
                 shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMedia));
+            else
+                shareUris.add(uriMedia);
 
             if (fileMediaSig != null
                && fileMediaSig.exists())
@@ -889,6 +949,8 @@ public class ShareProofActivity extends AppCompatActivity {
             for (Uri uri : uris) {
                 origin = new BufferedInputStream(getContentResolver().openInputStream(uri), BUFFER);
 
+                Timber.d("adding to zip: " + uri.getLastPathSegment());
+
                 ZipEntry entry = new ZipEntry(uri.getLastPathSegment());
                 out.putNextEntry(entry);
                 int count;
@@ -899,12 +961,15 @@ public class ShareProofActivity extends AppCompatActivity {
                 origin.close();
             }
 
+            Timber.d("Adding public key");
             //add public key
             String pubKey = getPublicKey();
             ZipEntry entry = new ZipEntry("pubkey.asc");
             out.putNextEntry(entry);
             out.write(pubKey.getBytes());
 
+
+            Timber.d("Adding HowToVerifyProofData.txt");
             String howToFile = "HowToVerifyProofData.txt";
             entry = new ZipEntry(howToFile);
             out.putNextEntry(entry);
@@ -915,6 +980,7 @@ public class ShareProofActivity extends AppCompatActivity {
             }
             is.close();
 
+            Timber.d("Zip complete");
 
             out.close();
         } catch (Exception e) {
@@ -922,25 +988,6 @@ public class ShareProofActivity extends AppCompatActivity {
         }
     }
 
-    public static String getImageUrlWithAuthority(Context context, Uri uri) {
-        InputStream is = null;
-        if (uri.getAuthority() != null) {
-            try {
-                is = context.getContentResolver().openInputStream(uri);
-                Bitmap bmp = BitmapFactory.decodeStream(is);
-                return writeToTempImageAndGetPathUri(context, bmp).toString();
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            }finally {
-                try {
-                    is.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-        return null;
-    }
 
     public static Uri writeToTempImageAndGetPathUri(Context inContext, Bitmap inImage) {
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();

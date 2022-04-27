@@ -28,7 +28,7 @@
     <string name="share_proof">SHARE PROOF TO...</string>
     <string name="proof_error_message">The proof does not exist</string>
     <string name="last_modified">was last modified at</string>
-    <string name="has_hash">and has a SHA-256 hash of</string>
+    <string name="has_hash">It has a SHA-256 hash of</string>
     <string name="proof_signed">This proof is signed by PGP key 0x</string>
     <string name="notarize_only">Share Notarization</string>
     <string name="share_proof_only">Share Proof Metadata</string>
@@ -37,6 +37,7 @@
     <string name="no_external_storage">WARNING: ProofMode enabled, but there is no external storage available!</string>
     <string name="no_hash_generated">ProofMode Alert: Unable to access media files</string>
     <string name="generating_proof_notify">Generating proof...</string>
+    <string name="waiting_proof_notify">Ready to add proof</string>
     <string name="inspect_photos">Inspecting photos</string>
     <string name="inspect_videos">Inspecting videos</string>
     <string name="select_app">Select the app to share proof to...</string>
@@ -119,4 +120,7 @@
     <string name="digital_signatures_whattodo_title">What do I do with it?</string>
     <string name="digital_signatures_whattodo_info">A public version of your PGP key will be shared along with your media and proof.csv files. This allows a third party to verify the PGP “.asc” signature files that come with the proof data. Including your public PGP key with the proof ensures that it will be preserved in case your device is compromised or you reinstall the app. Remember each time you re-install the app, it will create a new digital identity (PGP key).</string>
     <string name="publish_key_to">\"Publishing key to: \"</string>
+    <string name="progress_checking_proof">Checking for proof...</string>
+    <string name="progress_building_proof">Building proof bundle...</string>
+    <string name="progress_generating_proof">Generating proof...</string>
 </resources>
