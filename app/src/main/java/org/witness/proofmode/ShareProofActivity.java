@@ -62,6 +62,7 @@ import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.lang.ref.WeakReference;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -140,6 +141,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
     }
 
+    /**
     private Uri cleanUri (Uri mediaUri)
     {
         //content://com.google.android.apps.photos.contentprovider/0/1/content%3A%2F%2Fmedia%2Fexternal%2Fimages%2Fmedia%2F3517/ORIGINAL/NONE/image%2Fjpeg/765892976
@@ -162,7 +164,8 @@ public class ShareProofActivity extends AppCompatActivity {
         }
 
         return resultUri;
-    }
+    }**/
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -197,8 +200,6 @@ public class ShareProofActivity extends AppCompatActivity {
 
             for (Uri mediaUri : mediaUris)
             {
-                mediaUri = cleanUri(mediaUri);
-
                 try {
                     proofHash = HashUtils.getSHA256FromFileContent(getContentResolver().openInputStream(mediaUri));
                     hashCache.put(mediaUri.toString(),proofHash);
@@ -227,7 +228,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
             if (mediaUri != null)
             {
-                mediaUri = cleanUri(mediaUri);
+//                mediaUri = cleanUri(mediaUri);
 
                 try {
                     proofHash = hashCache.get(mediaUri.toString());
@@ -300,7 +301,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
     }
 
-    private boolean shareProofAsync (boolean shareMedia, boolean shareProof) throws FileNotFoundException {
+    private synchronized boolean shareProofAsync (boolean shareMedia, boolean shareProof) throws FileNotFoundException {
 
     // Get intent, action and MIME type
         Intent intent = getIntent();
@@ -334,7 +335,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
             for (Uri mediaUri : mediaUris)
             {
-                mediaUri = cleanUri(mediaUri);
+              //  mediaUri = cleanUri(mediaUri);
 
                 if (!processUri (null, mediaUri, shareUris, shareText, fBatchProofOut, shareMedia))
                     return false;
@@ -342,8 +343,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
             fBatchProofOut.flush();
             fBatchProofOut.close();
-            Uri uriBatchProof = FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider",fileBatchProof);
-            shareUris.add(uriBatchProof); // Add your image URIs here
+            shareUris.add(Uri.fromFile(fileBatchProof)); // Add your image URIs here
 
 
         }
@@ -354,7 +354,7 @@ public class ShareProofActivity extends AppCompatActivity {
                 mediaUri = intent.getData();
 
             if (mediaUri != null) {
-                mediaUri = cleanUri(mediaUri);
+               // mediaUri = cleanUri(mediaUri);
 
                 String mediaHash = hashCache.get(mediaUri);
                 if (!processUri(mediaHash, mediaUri, shareUris, shareText, null, shareMedia))
@@ -383,15 +383,32 @@ public class ShareProofActivity extends AppCompatActivity {
 
                 Timber.d("Preparing proof bundle zip: " + fileZip.getAbsolutePath());
 
-                zipProof(shareUris,fileZip);
+                try {
+                    zipProof(shareUris,fileZip);
+                } catch (IOException e) {
+                    Timber.e(e,"Error generating proof Zip");
+                    return false;
+                }
 
-                Timber.d("Proof zip completed. Size:" + fileZip.length());
+                if (fileZip.length() > 0) {
+                    Timber.d("Proof zip completed. Size:" + fileZip.length());
 
-                Uri uriZip = FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider",fileZip);
+                    Uri uriZip = FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider", fileZip);
 
-                shareFiltered(getString(R.string.select_app), shareText.toString(), shareUris, uriZip);
+                    shareFiltered(getString(R.string.select_app), shareText.toString(), shareUris, uriZip);
+                }
+                else
+                {
+                    Timber.d("Proof zip failed due to empty size:" + fileZip.length());
+
+                    return false;
+                }
 
             }
+        }
+        else
+        {
+            return false;
         }
 
 
@@ -471,7 +488,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
             if (mediaUri != null)
             {
-                mediaUri = activity.cleanUri (mediaUri);
+                //mediaUri = activity.cleanUri (mediaUri);
 
                 try {
                     proofHash = activity.proofExists(mediaUri);
@@ -694,31 +711,33 @@ public class ShareProofActivity extends AppCompatActivity {
         sb.append(getString(R.string.proof_signed)).append(fingerprint);
         sb.append("\n");
 
-        shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMediaProof));
+        //shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMediaProof));
+        shareUris.add(Uri.fromFile(fileMediaProof));
 
         if (shareMedia) {
 
-            if (fileMedia != null
-                    && fileMedia.exists())
-                shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMedia));
-            else
-                shareUris.add(uriMedia);
+            shareUris.add(uriMedia);
 
             if (fileMediaSig != null
                && fileMediaSig.exists())
-                shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMediaSig));
+                shareUris.add(Uri.fromFile(fileMediaSig));
+                //shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMediaSig));
 
             if (fileMediaProofSig != null
               && fileMediaProofSig.exists())
-                shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMediaProofSig));
+                shareUris.add(Uri.fromFile(fileMediaProofSig));
+                //shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMediaProofSig));
 
             if (fileMediaNotary != null
                     && fileMediaNotary.exists())
-                shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMediaNotary));
+                shareUris.add(Uri.fromFile(fileMediaNotary));
+               // shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMediaNotary));
 
             if (fileMediaNotary2 != null
                     && fileMediaNotary2.exists())
-                shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMediaNotary2));
+                shareUris.add(Uri.fromFile(fileMediaNotary2));
+
+              //  shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMediaNotary2));
 
         }
 
@@ -938,20 +957,20 @@ public class ShareProofActivity extends AppCompatActivity {
 
     private final static int BUFFER = 1024*8;
 
-    public void zipProof(ArrayList<Uri> uris, File fileZip) {
-        try {
-            BufferedInputStream origin;
-            FileOutputStream dest = new FileOutputStream(fileZip);
-            ZipOutputStream out = new ZipOutputStream(new BufferedOutputStream(
-                    dest));
-            byte[] data = new byte[BUFFER];
+    public void zipProof(ArrayList<Uri> uris, File fileZip) throws IOException {
 
-            for (Uri uri : uris) {
+        BufferedInputStream origin;
+        FileOutputStream dest = new FileOutputStream(fileZip);
+        ZipOutputStream out = new ZipOutputStream(new BufferedOutputStream(
+                dest));
+        byte[] data = new byte[BUFFER];
+
+        for (Uri uri : uris) {
+            try {
+                String fileName = getFileNameFromUri(uri);
+                Timber.d("adding to zip: " + fileName);
                 origin = new BufferedInputStream(getContentResolver().openInputStream(uri), BUFFER);
-
-                Timber.d("adding to zip: " + uri.getLastPathSegment());
-
-                ZipEntry entry = new ZipEntry(uri.getLastPathSegment());
+                ZipEntry entry = new ZipEntry(fileName);
                 out.putNextEntry(entry);
                 int count;
 
@@ -960,34 +979,61 @@ public class ShareProofActivity extends AppCompatActivity {
                 }
                 origin.close();
             }
-
-            Timber.d("Adding public key");
-            //add public key
-            String pubKey = getPublicKey();
-            ZipEntry entry = new ZipEntry("pubkey.asc");
-            out.putNextEntry(entry);
-            out.write(pubKey.getBytes());
-
-
-            Timber.d("Adding HowToVerifyProofData.txt");
-            String howToFile = "HowToVerifyProofData.txt";
-            entry = new ZipEntry(howToFile);
-            out.putNextEntry(entry);
-            InputStream is = getResources().getAssets().open(howToFile);
-            byte[] buffer = new byte[1024];
-            for (int length = is.read(buffer); length != -1; length = is.read(buffer)) {
-                out.write(buffer, 0, length);
+            catch (Exception e)
+            {
+                Timber.d(e, "Failed adding URI to zip: " + uri.getLastPathSegment());
             }
-            is.close();
-
-            Timber.d("Zip complete");
-
-            out.close();
-        } catch (Exception e) {
-            e.printStackTrace();
         }
+
+        Timber.d("Adding public key");
+        //add public key
+        String pubKey = getPublicKey();
+        ZipEntry entry = new ZipEntry("pubkey.asc");
+        out.putNextEntry(entry);
+        out.write(pubKey.getBytes());
+
+
+        Timber.d("Adding HowToVerifyProofData.txt");
+        String howToFile = "HowToVerifyProofData.txt";
+        entry = new ZipEntry(howToFile);
+        out.putNextEntry(entry);
+        InputStream is = getResources().getAssets().open(howToFile);
+        byte[] buffer = new byte[1024];
+        for (int length = is.read(buffer); length != -1; length = is.read(buffer)) {
+            out.write(buffer, 0, length);
+        }
+        is.close();
+
+        Timber.d("Zip complete");
+
+        out.close();
+
     }
 
+    private String getFileNameFromUri (Uri uri)
+    {
+        String[] projection = {MediaStore.Images.Media.DATA};
+        Cursor cursor = getContentResolver().query(getRealUri(uri),      projection,null, null, null);
+        boolean result = false;
+        String fileName = uri.getLastPathSegment();
+
+        if (cursor != null) {
+            if (cursor.getCount() > 0) {
+
+                cursor.moveToFirst();
+                int columnIndex = cursor.getColumnIndexOrThrow(projection[0]);
+                String path = cursor.getString(columnIndex);
+                if (path != null) {
+                    File fileMedia = new File(path);
+                    fileName = fileMedia.getName();
+                }
+            }
+
+            cursor.close();
+        }
+
+        return fileName;
+    }
 
     public static Uri writeToTempImageAndGetPathUri(Context inContext, Bitmap inImage) {
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
