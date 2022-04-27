@@ -68,6 +68,7 @@ public class PermissionActivity extends AppCompatActivity {
         super.onResume();
         if (showMissingPermissionsDialog) {
             showMissingPermissionsDialog = false;
+            /**
             new AlertDialog.Builder(this)
                     .setTitle(R.string.permissions_needed_title)
                     .setMessage(R.string.permissions_needed_content)
@@ -77,6 +78,7 @@ public class PermissionActivity extends AppCompatActivity {
                             finish();
                         }
                     }).show();
+             **/
         }
     }
 
