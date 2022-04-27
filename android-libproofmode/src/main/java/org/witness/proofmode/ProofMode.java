@@ -91,6 +91,14 @@ public class ProofMode {
     }
 
 
+    public static String generateProof (Context context, Uri uri, String proofHash)
+    {
+
+        return MediaWatcher.getInstance(context).processUri (uri, proofHash);
+
+    }
+
+
     public static File getProofDir (Context context, String mediaHash)
     {
         return MediaWatcher.getHashStorageDir(context, mediaHash);

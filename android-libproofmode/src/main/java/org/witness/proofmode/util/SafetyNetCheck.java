@@ -19,6 +19,8 @@ import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.Random;
 
+import timber.log.Timber;
+
 /**
  * Sample that demonstrates the use of the SafetyNet Google Play Services API.
  * It handles option items (defined in menu/main.xml) to call the API and share its result via an
@@ -43,7 +45,7 @@ public class SafetyNetCheck
                 == ConnectionResult.SUCCESS && sApiKey != null) {
             // The SafetyNet Attestation API is available.
 
-            Log.d(TAG, "Sending SafetyNet API request.");
+            Timber.d("Sending SafetyNet API request.");
 
             byte[] nonce = getRequestNonce(nonceData);
 

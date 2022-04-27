@@ -135,6 +135,26 @@ public class MediaWatcher extends BroadcastReceiver {
         }
     }
 
+    public String processUri (Uri fileUri, String proofHash) {
+        try {
+            Intent intent = new Intent();
+            intent.setData(fileUri);
+            intent.putExtra("hash",proofHash);
+            return handleIntent(mContext, intent);
+        }
+        catch (RuntimeException re)
+        {
+            Log.e("ProofMode","RUNTIME EXCEPTION processing media file: " + re);
+            return null;
+        }
+        catch (Error err)
+        {
+            Log.e("ProofMode","FATAL ERROR processing media file: " + err);
+
+            return null;
+        }
+    }
+
     public String handleIntent (final Context context, Intent intent) {
 
         if (mPrefs == null)
@@ -164,19 +184,24 @@ public class MediaWatcher extends BroadcastReceiver {
         final boolean showMobileNetwork = mPrefs.getBoolean(ProofMode.PREF_OPTION_NETWORK,ProofMode.PREF_OPTION_NETWORK_DEFAULT);
 
         final String mediaHash;
-        try {
-            mediaHash = HashUtils.getSHA256FromFileContent(context.getContentResolver().openInputStream(uriMedia));
-        } catch (FileNotFoundException e) {
-            Timber.e(e, "unable to open inputstream for hashing: %s", uriMedia);
-            return null;
+
+        if (intent.hasExtra("hash"))
+        {
+            mediaHash = intent.getStringExtra("hash");
         }
-        catch (IllegalStateException ise) {
-            Timber.e(ise, "unable to open inputstream for hashing: %s", uriMedia);
-            return null;
-        }
-         catch (SecurityException e) {
-            Timber.e(e,"security exception accessing URI: %s",uriMedia);
-            return null;
+        else {
+            try {
+                mediaHash = HashUtils.getSHA256FromFileContent(context.getContentResolver().openInputStream(uriMedia));
+            } catch (FileNotFoundException e) {
+                Timber.w(e, "unable to open inputstream for hashing: %s", uriMedia);
+                return null;
+            } catch (IllegalStateException ise) {
+                Timber.w(ise, "unable to open inputstream for hashing: %s", uriMedia);
+                return null;
+            } catch (SecurityException e) {
+                Timber.w(e, "security exception accessing URI: %s", uriMedia);
+                return null;
+            }
         }
 
         if (mediaHash != null) {
