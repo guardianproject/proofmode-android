@@ -79,6 +79,7 @@ public class PermissionActivity extends AppCompatActivity {
                         }
                     }).show();
              **/
+            finish();
         }
     }
 
