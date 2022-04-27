@@ -4,6 +4,8 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.location.Location;
 import android.net.ConnectivityManager;
@@ -44,6 +46,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.text.DateFormat;
 import java.util.Date;
@@ -55,6 +58,7 @@ import java.util.concurrent.Executors;
 
 import timber.log.Timber;
 
+import static org.witness.proofmode.ProofMode.GOOGLE_SAFETYNET_FILE_TAG;
 import static org.witness.proofmode.ProofMode.OPENPGP_FILE_TAG;
 import static org.witness.proofmode.ProofMode.OPENTIMESTAMPS_FILE_TAG;
 import static org.witness.proofmode.ProofMode.PREFS_DOPROOF;
@@ -186,8 +190,18 @@ public class MediaWatcher extends BroadcastReceiver {
 
             Timber.d("Writing proof for hash %s for path %s",mediaHash, uriMedia);
 
+            String notes = "";
+
+            try {
+                PackageInfo pInfo = context.getPackageManager().getPackageInfo(context.getPackageName(), 0);
+                String version = pInfo.versionName;
+                notes = "ProofMode v" + version;
+            } catch (PackageManager.NameNotFoundException e) {
+                e.printStackTrace();
+            }
+
             //write immediate proof, w/o safety check result
-            writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, null);
+            writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, null, "none", notes);
 
             if (autoNotarize) {
 
@@ -201,16 +215,15 @@ public class MediaWatcher extends BroadcastReceiver {
                             @Override
                             public void notarizationSuccessful(String result) {
 
-
                                 SafetyNetResponse resp = gProvider.parseJsonWebSignature(result);
 
-                                String apkDigest = "apkDigest:" + resp.getApkDigestSha256();
+                                String apkDigest = resp.getApkPackageName() + "=" + resp.getApkDigestSha256();
                                 long timestamp = resp.getTimestampMs();
                                 boolean isBasicIntegrity = resp.isBasicIntegrity();
                                 boolean isCtsMatch = resp.isCtsProfileMatch();
 
                                 writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork,
-                                        apkDigest, isBasicIntegrity, isCtsMatch, timestamp, null);
+                                        apkDigest, isBasicIntegrity, isCtsMatch, timestamp, result, GOOGLE_SAFETYNET_FILE_TAG, GOOGLE_SAFETYNET_FILE_TAG);
 
                             }
 
@@ -225,11 +238,12 @@ public class MediaWatcher extends BroadcastReceiver {
                         final NotarizationProvider nProvider = new OpenTimestampsNotarizationProvider();
                         nProvider.notarize(mediaHash, context.getContentResolver().openInputStream(uriMedia), new NotarizationListener() {
                             @Override
-                            public void notarizationSuccessful(String timestamp) {
+                            public void notarizationSuccessful(String resultData) {
 
 
-                                Timber.d("Got OpenTimestamps success response timestamp: %s", timestamp);
-                                writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, new Date().getTime(), timestamp);
+                                Timber.d("Got OpenTimestamps success response timestamp: %s", resultData);
+                                writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork,
+                                        null, false, false, new Date().getTime(), resultData, OPENTIMESTAMPS_FILE_TAG,OPENTIMESTAMPS_FILE_TAG);
 
 
 
@@ -299,7 +313,7 @@ public class MediaWatcher extends BroadcastReceiver {
     }
 
 
-    private void writeProof (Context context, Uri uriMedia, String hash, boolean showDeviceIds, boolean showLocation, boolean showMobileNetwork, String safetyCheckResult, boolean isBasicIntegrity, boolean isCtsMatch, long notarizeTimestamp, String notarizeData)
+    private void writeProof (Context context, Uri uriMedia, String hash, boolean showDeviceIds, boolean showLocation, boolean showMobileNetwork, String safetyCheckResult, boolean isBasicIntegrity, boolean isCtsMatch, long notarizeTimestamp, String notarizeData, String notarizeType, String notes)
     {
 
       //  File fileMedia = new File(mediaPath);
@@ -310,13 +324,13 @@ public class MediaWatcher extends BroadcastReceiver {
             File fileMediaSig = new File(fileFolder, hash + OPENPGP_FILE_TAG);
             File fileMediaProof = new File(fileFolder, hash + PROOF_FILE_TAG);
             File fileMediaProofSig = new File(fileFolder, hash + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
-            File fileMediaOpentimestamp = new File(fileFolder, hash + OPENTIMESTAMPS_FILE_TAG);
+            File fileMediaNotarizeData = new File(fileFolder, hash + notarizeType);
 
             try {
 
                 //add data to proof csv and sign again
                 boolean writeHeaders = !fileMediaProof.exists();
-                String buildProof = buildProof(context, uriMedia, writeHeaders, showDeviceIds, showLocation, showMobileNetwork, safetyCheckResult, isBasicIntegrity, isCtsMatch, notarizeTimestamp, notarizeData);
+                String buildProof = buildProof(context, uriMedia, writeHeaders, showDeviceIds, showLocation, showMobileNetwork, safetyCheckResult, isBasicIntegrity, isCtsMatch, notarizeTimestamp, notes);
                 writeTextToFile(context, fileMediaProof, buildProof);
 
                 if (fileMediaProof.exists()) {
@@ -333,8 +347,14 @@ public class MediaWatcher extends BroadcastReceiver {
                 try {
                     //try to save opentimestamps data to raw file
                     if (notarizeData != null) {
-                        byte[] rawNotarizeData = Base64.decode(notarizeData, Base64.DEFAULT);
-                        writeBytesToFile(context, fileMediaOpentimestamp, rawNotarizeData);
+                        if (notarizeType.equals(OPENTIMESTAMPS_FILE_TAG)) {
+                            byte[] rawNotarizeData = Base64.decode(notarizeData, Base64.DEFAULT);
+                            writeBytesToFile(context, fileMediaNotarizeData, rawNotarizeData);
+                        }
+                        else
+                        {
+                            writeBytesToFile(context,fileMediaNotarizeData, notarizeData.getBytes("UTF-8"));
+                        }
                     }
                 }
                 catch (Exception e)
@@ -487,14 +507,14 @@ public class MediaWatcher extends BroadcastReceiver {
                 }
                 else
                 {
-                    hmProof.put("Location.Latitude", "0");
-                    hmProof.put("Location.Longitude", "0");
+                    hmProof.put("Location.Latitude", "");
+                    hmProof.put("Location.Longitude", "");
                     hmProof.put("Location.Provider", "none");
-                    hmProof.put("Location.Accuracy", "0");
-                    hmProof.put("Location.Altitude", "0");
-                    hmProof.put("Location.Bearing", "0");
-                    hmProof.put("Location.Speed", "0");
-                    hmProof.put("Location.Time", "0");
+                    hmProof.put("Location.Accuracy", "");
+                    hmProof.put("Location.Altitude", "");
+                    hmProof.put("Location.Bearing", "");
+                    hmProof.put("Location.Speed", "");
+                    hmProof.put("Location.Time", "");
                 }
 
             }
@@ -502,19 +522,19 @@ public class MediaWatcher extends BroadcastReceiver {
             if (showMobileNetwork)
                 hmProof.put("CellInfo", DeviceInfo.getCellInfo(context));
             else
-                hmProof.put("CellInfo", "");
+                hmProof.put("CellInfo", "none");
 
         }
         else
         {
-            hmProof.put("Location.Latitude", "0");
-            hmProof.put("Location.Longitude", "0");
+            hmProof.put("Location.Latitude", "");
+            hmProof.put("Location.Longitude", "");
             hmProof.put("Location.Provider", "none");
-            hmProof.put("Location.Accuracy", "0");
-            hmProof.put("Location.Altitude", "0");
-            hmProof.put("Location.Bearing", "0");
-            hmProof.put("Location.Speed", "0");
-            hmProof.put("Location.Time", "0");
+            hmProof.put("Location.Accuracy", "");
+            hmProof.put("Location.Altitude", "");
+            hmProof.put("Location.Bearing", "");
+            hmProof.put("Location.Speed", "");
+            hmProof.put("Location.Time", "");
         }
 
 
@@ -555,8 +575,6 @@ public class MediaWatcher extends BroadcastReceiver {
             value = value.replace(',',' '); //remove commas from CSV file
             sb.append(value).append(",");
         }
-
-        sb.append("\n");
 
         return sb.toString();
 

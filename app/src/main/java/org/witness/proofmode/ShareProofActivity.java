@@ -1,5 +1,6 @@
 package org.witness.proofmode;
 
+import static org.witness.proofmode.ProofMode.GOOGLE_SAFETYNET_FILE_TAG;
 import static org.witness.proofmode.ProofMode.OPENPGP_FILE_TAG;
 import static org.witness.proofmode.ProofMode.PROOF_FILE_TAG;
 import static org.witness.proofmode.ProofMode.OPENTIMESTAMPS_FILE_TAG;
@@ -416,33 +417,23 @@ public class ShareProofActivity extends AppCompatActivity {
     private boolean proofExists (Uri mediaUri) throws FileNotFoundException {
         boolean result = false;
 
-        DocumentFile sourceFile = DocumentFile.fromSingleUri(this, mediaUri);
-        if (sourceFile == null)
-            return false;
+        String hash = HashUtils.getSHA256FromFileContent(getContentResolver().openInputStream(mediaUri));
 
-        boolean mediaUriExists = sourceFile.exists();
+        if (hash != null) {
 
-        if (mediaUriExists) {
-            String hash = HashUtils.getSHA256FromFileContent(getContentResolver().openInputStream(mediaUri));
+            Timber.d("Proof check if exists for URI %s and hash %s", mediaUri, hash);
 
-            if (hash != null) {
+            File fileFolder = MediaWatcher.getHashStorageDir(this, hash);
 
-                Timber.d("Proof check if exists for URI %s and hash %s", mediaUri, hash);
-
-
-                File fileFolder = MediaWatcher.getHashStorageDir(this, hash);
-
-                if (fileFolder != null) {
-                    File fileMediaProof = new File(fileFolder, hash + PROOF_FILE_TAG);
-                    //generate now?
-                    result = fileMediaProof.exists();
-                }
+            if (fileFolder != null) {
+                File fileMediaProof = new File(fileFolder, hash + PROOF_FILE_TAG);
+                //generate now?
+                result = fileMediaProof.exists();
             }
-
-            return result;
         }
-        else
-            throw new FileNotFoundException();
+
+        return result;
+
 
     }
 
@@ -587,10 +578,11 @@ public class ShareProofActivity extends AppCompatActivity {
             File fileMediaProof = new File(fileFolder, hash + PROOF_FILE_TAG);
             File fileMediaProofSig = new File(fileFolder, hash + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
             File fileMediaOpentimestamps = new File(fileFolder, hash + OPENTIMESTAMPS_FILE_TAG);
+            File fileMediaGoogleSafetyNet = new File(fileFolder, hash + GOOGLE_SAFETYNET_FILE_TAG);
 
 
             if (fileMediaProof.exists()) {
-                generateProofOutput(fileMedia, new Date(fileMedia.lastModified()), fileMediaSig, fileMediaProof, fileMediaProofSig, fileMediaOpentimestamps, hash, shareMedia, fBatchProofOut, shareUris, sb);
+                generateProofOutput(fileMedia, new Date(fileMedia.lastModified()), fileMediaSig, fileMediaProof, fileMediaProofSig, fileMediaOpentimestamps, fileMediaGoogleSafetyNet, hash, shareMedia, fBatchProofOut, shareUris, sb);
                 return true;
             }
         }
@@ -626,12 +618,12 @@ public class ShareProofActivity extends AppCompatActivity {
 
         }
 
-        generateProofOutput(fileMedia, new Date(fileMedia.lastModified()), fileMediaSig, fileMediaProof, fileMediaProofSig, null, hash, shareMedia, fBatchProofOut, shareUris, sb);
+        generateProofOutput(fileMedia, new Date(fileMedia.lastModified()), fileMediaSig, fileMediaProof, fileMediaProofSig, null, null, hash, shareMedia, fBatchProofOut, shareUris, sb);
 
         return false;
     }
 
-    private void generateProofOutput (File fileMedia, Date lastModified, File fileMediaSig, File fileMediaProof, File fileMediaProofSig, File fileMediaNotary, String hash, boolean shareMedia, PrintWriter fBatchProofOut, ArrayList<Uri> shareUris, StringBuffer sb)
+    private void generateProofOutput (File fileMedia, Date lastModified, File fileMediaSig, File fileMediaProof, File fileMediaProofSig, File fileMediaNotary, File fileMediaNotary2, String hash, boolean shareMedia, PrintWriter fBatchProofOut, ArrayList<Uri> shareUris, StringBuffer sb)
     {
         DateFormat sdf = SimpleDateFormat.getDateTimeInstance();
 
@@ -663,6 +655,10 @@ public class ShareProofActivity extends AppCompatActivity {
             if (fileMediaNotary != null
                     && fileMediaNotary.exists())
                 shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMediaNotary));
+
+            if (fileMediaNotary2 != null
+                    && fileMediaNotary2.exists())
+                shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMediaNotary2));
 
         }
 

@@ -21,7 +21,11 @@ import android.widget.Toast;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
+import java.util.Stack;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -72,6 +76,8 @@ public class PhotosContentJob extends JobService {
         return true;
     }
 
+    private HashMap<Uri,String> mUriStack = new HashMap<>();
+
     private void doWork ()
     {
 
@@ -81,15 +87,24 @@ public class PhotosContentJob extends JobService {
 
                 for (Uri uri : mRunningParams.getTriggeredContentUris()) {
 
-                    Timer t = new Timer();
-                    t.schedule(new TimerTask() {
-                        @Override
-                        public void run() {
-                            MediaWatcher.getInstance(PhotosContentJob.this).processUri(uri);
-                        }
-                    }, MediaWatcher.PROOF_GENERATION_DELAY_TIME_MS);
+                    mUriStack.put(uri,uri.toString());
 
                 }
+
+
+                Timer t = new Timer();
+                t.schedule(new TimerTask() {
+                    @Override
+                    public void run() {
+                        Set<Uri> uris = mUriStack.keySet();
+
+                        for (Uri uri : uris) {
+                            MediaWatcher.getInstance(PhotosContentJob.this).processUri(uri);
+                            mUriStack.remove(uri);
+                        }
+
+                    }
+                }, MediaWatcher.PROOF_GENERATION_DELAY_TIME_MS);
 
             } else {
                 // We don't have any details about URIs (because too many changed at once),
