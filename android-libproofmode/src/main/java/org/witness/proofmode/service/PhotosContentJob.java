@@ -66,7 +66,7 @@ public class PhotosContentJob extends JobService {
 
     @Override
     public boolean onStartJob(JobParameters params) {
-        Timber.d("JOB STARTED!");
+        Timber.d("Photos JOB STARTED!");
         mRunningParams = params;
 
         doWork ();
@@ -91,20 +91,7 @@ public class PhotosContentJob extends JobService {
 
                 }
 
-
-                Timer t = new Timer();
-                t.schedule(new TimerTask() {
-                    @Override
-                    public void run() {
-                        Set<Uri> uris = mUriStack.keySet();
-
-                        for (Uri uri : uris) {
-                            MediaWatcher.getInstance(PhotosContentJob.this).processUri(uri);
-                            mUriStack.remove(uri);
-                        }
-
-                    }
-                }, MediaWatcher.PROOF_GENERATION_DELAY_TIME_MS);
+                processMedia();
 
             } else {
                 // We don't have any details about URIs (because too many changed at once),
@@ -118,6 +105,24 @@ public class PhotosContentJob extends JobService {
 
         }
 
+
+    }
+
+    private void processMedia ()
+    {
+        Timer t = new Timer();
+        t.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                ArrayList<Uri> uris = new ArrayList<>(mUriStack.keySet());
+
+                for (Uri uri : uris) {
+                    MediaWatcher.getInstance(PhotosContentJob.this).processUri(uri);
+                    mUriStack.remove(uri);
+                }
+
+            }
+        }, MediaWatcher.PROOF_GENERATION_DELAY_TIME_MS);
 
     }
 

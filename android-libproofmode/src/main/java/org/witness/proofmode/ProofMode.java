@@ -7,7 +7,6 @@ import android.os.Build;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.witness.proofmode.library.R;
-import org.witness.proofmode.service.MediaListenerService;
 import org.witness.proofmode.service.MediaWatcher;
 import org.witness.proofmode.service.PhotosContentJob;
 import org.witness.proofmode.service.VideosContentJob;
@@ -54,13 +53,10 @@ public class ProofMode {
             PhotosContentJob.scheduleJob(context);
             VideosContentJob.scheduleJob(context);
         }
-        else {
-            Intent intentService = new Intent(context, MediaListenerService.class);
-            context.startService(intentService);
-        }
 
         mInit = true;
 
+        MediaWatcher.getInstance(context);
 
         SafetyNetCheck.setApiKey(context.getString(R.string.verification_api_key));
 
@@ -72,10 +68,8 @@ public class ProofMode {
             PhotosContentJob.cancelJob(context);
             VideosContentJob.cancelJob(context);
         }
-        else {
-            Intent intentService = new Intent(context, MediaListenerService.class);
-            context.stopService(intentService);
-        }
+
+        MediaWatcher.getInstance(context).stop();
     }
 
     public static BouncyCastleProvider getProvider ()

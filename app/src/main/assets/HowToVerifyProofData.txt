@@ -38,3 +38,5 @@ Primary key fingerprint: 094F 9BAE 1895 8C23 8F55  F793 560C C828 C726 365F
 
 5) If a .OTS file is present, you can visit https://opentimestamps.org/ and upload the OTF to verify the notarization
 (It can take awhile for the notarization timestamp to make its way fully to the Bitcoin blockchain)
+
+6) If a .GTS file is present, that is a Javascript Web Token signature from Google SafetyNet. You can decode the value of it here: https://jwt.io/

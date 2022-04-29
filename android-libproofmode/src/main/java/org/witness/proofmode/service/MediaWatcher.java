@@ -11,7 +11,9 @@ import android.location.Location;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Environment;
+import android.os.FileObserver;
 import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.provider.MediaStore;
@@ -34,6 +36,7 @@ import org.witness.proofmode.notarization.NotarizationProvider;
 import org.witness.proofmode.notarization.OpenTimestampsNotarizationProvider;
 import org.witness.proofmode.util.DeviceInfo;
 import org.witness.proofmode.util.GPSTracker;
+import org.witness.proofmode.util.RecursiveFileObserver;
 import org.witness.proofmode.util.SafetyNetCheck;
 import org.witness.proofmode.util.SafetyNetResponse;
 
@@ -74,7 +77,7 @@ public class MediaWatcher extends BroadcastReceiver {
     public final static int PROOF_GENERATION_DELAY_TIME_MS = 30 * 1000; // 30 seconds
     private static MediaWatcher mInstance;
 
-    private ExecutorService mExec = Executors.newFixedThreadPool(5);
+    private ExecutorService mExec = Executors.newFixedThreadPool(1);
 
     private Context mContext = null;
 
@@ -83,6 +86,8 @@ public class MediaWatcher extends BroadcastReceiver {
             mPrefs = PreferenceManager.getDefaultSharedPreferences(context);
 
         mContext = context;
+
+        startFileSystemMonitor();
     }
 
     public static synchronized MediaWatcher getInstance (Context context)
@@ -96,9 +101,6 @@ public class MediaWatcher extends BroadcastReceiver {
     @Override
     public void onReceive(final Context context, final Intent intent) {
 
-
-        //wait 10 seconds for any final modifications to the media file, like injection of GPS coordinations into EXIF
-
         mExec.submit(() -> {
 
             boolean doProof = mPrefs.getBoolean(PREFS_DOPROOF, true);
@@ -110,11 +112,6 @@ public class MediaWatcher extends BroadcastReceiver {
 
     }
 
-    public String processFile (File file) {
-        Intent intent = new Intent();
-        intent.setData(Uri.fromFile(file));
-        return handleIntent(mContext,intent);
-    }
 
     public String processUri (Uri fileUri) {
         try {
@@ -124,12 +121,12 @@ public class MediaWatcher extends BroadcastReceiver {
         }
         catch (RuntimeException re)
         {
-            Log.e("ProofMode","RUNTIME EXCEPTION processing media file: " + re);
+            Timber.e(re,"RUNTIME EXCEPTION processing media file: " + re);
             return null;
         }
         catch (Error err)
         {
-            Log.e("ProofMode","FATAL ERROR processing media file: " + err);
+            Timber.e(err,"FATAL ERROR processing media file: " + err);
 
             return null;
         }
@@ -144,12 +141,12 @@ public class MediaWatcher extends BroadcastReceiver {
         }
         catch (RuntimeException re)
         {
-            Log.e("ProofMode","RUNTIME EXCEPTION processing media file: " + re);
+            Timber.e(re,"RUNTIME EXCEPTION processing media file: " + re);
             return null;
         }
         catch (Error err)
         {
-            Log.e("ProofMode","FATAL ERROR processing media file: " + err);
+            Timber.e(err,"FATAL ERROR processing media file: " + err);
 
             return null;
         }
@@ -193,13 +190,13 @@ public class MediaWatcher extends BroadcastReceiver {
             try {
                 mediaHash = HashUtils.getSHA256FromFileContent(context.getContentResolver().openInputStream(uriMedia));
             } catch (FileNotFoundException e) {
-                Timber.w(e, "unable to open inputstream for hashing: %s", uriMedia);
+                Timber.d( "FileNotFoundException: unable to open inputstream for hashing: %s", uriMedia);
                 return null;
             } catch (IllegalStateException ise) {
-                Timber.w(ise, "unable to open inputstream for hashing: %s", uriMedia);
+                Timber.d( "IllegalStateException: unable to open inputstream for hashing: %s", uriMedia);
                 return null;
             } catch (SecurityException e) {
-                Timber.w(e, "security exception accessing URI: %s", uriMedia);
+                Timber.d( "SecurityException: security exception accessing URI: %s", uriMedia);
                 return null;
             }
         }
@@ -443,20 +440,27 @@ public class MediaWatcher extends BroadcastReceiver {
     private String buildProof (Context context, Uri uriMedia, boolean writeHeaders, boolean showDeviceIds, boolean showLocation, boolean showMobileNetwork, String safetyCheckResult, boolean isBasicIntegrity, boolean isCtsMatch, long notarizeTimestamp, String notes)
     {
         String mediaPath = null;
-        String[] projection = { MediaStore.Images.Media.DATA };
 
-        Cursor cursor = context.getContentResolver().query(uriMedia,      projection,null, null, null);
+        if (uriMedia.getScheme() == null || uriMedia.getScheme().equalsIgnoreCase("file"))
+        {
+            mediaPath = uriMedia.getPath();
+        }
+        else {
+            String[] projection = {MediaStore.Images.Media.DATA};
 
-        if (cursor != null) {
-            if (cursor.getCount() > 0) {
+            Cursor cursor = context.getContentResolver().query(uriMedia, projection, null, null, null);
 
-                cursor.moveToFirst();
-                int colIdx = cursor.getColumnIndex(projection[0]);
-                if (colIdx > -1)
-                    mediaPath = cursor.getString(colIdx);
+            if (cursor != null) {
+                if (cursor.getCount() > 0) {
+
+                    cursor.moveToFirst();
+                    int colIdx = cursor.getColumnIndex(projection[0]);
+                    if (colIdx > -1)
+                        mediaPath = cursor.getString(colIdx);
+                }
+
+                cursor.close();
             }
-
-            cursor.close();
         }
 
         String hash = null;
@@ -694,5 +698,56 @@ public class MediaWatcher extends BroadcastReceiver {
                     .substring(1));
         }
         return stringBuffer.toString();
+    }
+
+    private static final int READ_STORAGE_PERMISSION_REQUEST_CODE = 41;
+    public boolean checkPermissionForReadExtertalStorage() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            int result = mContext.checkSelfPermission(android.Manifest.permission.READ_EXTERNAL_STORAGE);
+            return result == PackageManager.PERMISSION_GRANTED;
+        }
+        return false;
+    }
+
+    public static FileObserver observer;
+
+    private void startFileSystemMonitor() {
+
+        if (checkPermissionForReadExtertalStorage()) {
+
+            final String pathToWatch = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).getAbsolutePath();
+
+            observer = new RecursiveFileObserver(pathToWatch, FileObserver.CLOSE_WRITE|FileObserver.MOVED_TO) { // set up a file observer to watch this directory on sd card
+                @Override
+                public void onEvent(int event, final String mediaPath) {
+                    if (mediaPath != null && (!mediaPath.equals(".probe"))) { // check that it's not equal to .probe because thats created every time camera is launched
+
+                        Timer t = new Timer();
+                        t.schedule(new TimerTask() {
+                            @Override
+                            public void run() {
+                                File fileMedia = new File(mediaPath);
+                                if (fileMedia.exists())
+                                    processUri(Uri.fromFile(fileMedia));
+
+                            }
+                        }, MediaWatcher.PROOF_GENERATION_DELAY_TIME_MS);
+
+
+                    }
+                }
+            };
+            observer.startWatching();
+        }
+
+
+    }
+
+    public void stop () {
+
+        if (observer != null)
+        {
+            observer.stopWatching();
+        }
     }
 }

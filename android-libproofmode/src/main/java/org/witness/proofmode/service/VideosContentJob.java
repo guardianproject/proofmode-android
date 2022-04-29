@@ -26,7 +26,9 @@ import org.witness.proofmode.library.R;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -56,6 +58,11 @@ public class VideosContentJob extends JobService {
                 new JobInfo.TriggerContentUri(MediaStore.Video.Media.INTERNAL_CONTENT_URI,
                         JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS));
 
+
+        // Get all media changes within a tenth of a second.
+        builder.setTriggerContentUpdateDelay(1);
+        builder.setTriggerContentMaxDelay(100);
+
         js.schedule(builder.build());
     }
 
@@ -82,13 +89,15 @@ public class VideosContentJob extends JobService {
 
     @Override
     public boolean onStartJob(JobParameters params) {
-        Log.i("VideosContentJob", "JOB STARTED!");
+        Timber.d( "Video JOB STARTED!");
         mRunningParams = params;
         doWork ();
         jobFinished(mRunningParams, false);
 
         return true;
     }
+
+    private HashMap<Uri,String> mUriStack = new HashMap<>();
 
     private void doWork ()
     {
@@ -103,21 +112,41 @@ public class VideosContentJob extends JobService {
                     t.schedule(new TimerTask() {
                         @Override
                         public void run() {
-                            MediaWatcher.getInstance(VideosContentJob.this).processUri(uri);
+                            mUriStack.put(uri,uri.toString());
                         }
                     }, MediaWatcher.PROOF_GENERATION_DELAY_TIME_MS);
 
                 }
 
+                processMedia();
+
             } else {
                 // We don't have any details about URIs (because too many changed at once),
                 // so just note that we need to do a full rescan.
 
-                Timber.w("rescan is needed since many videos changed at once");
+               // Timber.w("rescan is needed since many videos changed at once");
             
             }
 
         }
+
+    }
+
+    private void processMedia ()
+    {
+        Timer t = new Timer();
+        t.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                Set<Uri> uris = mUriStack.keySet();
+
+                for (Uri uri : uris) {
+                    MediaWatcher.getInstance(VideosContentJob.this).processUri(uri);
+                    mUriStack.remove(uri);
+                }
+
+            }
+        }, MediaWatcher.PROOF_GENERATION_DELAY_TIME_MS);
 
     }
 

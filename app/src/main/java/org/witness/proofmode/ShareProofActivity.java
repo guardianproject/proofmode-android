@@ -1012,7 +1012,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
     private String getFileNameFromUri (Uri uri)
     {
-        String[] projection = {MediaStore.Images.Media.DATA};
+        String[] projection = {MediaStore.Images.Media.DATA,MediaStore.Images.Media.DISPLAY_NAME};
         Cursor cursor = getContentResolver().query(getRealUri(uri),      projection,null, null, null);
         boolean result = false;
         String fileName = uri.getLastPathSegment();
@@ -1025,12 +1025,22 @@ public class ShareProofActivity extends AppCompatActivity {
                 String path = cursor.getString(columnIndex);
                 if (path != null) {
                     File fileMedia = new File(path);
-                    fileName = fileMedia.getName();
+                    if (fileMedia.exists())
+                        fileName = fileMedia.getName();
+
+                }
+
+                if (TextUtils.isEmpty(fileName)){
+                    columnIndex = cursor.getColumnIndexOrThrow(projection[1]);
+                    fileName = cursor.getString(columnIndex);
                 }
             }
 
             cursor.close();
         }
+
+        if (TextUtils.isEmpty(fileName))
+            fileName = uri.getLastPathSegment();
 
         return fileName;
     }
