@@ -123,11 +123,20 @@
             </intent-filter>
             <intent-filter>
                 <action
-                    android:name="android.intent.action.SEND_MULTIPLE"
+                    android:name="android.intent.action.SEND"
                     android:label="@string/share_proof_action" />
 
                 <category android:name="android.intent.category.DEFAULT" />
 
+                <data android:mimeType="audio/*" />
+            </intent-filter>
+            <intent-filter>
+                <action
+                    android:name="android.intent.action.SEND_MULTIPLE"
+                    android:label="@string/share_proof_action" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeGroup="audio/*"/>
                 <data android:mimeType="image/*" />
                 <data android:mimeType="video/*" />
             </intent-filter>
@@ -139,6 +148,10 @@
             android:permission="android.permission.BIND_JOB_SERVICE" />
         <service
             android:name=".service.VideosContentJob"
+            android:exported="true"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+        <service
+            android:name=".service.AudioContentJob"
             android:exported="true"
             android:permission="android.permission.BIND_JOB_SERVICE" />
         <service

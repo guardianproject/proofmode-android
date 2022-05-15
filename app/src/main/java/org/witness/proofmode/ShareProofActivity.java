@@ -586,23 +586,43 @@ public class ShareProofActivity extends AppCompatActivity {
     }
 
     private boolean processUri (String mediaHash, Uri mediaUri, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut, boolean shareMedia) throws FileNotFoundException {
-        String[] projection = {MediaStore.Images.Media.DATA};
+
+
+        String[] projection = new String[1];
+        String mimeType = getContentResolver().getType(mediaUri);
+
+        if (mimeType != null)
+        {
+            if (mimeType.startsWith("image"))
+                projection[0] = MediaStore.Images.Media.DATA;
+            else if (mimeType.startsWith("video"))
+                projection[0] = MediaStore.Video.Media.DATA;
+            else if (mimeType.startsWith("audio"))
+                projection[0] = MediaStore.Audio.Media.DATA;
+        }
+        else
+          projection[0] = MediaStore.Images.Media.DATA;
+
         Cursor cursor = getContentResolver().query(getRealUri(mediaUri),      projection,null, null, null);
         boolean result = false;
         String mediaPath = null;
 
         if (cursor != null) {
             if (cursor.getCount() > 0) {
-
                 cursor.moveToFirst();
-                int columnIndex = cursor.getColumnIndexOrThrow(projection[0]);
-                mediaPath = cursor.getString(columnIndex);
-
+                try {
+                    int columnIndex = cursor.getColumnIndexOrThrow(projection[0]);
+                    mediaPath = cursor.getString(columnIndex);
+                }
+                catch (Exception e) {
+                    //couldn't find path
+                }
             }
 
             cursor.close();
         }
-        else
+
+        if (TextUtils.isEmpty(mediaPath))
         {
             File fileMedia = new File(mediaUri.getPath());
             if (fileMedia.exists())
@@ -1012,7 +1032,34 @@ public class ShareProofActivity extends AppCompatActivity {
 
     private String getFileNameFromUri (Uri uri)
     {
-        String[] projection = {MediaStore.Images.Media.DATA,MediaStore.Images.Media.DISPLAY_NAME};
+       // String[] projection = {MediaStore.Images.Media.DATA,MediaStore.Images.Media.DISPLAY_NAME};
+
+        String[] projection = new String[2];
+
+        String mimeType = getContentResolver().getType(uri);
+
+        if (mimeType != null)
+        {
+            if (mimeType.startsWith("image")) {
+                projection[0] = MediaStore.Images.Media.DATA;
+                projection[1] = MediaStore.Images.Media.DISPLAY_NAME;
+            }
+            else if (mimeType.startsWith("video")) {
+                projection[0] = MediaStore.Video.Media.DATA;
+                projection[1] = MediaStore.Video.Media.DISPLAY_NAME;
+
+            }
+            else if (mimeType.startsWith("audio")) {
+                projection[0] = MediaStore.Audio.Media.DATA;
+                projection[0] = MediaStore.Audio.Media.DISPLAY_NAME;
+            }
+
+        }
+        else {
+            projection[0] = MediaStore.Images.Media.DATA;
+            projection[1] = MediaStore.Images.Media.DISPLAY_NAME;
+         }
+
         Cursor cursor = getContentResolver().query(getRealUri(uri),      projection,null, null, null);
         boolean result = false;
         String fileName = uri.getLastPathSegment();
@@ -1021,18 +1068,25 @@ public class ShareProofActivity extends AppCompatActivity {
             if (cursor.getCount() > 0) {
 
                 cursor.moveToFirst();
-                int columnIndex = cursor.getColumnIndexOrThrow(projection[0]);
-                String path = cursor.getString(columnIndex);
-                if (path != null) {
-                    File fileMedia = new File(path);
-                    if (fileMedia.exists())
-                        fileName = fileMedia.getName();
 
+                try {
+
+                    int columnIndex = cursor.getColumnIndexOrThrow(projection[0]);
+                    String path = cursor.getString(columnIndex);
+                    if (path != null) {
+                        File fileMedia = new File(path);
+                        if (fileMedia.exists())
+                            fileName = fileMedia.getName();
+
+                    }
+
+                    if (TextUtils.isEmpty(fileName)) {
+                        columnIndex = cursor.getColumnIndexOrThrow(projection[1]);
+                        fileName = cursor.getString(columnIndex);
+                    }
                 }
+                catch (IllegalArgumentException iae) {
 
-                if (TextUtils.isEmpty(fileName)){
-                    columnIndex = cursor.getColumnIndexOrThrow(projection[1]);
-                    fileName = cursor.getString(columnIndex);
                 }
             }
 

@@ -7,6 +7,7 @@ import android.os.Build;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.witness.proofmode.library.R;
+import org.witness.proofmode.service.AudioContentJob;
 import org.witness.proofmode.service.MediaWatcher;
 import org.witness.proofmode.service.PhotosContentJob;
 import org.witness.proofmode.service.VideosContentJob;
@@ -52,6 +53,7 @@ public class ProofMode {
         if (Build.VERSION.SDK_INT >= 24) {
             PhotosContentJob.scheduleJob(context);
             VideosContentJob.scheduleJob(context);
+            AudioContentJob.scheduleJob(context);
         }
 
         mInit = true;
@@ -67,6 +69,7 @@ public class ProofMode {
         if (Build.VERSION.SDK_INT >= 24) {
             PhotosContentJob.cancelJob(context);
             VideosContentJob.cancelJob(context);
+            AudioContentJob.cancelJob(context);
         }
 
         MediaWatcher.getInstance(context).stop();
