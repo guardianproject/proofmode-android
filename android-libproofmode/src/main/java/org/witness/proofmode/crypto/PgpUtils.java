@@ -49,6 +49,7 @@ import org.witness.proofmode.ProofMode;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -245,13 +246,13 @@ public class PgpUtils {
 
     public void createDetachedSignature (File media, File mediaSig, String password, boolean armor) throws Exception
     {
-        DetachedSignatureProcessor.createSignature(pgpSec, new FileInputStream(media), new FileOutputStream(mediaSig), password.toCharArray(), armor);
+        createDetachedSignature(new FileInputStream(media),new FileOutputStream(mediaSig), password, armor);
 
     }
 
-    public void createDetachedSignature (InputStream media, OutputStream mediaSig, String password, boolean armor) throws Exception
+    public void createDetachedSignature (InputStream is, OutputStream mediaSig, String password, boolean armor) throws Exception
     {
-        DetachedSignatureProcessor.createSignature(pgpSec, media, mediaSig, password.toCharArray(), armor);
+        DetachedSignatureProcessor.createSignature(pgpSec, new DataInputStream(is), mediaSig, password.toCharArray(), armor);
 
     }
 

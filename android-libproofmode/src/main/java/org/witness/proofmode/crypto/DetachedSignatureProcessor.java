@@ -155,8 +155,6 @@ public class DetachedSignatureProcessor
             throws GeneralSecurityException, IOException, PGPException
     {
 
-      //  PGPPrivateKey            prKey = skey.extractPrivateKey(new JcePBESecretKeyDecryptorBuilder().setProvider("SC").build(pass));
-
         if (armor)
         {
             out = new ArmoredOutputStream(out);
@@ -168,16 +166,15 @@ public class DetachedSignatureProcessor
         sGen.init(PGPSignature.BINARY_DOCUMENT, pgpPrivKey);
 
         BCPGOutputStream         bOut = new BCPGOutputStream(out);
-        InputStream              fIn = new BufferedInputStream(in);
 
         int n = -1;
         byte[] buffer = new byte[2048];
-        while ((n = fIn.read(buffer)) >= 0)
+        while ((n = in.read(buffer)) >= 0)
         {
             sGen.update(buffer,0,n);
         }
 
-        fIn.close();
+        in.close();
 
         sGen.generate().encode(bOut);
 
