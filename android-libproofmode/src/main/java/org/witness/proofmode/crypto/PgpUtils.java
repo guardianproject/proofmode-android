@@ -243,15 +243,15 @@ public class PgpUtils {
         publicOut.close();
     }
 
-    public void createDetachedSignature (File media, File mediaSig, String password) throws Exception
+    public void createDetachedSignature (File media, File mediaSig, String password, boolean armor) throws Exception
     {
-        DetachedSignatureProcessor.createSignature(pgpSec, new FileInputStream(media), new FileOutputStream(mediaSig), password.toCharArray(), false);
+        DetachedSignatureProcessor.createSignature(pgpSec, new FileInputStream(media), new FileOutputStream(mediaSig), password.toCharArray(), armor);
 
     }
 
-    public void createDetachedSignature (InputStream media, OutputStream mediaSig, String password) throws Exception
+    public void createDetachedSignature (InputStream media, OutputStream mediaSig, String password, boolean armor) throws Exception
     {
-        DetachedSignatureProcessor.createSignature(pgpSec, media, mediaSig, password.toCharArray(), false);
+        DetachedSignatureProcessor.createSignature(pgpSec, media, mediaSig, password.toCharArray(), armor);
 
     }
 

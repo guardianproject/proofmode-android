@@ -338,7 +338,8 @@ public class MediaWatcher extends BroadcastReceiver {
     private void writeProof (Context context, Uri uriMedia, String hash, boolean showDeviceIds, boolean showLocation, boolean showMobileNetwork, String safetyCheckResult, boolean isBasicIntegrity, boolean isCtsMatch, long notarizeTimestamp, String notarizeData, String notarizeType, String notes)
     {
 
-      //  File fileMedia = new File(mediaPath);
+        boolean usePgpArmor = true;
+
         File fileFolder = getHashStorageDir(context,hash);
 
         if (fileFolder != null) {
@@ -357,12 +358,12 @@ public class MediaWatcher extends BroadcastReceiver {
 
                 if (fileMediaProof.exists()) {
                     //sign the proof file again
-                    PgpUtils.getInstance(context).createDetachedSignature(fileMediaProof, fileMediaProofSig, PgpUtils.DEFAULT_PASSWORD);
+                    PgpUtils.getInstance(context).createDetachedSignature(fileMediaProof, fileMediaProofSig, PgpUtils.DEFAULT_PASSWORD, usePgpArmor);
                 }
 
                 //sign the media file
                if (!fileMediaSig.exists())
-                  PgpUtils.getInstance(context).createDetachedSignature(context.getContentResolver().openInputStream(uriMedia), new FileOutputStream(fileMediaSig), PgpUtils.DEFAULT_PASSWORD);
+                  PgpUtils.getInstance(context).createDetachedSignature(context.getContentResolver().openInputStream(uriMedia), new FileOutputStream(fileMediaSig), PgpUtils.DEFAULT_PASSWORD, usePgpArmor);
 
                 Timber.d("Proof written/updated for uri %s and hash %s", uriMedia, hash);
 
@@ -709,15 +710,15 @@ public class MediaWatcher extends BroadcastReceiver {
         return false;
     }
 
-    public static FileObserver observer;
+    public static FileObserver observerMedia;
 
     private void startFileSystemMonitor() {
 
         if (checkPermissionForReadExtertalStorage()) {
 
-            final String pathToWatch = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).getAbsolutePath();
+            String pathToWatch = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).getAbsolutePath();
 
-            observer = new RecursiveFileObserver(pathToWatch, FileObserver.CLOSE_WRITE|FileObserver.MOVED_TO) { // set up a file observer to watch this directory on sd card
+            observerMedia = new RecursiveFileObserver(pathToWatch, FileObserver.CLOSE_WRITE|FileObserver.MOVED_TO) { // set up a file observer to watch this directory on sd card
                 @Override
                 public void onEvent(int event, final String mediaPath) {
                     if (mediaPath != null && (!mediaPath.equals(".probe"))) { // check that it's not equal to .probe because thats created every time camera is launched
@@ -733,11 +734,11 @@ public class MediaWatcher extends BroadcastReceiver {
                             }
                         }, MediaWatcher.PROOF_GENERATION_DELAY_TIME_MS);
 
-
                     }
                 }
             };
-            observer.startWatching();
+            observerMedia.startWatching();
+
         }
 
 
@@ -745,9 +746,9 @@ public class MediaWatcher extends BroadcastReceiver {
 
     public void stop () {
 
-        if (observer != null)
+        if (observerMedia != null)
         {
-            observer.stopWatching();
+            observerMedia.stopWatching();
         }
     }
 }
