@@ -1,0 +1,8 @@
+<resources>
+<!--
+    //get a key from here: https://developer.android.com/training/safetynet/attestation#add-api-key
+    -->
+    <string name="verification_api_key">none<string>
+</resources>
+
+
