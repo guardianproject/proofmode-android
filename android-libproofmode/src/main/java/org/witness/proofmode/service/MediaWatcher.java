@@ -507,6 +507,7 @@ public class MediaWatcher extends BroadcastReceiver {
         hmProof.put("Locale",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_LOCALE));
 
 
+
         if (showLocation)
         {
             GPSTracker gpsTracker = new GPSTracker(context);

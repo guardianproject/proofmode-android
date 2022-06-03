@@ -52,6 +52,7 @@ import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -392,6 +393,19 @@ public class ShareProofActivity extends AppCompatActivity {
 
                 if (fileZip.length() > 0) {
                     Timber.d("Proof zip completed. Size:" + fileZip.length());
+
+                    boolean encryptZip = false;
+
+                    if (encryptZip) {
+                        File fileZipEnc = new File(fileCacheFolder, "proofmode-" + userId + "-" + dateString + ".zip.gpg");
+                        try {
+                            PgpUtils.getInstance(this).encrypt(new FileInputStream(fileZip), fileZip.length(), new FileOutputStream(fileZipEnc));
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
 
                     Uri uriZip = FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider", fileZip);
 

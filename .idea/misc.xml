@@ -8,6 +8,7 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
+        <entry key="android-libproofmode/src/main/res/drawable/ic_baseline_photo_library_24.xml" value="0.233" />
         <entry key="app/src/main/res/layout/activity_main.xml" value="0.24010416666666667" />
         <entry key="app/src/main/res/layout/activity_share.xml" value="0.2557291666666667" />
         <entry key="app/src/main/res/layout/content_main.xml" value="0.33" />
