@@ -67,7 +67,7 @@ public class DeviceInfo {
                 case DEVICE_NUMBER_OF_PROCESSORS:
                     return Runtime.getRuntime().availableProcessors() + "";
                 case DEVICE_LOCALE:
-                    return Locale.getDefault().getISO3Country();
+                    return activity.getResources().getConfiguration().locale.getISO3Country();
                 case DEVICE_IP_ADDRESS_IPV4:
                     return getIPAddress(true);
                 case DEVICE_IP_ADDRESS_IPV6:
@@ -83,16 +83,12 @@ public class DeviceInfo {
                     return mac;
 
                 case DEVICE_TOTAL_MEMORY:
-                    if (Build.VERSION.SDK_INT >= 16)
-                        return String.valueOf(getTotalMemory(activity));
+                    return String.valueOf(getTotalMemory(activity));
                 case DEVICE_FREE_MEMORY:
                     return String.valueOf(getFreeMemory(activity));
                 case DEVICE_USED_MEMORY:
-                    if (Build.VERSION.SDK_INT >= 16) {
-                        long freeMem = getTotalMemory(activity) - getFreeMemory(activity);
-                        return String.valueOf(freeMem);
-                    }
-                    return "";
+                    long freeMem = getTotalMemory(activity) - getFreeMemory(activity);
+                    return String.valueOf(freeMem);
                 case DEVICE_TOTAL_CPU_USAGE:
                     int[] cpu = getCpuUsageStatistic();
                     if (cpu != null) {
