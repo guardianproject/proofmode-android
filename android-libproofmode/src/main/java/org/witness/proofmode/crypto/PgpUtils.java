@@ -136,6 +136,35 @@ public class PgpUtils {
         return secretKey.extractPrivateKey(decryptor);
     }
 
+    public void encrypt(InputStream inClear, long dataLen, OutputStream encOut) throws IOException, PGPException {
+
+        PGPPublicKey encKey = getPublicKey(pkr);
+        OutputStream out = new ArmoredOutputStream(encOut);
+        ByteArrayOutputStream bOut = new ByteArrayOutputStream();
+        PGPCompressedDataGenerator comData = new PGPCompressedDataGenerator(PGPCompressedDataGenerator.ZIP);
+        OutputStream cos = comData.open(bOut);
+        PGPLiteralDataGenerator lData = new PGPLiteralDataGenerator();
+        OutputStream pOut = lData.open(cos, PGPLiteralData.BINARY, PGPLiteralData.CONSOLE, dataLen, new Date());
+
+        for (int i = 0; i < dataLen; i++)
+            pOut.write(inClear.read());
+
+        lData.close();
+        comData.close();
+        PGPEncryptedDataGenerator encGen =
+                new PGPEncryptedDataGenerator(
+                        new JcePGPDataEncryptorBuilder(PGPEncryptedData.AES_256).setWithIntegrityPacket(true).setSecureRandom(
+                                new SecureRandom()).setProvider(ProofMode.getProvider()));
+        if (encKey != null) {
+            encGen.addMethod(new JcePublicKeyKeyEncryptionMethodGenerator(encKey).setProvider(ProofMode.getProvider()));
+            byte[] bytes = bOut.toByteArray();
+            OutputStream cOut = encGen.open(out, bytes.length);
+            cOut.write(bytes);
+            cOut.close();
+        }
+        out.close();
+    }
+
     public String encrypt(String msgText) throws IOException, PGPException {
         byte[] clearData = msgText.getBytes();
         PGPPublicKey encKey = getPublicKey(pkr);
