@@ -197,27 +197,53 @@ public class ShareProofActivity extends AppCompatActivity {
         String proofHash = null;
 
         if (Intent.ACTION_SEND_MULTIPLE.equals(action)) {
-            ArrayList<Uri> mediaUris = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
+            final ArrayList<Uri> mediaUris = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
 
-            for (Uri mediaUri : mediaUris)
-            {
-                try {
-                    proofHash = HashUtils.getSHA256FromFileContent(getContentResolver().openInputStream(mediaUri));
-                    hashCache.put(mediaUri.toString(),proofHash);
-                    generateProof(mediaUri, proofHash);
+            new AsyncTask<Void, Void, String> () {
+
+                @Override
+                protected String doInBackground(Void... voids) {
+
+                    String proofHash = null;
+
+                    for (Uri mediaUri : mediaUris)
+                    {
+                        try {
+                            proofHash = HashUtils.getSHA256FromFileContent(getContentResolver().openInputStream(mediaUri));
+                            hashCache.put(mediaUri.toString(),proofHash);
+                            String genProofHash = ProofMode.generateProof(ShareProofActivity.this, mediaUri, proofHash);
+
+                            if (genProofHash != null && genProofHash.equals(proofHash))
+                            {
+                                //all good
+                            }
+                            else {
+                                //error occured
+                            }
+                        }
+                        catch (FileNotFoundException fe)
+                        {
+                            Timber.d("FileNotFound: %s", mediaUri);
+                        }
+
+                    }
+
+                    return proofHash;
+                }
+
+                @Override
+                protected void onPostExecute(String proofHash) {
+                    super.onPostExecute(proofHash);
+
+
+                    if (proofHash != null)
+                        displaySharePrompt ();
+                    else
+                        showProofError();
 
                 }
-                catch (FileNotFoundException fe)
-                {
-                    Timber.d("FileNotFound: %s", mediaUri);
-                }
+            }.execute();
 
-            }
-
-            if (proofHash != null)
-                displaySharePrompt ();
-            else
-                showProofError();
 
 
 
@@ -336,8 +362,6 @@ public class ShareProofActivity extends AppCompatActivity {
 
             for (Uri mediaUri : mediaUris)
             {
-              //  mediaUri = cleanUri(mediaUri);
-
                 if (!processUri (null, mediaUri, shareUris, shareText, fBatchProofOut, shareMedia))
                     return false;
             }
