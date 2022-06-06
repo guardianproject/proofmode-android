@@ -1,5 +1,8 @@
 package org.witness.proofmode.crypto;
 
+import org.bouncycastle.crypto.digests.SHA256Digest;
+
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -15,14 +18,14 @@ import timber.log.Timber;
  */
 public class HashUtils {
 
-    public static String getSHA256FromFileContent(InputStream fis)
+    public static String getSHA256FromFileContent(InputStream is)
     {
 
         try
         {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] buffer = new byte[65536]; //created at start.
-         //   InputStream fis = new FileInputStream(filename);
+            byte[] buffer = new byte[1024*16]; //16k chunks
+            BufferedInputStream fis = new BufferedInputStream(is);
             int n = 0;
             while (n != -1)
             {
@@ -37,17 +40,17 @@ public class HashUtils {
         }
         catch (FileNotFoundException e)
         {
-            Timber.e("Could not find the file to generate hash %s");
+            Timber.w(e,"Could not find the file to generate hash");
             return null;
         }
         catch (IOException e)
         {
-            Timber.e(e,"Error generating hash; IOError");
+            Timber.w(e,"Error generating hash; IOError");
             return null;
         }
         catch (NoSuchAlgorithmException e)
         {
-            Timber.e(e,"Error generating hash; No such algorithm");
+            Timber.w(e,"Error generating hash; No such algorithm");
             return null;
         }
     }
