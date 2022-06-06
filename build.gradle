@@ -8,6 +8,7 @@ buildscript {
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:7.1.2'
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.6.10'
     }
 }
 
@@ -20,7 +21,7 @@ allprojects {
         mavenCentral()
         jcenter()
         google()
-
+    //    maven { url "https://raw.githubusercontent.com/guardianproject/gpmaven/master" }
         maven { url 'https://dl.bintray.com/textile/maven' }
         maven { url 'https://jitpack.io' }
 
