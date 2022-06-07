@@ -152,7 +152,7 @@ public class DetachedSignatureProcessor
             OutputStream    out,
             char[]          pass,
             boolean         armor)
-            throws GeneralSecurityException, IOException, PGPException
+            throws IOException, PGPException
     {
 
         if (armor)
