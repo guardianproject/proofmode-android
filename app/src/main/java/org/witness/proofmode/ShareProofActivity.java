@@ -2,6 +2,7 @@ package org.witness.proofmode;
 
 import static org.witness.proofmode.ProofMode.GOOGLE_SAFETYNET_FILE_TAG;
 import static org.witness.proofmode.ProofMode.OPENPGP_FILE_TAG;
+import static org.witness.proofmode.ProofMode.PROOF_FILE_JSON_TAG;
 import static org.witness.proofmode.ProofMode.PROOF_FILE_TAG;
 import static org.witness.proofmode.ProofMode.OPENTIMESTAMPS_FILE_TAG;
 import static org.witness.proofmode.ProofMode.PROVIDER_TAG;
@@ -131,6 +132,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
             if (mediaUri != null)
             {
+                mediaUri = cleanUri(mediaUri);
                 displayProgress(getString(R.string.progress_checking_proof));
                 new CheckProofTasks(this).execute(mediaUri);
             }
@@ -142,7 +144,6 @@ public class ShareProofActivity extends AppCompatActivity {
 
     }
 
-    /**
     private Uri cleanUri (Uri mediaUri)
     {
         //content://com.google.android.apps.photos.contentprovider/0/1/content%3A%2F%2Fmedia%2Fexternal%2Fimages%2Fmedia%2F3517/ORIGINAL/NONE/image%2Fjpeg/765892976
@@ -165,7 +166,7 @@ public class ShareProofActivity extends AppCompatActivity {
         }
 
         return resultUri;
-    }**/
+    }
 
 
     @Override
@@ -255,7 +256,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
             if (mediaUri != null)
             {
-//                mediaUri = cleanUri(mediaUri);
+                mediaUri = cleanUri(mediaUri);
 
                 try {
                     proofHash = hashCache.get(mediaUri.toString());
@@ -379,7 +380,7 @@ public class ShareProofActivity extends AppCompatActivity {
                 mediaUri = intent.getData();
 
             if (mediaUri != null) {
-               // mediaUri = cleanUri(mediaUri);
+                mediaUri = cleanUri(mediaUri);
 
                 String mediaHash = hashCache.get(mediaUri);
                 if (!processUri(mediaHash, mediaUri, shareUris, shareText, null, shareMedia))
@@ -460,7 +461,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
         if (hash != null) {
 
-            hashCache.put (mediaUri.toString(), mediaUri.getLastPathSegment());
+            hashCache.put (mediaUri.toString(), hash);
 
             Timber.d("Proof check if exists for URI %s and hash %s", mediaUri, hash);
 
@@ -702,6 +703,9 @@ public class ShareProofActivity extends AppCompatActivity {
             File fileMediaSig = new File(fileFolder, hash + OPENPGP_FILE_TAG);
             File fileMediaProof = new File(fileFolder, hash + PROOF_FILE_TAG);
             File fileMediaProofSig = new File(fileFolder, hash + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
+            File fileMediaProofJSON = new File(fileFolder, hash + PROOF_FILE_JSON_TAG);
+            File fileMediaProofJSONSig = new File(fileFolder, hash + PROOF_FILE_JSON_TAG + OPENPGP_FILE_TAG);
+
             File fileMediaOpentimestamps = new File(fileFolder, hash + OPENTIMESTAMPS_FILE_TAG);
             File fileMediaGoogleSafetyNet = new File(fileFolder, hash + GOOGLE_SAFETYNET_FILE_TAG);
 
@@ -711,7 +715,7 @@ public class ShareProofActivity extends AppCompatActivity {
                 if (fileMedia != null)
                     lastModified = new Date(fileMedia.lastModified());
 
-                generateProofOutput(uriMedia, fileMedia, lastModified, fileMediaSig, fileMediaProof, fileMediaProofSig, fileMediaOpentimestamps, fileMediaGoogleSafetyNet, hash, shareMedia, fBatchProofOut, shareUris, sb);
+                generateProofOutput(uriMedia, fileMedia, lastModified, fileMediaSig, fileMediaProof, fileMediaProofSig, fileMediaProofJSON, fileMediaProofJSONSig, fileMediaOpentimestamps, fileMediaGoogleSafetyNet, hash, shareMedia, fBatchProofOut, shareUris, sb);
                 return true;
             }
         }
@@ -747,12 +751,12 @@ public class ShareProofActivity extends AppCompatActivity {
 
         }
 
-        generateProofOutput(mediaUri, fileMedia, new Date(fileMedia.lastModified()), fileMediaSig, fileMediaProof, fileMediaProofSig, null, null, hash, shareMedia, fBatchProofOut, shareUris, sb);
+        generateProofOutput(mediaUri, fileMedia, new Date(fileMedia.lastModified()), fileMediaSig, fileMediaProof, fileMediaProofSig, null, null,null, null, hash, shareMedia, fBatchProofOut, shareUris, sb);
 
         return false;
     }
 
-    private void generateProofOutput (Uri uriMedia, File fileMedia, Date fileLastModified, File fileMediaSig, File fileMediaProof, File fileMediaProofSig, File fileMediaNotary, File fileMediaNotary2, String hash, boolean shareMedia, PrintWriter fBatchProofOut, ArrayList<Uri> shareUris, StringBuffer sb)
+    private void generateProofOutput (Uri uriMedia, File fileMedia, Date fileLastModified, File fileMediaSig, File fileMediaProof, File fileMediaProofSig, File fileMediaProofJSON, File fileMediaProofJSONSig, File fileMediaNotary, File fileMediaNotary2, String hash, boolean shareMedia, PrintWriter fBatchProofOut, ArrayList<Uri> shareUris, StringBuffer sb)
     {
         DateFormat sdf = SimpleDateFormat.getDateTimeInstance();
 
@@ -779,23 +783,28 @@ public class ShareProofActivity extends AppCompatActivity {
             if (fileMediaSig != null
                && fileMediaSig.exists())
                 shareUris.add(Uri.fromFile(fileMediaSig));
-                //shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMediaSig));
 
             if (fileMediaProofSig != null
               && fileMediaProofSig.exists())
                 shareUris.add(Uri.fromFile(fileMediaProofSig));
-                //shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMediaProofSig));
+
+            if (fileMediaProofJSON != null
+                    && fileMediaProofJSON.exists())
+                shareUris.add(Uri.fromFile(fileMediaProofJSON));
+
+
+            if (fileMediaProofJSONSig != null
+                    && fileMediaProofJSONSig.exists())
+                shareUris.add(Uri.fromFile(fileMediaProofJSONSig));
+
 
             if (fileMediaNotary != null
                     && fileMediaNotary.exists())
                 shareUris.add(Uri.fromFile(fileMediaNotary));
-               // shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMediaNotary));
 
             if (fileMediaNotary2 != null
                     && fileMediaNotary2.exists())
                 shareUris.add(Uri.fromFile(fileMediaNotary2));
-
-              //  shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMediaNotary2));
 
         }
 

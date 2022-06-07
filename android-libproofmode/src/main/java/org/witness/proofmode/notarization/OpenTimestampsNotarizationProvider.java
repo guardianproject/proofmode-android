@@ -34,7 +34,7 @@ public class OpenTimestampsNotarizationProvider implements NotarizationProvider 
 
             String result = new String(Base64.encode(detachedToSerialize.serialize(),Base64.DEFAULT));
 
-            listener.notarizationSuccessful(result);
+            listener.notarizationSuccessful(mediaHash, result);
         }
         catch (IOException ioe)
         {

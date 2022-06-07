@@ -141,7 +141,7 @@ public class VideosContentJob extends JobService {
                 Set<Uri> uris = mUriStack.keySet();
 
                 for (Uri uri : uris) {
-                    MediaWatcher.getInstance(VideosContentJob.this).processUri(uri);
+                    MediaWatcher.getInstance(VideosContentJob.this).processUri(uri, true);
                     mUriStack.remove(uri);
                 }
 

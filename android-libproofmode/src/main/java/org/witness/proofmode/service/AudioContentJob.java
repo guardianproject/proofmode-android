@@ -108,7 +108,7 @@ public class AudioContentJob extends JobService {
                 ArrayList<Uri> uris = new ArrayList<>(mUriStack.keySet());
 
                 for (Uri uri : uris) {
-                    MediaWatcher.getInstance(AudioContentJob.this).processUri(uri);
+                    MediaWatcher.getInstance(AudioContentJob.this).processUri(uri, true);
                     mUriStack.remove(uri);
                 }
 

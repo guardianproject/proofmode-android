@@ -31,6 +31,7 @@ public class ProofMode {
 
 
     public final static String PROOF_FILE_TAG = ".proof.csv";
+    public final static String PROOF_FILE_JSON_TAG = ".proof.json";
     public final static String OPENPGP_FILE_TAG = ".asc";
     public final static String OPENTIMESTAMPS_FILE_TAG = ".ots";
     public final static String GOOGLE_SAFETYNET_FILE_TAG = ".gst";
@@ -83,7 +84,7 @@ public class ProofMode {
     public static String generateProof (Context context, Uri uri)
     {
 
-        return MediaWatcher.getInstance(context).processUri (uri);
+        return MediaWatcher.getInstance(context).processUri (uri, false);
 
     }
 
@@ -91,7 +92,7 @@ public class ProofMode {
     public static String generateProof (Context context, Uri uri, String proofHash)
     {
 
-        return MediaWatcher.getInstance(context).processUri (uri, proofHash);
+        return MediaWatcher.getInstance(context).processUri (uri, proofHash, false);
 
     }
 
