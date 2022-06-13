@@ -1,27 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:fitsSystemWindows="true"
-    tools:context="org.witness.proofmode.SettingsActivity">
+    xmlns:tools="http://schemas.android.com/tools">
 
-    <include layout="@layout/content_settings" />
+    <data>
 
-    <androidx.appcompat.widget.Toolbar
-        android:id="@+id/toolbar"
+    </data>
+
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        android:background="@android:color/transparent"
-        app:popupTheme="@style/AppTheme.PopupOverlay"
-        app:theme="@style/SettingsToolBarStyle">
+        android:layout_height="match_parent"
+        android:fitsSystemWindows="true"
+        tools:context="org.witness.proofmode.SettingsActivity">
 
-        <TextView
-            android:id="@+id/toolbar_title"
-            style="@style/SettingsToolBarTitleStyle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center" />
-    </androidx.appcompat.widget.Toolbar>
-</FrameLayout>
+        <include
+            android:id="@+id/content_settings"
+            layout="@layout/content_settings" />
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@android:color/transparent"
+            app:popupTheme="@style/AppTheme.PopupOverlay"
+            app:theme="@style/SettingsToolBarStyle">
+
+            <TextView
+                android:id="@+id/toolbar_title"
+                style="@style/SettingsToolBarTitleStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center" />
+        </androidx.appcompat.widget.Toolbar>
+    </FrameLayout>
+</layout>
