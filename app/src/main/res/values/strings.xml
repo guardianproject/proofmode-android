@@ -123,4 +123,6 @@
     <string name="progress_checking_proof">Checking for proof...</string>
     <string name="progress_building_proof">Building proof bundle...</string>
     <string name="progress_generating_proof">Generating proof...</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>

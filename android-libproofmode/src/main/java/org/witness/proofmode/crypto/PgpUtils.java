@@ -332,15 +332,14 @@ public class PgpUtils {
         }
     }
 
-    public void publishPublicKey () throws IOException
+    public String retrievePublicKeyToBePublished() throws IOException
     {
         ByteArrayOutputStream baosPkr = new ByteArrayOutputStream();
         Base64OutputStream bos = new Base64OutputStream(baosPkr, Base64.DEFAULT);
         pkr.encode(bos);
         bos.close();
-
-        final String pubKey = new String(baosPkr.toByteArray(), Charset.forName("UTF-8"));
-
+        return new String(baosPkr.toByteArray(), Charset.forName("UTF-8"));
+/*
         new Thread () {
 
             public void run() {
@@ -386,7 +385,7 @@ public class PgpUtils {
                     ioe.printStackTrace();
                 }
             }
-        }.start();;
+        }.start();*/
     }
 
     private static final char PARAMETER_DELIMITER = '&';

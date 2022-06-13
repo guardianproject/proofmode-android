@@ -1,14 +1,16 @@
 apply plugin: 'com.android.application'
+apply plugin: 'org.jetbrains.kotlin.android'
+apply plugin: 'kotlinx-serialization'
 
 android {
-    compileSdkVersion 31
+    compileSdkVersion 32
     buildToolsVersion "31.0.0"
 
-    lintOptions {
-        abortOnError false
-    }
-
     flavorDimensions 'default'
+
+    buildFeatures {
+        dataBinding true
+    }
 
     productFlavors {
         artwork {
@@ -18,8 +20,8 @@ android {
 
     defaultConfig {
         applicationId "org.witness.proofmode"
-        minSdkVersion 16
-        targetSdkVersion 31
+        minSdkVersion 21
+        targetSdkVersion 32
         versionCode 160102
         versionName "0.0.16-ALPHA-2"
         multiDexEnabled true
@@ -54,13 +56,13 @@ dependencies {
     implementation project(':android-libproofmode')
 
    // implementation 'org.witness:android-libproofmode:1.0.16'
-    implementation 'androidx.appcompat:appcompat:1.4.0'
-    implementation 'androidx.core:core:1.7.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.1.2'
+    implementation 'androidx.appcompat:appcompat:1.4.2'
+    implementation 'androidx.core:core:1.8.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
     implementation 'androidx.legacy:legacy-support-v13:1.0.0'
 
-    implementation 'com.google.android.material:material:1.4.0'
+    implementation 'com.google.android.material:material:1.6.1'
 
     implementation 'com.github.paolorotolo:appintro:4.1.0'
 
@@ -68,4 +70,7 @@ dependencies {
     implementation 'androidx.multidex:multidex:2.0.1'
 
     implementation 'com.caverock:androidsvg-aar:1.3'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.1'
+    implementation "androidx.preference:preference-ktx:1.2.0"
+
 }
