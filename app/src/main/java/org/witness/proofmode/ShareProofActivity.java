@@ -133,29 +133,29 @@ public class ShareProofActivity extends AppCompatActivity {
     }
 
     /**
-    private Uri cleanUri (Uri mediaUri)
-    {
-        //content://com.google.android.apps.photos.contentprovider/0/1/content%3A%2F%2Fmedia%2Fexternal%2Fimages%2Fmedia%2F3517/ORIGINAL/NONE/image%2Fjpeg/765892976
-        Uri resultUri = mediaUri;
+     private Uri cleanUri (Uri mediaUri)
+     {
+     //content://com.google.android.apps.photos.contentprovider/0/1/content%3A%2F%2Fmedia%2Fexternal%2Fimages%2Fmedia%2F3517/ORIGINAL/NONE/image%2Fjpeg/765892976
+     Uri resultUri = mediaUri;
 
-        String contentEnc = "content://";
-        List<String> paths = mediaUri.getPathSegments();
-        for (String path: paths)
-        {
-            if (path.startsWith(contentEnc))
-            {
-                try {
-                    String pathDec = URLDecoder.decode(path,"UTF-8");
-                    resultUri = Uri.parse(pathDec);
-                    break;
-                } catch (UnsupportedEncodingException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
+     String contentEnc = "content://";
+     List<String> paths = mediaUri.getPathSegments();
+     for (String path: paths)
+     {
+     if (path.startsWith(contentEnc))
+     {
+     try {
+     String pathDec = URLDecoder.decode(path,"UTF-8");
+     resultUri = Uri.parse(pathDec);
+     break;
+     } catch (UnsupportedEncodingException e) {
+     e.printStackTrace();
+     }
+     }
+     }
 
-        return resultUri;
-    }**/
+     return resultUri;
+     }**/
 
 
     @Override
@@ -320,7 +320,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
     private synchronized boolean shareProofAsync (boolean shareMedia, boolean shareProof) throws FileNotFoundException {
 
-    // Get intent, action and MIME type
+        // Get intent, action and MIME type
         Intent intent = getIntent();
         String action = intent.getAction();
 
@@ -369,7 +369,7 @@ public class ShareProofActivity extends AppCompatActivity {
                 mediaUri = intent.getData();
 
             if (mediaUri != null) {
-               // mediaUri = cleanUri(mediaUri);
+                // mediaUri = cleanUri(mediaUri);
 
                 String mediaHash = hashCache.get(mediaUri);
                 if (!processUri(mediaHash, mediaUri, shareUris, shareText, null, shareMedia))
@@ -568,16 +568,16 @@ public class ShareProofActivity extends AppCompatActivity {
 
         protected void onPostExecute(Boolean result) {
 
-                if (!result)
-                {
-                    //do something
-                    Timber.d("unable to shareProofAsync");
-                    activity.showProofError();
-                }
-                else
-                {
-                    activity.finish();
-                }
+            if (!result)
+            {
+                //do something
+                Timber.d("unable to shareProofAsync");
+                activity.showProofError();
+            }
+            else
+            {
+                activity.finish();
+            }
         }
     }
 
@@ -629,7 +629,7 @@ public class ShareProofActivity extends AppCompatActivity {
                 projection[0] = MediaStore.Audio.Media.DATA;
         }
         else
-          projection[0] = MediaStore.Images.Media.DATA;
+            projection[0] = MediaStore.Images.Media.DATA;
 
         Cursor cursor = getContentResolver().query(getRealUri(mediaUri),      projection,null, null, null);
         boolean result = false;
@@ -767,25 +767,25 @@ public class ShareProofActivity extends AppCompatActivity {
             shareUris.add(uriMedia);
 
             if (fileMediaSig != null
-               && fileMediaSig.exists())
+                    && fileMediaSig.exists())
                 shareUris.add(Uri.fromFile(fileMediaSig));
-                //shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMediaSig));
+            //shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMediaSig));
 
             if (fileMediaProofSig != null
-              && fileMediaProofSig.exists())
+                    && fileMediaProofSig.exists())
                 shareUris.add(Uri.fromFile(fileMediaProofSig));
-                //shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMediaProofSig));
+            //shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMediaProofSig));
 
             if (fileMediaNotary != null
                     && fileMediaNotary.exists())
                 shareUris.add(Uri.fromFile(fileMediaNotary));
-               // shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMediaNotary));
+            // shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMediaNotary));
 
             if (fileMediaNotary2 != null
                     && fileMediaNotary2.exists())
                 shareUris.add(Uri.fromFile(fileMediaNotary2));
 
-              //  shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMediaNotary2));
+            //  shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMediaNotary2));
 
         }
 
@@ -861,7 +861,7 @@ public class ShareProofActivity extends AppCompatActivity {
                 intent.setComponent(new ComponentName(packageName,
                         ri.activityInfo.name));
                 intent.setAction(Intent.ACTION_SEND);
-         //       intent.setDataAndType(shareUri, shareMimeType);
+                //       intent.setDataAndType(shareUri, shareMimeType);
                 intent.putExtra(Intent.EXTRA_EMAIL, new String[] { "" });
                 intent.putExtra(Intent.EXTRA_TEXT, shareText);
                 intent.putExtra(Intent.EXTRA_STREAM,shareUri);
@@ -877,7 +877,7 @@ public class ShareProofActivity extends AppCompatActivity {
                         ri.activityInfo.name));
 
                 intent.setAction(Intent.ACTION_SEND);
-           //     intent.setDataAndType(shareUri, shareMimeType);
+                //     intent.setDataAndType(shareUri, shareMimeType);
                 intent.putExtra(Intent.EXTRA_TEXT, shareText);
                 intent.putExtra(Intent.EXTRA_STREAM,shareUri);
                 intent.putExtra(Intent.EXTRA_TITLE,shareUri.getLastPathSegment());
@@ -892,7 +892,7 @@ public class ShareProofActivity extends AppCompatActivity {
                         ri.activityInfo.name));
 
                 intent.setAction(Intent.ACTION_SEND);
-            //    intent.setDataAndType(shareUri, shareMimeType);
+                //    intent.setDataAndType(shareUri, shareMimeType);
                 intent.putExtra(Intent.EXTRA_TEXT, shareText);
                 intent.putExtra(Intent.EXTRA_STREAM,shareUri);
                 intent.putExtra(Intent.EXTRA_TITLE,shareUri.getLastPathSegment());
@@ -908,7 +908,7 @@ public class ShareProofActivity extends AppCompatActivity {
                         ri.activityInfo.name));
 
                 intent.setAction(Intent.ACTION_SEND);
-           //     intent.setDataAndType(shareUri, shareMimeType);
+                //     intent.setDataAndType(shareUri, shareMimeType);
                 intent.putExtra(Intent.EXTRA_TEXT, shareText);
                 intent.putExtra(Intent.EXTRA_STREAM,shareUri);
                 intent.putExtra(Intent.EXTRA_TITLE,shareUri.getLastPathSegment());
@@ -1060,7 +1060,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
     private String getFileNameFromUri (Uri uri)
     {
-       // String[] projection = {MediaStore.Images.Media.DATA,MediaStore.Images.Media.DISPLAY_NAME};
+        // String[] projection = {MediaStore.Images.Media.DATA,MediaStore.Images.Media.DISPLAY_NAME};
 
         String[] projection = new String[2];
 
@@ -1086,7 +1086,7 @@ public class ShareProofActivity extends AppCompatActivity {
         else {
             projection[0] = MediaStore.Images.Media.DATA;
             projection[1] = MediaStore.Images.Media.DISPLAY_NAME;
-         }
+        }
 
         Cursor cursor = getContentResolver().query(getRealUri(uri),      projection,null, null, null);
         boolean result = false;
