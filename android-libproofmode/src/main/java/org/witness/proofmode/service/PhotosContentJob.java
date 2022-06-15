@@ -11,21 +11,12 @@ import android.app.job.JobScheduler;
 import android.app.job.JobService;
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.Intent;
-import android.database.Cursor;
 import android.net.Uri;
-import android.os.Environment;
-import android.os.Handler;
 import android.provider.MediaStore;
-import android.widget.Toast;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Set;
-import java.util.Stack;
 import java.util.Timer;
 import java.util.TimerTask;
 

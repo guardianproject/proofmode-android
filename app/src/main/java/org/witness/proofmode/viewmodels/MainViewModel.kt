@@ -29,9 +29,9 @@ class MainViewModel(val app: Application):AndroidViewModel(app) {
 
 
     fun publishPublicKey() {
-       val publicKey = pgpUtils.retrievePublicKeyToBePublished()
+       val publicKey = pgpUtils.publicKey
+        Timber.d("Publishing key $publicKey")
         coroutineScope.launch {
-
             try {
                 val publishResponse = openPGPRepo.publishPublicKey(OpenPGPUploadBody(publicKey))
                 if (publishResponse.isSuccess) {
@@ -39,7 +39,7 @@ class MainViewModel(val app: Application):AndroidViewModel(app) {
                     Timber.d("Publishing key success")
                 } else {
                     _error.value = "There was an error publishing your public key. Please try again"
-                    Timber.e("publishPublickKey:error ")
+                    Timber.e("publishPublic Key:error ")
                 }
             } catch (ex:Exception) {
                 _error.value = ex.message

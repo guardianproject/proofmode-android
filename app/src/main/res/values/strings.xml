@@ -84,7 +84,7 @@
     <string name="onboarding_privacy_continue">Continue</string>
     <string name="onboarding_privacy_options">Privacy Options</string>
 
-    <string name="permission_location_title">We need to your location in order to document where your media is captured.</string>
+    <string name="permission_location_title">We need your location in order to document where your media is captured.</string>
     <string name="permission_location_content">Giving permission allows us to document your gps coordinates. We will not track you or store your location in any other way.</string>
     <string name="permission_location_info">If you do not want to capture this data for security or privacy purposes, do not allow permission.</string>
 
@@ -120,9 +120,9 @@
     <string name="digital_signatures_whattodo_title">What do I do with it?</string>
     <string name="digital_signatures_whattodo_info">A public version of your PGP key will be shared along with your media and proof.csv files. This allows a third party to verify the PGP “.asc” signature files that come with the proof data. Including your public PGP key with the proof ensures that it will be preserved in case your device is compromised or you reinstall the app. Remember each time you re-install the app, it will create a new digital identity (PGP key).</string>
     <string name="publish_key_to">\"Publishing key to: \"</string>
-    <string name="progress_checking_proof">Checking for proof...</string>
-    <string name="progress_building_proof">Building proof bundle...</string>
-    <string name="progress_generating_proof">Generating proof...</string>
+    <string name="progress_checking_proof">Checking for proof…</string>
+    <string name="progress_building_proof">Building proof bundle…</string>
+    <string name="progress_generating_proof">Generating proof…</string>
     <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="view_public_key">View the public key at: http://pgp.mit.edu/pks/lookup?search=0x</string>
 </resources>

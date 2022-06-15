@@ -1,5 +1,11 @@
 package org.witness.proofmode.service;
 
+import static org.witness.proofmode.ProofMode.GOOGLE_SAFETYNET_FILE_TAG;
+import static org.witness.proofmode.ProofMode.OPENPGP_FILE_TAG;
+import static org.witness.proofmode.ProofMode.OPENTIMESTAMPS_FILE_TAG;
+import static org.witness.proofmode.ProofMode.PREFS_DOPROOF;
+import static org.witness.proofmode.ProofMode.PROOF_FILE_TAG;
+
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -14,18 +20,10 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
 import android.os.FileObserver;
-import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.provider.MediaStore;
 import android.text.TextUtils;
 import android.util.Base64;
-import android.util.Log;
-
-import androidx.annotation.NonNull;
-
-import com.google.android.gms.safetynet.SafetyNetApi;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 
 import org.witness.proofmode.ProofMode;
 import org.witness.proofmode.crypto.HashUtils;
@@ -37,7 +35,6 @@ import org.witness.proofmode.notarization.OpenTimestampsNotarizationProvider;
 import org.witness.proofmode.util.DeviceInfo;
 import org.witness.proofmode.util.GPSTracker;
 import org.witness.proofmode.util.RecursiveFileObserver;
-import org.witness.proofmode.util.SafetyNetCheck;
 import org.witness.proofmode.util.SafetyNetResponse;
 
 import java.io.DataOutputStream;
@@ -47,9 +44,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.PrintStream;
-import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.text.DateFormat;
 import java.util.Date;
@@ -60,12 +55,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import timber.log.Timber;
-
-import static org.witness.proofmode.ProofMode.GOOGLE_SAFETYNET_FILE_TAG;
-import static org.witness.proofmode.ProofMode.OPENPGP_FILE_TAG;
-import static org.witness.proofmode.ProofMode.OPENTIMESTAMPS_FILE_TAG;
-import static org.witness.proofmode.ProofMode.PREFS_DOPROOF;
-import static org.witness.proofmode.ProofMode.PROOF_FILE_TAG;
 
 public class MediaWatcher extends BroadcastReceiver {
 

@@ -1,10 +1,6 @@
 package org.witness.proofmode.crypto;
 
 import android.content.Context;
-import android.util.Base64;
-import android.util.Base64OutputStream;
-import android.util.Log;
-
 
 import org.bouncycastle.bcpg.ArmoredInputStream;
 import org.bouncycastle.bcpg.ArmoredOutputStream;
@@ -14,7 +10,6 @@ import org.bouncycastle.bcpg.sig.Features;
 import org.bouncycastle.bcpg.sig.KeyFlags;
 import org.bouncycastle.crypto.generators.RSAKeyPairGenerator;
 import org.bouncycastle.crypto.params.RSAKeyGenerationParameters;
-import org.bouncycastle.jcajce.provider.symmetric.util.PBE;
 import org.bouncycastle.openpgp.PGPCompressedDataGenerator;
 import org.bouncycastle.openpgp.PGPEncryptedData;
 import org.bouncycastle.openpgp.PGPEncryptedDataGenerator;
@@ -47,7 +42,6 @@ import org.bouncycastle.openpgp.operator.jcajce.JcePublicKeyKeyEncryptionMethodG
 import org.bouncycastle.util.encoders.Hex;
 import org.witness.proofmode.ProofMode;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.File;
@@ -56,10 +50,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.security.InvalidKeyException;
@@ -67,7 +59,6 @@ import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
 import java.security.SignatureException;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -89,20 +80,16 @@ public class PgpUtils {
 
     public final static String URL_LOOKUP_ENDPOINT = "https://keys.openpgp.org/search?q=0x";
 
-    private PgpUtils ()
-    {
+    private PgpUtils() {
 
     }
 
-    public static synchronized PgpUtils getInstance (Context context)
-    {
+    public static synchronized PgpUtils getInstance(Context context) {
         return getInstance(context, DEFAULT_PASSWORD);
     }
 
-    public static synchronized PgpUtils getInstance (Context context, String password)
-    {
-        if (mInstance == null)
-        {
+    public static synchronized PgpUtils getInstance(Context context, String password) {
+        if (mInstance == null) {
             mInstance = new PgpUtils();
             mInstance.initCrypto(context, password);
         }
@@ -111,11 +98,10 @@ public class PgpUtils {
 
     }
 
-    public String getPublicKeyFingerprint ()
-    {
+    public String getPublicKeyFingerprint() {
         PGPPublicKey key = pkr.getPublicKey();
         String fullKey = new String(Hex.encode(key.getFingerprint()));
-        return fullKey.substring(fullKey.length()-16);
+        return fullKey.substring(fullKey.length() - 16);
     }
 
 
@@ -193,13 +179,13 @@ public class PgpUtils {
         return new String(encOut.toByteArray());
     }
 
-    public final static PGPKeyRingGenerator generateKeyRingGenerator (String keyId, char[] pass) throws PGPException{
+    public final static PGPKeyRingGenerator generateKeyRingGenerator(String keyId, char[] pass) throws PGPException {
         RSAKeyPairGenerator kpg = new RSAKeyPairGenerator();
         kpg.init(new RSAKeyGenerationParameters(BigInteger.valueOf(0x10001), new SecureRandom(), 4096, 12));
         PGPKeyPair rsakp_sign = new BcPGPKeyPair(PGPPublicKey.RSA_GENERAL, kpg.generateKeyPair(), new Date());
         PGPKeyPair rsakp_enc = new BcPGPKeyPair(PGPPublicKey.RSA_GENERAL, kpg.generateKeyPair(), new Date());
         PGPSignatureSubpacketGenerator signhashgen = new PGPSignatureSubpacketGenerator();
-        signhashgen.setKeyFlags(false, KeyFlags.SIGN_DATA|KeyFlags.CERTIFY_OTHER|KeyFlags.SHARED);
+        signhashgen.setKeyFlags(false, KeyFlags.SIGN_DATA | KeyFlags.CERTIFY_OTHER | KeyFlags.SHARED);
         signhashgen.setPreferredSymmetricAlgorithms(false, new int[]{SymmetricKeyAlgorithmTags.AES_256, SymmetricKeyAlgorithmTags.AES_192, SymmetricKeyAlgorithmTags.AES_128});
         signhashgen.setPreferredHashAlgorithms(false, new int[]{HashAlgorithmTags.SHA256, HashAlgorithmTags.SHA1, HashAlgorithmTags.SHA384, HashAlgorithmTags.SHA512, HashAlgorithmTags.SHA224});
         signhashgen.setFeature(false, Features.FEATURE_MODIFICATION_DETECTION);
@@ -208,7 +194,7 @@ public class PgpUtils {
         PGPDigestCalculator sha1Calc = new BcPGPDigestCalculatorProvider().get(HashAlgorithmTags.SHA1);
         PGPDigestCalculator sha256Calc = new BcPGPDigestCalculatorProvider().get(HashAlgorithmTags.SHA256);
         PBESecretKeyEncryptor pske = (new BcPBESecretKeyEncryptorBuilder(PGPEncryptedData.AES_256, sha256Calc, 0xc0)).build(pass);
-        PGPKeyRingGenerator keyRingGen = new PGPKeyRingGenerator (PGPSignature.POSITIVE_CERTIFICATION, rsakp_sign,
+        PGPKeyRingGenerator keyRingGen = new PGPKeyRingGenerator(PGPSignature.POSITIVE_CERTIFICATION, rsakp_sign,
                 keyId, sha1Calc, signhashgen.generate(), null, new BcPGPContentSignerBuilder(rsakp_sign.getPublicKey().getAlgorithm(),
                 HashAlgorithmTags.SHA1), pske);
         keyRingGen.addSubKey(rsakp_enc, enchashgen.generate(), null);
@@ -216,8 +202,7 @@ public class PgpUtils {
     }
 
 
-
-    public String getPublicKey () throws IOException {
+    public String getPublicKey() throws IOException {
         ByteArrayOutputStream baosPkr = new ByteArrayOutputStream();
         ArmoredOutputStream armoredStreamPkr = new ArmoredOutputStream(baosPkr);
         pkr.encode(armoredStreamPkr);
@@ -226,11 +211,11 @@ public class PgpUtils {
         return new String(baosPkr.toByteArray(), Charset.defaultCharset());
     }
 
-    public final static String genPGPPrivKey (PGPKeyRingGenerator krgen) throws IOException {
-            // String pgpPublicKey = PgpUtils.genPGPPublicKey(krgen);
-            //DetachedSignatureProcessor.createSignature(pgpSecretKey, )
+    public final static String genPGPPrivKey(PGPKeyRingGenerator krgen) throws IOException {
+        // String pgpPublicKey = PgpUtils.genPGPPublicKey(krgen);
+        //DetachedSignatureProcessor.createSignature(pgpSecretKey, )
 
-        ByteArrayOutputStream baosPriv = new ByteArrayOutputStream ();
+        ByteArrayOutputStream baosPriv = new ByteArrayOutputStream();
         PGPSecretKeyRing skr = krgen.generateSecretKeyRing();
         ArmoredOutputStream armoredStreamPriv = new ArmoredOutputStream(baosPriv);
         skr.encode(armoredStreamPriv);
@@ -239,71 +224,63 @@ public class PgpUtils {
     }
 
     private static void exportKeyPair(
-            OutputStream    secretOut,
-            OutputStream    publicOut,
+            OutputStream secretOut,
+            OutputStream publicOut,
             PGPPublicKey publicKey,
             PGPPrivateKey privateKey,
-            String          identity,
-            char[]          passPhrase,
-            boolean         armor)
-            throws IOException, InvalidKeyException, NoSuchProviderException, SignatureException, PGPException
-    {
-        if (armor)
-        {
+            String identity,
+            char[] passPhrase,
+            boolean armor)
+            throws IOException, InvalidKeyException, NoSuchProviderException, SignatureException, PGPException {
+        if (armor) {
             secretOut = new ArmoredOutputStream(secretOut);
         }
 
         PGPDigestCalculator sha1Calc = new JcaPGPDigestCalculatorProviderBuilder().build().get(HashAlgorithmTags.SHA1);
-        PGPKeyPair          keyPair = new PGPKeyPair(publicKey, privateKey);
-        PGPSecretKey        secretKey = new PGPSecretKey(PGPSignature.DEFAULT_CERTIFICATION, keyPair, identity, sha1Calc, null, null, new JcaPGPContentSignerBuilder(keyPair.getPublicKey().getAlgorithm(), HashAlgorithmTags.SHA1), new JcePBESecretKeyEncryptorBuilder(PGPEncryptedData.CAST5, sha1Calc).setProvider(ProofMode.getProvider()).build(passPhrase));
+        PGPKeyPair keyPair = new PGPKeyPair(publicKey, privateKey);
+        PGPSecretKey secretKey = new PGPSecretKey(PGPSignature.DEFAULT_CERTIFICATION, keyPair, identity, sha1Calc, null, null, new JcaPGPContentSignerBuilder(keyPair.getPublicKey().getAlgorithm(), HashAlgorithmTags.SHA1), new JcePBESecretKeyEncryptorBuilder(PGPEncryptedData.CAST5, sha1Calc).setProvider(ProofMode.getProvider()).build(passPhrase));
 
         secretKey.encode(secretOut);
 
         secretOut.close();
 
-        if (armor)
-        {
+        if (armor) {
             publicOut = new ArmoredOutputStream(publicOut);
         }
 
-        PGPPublicKey    key = secretKey.getPublicKey();
+        PGPPublicKey key = secretKey.getPublicKey();
 
         key.encode(publicOut);
 
         publicOut.close();
     }
 
-    public void createDetachedSignature (File media, File mediaSig, String password, boolean armor) throws Exception
-    {
-        createDetachedSignature(new FileInputStream(media),new FileOutputStream(mediaSig), password, armor);
+    public void createDetachedSignature(File media, File mediaSig, String password, boolean armor) throws Exception {
+        createDetachedSignature(new FileInputStream(media), new FileOutputStream(mediaSig), password, armor);
 
     }
 
-    public void createDetachedSignature (InputStream is, OutputStream mediaSig, String password, boolean armor) throws Exception
-    {
+    public void createDetachedSignature(InputStream is, OutputStream mediaSig, String password, boolean armor) throws Exception {
         DetachedSignatureProcessor.createSignature(pgpSec, new DataInputStream(is), mediaSig, password.toCharArray(), armor);
 
     }
 
 
-    public synchronized void initCrypto (Context context, String password)
-    {
+    public synchronized void initCrypto(Context context, String password) {
         if (pgpSec == null) {
             try {
-                File fileSecKeyRing = new File(context.getFilesDir(),FILE_SECRET_KEY_RING);
-                File filePubKeyRing = new File(context.getFilesDir(),FILE_PUBLIC_KEY_RING);
+                File fileSecKeyRing = new File(context.getFilesDir(), FILE_SECRET_KEY_RING);
+                File filePubKeyRing = new File(context.getFilesDir(), FILE_PUBLIC_KEY_RING);
 
-                if (fileSecKeyRing.exists())
-                {
+                if (fileSecKeyRing.exists()) {
                     ArmoredInputStream sin = new ArmoredInputStream(new FileInputStream(fileSecKeyRing));
-                    skr = new PGPSecretKeyRing(sin,new BcKeyFingerprintCalculator());
+                    skr = new PGPSecretKeyRing(sin, new BcKeyFingerprintCalculator());
                     sin.close();
 
                     sin = new ArmoredInputStream(new FileInputStream(filePubKeyRing));
                     pkr = new PGPPublicKeyRing(sin, new BcKeyFingerprintCalculator());
                     sin.close();
-                }
-                else {
+                } else {
                     final PGPKeyRingGenerator krgen = generateKeyRingGenerator(keyId, password.toCharArray());
                     skr = krgen.generateSecretKeyRing();
 
@@ -332,64 +309,9 @@ public class PgpUtils {
         }
     }
 
-    public String retrievePublicKeyToBePublished() throws IOException
-    {
-        ByteArrayOutputStream baosPkr = new ByteArrayOutputStream();
-        Base64OutputStream bos = new Base64OutputStream(baosPkr, Base64.DEFAULT);
-        pkr.encode(bos);
-        bos.close();
-        return new String(baosPkr.toByteArray(), Charset.forName("UTF-8"));
-/*
-        new Thread () {
-
-            public void run() {
-
-                try {
-
-                    String queryString = "{\"keytext\":\"" + pubKey + "\"}";
-
-                    URL url = new URL(URL_POST_KEY_ENDPOINT);
-                    HttpURLConnection client = null;
-                    client = (HttpURLConnection) url.openConnection();
-                    client.setRequestMethod("POST");
-                    client.setRequestProperty("Content-Type",
-                            "application/json");
-                    client.setDoOutput(true);
-                    client.setDoInput(true);
-                    client.setReadTimeout(20000);
-                    client.setConnectTimeout(30000);
-
-                    PrintWriter out = new PrintWriter(client.getOutputStream());
-                    out.print(queryString);
-                    out.close();
-
-
-                    // handle issues
-                    int statusCode = client.getResponseCode();
-                    if (statusCode != HttpURLConnection.HTTP_OK) {
-                        // throw some exception
-                        Log.w("PGP","key did not upload: " + statusCode + " = " + client.getResponseMessage());
-                    }
-                    else
-                    {
-                        Log.w("PGP", "Published key: " + client.getResponseMessage());
-
-
-                    }
-
-
-                    client.disconnect();
-                }
-                catch (IOException ioe)
-                {
-                    ioe.printStackTrace();
-                }
-            }
-        }.start();*/
-    }
-
     private static final char PARAMETER_DELIMITER = '&';
     private static final char PARAMETER_EQUALS_CHAR = '=';
+
     public static String createQueryStringForParameters(Map<String, String> parameters) {
         StringBuilder parametersAsQueryString = new StringBuilder();
         if (parameters != null) {
@@ -400,16 +322,19 @@ public class PgpUtils {
                     parametersAsQueryString.append(PARAMETER_DELIMITER);
                 }
 
-                parametersAsQueryString.append(parameterName)
-                        .append(PARAMETER_EQUALS_CHAR)
-                        .append(URLEncoder.encode(
-                                parameters.get(parameterName)));
+                try {
+                    parametersAsQueryString.append(parameterName)
+                            .append(PARAMETER_EQUALS_CHAR)
+                            .append(URLEncoder.encode(
+                                    parameters.get(parameterName), "UTF-8"));
+                } catch (UnsupportedEncodingException e) {
+                    e.printStackTrace();
+                }
 
                 firstParameter = false;
             }
         }
         return parametersAsQueryString.toString();
     }
-
 
 }

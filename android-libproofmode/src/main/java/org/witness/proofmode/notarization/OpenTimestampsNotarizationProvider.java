@@ -7,12 +7,9 @@ import com.eternitywall.ots.Hash;
 import com.eternitywall.ots.OpenTimestamps;
 import com.eternitywall.ots.Timestamp;
 import com.eternitywall.ots.Utils;
-import com.eternitywall.ots.op.OpSHA256;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.security.NoSuchAlgorithmException;
 
 /**
  * Created by n8fr8 on 3/14/18.

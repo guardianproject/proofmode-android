@@ -119,4 +119,8 @@
     <string name="digital_signatures_whatis_info">Chaque fois que vous installez ProofMode, une identité numérique unique, composée de clés PGP secrètes et publiques est créé. Elle est alimentée par la norme de chiffrement OpenPGP. Elle est utilisée pour signer cryptographiquement vos supports numériques et les fichiers de preuve à l\'appui. Si les signatures PGP correspondent à l\'identité numérique (clé PGP) de votre instance actuelle de ProofMode, alors la signature a été créée par cette instance de ProofMode.</string>
     <string name="digital_signatures_whattodo_title">Qu\'est-ce que j\'en fais ?</string>
     <string name="digital_signatures_whattodo_info">Une version publique de votre clé PGP sera partagée avec vos supports numériques et les fichiers proof.csv. Celà permet à une tierce partie de vérifier les fichiers ".asc" de signature PGP qui accompagnent les données de preuve. L\'inclusion de votre clé PGP publique avec la preuve, garantit qu\'elle sera préservée au cas où votre appareil serait compromis ou si vous réinstallez l\'application. N\'oubliez pas que chaque fois que vous réinstallez l\'application, elle crée une nouvelle identité numérique (clé PGP).</string>
+    <string name="progress_checking_proof">Vérification des preuves…</string>
+    <string name="progress_generating_proof">Génération de preuves...</string>
+    <string name="progress_building_proof">Paquet de preuve de construction...</string>
+    <string name="waiting_proof_notify">Prêt à ajouter une preuve</string>
 </resources>

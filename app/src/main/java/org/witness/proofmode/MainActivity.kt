@@ -5,9 +5,7 @@ import android.animation.Animator
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -26,6 +24,7 @@ import org.witness.proofmode.onboarding.OnboardingActivity
 import org.witness.proofmode.util.GPSTracker
 import org.witness.proofmode.viewmodels.MainViewModel
 import org.witness.proofmode.viewmodels.MainViewModelFactory
+import timber.log.Timber
 import java.io.IOException
 
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
@@ -62,15 +61,14 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         mainBinding.drawerLayout.addDrawerListener(drawerToggle)
         drawerToggle.syncState()
         mainBinding.navView.setNavigationItemSelectedListener(this)
+        observeSuccess()
         val btnSettings = findViewById<ImageButton>(R.id.btnSettings)
         btnSettings.setOnClickListener { v: View? -> openSettings() }
         val btnShareProof = findViewById<View>(R.id.btnShareProof)
         btnShareProof.setOnClickListener { v: View? ->
             val intent = Intent()
             intent.type = "image/*"
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
-                intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
-            }
+            intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
             intent.action = Intent.ACTION_GET_CONTENT
             startActivityForResult(
                 Intent.createChooser(
@@ -80,6 +78,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             )
         }
         updateOnOffState(false)
+    }
+
+    private fun observeSuccess() {
+        mainViewModel.successMessage.observe(this) {
+            Toast.makeText(this, it, Toast.LENGTH_LONG).show()
+        }
     }
 
     fun toggleOnClicked(view: View?) {
@@ -194,12 +198,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         return askForPermissions(arrayOf(permission), requestCode)
     }
 
-    private fun observeError() {
-        mainViewModel.error.observe(this) {
-
-        }
-    }
-
     private fun publishKey() {
         try {
             mainViewModel.publishPublicKey()
@@ -209,13 +207,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 Toast.LENGTH_LONG
             ).show()
 
-            //String fingerprint = mPgpUtils.getPublicKeyFingerprint();
-
-            //Toast.makeText(this, R.string.open_public_key_page, Toast.LENGTH_LONG).show();
-
-            //openUrl(PgpUtils.URL_LOOKUP_ENDPOINT + fingerprint);
         } catch (ioe: Exception) {
-            Log.e("Proofmode", "error publishing key", ioe)
+            Timber.tag("Proofmode").e(ioe, "error publishing key")
         }
     }
 
@@ -228,7 +221,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             intent.putExtra(Intent.EXTRA_TEXT, pubKey)
             startActivity(intent)
         } catch (ioe: IOException) {
-            Log.e("Proofmode", "error publishing key", ioe)
+            Timber.e(ioe, "error publishing key $ioe")
         }
     }
 

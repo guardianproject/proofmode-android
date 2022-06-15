@@ -1,6 +1,5 @@
 package org.witness.proofmode.notarization;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 

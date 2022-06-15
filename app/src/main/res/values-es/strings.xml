@@ -116,4 +116,8 @@
 \n• Requiere acceso a Internet
 \n• Comparte archivos .csv con datos, PGP y huellas dactilares únicas</string>
     <string name="digital_signatures_whatis_info">Cada vez que instala ProofMode, se crea una identidad digital única, que consta de claves PGP públicas y secretas. Esto funciona con el estándar OpenPGP. Se utiliza para firmar criptográficamente tus medios y archivos de prueba de apoyo. Si las firmas PGP coinciden con la identidad digital (clave PGP) de su instancia actual de ProofMode, entonces la firma fue creada por esa instancia de ProofMode.</string>
+    <string name="progress_checking_proof">Buscando pruebas…</string>
+    <string name="progress_generating_proof">Generando prueba...</string>
+    <string name="progress_building_proof">Paquete de pruebas de construcción...</string>
+    <string name="waiting_proof_notify">Listo para agregar prueba</string>
 </resources>

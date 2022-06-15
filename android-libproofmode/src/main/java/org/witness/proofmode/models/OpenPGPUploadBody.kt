@@ -9,6 +9,5 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class OpenPGPUploadBody(
-
     @SerialName("keytext") val key:String
 )
