@@ -360,11 +360,15 @@ public class ShareProofActivity extends AppCompatActivity {
                 return false; //unable to open batch proof
             }
 
+            int successProof = 0;
 
             for (Uri mediaUri : mediaUris)
             {
-                if (!processUri (null, mediaUri, shareUris, shareText, fBatchProofOut, shareMedia))
-                    return false;
+                if (processUri (null, mediaUri, shareUris, shareText, fBatchProofOut, shareMedia)) {
+                    successProof++;
+                } else {
+                    Timber.d("share proof failed for: " + mediaUri);
+                }
             }
 
             fBatchProofOut.flush();
@@ -715,8 +719,13 @@ public class ShareProofActivity extends AppCompatActivity {
                 if (fileMedia != null)
                     lastModified = new Date(fileMedia.lastModified());
 
-                generateProofOutput(uriMedia, fileMedia, lastModified, fileMediaSig, fileMediaProof, fileMediaProofSig, fileMediaProofJSON, fileMediaProofJSONSig, fileMediaOpentimestamps, fileMediaGoogleSafetyNet, hash, shareMedia, fBatchProofOut, shareUris, sb);
-                return true;
+                try {
+                    generateProofOutput(uriMedia, fileMedia, lastModified, fileMediaSig, fileMediaProof, fileMediaProofSig, fileMediaProofJSON, fileMediaProofJSONSig, fileMediaOpentimestamps, fileMediaGoogleSafetyNet, hash, shareMedia, fBatchProofOut, shareUris, sb);
+                    return true;
+                } catch (IOException e) {
+                    Timber.d(e,"unable to geenrate proof output");
+                    return false;
+                }
             }
         }
 
@@ -751,13 +760,19 @@ public class ShareProofActivity extends AppCompatActivity {
 
         }
 
-        generateProofOutput(mediaUri, fileMedia, new Date(fileMedia.lastModified()), fileMediaSig, fileMediaProof, fileMediaProofSig, null, null,null, null, hash, shareMedia, fBatchProofOut, shareUris, sb);
+        try {
 
-        return false;
+            generateProofOutput(mediaUri, fileMedia, new Date(fileMedia.lastModified()), fileMediaSig, fileMediaProof, fileMediaProofSig, null, null, null, null, hash, shareMedia, fBatchProofOut, shareUris, sb);
+            return true;
+        }
+        catch (IOException ioe)
+        {
+            Timber.d(ioe,"unable to generate classic proof");
+            return false;
+        }
     }
 
-    private void generateProofOutput (Uri uriMedia, File fileMedia, Date fileLastModified, File fileMediaSig, File fileMediaProof, File fileMediaProofSig, File fileMediaProofJSON, File fileMediaProofJSONSig, File fileMediaNotary, File fileMediaNotary2, String hash, boolean shareMedia, PrintWriter fBatchProofOut, ArrayList<Uri> shareUris, StringBuffer sb)
-    {
+    private void generateProofOutput (Uri uriMedia, File fileMedia, Date fileLastModified, File fileMediaSig, File fileMediaProof, File fileMediaProofSig, File fileMediaProofJSON, File fileMediaProofJSONSig, File fileMediaNotary, File fileMediaNotary2, String hash, boolean shareMedia, PrintWriter fBatchProofOut, ArrayList<Uri> shareUris, StringBuffer sb) throws IOException {
         DateFormat sdf = SimpleDateFormat.getDateTimeInstance();
 
         String fingerprint = PgpUtils.getInstance(this).getPublicKeyFingerprint();
@@ -810,18 +825,14 @@ public class ShareProofActivity extends AppCompatActivity {
 
         if (fBatchProofOut != null)
         {
-            try {
+
                 BufferedReader br = new BufferedReader(new FileReader(fileMediaProof));
                 br.readLine();//skip header
                 String csvLine = br.readLine();
                 // Log.i("ShareProof","batching csv line: " + csvLine);
                 fBatchProofOut.println(csvLine);
                 br.close();
-            }
-            catch (IOException ioe)
-            {
-                Timber.d(ioe);
-            }
+
         }
     }
 

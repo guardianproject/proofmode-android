@@ -23,7 +23,7 @@ import java.util.TimerTask;
 import timber.log.Timber;
 
 /**
- * Job to monitor when there is a change to photos in the media provider.
+ * Job to monitor when there is a change to audio in the media provider.
  */
 
 @TargetApi(24)
