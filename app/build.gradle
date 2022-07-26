@@ -20,8 +20,8 @@ android {
         applicationId "org.witness.proofmode"
         minSdkVersion 16
         targetSdkVersion 31
-        versionCode 160103
-        versionName "0.0.16-ALPHA-3"
+        versionCode 160301
+        versionName "0.0.16-RC-1"
         multiDexEnabled true
         archivesBaseName = "ProofMode-$versionName"
     }
