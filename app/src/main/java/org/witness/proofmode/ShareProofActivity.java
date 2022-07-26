@@ -1090,7 +1090,6 @@ public class ShareProofActivity extends AppCompatActivity {
 
     private String getFileNameFromUri (Uri uri)
     {
-       // String[] projection = {MediaStore.Images.Media.DATA,MediaStore.Images.Media.DISPLAY_NAME};
 
         String[] projection = new String[2];
 
@@ -1109,7 +1108,7 @@ public class ShareProofActivity extends AppCompatActivity {
             }
             else if (mimeType.startsWith("audio")) {
                 projection[0] = MediaStore.Audio.Media.DATA;
-                projection[0] = MediaStore.Audio.Media.DISPLAY_NAME;
+                projection[1] = MediaStore.Audio.Media.DISPLAY_NAME;
             }
 
         }
