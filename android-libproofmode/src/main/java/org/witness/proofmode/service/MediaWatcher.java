@@ -351,7 +351,7 @@ public class MediaWatcher extends BroadcastReceiver {
 
                 if (fileMediaProofJson.exists()) {
                     //sign the proof file again
-                    PgpUtils.getInstance(context).createDetachedSignature(fileMediaProof, new File(fileFolder, hash + PROOF_FILE_JSON_TAG + OPENPGP_FILE_TAG), PgpUtils.DEFAULT_PASSWORD, usePgpArmor);
+                    PgpUtils.getInstance(context).createDetachedSignature(fileMediaProofJson, new File(fileFolder, hash + PROOF_FILE_JSON_TAG + OPENPGP_FILE_TAG), PgpUtils.DEFAULT_PASSWORD, usePgpArmor);
                 }
 
                 //sign the media file
@@ -360,24 +360,6 @@ public class MediaWatcher extends BroadcastReceiver {
                   PgpUtils.getInstance(context).createDetachedSignature(context.getContentResolver().openInputStream(uriMedia), new FileOutputStream(fileMediaSig), PgpUtils.DEFAULT_PASSWORD, usePgpArmor);
 
                 Timber.d("Proof written/updated for uri %s and hash %s", uriMedia, hash);
-
-                try {
-                    /**
-                    if (notarizeData != null) {
-                        if (notarizeType.equals(OPENTIMESTAMPS_FILE_TAG)) {
-                            byte[] rawNotarizeData = Base64.decode(notarizeData, Base64.DEFAULT);
-                            writeBytesToFile(context, fileMediaNotarizeData, rawNotarizeData);
-                        }
-                        else
-                        {
-                            writeBytesToFile(context,fileMediaNotarizeData, notarizeData.getBytes("UTF-8"));
-                        }
-                    }**/
-                }
-                catch (Exception e)
-                {
-                    Timber.d("unable to save notarization data to file: " + e);
-                }
 
             } catch (Exception e) {
                 Timber.d( "Error signing media or proof: %s", e.getLocalizedMessage());
