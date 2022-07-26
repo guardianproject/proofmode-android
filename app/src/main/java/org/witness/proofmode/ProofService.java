@@ -24,16 +24,19 @@ public class ProofService extends Service {
 
 
     private void showNotification (String notifyMsg) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 
             String NOTIFICATION_CHANNEL_ID = getPackageName();
             String channelName = getString(R.string.app_name);
-            NotificationChannel chan = new NotificationChannel(NOTIFICATION_CHANNEL_ID, channelName, NotificationManager.IMPORTANCE_NONE);
-            chan.setLightColor(Color.BLUE);
-            chan.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
-            NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-            assert manager != null;
-            manager.createNotificationChannel(chan);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+
+                NotificationChannel chan = new NotificationChannel(NOTIFICATION_CHANNEL_ID, channelName, NotificationManager.IMPORTANCE_NONE);
+                chan.setLightColor(Color.BLUE);
+                chan.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
+                NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                assert manager != null;
+                manager.createNotificationChannel(chan);
+            }
 
             Intent notificationIntent = new Intent(this, MainActivity.class);
 
@@ -52,8 +55,6 @@ public class ProofService extends Service {
 
             startForeground(1337, notification);
 
-
-        }
     }
 
     @Override

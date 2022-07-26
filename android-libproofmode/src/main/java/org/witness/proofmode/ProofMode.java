@@ -2,12 +2,14 @@ package org.witness.proofmode;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.net.Uri;
 import android.os.Build;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.witness.proofmode.library.R;
 import org.witness.proofmode.service.AudioContentJob;
+import org.witness.proofmode.service.CameraEventReceiver;
 import org.witness.proofmode.service.MediaWatcher;
 import org.witness.proofmode.service.PhotosContentJob;
 import org.witness.proofmode.service.VideosContentJob;
@@ -44,6 +46,8 @@ public class ProofMode {
         Security.addProvider(sProvider);
     }
 
+    private static CameraEventReceiver mReceiver;
+
     private static boolean mInit = false;
 
     public synchronized static void init (Context context)
@@ -56,10 +60,18 @@ public class ProofMode {
             VideosContentJob.scheduleJob(context);
             AudioContentJob.scheduleJob(context);
         }
+        else
+        {
+            mReceiver = new CameraEventReceiver();
+            context.registerReceiver(mReceiver, new IntentFilter("com.android.camera.NEW_PICTURE"));
+            context.registerReceiver(mReceiver, new IntentFilter("android.hardware.action.NEW_PICTURE"));
+            context.registerReceiver(mReceiver, new IntentFilter("com.android.camera.NEW_VIDEO"));
+        }
 
         mInit = true;
 
         MediaWatcher.getInstance(context);
+
 
         SafetyNetCheck.setApiKey(context.getString(R.string.verification_api_key));
 
@@ -72,8 +84,14 @@ public class ProofMode {
             VideosContentJob.cancelJob(context);
             AudioContentJob.cancelJob(context);
         }
+        else
+        {
+            if (mReceiver != null)
+                context.unregisterReceiver(mReceiver);
+        }
 
         MediaWatcher.getInstance(context).stop();
+
     }
 
     public static BouncyCastleProvider getProvider ()

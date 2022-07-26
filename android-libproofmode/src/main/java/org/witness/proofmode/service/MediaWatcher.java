@@ -718,7 +718,7 @@ public class MediaWatcher extends BroadcastReceiver {
 
             String pathToWatch = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).getAbsolutePath();
 
-            observerMedia = new RecursiveFileObserver(pathToWatch, FileObserver.CLOSE_WRITE|FileObserver.MOVED_TO) { // set up a file observer to watch this directory on sd card
+            observerMedia = new RecursiveFileObserver(pathToWatch, FileObserver.MODIFY|FileObserver.CLOSE_WRITE|FileObserver.MOVED_TO) { // set up a file observer to watch this directory on sd card
                 @Override
                 public void onEvent(int event, final String mediaPath) {
                     if (mediaPath != null && (!mediaPath.equals(".probe"))) { // check that it's not equal to .probe because thats created every time camera is launched
