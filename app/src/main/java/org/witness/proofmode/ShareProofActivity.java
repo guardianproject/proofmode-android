@@ -56,6 +56,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -144,16 +146,16 @@ public class ShareProofActivity extends AppCompatActivity {
      List<String> paths = mediaUri.getPathSegments();
      for (String path: paths)
      {
-     if (path.startsWith(contentEnc))
-     {
-     try {
-     String pathDec = URLDecoder.decode(path,"UTF-8");
-     resultUri = Uri.parse(pathDec);
-     break;
-     } catch (UnsupportedEncodingException e) {
-     e.printStackTrace();
-     }
-     }
+         if (path.startsWith(contentEnc))
+         {
+             try {
+                 String pathDec = URLDecoder.decode(path,"UTF-8");
+                 resultUri = Uri.parse(pathDec);
+                 break;
+             } catch (UnsupportedEncodingException e) {
+             e.printStackTrace();
+             }
+         }
      }
 
         return resultUri;
