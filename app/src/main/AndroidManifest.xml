@@ -165,6 +165,26 @@
             </intent-filter>
         </service>
 
+        <receiver
+            android:name="org.witness.proofmode.service.CameraEventReceiver"
+            android:exported="true"
+            android:enabled="true" >
+
+            <intent-filter android:priority="10000">
+                <action android:name="com.android.camera.NEW_PICTURE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+
+
+            <intent-filter android:priority="10000">
+                <action android:name="com.android.camera.NEW_VIDEO" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="video/*" />
+            </intent-filter>
+
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"

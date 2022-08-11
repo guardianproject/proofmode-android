@@ -79,7 +79,7 @@ project.afterEvaluate {
             release(MavenPublication) {
                 groupId 'org.witness'
                 artifactId 'android-libproofmode'
-                version '1.0.16'
+                version '1.0.17'
                 from components.release
             }
         }

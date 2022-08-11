@@ -1,6 +1,9 @@
 package org.witness.proofmode.crypto;
 
 import java.io.BufferedInputStream;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -20,8 +23,8 @@ public class HashUtils {
         try
         {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] buffer = new byte[1024*16]; //16k chunks
-            BufferedInputStream fis = new BufferedInputStream(is);
+            byte[] buffer = new byte[1024*64]; //16k chunks
+            DataInputStream fis = new DataInputStream(is);
             int n = 0;
             while (n != -1)
             {

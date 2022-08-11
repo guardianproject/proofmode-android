@@ -20,10 +20,10 @@ android {
 
     defaultConfig {
         applicationId "org.witness.proofmode"
-        minSdkVersion 21
+        minSdkVersion 16
         targetSdkVersion 32
-        versionCode 160102
-        versionName "0.0.16-ALPHA-2"
+        versionCode 170101
+        versionName "0.0.17-alpha-1"
         multiDexEnabled true
         archivesBaseName = "ProofMode-$versionName"
     }

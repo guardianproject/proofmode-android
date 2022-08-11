@@ -17,7 +17,8 @@ THEHASHVALUEFORYOURPHOTO  PXL_20220204_035043227.jpg
 
 3) verify signature using actual photo to test GOOD signature
 
-gpg --verify THEHASHVALUEFORYOURPHOTO.asc PXL_20220204_035043227.jpg
+gpg --dearmor pubkey.asc
+gpg --no-default-keyring --keyring ./pubkey.asc.gpg --homedir ./ --verify THEHASHVALUEFORYOURPHOTO.asc PXL_20220204_035043227.jpg
 
 gpg: Signature made Thu 03 Feb 2022 10:51:16 PM EST
 gpg:                using RSA key 560CC828C726365F

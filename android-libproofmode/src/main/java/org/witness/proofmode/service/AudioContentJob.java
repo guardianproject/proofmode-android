@@ -23,7 +23,7 @@ import java.util.TimerTask;
 import timber.log.Timber;
 
 /**
- * Job to monitor when there is a change to photos in the media provider.
+ * Job to monitor when there is a change to audio in the media provider.
  */
 
 @TargetApi(24)
@@ -108,7 +108,7 @@ public class AudioContentJob extends JobService {
                 ArrayList<Uri> uris = new ArrayList<>(mUriStack.keySet());
 
                 for (Uri uri : uris) {
-                    MediaWatcher.getInstance(AudioContentJob.this).processUri(uri);
+                    MediaWatcher.getInstance(AudioContentJob.this).processUri(uri, true);
                     mUriStack.remove(uri);
                 }
 
