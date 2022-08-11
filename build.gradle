@@ -14,7 +14,7 @@ buildscript {
 }
 
 ext {
-    supportLibVersion = '28.0.0'
+    supportLibVersion = '32.0.0'
 }
 
 allprojects {
@@ -29,10 +29,10 @@ allprojects {
     }
     project.ext {
         // these are common variables used in */build.gradle
-        buildToolsVersion="30.0.3"
-        compileSdkVersion=30
+        buildToolsVersion="32.0.0"
+        compileSdkVersion=32
         minSdkVersion=21
-        targetSdkVersion=30
+        targetSdkVersion=32
     }
 }
 
