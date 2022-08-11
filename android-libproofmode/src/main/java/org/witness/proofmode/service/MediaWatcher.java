@@ -5,6 +5,8 @@ import static org.witness.proofmode.ProofMode.OPENPGP_FILE_TAG;
 import static org.witness.proofmode.ProofMode.OPENTIMESTAMPS_FILE_TAG;
 import static org.witness.proofmode.ProofMode.PREFS_DOPROOF;
 import static org.witness.proofmode.ProofMode.PROOF_FILE_TAG;
+import static org.witness.proofmode.ProofMode.PROOF_FILE_JSON_TAG;
+
 
 import android.Manifest;
 import android.content.BroadcastReceiver;
