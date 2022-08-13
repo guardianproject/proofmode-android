@@ -53,15 +53,16 @@
         app:srcCompat="@drawable/ic_circle" />
 
     <ImageButton
-        android:contentDescription="@string/resume_recording"
         android:id="@+id/buttonResume"
         android:layout_width="wrap_content"
-        android:visibility="invisible"
         android:layout_height="wrap_content"
+        android:layout_marginEnd="24dp"
         android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/resume_recording"
+        android:visibility="invisible"
         app:layout_constraintBottom_toTopOf="@+id/guideline"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/buttonCaptureVideo"
+        app:layout_constraintEnd_toStartOf="@+id/buttonCapturePicture"
         app:srcCompat="@drawable/ic_resume" />
 
     <ImageButton
