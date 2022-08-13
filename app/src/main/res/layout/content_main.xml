@@ -78,6 +78,23 @@
                 android:background="@null"
                 android:scaleType="fitCenter"
                 android:src="@drawable/ic_baseline_photo_library_24" />
+                android:onClick="toggleOffClicked"
+                android:src="@drawable/ic_toggle_on"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:textColor="@android:color/black"
+                app:layout_constraintBottom_toTopOf="@id/toggle_y_guideline" />
+
+            <ImageView
+                android:contentDescription="@string/start_camera"
+                android:id="@+id/cameraLauncher"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:onClick="startNewActivity"
+                android:layout_marginTop="24dp"
+                android:src="@drawable/ic_camera"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/toggleOff" />
 
             <TextView
                 style="@style/OnboardingStepTextStyle"
