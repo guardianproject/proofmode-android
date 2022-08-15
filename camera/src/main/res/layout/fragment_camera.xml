@@ -14,8 +14,35 @@
   <androidx.constraintlayout.widget.ConstraintLayout
       android:layout_width="match_parent"
       android:background="@android:color/darker_gray"
-      android:layout_height="match_parent"
-      tools:context=".CameraFragment">
+      android:layout_height="match_parent">
+
+      <com.google.android.material.card.MaterialCardView
+          android:layout_width="60dp"
+          android:id="@+id/cardView"
+          android:visibility="invisible"
+          app:strokeColor="@android:color/black"
+          app:strokeWidth="@dimen/cardview_default_radius"
+          android:layout_height="60dp"
+          app:layout_constraintBottom_toTopOf="@+id/guideline"
+          app:layout_constraintEnd_toEndOf="parent"
+          app:layout_constraintStart_toEndOf="@+id/buttonCaptureVideo"
+          app:cardCornerRadius="40dp"
+          tools:visibility="visible"
+          app:cardElevation="2dp">
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="80dp"
+            app:cardCornerRadius="100dp"
+            android:layout_gravity="center"
+            android:layout_height="80dp">
+          <ImageView
+              android:id="@+id/capturedImagePreview"
+              android:layout_width="match_parent"
+              android:scaleType="centerCrop"
+              android:layout_height="match_parent"/>
+
+        </com.google.android.material.card.MaterialCardView>
+
+      </com.google.android.material.card.MaterialCardView>
 
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/guideline3"
@@ -24,7 +51,7 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal" />
 
-    <Chronometer
+    <com.google.android.material.chip.Chip
         android:id="@+id/chronometer"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -33,6 +60,7 @@
         android:visibility="invisible"
         android:textColor="@android:color/holo_red_dark"
         tools:visibility="visible"
+        android:text="0"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

@@ -1,0 +1,6 @@
+<resources>
+    <declare-styleable name="CircleImageView">
+        <attr name="border_color" format="color"/>
+        <attr name="src" format="integer"/>
+    </declare-styleable>
+</resources>
