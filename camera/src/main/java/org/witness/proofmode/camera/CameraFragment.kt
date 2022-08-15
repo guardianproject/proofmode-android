@@ -5,16 +5,13 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.media.AudioAttributes
-import android.media.SoundPool
-import android.media.ThumbnailUtils
+import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.provider.Settings
 import android.util.Log
-import android.util.Size
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -33,8 +30,6 @@ import androidx.camera.video.*
 import androidx.camera.view.PreviewView
 import androidx.concurrent.futures.await
 import androidx.core.content.ContextCompat
-import androidx.core.graphics.createBitmap
-import androidx.core.net.toFile
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
@@ -68,15 +63,14 @@ class CameraFragment : Fragment() {
     private lateinit var videoTimer: Chip
     private lateinit var previewView: PreviewView
     private lateinit var resumeRecordingVideoButton: ImageButton
-    private lateinit var capturedPreview:ImageView
+    private lateinit var capturedPreview: ImageView
     private lateinit var flashSettingsButton: Button
-    private var cameraSelector:CameraSelector? = null
-    private val viewModel:FlashModeViewModel by activityViewModels()
+    private var cameraSelector: CameraSelector? = null
+    private val viewModel: FlashModeViewModel by activityViewModels()
 
     private var _binding: FragmentCameraBinding? = null
 
     private val binding get() = _binding!!
-
 
 
     override fun onCreateView(
@@ -94,33 +88,20 @@ class CameraFragment : Fragment() {
 
     }
 
-    private fun playSound(@RawRes soundFile:Int){
-        /*var mediaPlayer:MediaPlayer? = MediaPlayer.create(requireActivity(),soundFile)
+    private fun playSound(@RawRes soundFile: Int) {
+        var mediaPlayer: MediaPlayer? = MediaPlayer.create(requireActivity(), soundFile)
         mediaPlayer?.start()
         mediaPlayer?.setOnCompletionListener {
             it.release()
             mediaPlayer = null
-        }*/
-
-        val attrs = AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-            .build()
-        val soundPool = SoundPool.Builder()
-            .setAudioAttributes(attrs)
-            .setMaxStreams(3)
-            .build()
-        val soundIds = arrayOf(soundPool.load(requireContext(),soundFile,1))
-        soundPool.play(soundIds[0],2f,2f,0,0,1f)
-        //soundPool.release()
-
+        }
 
     }
 
 
     private fun observeSettingsChange() {
 
-        viewModel.flashMode.observe(viewLifecycleOwner){
+        viewModel.flashMode.observe(viewLifecycleOwner) {
             rebindImageCapture(it)
         }
     }
@@ -144,7 +125,6 @@ class CameraFragment : Fragment() {
         }
 
         setClickListeners()
-        setVideoTimeTickEvent()
 
     }
 
@@ -164,19 +144,6 @@ class CameraFragment : Fragment() {
         }
     }
 
-    private fun setVideoTimeTickEvent() {
-        /*videoTimer.setOnChronometerTickListener {
-            if (!resume) {
-                val minutes = ((SystemClock.elapsedRealtime() - it.base) / 1000) / 60
-                val seconds = ((SystemClock.elapsedRealtime() - it.base) / 1000) % 60
-                elapsedTime = SystemClock.elapsedRealtime()
-            } else {
-                val minutes = ((SystemClock.elapsedRealtime() - elapsedTime) / 1000) / 60
-                val seconds = ((SystemClock.elapsedRealtime() - elapsedTime) / 1000) % 60
-                elapsedTime += 1000
-            }
-        }*/
-    }
 
     private fun setClickListeners() {
 
@@ -206,7 +173,7 @@ class CameraFragment : Fragment() {
         }
         flashSettingsButton.setOnClickListener {
             val dialog = FlashSettingsDialogFragment()
-            dialog.show(requireActivity().supportFragmentManager,"dialog")
+            dialog.show(requireActivity().supportFragmentManager, "dialog")
         }
 
 
@@ -258,14 +225,14 @@ class CameraFragment : Fragment() {
 
     }
 
-    private fun rebindImageCapture(flashMode:Int) {
-        val imageCapture = imageCapture?:return
+    private fun rebindImageCapture(flashMode: Int) {
+        val imageCapture = imageCapture ?: return
         imageCapture.flashMode = flashMode
         try {
             cameraProvider.unbind(imageCapture)
-            cameraProvider.bindToLifecycle(this,cameraSelector!!,imageCapture)
+            cameraProvider.bindToLifecycle(this, cameraSelector!!, imageCapture)
 
-        }catch (ex:Exception) {
+        } catch (ex: Exception) {
             Log.e(TAG, "rebindImageCapture: Error binding image capture usecase")
         }
 
@@ -370,9 +337,10 @@ class CameraFragment : Fragment() {
 
                     is VideoRecordEvent.Finalize -> {
 
-                       //val file:File =  recordEvent.outputResults.outputUri.toFile()
+                        //val file:File =  recordEvent.outputResults.outputUri.toFile()
                         capturedPreview.setImageURI(recordEvent.outputResults.outputUri)
-                        val bitmap = createVideoThumb(requireContext(),recordEvent.outputResults.outputUri)
+                        val bitmap =
+                            createVideoThumb(requireContext(), recordEvent.outputResults.outputUri)
                         if (bitmap != null) {
                             capturedPreview.setImageBitmap(bitmap)
                             binding.cardView.visibility = View.VISIBLE
@@ -435,7 +403,6 @@ class CameraFragment : Fragment() {
 
 
     }
-
 
 
     private fun captureImage() {

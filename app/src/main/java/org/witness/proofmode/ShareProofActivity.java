@@ -2,10 +2,10 @@ package org.witness.proofmode;
 
 import static org.witness.proofmode.ProofMode.GOOGLE_SAFETYNET_FILE_TAG;
 import static org.witness.proofmode.ProofMode.OPENPGP_FILE_TAG;
-import static org.witness.proofmode.ProofMode.PROOF_FILE_JSON_TAG;
-import static org.witness.proofmode.ProofMode.PROOF_FILE_TAG;
 import static org.witness.proofmode.ProofMode.OPENTIMESTAMPS_FILE_TAG;
 import static org.witness.proofmode.ProofMode.PROVIDER_TAG;
+import static org.witness.proofmode.ProofMode.PROOF_FILE_JSON_TAG;
+import static org.witness.proofmode.ProofMode.PROOF_FILE_TAG;
 
 import android.Manifest;
 import android.app.Dialog;
