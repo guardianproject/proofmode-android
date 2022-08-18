@@ -22,7 +22,7 @@ class FlashSettingsDialogFragment: DialogFragment() {
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         preferences = requireActivity().getSharedPreferences(PREFS_FILE_NAME,MODE_PRIVATE)
-        val mode = preferences.getInt(FLASH_KEY,ImageCapture.FLASH_MODE_OFF)
+
 
         return activity?.let {
             val builder = AlertDialog.Builder(it)
@@ -34,9 +34,6 @@ class FlashSettingsDialogFragment: DialogFragment() {
             initViews()
             initListeners()
             observeModeChange()
-            // If mode is 100, enable torch
-            setFlashMode(mode)
-
             builder.create()
         }?: throw IllegalStateException("Activity cannot be null")
 
@@ -61,9 +58,14 @@ class FlashSettingsDialogFragment: DialogFragment() {
                         R.color.colorAccent,
                         requireContext()
                     )
-                    viewModel.tintButton(flashAutoButton,android.R.color.black,requireContext())
-                    viewModel.tintButton(flashOffButton,android.R.color.black,requireContext())
-
+                    viewModel.tintButton(
+                        flashAutoButton,
+                        android.R.color.black,
+                        requireContext())
+                    viewModel.tintButton(
+                        flashOffButton,
+                        android.R.color.black,
+                        requireContext())
 
                 }
 
@@ -74,8 +76,14 @@ class FlashSettingsDialogFragment: DialogFragment() {
                         requireContext()
                     )
 
-                    viewModel.tintButton(flashAutoButton,R.color.colorAccent,requireContext())
-                    viewModel.tintButton(flashOffButton,android.R.color.black,requireContext())
+                    viewModel.tintButton(
+                        flashAutoButton,
+                        R.color.colorAccent,
+                        requireContext())
+                    viewModel.tintButton(
+                        flashOffButton,
+                        android.R.color.black,
+                        requireContext())
                 }
                 ImageCapture.FLASH_MODE_OFF -> {
                     viewModel.tintButton(
@@ -84,8 +92,14 @@ class FlashSettingsDialogFragment: DialogFragment() {
                         requireContext()
                     )
 
-                    viewModel.tintButton(flashAutoButton,android.R.color.black,requireContext())
-                    viewModel.tintButton(flashOffButton,R.color.colorAccent,requireContext())
+                    viewModel.tintButton(
+                        flashAutoButton,
+                        android.R.color.black,
+                        requireContext())
+                    viewModel.tintButton(
+                        flashOffButton,
+                        R.color.colorAccent,
+                        requireContext())
 
                 }
 
@@ -96,8 +110,14 @@ class FlashSettingsDialogFragment: DialogFragment() {
                         requireContext()
                     )
 
-                    viewModel.tintButton(flashAutoButton,android.R.color.black,requireContext())
-                    viewModel.tintButton(flashOffButton,R.color.colorAccent,requireContext())
+                    viewModel.tintButton(
+                        flashAutoButton,
+                        android.R.color.black,
+                        requireContext())
+                    viewModel.tintButton(
+                        flashOffButton,
+                        R.color.colorAccent,
+                        requireContext())
                 }
 
             }
@@ -113,20 +133,16 @@ class FlashSettingsDialogFragment: DialogFragment() {
 
     private fun initListeners() {
         flashAutoButton.setOnClickListener {
-
             setFlashMode(ImageCapture.FLASH_MODE_AUTO)
-            setPreferenceSetting(ImageCapture.FLASH_MODE_AUTO)
             dismiss()
         }
         flashOffButton.setOnClickListener {
             setFlashMode(ImageCapture.FLASH_MODE_OFF)
-            setPreferenceSetting(ImageCapture.FLASH_MODE_OFF)
             dismiss()
         }
 
         flashOnButton.setOnClickListener {
             setFlashMode(ImageCapture.FLASH_MODE_ON)
-            setPreferenceSetting(ImageCapture.FLASH_MODE_ON)
             dismiss()
         }
 

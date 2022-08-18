@@ -10,5 +10,26 @@
         android:name="org.witness.proofmode.camera.CameraFragment"
         android:label=""
         tools:layout="@layout/fragment_camera">
+        <action
+            android:id="@+id/action_camera_fragment_to_viewCapturedFragment"
+            app:destination="@id/view_captured_fragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/permissions_fragment"
+        tools:layout="@layout/fragment_permissions"
+        android:name="org.witness.proofmode.camera.PermissionsFragment"
+        android:label="" >
+        <action
+            app:launchSingleTop="true"
+            app:popUpToInclusive="true"
+            app:popUpTo="@id/nav_graph"
+            android:id="@+id/action_permissions_fragment_to_camera_fragment"
+            app:destination="@id/camera_fragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/view_captured_fragment"
+        tools:layout="@layout/fragment_view_captured"
+        android:name="org.witness.proofmode.camera.ViewCapturedFragment"
+        android:label="" >
     </fragment>
 </navigation>

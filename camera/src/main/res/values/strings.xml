@@ -7,5 +7,15 @@
     <string name="stop_video_record">Stop</string>
     <string name="capture_image">Capture</string>
     <string name="flip_camera">Flip</string>
-    <string name="permission_reason">We need to use the Camera</string>
+    <string name="open_settings">Settings</string>
+    <string name="open_camera_settings">Settings</string>
+    <string name="chronometer_format">HH:MM:SS</string>
+    <string name="title_activity_permissions">PermissionsActivity</string>
+    <string name="permission_reason">Allow Proofmode to access your camera,audio and local storage to take photos and videos and more</string>
+    <string name="allow_access">Allow access</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="camera_seetings_required">Permissions are required to use the Camera.Enable in settings</string>
+    <string name="capture_error">Error binding camera</string>
+    <string name="flash_settings">Flash settings</string>
 </resources>

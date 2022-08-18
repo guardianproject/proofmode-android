@@ -3,11 +3,21 @@ package org.witness.proofmode.camera
 import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
+import android.database.Cursor
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.os.Build
+import android.provider.MediaStore
+import android.widget.ImageView
+import android.widget.MediaController
 import android.widget.Toast
-import androidx.core.app.ActivityCompat
+import android.widget.VideoView
+import androidx.camera.video.VideoRecordEvent.Finalize
+import androidx.core.content.ContextCompat
+import androidx.databinding.BindingAdapter
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.LiveData
 import java.text.DecimalFormat
 import java.util.concurrent.TimeUnit
 
@@ -60,3 +70,72 @@ fun createVideoThumb(context: Context, uri: Uri): Bitmap? {
     return null
 
 }
+
+@BindingAdapter("app:imageUri")
+fun bindImageUri(imageView: ImageView,uri:LiveData<Uri?>){
+    uri.value?.let {
+        imageView.setImageURI(it)
+    }
+}
+
+@BindingAdapter("app:imageBitmap")
+fun bindBitmap(imageView: ImageView,bitmap:LiveData<Bitmap?>){
+    bitmap.value?.let {
+        imageView.setImageBitmap(it)
+    }
+}
+
+@BindingAdapter("app:videoUri")
+fun bindVideoUri(videoView: VideoView,uri:LiveData<Uri?>){
+    uri.value?.let {
+        val mediaController = MediaController(videoView.context)
+        mediaController.setAnchorView(videoView)
+        videoView.setVideoURI(it)
+        videoView.start()
+    }
+}
+
+
+/**
+ * The errorToString method in the VideoRecordEvent file/package
+ * is package private, so we create a similar method here
+ */
+fun errorString(@Finalize.VideoRecordError error: Int):String {
+    when (error) {
+        Finalize.ERROR_NONE -> return "ERROR_NONE"
+        Finalize.ERROR_UNKNOWN -> return "ERROR_UNKNOWN"
+        Finalize.ERROR_FILE_SIZE_LIMIT_REACHED -> return "ERROR_FILE_SIZE_LIMIT_REACHED"
+        Finalize.ERROR_INSUFFICIENT_STORAGE -> return "ERROR_INSUFFICIENT_STORAGE"
+        Finalize.ERROR_INVALID_OUTPUT_OPTIONS -> return "ERROR_INVALID_OUTPUT_OPTIONS"
+        Finalize.ERROR_ENCODING_FAILED -> return "ERROR_ENCODING_FAILED"
+        Finalize.ERROR_RECORDER_ERROR -> return "ERROR_RECORDER_ERROR"
+        Finalize.ERROR_NO_VALID_DATA -> return "ERROR_NO_VALID_DATA"
+        Finalize.ERROR_SOURCE_INACTIVE -> return "ERROR_SOURCE_INACTIVE"
+    }
+
+    // Should never reach here, but just in case...
+
+    // Should never reach here, but just in case...
+    return "Unknown($error)"
+}
+
+fun Context.getImagesFromUri(): List<Bitmap>{
+    val images = mutableListOf<Bitmap>()
+    val imagesCollection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+    } else {
+        MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+    }
+
+    val projection = arrayOf(
+        MediaStore.Images.Media._ID,
+        MediaStore.Images.Media.DATA,
+        MediaStore.Images.Media.DISPLAY_NAME,
+    )
+    val cursor = this.contentResolver.query(imagesCollection, projection, null, null, null)
+
+
+    return images
+}
+
+

@@ -17,30 +17,27 @@
       android:layout_height="match_parent">
 
       <com.google.android.material.card.MaterialCardView
-          android:layout_width="60dp"
-          android:id="@+id/cardView"
+          android:layout_width="48dp"
+          android:id="@+id/imagePreviewContainer"
+          app:cardBackgroundColor="@android:color/transparent"
           android:visibility="invisible"
           app:strokeColor="@android:color/black"
           app:strokeWidth="@dimen/cardview_default_radius"
-          android:layout_height="60dp"
+          android:layout_height="48dp"
           app:layout_constraintBottom_toTopOf="@+id/guideline"
           app:layout_constraintEnd_toEndOf="parent"
           app:layout_constraintStart_toEndOf="@+id/buttonCaptureVideo"
           app:cardCornerRadius="40dp"
           tools:visibility="visible"
           app:cardElevation="2dp">
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="80dp"
-            app:cardCornerRadius="100dp"
-            android:layout_gravity="center"
-            android:layout_height="80dp">
           <ImageView
+              app:imageUri="@{flashSettingsViewModel.imageUri}"
+              app:imageBitmap="@{flashSettingsViewModel.videoImageBitmap}"
               android:id="@+id/capturedImagePreview"
               android:layout_width="match_parent"
               android:scaleType="centerCrop"
               android:layout_height="match_parent"/>
 
-        </com.google.android.material.card.MaterialCardView>
 
       </com.google.android.material.card.MaterialCardView>
 
@@ -52,7 +49,7 @@
         android:orientation="horizontal" />
 
     <com.google.android.material.chip.Chip
-        android:id="@+id/chronometer"
+        android:id="@+id/videoTimerView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
@@ -133,8 +130,8 @@
         android:contentDescription="@string/capture_image"
         android:id="@+id/buttonCapturePicture"
         android:background="?attr/selectableItemBackgroundBorderless"
-        android:layout_width="65dp"
-        android:layout_height="65dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         app:layout_constraintBottom_toTopOf="@+id/guideline"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -181,8 +178,9 @@
         android:id="@+id/buttonFlashSettings"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:drawableStart="@drawable/ic_settings"
+        android:contentDescription="@string/flash_settings"
         android:drawableEnd="@drawable/ic_arrow_down"
+        android:minHeight="48dp"
         app:icon="@drawable/ic_settings"
         app:layout_constraintBottom_toTopOf="@id/guideline3"
         app:layout_constraintEnd_toEndOf="parent"

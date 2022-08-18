@@ -1,7 +1,9 @@
 package org.witness.proofmode.camera
 
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.ViewGroup
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
@@ -12,11 +14,11 @@ import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import org.witness.proofmode.camera.databinding.ActivityCameraMainBinding
-
 class CameraModuleActivity : AppCompatActivity() {
 
     private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var binding: ActivityCameraMainBinding
+    private val viewModel:CameraViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -24,7 +26,7 @@ class CameraModuleActivity : AppCompatActivity() {
         binding = ActivityCameraMainBinding.inflate(layoutInflater)
         displayEdgeToEdge()
         setContentView(binding.root)
-
+        binding.viewModel = viewModel
         binding.lifecycleOwner = this
         setSupportActionBar(binding.toolbar)
 
@@ -35,7 +37,12 @@ class CameraModuleActivity : AppCompatActivity() {
 
     }
 
-
+    override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
+        return if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP){
+            viewModel.setEventFromKeyCode(keyCode)
+            true
+        } else super.onKeyUp(keyCode, event)
+    }
 
 
     override fun onSupportNavigateUp(): Boolean {

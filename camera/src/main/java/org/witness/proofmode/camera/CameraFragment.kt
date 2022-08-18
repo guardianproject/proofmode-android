@@ -6,19 +6,18 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.MediaPlayer
+import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.provider.Settings
 import android.util.Log
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import android.widget.ImageButton
-import android.widget.ImageView
-import android.widget.Toast
+import android.widget.*
 import androidx.annotation.RawRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
@@ -33,6 +32,8 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
+import com.google.android.material.card.MaterialCardView
 import com.google.android.material.chip.Chip
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
@@ -52,6 +53,7 @@ class CameraFragment : Fragment() {
     private var preview: Preview? = null
     private var resume = false
     private var flashMode = ImageCapture.FLASH_MODE_OFF
+    private val proofModeDir = "DCIM/Proofmode"
 
     // Views
     private lateinit var captureImageButton: ImageButton
@@ -65,6 +67,7 @@ class CameraFragment : Fragment() {
     private lateinit var resumeRecordingVideoButton: ImageButton
     private lateinit var capturedPreview: ImageView
     private lateinit var flashSettingsButton: Button
+    private lateinit var imageViewContainer:MaterialCardView
     private var cameraSelector: CameraSelector? = null
     private val viewModel: FlashModeViewModel by activityViewModels()
 
@@ -81,11 +84,21 @@ class CameraFragment : Fragment() {
         _binding = FragmentCameraBinding.inflate(inflater, container, false)
         binding.flashSettingsViewModel = viewModel
         binding.lifecycleOwner = this
-
         initViews()
         observeSettingsChange()
+        observeKeyEventChanges()
         return binding.root
 
+    }
+
+    private fun observeKeyEventChanges() {
+        viewModel.keyEvent.observe(viewLifecycleOwner) {
+
+            if (it == KeyEvent.KEYCODE_VOLUME_UP || it == KeyEvent.KEYCODE_VOLUME_DOWN) {
+                captureImage()
+            }
+
+        }
     }
 
     private fun playSound(@RawRes soundFile: Int) {
@@ -134,13 +147,14 @@ class CameraFragment : Fragment() {
             recordVideoButton = buttonCaptureVideo
             pauseRecordingVideoButton = buttonPauseVideoRecording
             stopRecordingVideoButton = buttonStopRecording
-            videoTimer = chronometer
+            videoTimer = videoTimerView
             flipCameraButton = buttonFlipCamera
             dot = buttonDot
             previewView = viewFinderView
             resumeRecordingVideoButton = buttonResume
             flashSettingsButton = buttonFlashSettings
             capturedPreview = capturedImagePreview
+            imageViewContainer = imagePreviewContainer
         }
     }
 
@@ -148,7 +162,6 @@ class CameraFragment : Fragment() {
     private fun setClickListeners() {
 
         captureImageButton.setOnClickListener {
-            playSound(R.raw.camera_click)
             captureImage()
         }
 
@@ -176,7 +189,14 @@ class CameraFragment : Fragment() {
             dialog.show(requireActivity().supportFragmentManager, "dialog")
         }
 
-
+        capturedPreview.setOnClickListener {
+            viewModel.mediaType.value?.let {
+                if (it == MediaType.TypeVideo) {
+                    val action = CameraFragmentDirections.actionCameraFragmentToViewCapturedFragment()
+                    findNavController().navigate(action)
+                }
+            }
+        }
     }
 
 
@@ -205,8 +225,7 @@ class CameraFragment : Fragment() {
             )
 
         } catch (ex: Exception) {
-            Toast.makeText(requireContext(), "Error binding camera", Toast.LENGTH_LONG).show()
-
+            Toast.makeText(requireContext(), getString(R.string.capture_error), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -270,7 +289,6 @@ class CameraFragment : Fragment() {
         //videoTimer.start()
         recording?.resume()
 
-
     }
 
     private fun captureVideo() {
@@ -281,10 +299,9 @@ class CameraFragment : Fragment() {
             recording = null
             return
         }
-        binding.buttonFlipCamera.isEnabled = false
-        binding.buttonFlipCamera.visibility = View.INVISIBLE
+
+        flipCameraButton.visibility = View.INVISIBLE
         videoTimer.visibility = View.VISIBLE
-        //videoTimer.start()
         val name = SimpleDateFormat(FILE_NAME_FORMAT, Locale.US)
             .format(System.currentTimeMillis())
         val contentValues = ContentValues().apply {
@@ -292,7 +309,7 @@ class CameraFragment : Fragment() {
             put(MediaStore.MediaColumns.MIME_TYPE, "video/mp4")
             //put(MediaStore.MediaColumns.MIME_TYPE, "video/mp4")
             if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
-                put(MediaStore.Video.Media.RELATIVE_PATH, "DCIM/Proofmode")
+                put(MediaStore.Video.Media.RELATIVE_PATH, proofModeDir)
             }
         }
         val videoUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -317,14 +334,11 @@ class CameraFragment : Fragment() {
                 }
             }
             .start(ContextCompat.getMainExecutor(requireContext())) { recordEvent ->
-
                 when (recordEvent) {
                     is VideoRecordEvent.Start -> {
                         playSound(R.raw.video_record)
-                        binding.buttonCaptureVideo.visibility = View.INVISIBLE
-                        binding.buttonStopRecording.visibility = View.VISIBLE
-                        binding.buttonPauseVideoRecording.visibility = View.VISIBLE
-
+                        stopRecordingVideoButton.visibility = View.VISIBLE
+                        pauseRecordingVideoButton.visibility = View.VISIBLE
                     }
 
                     // As recording proceeds, get the duration and update the UI
@@ -337,30 +351,23 @@ class CameraFragment : Fragment() {
 
                     is VideoRecordEvent.Finalize -> {
 
-                        //val file:File =  recordEvent.outputResults.outputUri.toFile()
-                        capturedPreview.setImageURI(recordEvent.outputResults.outputUri)
+                        playSound(R.raw.video_record)
+
+                        viewModel.setVideoUri(recordEvent.outputResults.outputUri)
                         val bitmap =
                             createVideoThumb(requireContext(), recordEvent.outputResults.outputUri)
-                        if (bitmap != null) {
-                            capturedPreview.setImageBitmap(bitmap)
-                            binding.cardView.visibility = View.VISIBLE
-                        }
-                        playSound(R.raw.video_record)
+                        viewModel.setVideoImage(bitmap!!)
                         val viewVisible = View.VISIBLE
                         val viewInvisible = View.INVISIBLE
-                        binding.apply {
-                            buttonStopRecording.visibility = viewInvisible
-                            buttonCaptureVideo.visibility = viewVisible
-                            buttonPauseVideoRecording.visibility = viewInvisible
-                            buttonFlipCamera.isEnabled = true
-                            buttonFlipCamera.visibility = viewVisible
-                            buttonCapturePicture.isEnabled = true
-                            buttonCaptureVideo.isEnabled = true
-                            //videoTimer.stop()
-                            videoTimer.text = "00:00"
-                            videoTimer.visibility = viewInvisible
-                        }
-
+                        stopRecordingVideoButton.visibility = viewInvisible
+                        captureImageButton.visibility = viewVisible
+                        pauseRecordingVideoButton.visibility = viewInvisible
+                        flipCameraButton.visibility = viewVisible
+                        captureImageButton.isEnabled = true
+                        recordVideoButton.isEnabled = true
+                        videoTimer.visibility = viewInvisible
+                        imageViewContainer.visibility = viewVisible
+                        videoTimer.text = ""
                         if (!recordEvent.hasError()) {
                             val message =
                                 "Video capture succeeded ${recordEvent.outputResults.outputUri}"
@@ -368,10 +375,10 @@ class CameraFragment : Fragment() {
                                 .show()
 
                         } else {
+                            val error = errorString(recordEvent.error)
                             recordEvent.cause
-                            recording?.close()
                             recording = null
-                            val message = "Error recording video: ${recordEvent.error}"
+                            val message = "Error : $error"
                             Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT)
                                 .show()
                         }
@@ -380,10 +387,12 @@ class CameraFragment : Fragment() {
                     is VideoRecordEvent.Pause -> {
                         val viewVisible = View.VISIBLE
                         val viewInvisible = View.INVISIBLE
+                        val stats = recordEvent.recordingStats
+                        val nanoSecs = stats.recordedDurationNanos
+                        videoTimer.text = "Paused:${formatNanoseconds(nanoSecs)}"
                         stopRecordingVideoButton.visibility = viewVisible
                         pauseRecordingVideoButton.visibility = viewInvisible
                         resumeRecordingVideoButton.visibility = viewVisible
-
                     }
 
                     is VideoRecordEvent.Resume -> {
@@ -406,6 +415,7 @@ class CameraFragment : Fragment() {
 
 
     private fun captureImage() {
+        playSound(R.raw.camera_click)
         val imageCapture: ImageCapture = imageCapture ?: return
         val name = SimpleDateFormat(FILE_NAME_FORMAT, Locale.US)
             .format(System.currentTimeMillis())
@@ -413,7 +423,7 @@ class CameraFragment : Fragment() {
             put(MediaStore.Images.ImageColumns.MIME_TYPE, "image/jpeg")
             put(MediaStore.Images.ImageColumns.DISPLAY_NAME, name)
             if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
-                put(MediaStore.Images.ImageColumns.RELATIVE_PATH, "Pictures/Proofmode")
+                put(MediaStore.Images.ImageColumns.RELATIVE_PATH, proofModeDir)
             }
         }
         val outputDir = getExternalMediaDirs(requireContext().applicationContext)
@@ -435,18 +445,20 @@ class CameraFragment : Fragment() {
             object : ImageCapture.OnImageSavedCallback {
 
                 override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
+                    val file = createFile(outputDir, ".jpg")
+
                     val savedUri =
-                        outputFileResults.savedUri ?: Uri.fromFile(createFile(outputDir, ".jpg"))
-                    capturedPreview.setImageURI(savedUri)
-                    binding.cardView.visibility = View.VISIBLE
-                    Toast.makeText(
-                        requireContext(), "Image saved",
-                        Toast.LENGTH_LONG
-                    )
-                        .show()
+                        outputFileResults.savedUri ?: Uri.fromFile(file)
+
+                    viewModel.setImage(savedUri)
+                    MediaScannerConnection.scanFile(requireContext(), arrayOf(file.absolutePath),
+                        arrayOf("image/jpeg")
+                    ) { _, _ ->
+
+                    }
+                    imageViewContainer.visibility = View.VISIBLE
 
                 }
-
 
                 override fun onError(exception: ImageCaptureException) {
                     Toast.makeText(
@@ -463,7 +475,7 @@ class CameraFragment : Fragment() {
     }
 
 
-    @Deprecated("Deprecated in Java")
+    @Suppress("OVERRIDE_DEPRECATION")
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -471,7 +483,6 @@ class CameraFragment : Fragment() {
     ) {
         if (requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
             if (grantResults.isNotEmpty()) {
-
                 lifecycleScope.launch {
                     startCamera()
                 }

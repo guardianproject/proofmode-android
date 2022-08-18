@@ -14,7 +14,7 @@
 
         <ImageView
             android:layout_width="match_parent"
-            android:id="@+id/cardView"
+            android:id="@+id/cardViewImageView"
             android:scaleType="centerCrop"
             android:layout_height="match_parent"/>
 

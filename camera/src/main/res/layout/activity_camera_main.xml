@@ -3,6 +3,9 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <data>
+        <variable
+            name="viewModel"
+            type="org.witness.proofmode.camera.CameraViewModel" />
 
     </data>
 
