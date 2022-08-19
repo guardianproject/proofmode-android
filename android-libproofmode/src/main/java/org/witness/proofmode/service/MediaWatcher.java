@@ -206,22 +206,30 @@ public class MediaWatcher extends BroadcastReceiver {
                 e.printStackTrace();
             }
 
-            //write immediate proof
-            writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, notes);
 
-            if (autoNotarize) {
+            if (!autoNotarize) {
+                //write immediate proof
+                writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, notes, null);
+
+            }
+            else {
 
                 if (isOnline(context)) {
 
                     final GoogleSafetyNetNotarizationProvider gProvider = new GoogleSafetyNetNotarizationProvider(context);
+                    final String mediaHashNotarize = mediaHash;
+                    final String mediaNotesNotarize = notes;
 
                     try
                     {
+
+                        //notarize and then write proof so we can include notarization response
+
                         gProvider.notarize(mediaHash, context.getContentResolver().openInputStream(uriMedia), new NotarizationListener() {
                             @Override
                             public void notarizationSuccessful(String notarizedHash, String result) {
 
-                              //  SafetyNetResponse resp = gProvider.parseJsonWebSignature(result);
+                                SafetyNetResponse resp = gProvider.parseJsonWebSignature(result);
 
                                 File fileMediaNotarizeData = new File(getHashStorageDir(context,notarizedHash),notarizedHash + GOOGLE_SAFETYNET_FILE_TAG);
                                 try {
@@ -230,11 +238,17 @@ public class MediaWatcher extends BroadcastReceiver {
                                     e.printStackTrace();
                                 }
 
+                                writeProof(context, uriMedia, mediaHashNotarize, showDeviceIds, showLocation, showMobileNetwork, mediaNotesNotarize, resp);
+
+
                             }
 
                             @Override
                             public void notarizationFailed(int errCode, String message) {
+
+                                //if failed, write proof without response
                                 Timber.d("Got Google SafetyNet error response: %s", message);
+                                writeProof(context, uriMedia, mediaHashNotarize, showDeviceIds, showLocation, showMobileNetwork, mediaNotesNotarize, null);
 
                             }
                         });
@@ -247,8 +261,6 @@ public class MediaWatcher extends BroadcastReceiver {
 
 
                                 Timber.d("Got OpenTimestamps success response timestamp: %s", resultData);
-                                //writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork,
-                                  //      null, false, false, new Date().getTime(), resultData, OPENTIMESTAMPS_FILE_TAG,OPENTIMESTAMPS_FILE_TAG);
                                 File fileMediaNotarizeData = new File(getHashStorageDir(context,notarizedHash),notarizedHash + OPENTIMESTAMPS_FILE_TAG);
 
                                 byte[] rawNotarizeData = Base64.decode(resultData, Base64.DEFAULT);
@@ -260,15 +272,23 @@ public class MediaWatcher extends BroadcastReceiver {
                             public void notarizationFailed(int errCode, String message) {
 
                                 Timber.d("Got OpenTimestamps error response: %s", message);
-                         //       writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, null, false, false, -1, "Opentimestamps.org error: " + message);
 
                             }
                         });
+
                     } catch (FileNotFoundException e) {
+                        //write immediate proof
+                        writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, notes, null);
+
                         Timber.e(e);
                     }
                 }
+                else
+                {
+                    //write immediate proof
+                    writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, notes, null);
 
+                }
             }
 
             return mediaHash;
@@ -320,7 +340,7 @@ public class MediaWatcher extends BroadcastReceiver {
     }
 
 
-    private void writeProof (Context context, Uri uriMedia, String hash, boolean showDeviceIds, boolean showLocation, boolean showMobileNetwork, String notes)
+    private void writeProof (Context context, Uri uriMedia, String hash, boolean showDeviceIds, boolean showLocation, boolean showMobileNetwork, String notes, SafetyNetResponse resp)
     {
 
         boolean usePgpArmor = true;
@@ -338,7 +358,7 @@ public class MediaWatcher extends BroadcastReceiver {
                 //add data to proof csv and sign again
                 boolean writeHeaders = !fileMediaProof.exists();
 
-                HashMap<String,String> hmProof = buildProof(context, uriMedia, showDeviceIds, showLocation, showMobileNetwork, notes);
+                HashMap<String,String> hmProof = buildProof(context, uriMedia, showDeviceIds, showLocation, showMobileNetwork, notes, resp);
                 writeMapToCSV(context, fileMediaProof, hmProof, writeHeaders);
 
                 JSONObject jProof = new JSONObject(hmProof);
@@ -414,7 +434,7 @@ public class MediaWatcher extends BroadcastReceiver {
         return false;
     }
 
-    private HashMap<String,String> buildProof (Context context, Uri uriMedia, boolean showDeviceIds, boolean showLocation, boolean showMobileNetwork, String notes)
+    private HashMap<String,String> buildProof (Context context, Uri uriMedia, boolean showDeviceIds, boolean showLocation, boolean showMobileNetwork, String notes, SafetyNetResponse resp)
     {
         String mediaPath = null;
 
@@ -544,10 +564,20 @@ public class MediaWatcher extends BroadcastReceiver {
             hmProof.put("Location.Time", "");
         }
 
-        hmProof.put("SafetyCheck", "");
-        hmProof.put("SafetyCheckBasicIntegrity", "");
-        hmProof.put("SafetyCheckCtsMatch", "");
-        hmProof.put("SafetyCheckTimestamp", "");
+
+        if (resp != null) {
+            hmProof.put("SafetyCheck", "true");
+            hmProof.put("SafetyCheckBasicIntegrity", resp.isBasicIntegrity()+"");
+            hmProof.put("SafetyCheckCtsMatch", resp.isCtsProfileMatch()+"");
+            hmProof.put("SafetyCheckTimestamp", resp.getTimestampMs()+"");
+        }
+        else
+        {
+            hmProof.put("SafetyCheck", "false");
+            hmProof.put("SafetyCheckBasicIntegrity", "");
+            hmProof.put("SafetyCheckCtsMatch", "");
+            hmProof.put("SafetyCheckTimestamp", "");
+        }
 
         if (!TextUtils.isEmpty(notes))
             hmProof.put("Notes",notes);
