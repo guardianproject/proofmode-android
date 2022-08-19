@@ -37,6 +37,7 @@ import com.google.android.material.card.MaterialCardView
 import com.google.android.material.chip.Chip
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
+import org.witness.proofmode.camera.data.MediaType
 import org.witness.proofmode.camera.databinding.FragmentCameraBinding
 import java.io.File
 import java.text.SimpleDateFormat
@@ -313,7 +314,7 @@ class CameraFragment : Fragment() {
             }
         }
         val videoUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+            MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
         } else {
             MediaStore.Video.Media.EXTERNAL_CONTENT_URI
         }
@@ -356,6 +357,7 @@ class CameraFragment : Fragment() {
                         viewModel.setVideoUri(recordEvent.outputResults.outputUri)
                         val bitmap =
                             createVideoThumb(requireContext(), recordEvent.outputResults.outputUri)
+                        Log.d(TAG, "captureVideo: ${recordEvent.outputResults.outputUri}")
                         viewModel.setVideoImage(bitmap!!)
                         val viewVisible = View.VISIBLE
                         val viewInvisible = View.INVISIBLE
@@ -433,6 +435,7 @@ class CameraFragment : Fragment() {
         } else {
             MediaStore.Images.Media.EXTERNAL_CONTENT_URI
         }
+        Log.d(TAG, "The collection is $imagesCollection")
         val outputFileOptions =
             ImageCapture.OutputFileOptions.Builder(
                 requireActivity().contentResolver,
@@ -449,6 +452,8 @@ class CameraFragment : Fragment() {
 
                     val savedUri =
                         outputFileResults.savedUri ?: Uri.fromFile(file)
+
+                    Log.d(TAG, "onImageSaved: savedUri = $savedUri")
 
                     viewModel.setImage(savedUri)
                     MediaScannerConnection.scanFile(requireContext(), arrayOf(file.absolutePath),

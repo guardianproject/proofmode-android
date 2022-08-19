@@ -3,6 +3,7 @@ package org.witness.proofmode.camera
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.ViewGroup
+import androidx.activity.ComponentActivity
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -18,7 +19,7 @@ class CameraModuleActivity : AppCompatActivity() {
 
     private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var binding: ActivityCameraMainBinding
-    private val viewModel:CameraViewModel by viewModels()
+    private val viewModel:CameraViewModel by (this as androidx.core.app.ComponentActivity as ComponentActivity).viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         WindowCompat.setDecorFitsSystemWindows(window, false)
