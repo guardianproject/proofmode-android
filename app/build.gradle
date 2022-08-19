@@ -4,9 +4,6 @@ android {
     compileSdkVersion 31
     buildToolsVersion "31.0.0"
 
-    lintOptions {
-        abortOnError false
-    }
 
     flavorDimensions 'default'
 
@@ -20,8 +17,8 @@ android {
         applicationId "org.witness.proofmode"
         minSdkVersion 16
         targetSdkVersion 31
-        versionCode 160302
-        versionName "0.0.16-RC-2"
+        versionCode 170102
+        versionName "0.0.17-BETA-2"
         multiDexEnabled true
         archivesBaseName = "ProofMode-$versionName"
     }
@@ -32,20 +29,14 @@ android {
         }
     }
     packagingOptions {
-        exclude 'org.bitcoin.production.checkpoints'
-        exclude 'org.bitcoin.test.checkpoints'
-        exclude 'org/bitcoinj/crypto/cacerts'
-        exclude 'org/bitcoinj/crypto/mnemonic/wordlist/english.txt'
-        exclude 'lib/x86_64/darwin/libscrypt.dylib'
-        exclude 'com/google/thirdparty/publicsuffix/PublicSuffixType.gwt.xml'
-        exclude 'com/google/thirdparty/publicsuffix/PublicSuffixPatterns.gwt.xml'
-        exclude 'com/google/thirdparty/publicsuffix/PublicSuffixPatterns.gwt.xml'
-        exclude 'org/apache/commons/cli/AlreadySelectedException.class'
+        resources {
+            excludes += ['org.bitcoin.production.checkpoints', 'org.bitcoin.test.checkpoints', 'org/bitcoinj/crypto/cacerts', 'org/bitcoinj/crypto/mnemonic/wordlist/english.txt', 'lib/x86_64/darwin/libscrypt.dylib', 'com/google/thirdparty/publicsuffix/PublicSuffixType.gwt.xml', 'com/google/thirdparty/publicsuffix/PublicSuffixPatterns.gwt.xml', 'com/google/thirdparty/publicsuffix/PublicSuffixPatterns.gwt.xml', 'org/apache/commons/cli/AlreadySelectedException.class']
+        }
     }
-
-    lintOptions {
+    lint {
         abortOnError false
     }
+
 }
 
 dependencies {
