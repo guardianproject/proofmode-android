@@ -106,6 +106,7 @@
     <string name="share_mode_robust">Robust</string>
     <string name="share_mode_robust_info">Shares everything that you\'ve enabled ProofMode to capture in a cryptographically signed file.</string>
     <string name="share_share_robust">Share robust</string>
+    <string name="share_save_robust">Save robust</string>
 
     <string name="share_info_basic_title">Shares a fingerprint of your media to establish that it exists.</string>
     <string name="share_info_basic_message">• Doesn’t include personal info\n• No trust is needed\n• Short enough to send in a text</string>
@@ -123,4 +124,5 @@
     <string name="progress_checking_proof">Checking for proof...</string>
     <string name="progress_building_proof">Building proof bundle...</string>
     <string name="progress_generating_proof">Generating proof...</string>
+    <string name="share_save_downloads">Proof saved to Downloads folder</string>
 </resources>

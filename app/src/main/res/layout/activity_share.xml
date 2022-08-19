@@ -13,6 +13,7 @@
         android:layout_height="?attr/actionBarSize"
         android:background="@android:color/transparent"
         app:theme="@style/SettingsToolBarStyle"
+        tools:visibility="gone"
         app:popupTheme="@style/AppTheme.PopupOverlay" />
 
     <LinearLayout
@@ -79,7 +80,7 @@
         android:orientation="vertical"
         android:gravity="center_horizontal|top"
         android:visibility="gone"
-        tools:visibility="gone"
+        tools:visibility="visible"
         android:paddingStart="10dp"
         android:paddingLeft="10dp"
         android:paddingEnd="10dp"
@@ -151,14 +152,28 @@
             style="@style/OnboardingStepContentStyle"
             />
 
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
         <Button
             style="@style/OnboardingButtonStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
+            android:layout_margin="10dp"
             android:text="@string/share_share_robust"
             android:onClick="clickAll"
             />
+            <Button
+                style="@style/OnboardingButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="10dp"
+                android:text="@string/share_save_robust"
+                android:onClick="saveAll"
+                />
+        </LinearLayout>
 
         <!--       <Button
                    android:layout_width="wrap_content"

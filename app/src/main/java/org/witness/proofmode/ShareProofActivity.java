@@ -7,6 +7,7 @@ import static org.witness.proofmode.ProofMode.PROOF_FILE_TAG;
 import static org.witness.proofmode.ProofMode.OPENTIMESTAMPS_FILE_TAG;
 import static org.witness.proofmode.ProofMode.PROVIDER_TAG;
 
+import android.Manifest;
 import android.app.Dialog;
 import android.content.ComponentName;
 import android.content.Context;
@@ -43,6 +44,8 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.documentfile.provider.DocumentFile;
+
+import com.google.android.material.snackbar.Snackbar;
 
 import org.witness.proofmode.crypto.HashUtils;
 import org.witness.proofmode.crypto.PgpUtils;
@@ -289,6 +292,11 @@ public class ShareProofActivity extends AppCompatActivity {
 
     }
 
+    public void saveAll (View button)
+    {
+        saveProof (sendMedia, true);
+    }
+
     private void displayProgress (String progressText)
     {
 
@@ -318,6 +326,177 @@ public class ShareProofActivity extends AppCompatActivity {
         findViewById(R.id.view_proof_progress).setVisibility(View.GONE);
         findViewById(R.id.view_no_proof).setVisibility(View.GONE);
         findViewById(R.id.view_proof).setVisibility(View.VISIBLE);
+    }
+
+    private void saveProof (final boolean shareMedia, final boolean shareProof) {
+
+        if (!askForWritePermissions()) {
+
+            displayProgress(getString(R.string.progress_building_proof));
+
+            new SaveProofTask(this).execute(shareMedia, shareProof);
+
+        }
+    }
+
+    private synchronized boolean saveProofAsync (boolean shareMedia, boolean shareProof) throws FileNotFoundException {
+
+        // Get intent, action and MIME type
+        Intent intent = getIntent();
+        String action = intent.getAction();
+
+        ArrayList<Uri> shareUris = new ArrayList<>();
+        StringBuffer shareText = new StringBuffer ();
+
+        if (Intent.ACTION_SEND_MULTIPLE.equals(action))
+        {
+            ArrayList<Uri> mediaUris = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
+
+            File fileBatchProof;
+
+            PrintWriter fBatchProofOut;
+
+            try
+            {
+                File fileFolder = MediaWatcher.getHashStorageDir(this, "batch");
+
+                if (fileFolder == null)
+                    return false;
+
+                fileBatchProof = new File(fileFolder,new Date().getTime() + "batchproof.csv");
+                fBatchProofOut = new PrintWriter(new FileWriter(fileBatchProof,  true));
+            }
+            catch (IOException ioe) {
+                return false; //unable to open batch proof
+            }
+
+            int successProof = 0;
+
+            for (Uri mediaUri : mediaUris)
+            {
+                if (processUri (null, mediaUri, shareUris, shareText, fBatchProofOut, shareMedia)) {
+                    successProof++;
+                } else {
+                    Timber.d("share proof failed for: " + mediaUri);
+                }
+            }
+
+            fBatchProofOut.flush();
+            fBatchProofOut.close();
+            shareUris.add(Uri.fromFile(fileBatchProof)); // Add your image URIs here
+
+
+        }
+        else if (Intent.ACTION_SEND.equals(action)) {
+
+            Uri mediaUri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
+            if (mediaUri == null)
+                mediaUri = intent.getData();
+
+            if (mediaUri != null) {
+                mediaUri = cleanUri(mediaUri);
+
+                String mediaHash = hashCache.get(mediaUri);
+                if (!processUri(mediaHash, mediaUri, shareUris, shareText, null, shareMedia))
+                    return false;
+            }
+
+        }
+
+        if (shareUris.size() > 0) {
+
+            if (!shareProof)
+                shareNotarization(shareText.toString());
+            else {
+
+                File fileCacheFolder = new File(getCacheDir(),"zips");
+                fileCacheFolder.mkdir();
+
+                SimpleDateFormat sdf = new SimpleDateFormat(ZIP_FILE_DATETIME_FORMAT);
+                String dateString = sdf.format(new Date());
+
+                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+                PgpUtils pu = PgpUtils.getInstance(this,prefs.getString("password",PgpUtils.DEFAULT_PASSWORD));
+                String userId = pu.getPublicKeyFingerprint();
+
+                File fileZip = new File(fileCacheFolder,"proofmode-" + userId + "-" + dateString + ".zip");
+
+                Timber.d("Preparing proof bundle zip: " + fileZip.getAbsolutePath());
+
+                try {
+                    zipProof(shareUris,fileZip);
+                } catch (IOException e) {
+                    Timber.e(e,"Error generating proof Zip");
+                    return false;
+                }
+
+                if (fileZip.length() > 0) {
+                    Timber.d("Proof zip completed. Size:" + fileZip.length());
+
+                    boolean encryptZip = false;
+
+                    if (encryptZip) {
+                        File fileZipEnc = new File(fileCacheFolder, "proofmode-" + userId + "-" + dateString + ".zip.gpg");
+                        try {
+                            PgpUtils.getInstance(this).encrypt(new FileInputStream(fileZip), fileZip.length(), new FileOutputStream(fileZipEnc));
+
+                            fileZip = fileZipEnc;
+
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+
+                    /**
+                    Uri uriZip = FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider", fileZip);
+                    shareFiltered(getString(R.string.select_app), shareText.toString(), shareUris, uriZip);
+                     **/
+
+                    File fileProofDownloads = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileZip.getName());
+
+                    FileOutputStream fos = new FileOutputStream(fileProofDownloads);
+                    FileInputStream fis = new FileInputStream(fileZip);
+
+                    try {
+
+                        int count;
+                        byte[] data = new byte[BUFFER];
+                        while ((count = fis.read(data, 0, BUFFER)) != -1) {
+                            fos.write(data, 0, count);
+                        }
+                        fis.close();
+                        fos.close();
+
+
+                    }
+                    catch (Exception e)
+                    {
+                        Timber.e(e,"Proof zip failed due to file copy:" + fileProofDownloads.getAbsolutePath());
+
+                        return false;
+                    }
+
+                    //copy IO utils
+
+                }
+                else
+                {
+                    Timber.d("Proof zip failed due to empty size:" + fileZip.length());
+
+                    return false;
+                }
+
+            }
+        }
+        else
+        {
+            return false;
+        }
+
+
+        return true;
     }
 
     private void shareProof (final boolean shareMedia, final boolean shareProof) {
@@ -557,6 +736,46 @@ public class ShareProofActivity extends AppCompatActivity {
         }
     }
 
+    private static class SaveProofTask extends AsyncTask<Boolean, Void, Boolean> {
+
+        private final ShareProofActivity activity;
+
+        // only retain a weak reference to the activity
+        SaveProofTask(ShareProofActivity context) {
+            super();
+            activity = context;
+        }
+
+        protected Boolean doInBackground(Boolean... params) {
+
+            boolean result = false;
+            try {
+                result = activity.saveProofAsync(params[0],params[1]);
+                return result;
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+                return false;
+            }
+
+
+        }
+
+        protected void onPostExecute(Boolean result) {
+
+            if (!result)
+            {
+                //do something
+                Timber.d("unable to shareProofAsync");
+                activity.showProofError();
+            }
+            else
+            {
+                Snackbar.make(activity.findViewById(R.id.view_proof), activity.getString(R.string.share_save_downloads),Snackbar.LENGTH_LONG).show();
+               // activity.finish();
+            }
+        }
+    }
+
     private static class ShareProofTask extends AsyncTask<Boolean, Void, Boolean> {
 
         private final ShareProofActivity activity;
@@ -591,7 +810,7 @@ public class ShareProofActivity extends AppCompatActivity {
                 }
                 else
                 {
-                    activity.finish();
+                //    activity.finish();
                 }
         }
     }
@@ -1198,5 +1417,22 @@ public class ShareProofActivity extends AppCompatActivity {
         }
 
         return pubKey;
+    }
+
+    /**
+     * User the PermissionActivity to ask for permissions, but show no UI when calling from here.
+     */
+    private boolean askForWritePermissions() {
+        String[] requiredPermissions = new String[] {
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+        };
+
+        if (!PermissionActivity.hasPermissions(this, requiredPermissions)) {
+            Intent intent = new Intent(this, PermissionActivity.class);
+            intent.putExtra(PermissionActivity.ARG_PERMISSIONS, requiredPermissions);
+            startActivityForResult(intent, 9999);
+            return true;
+        }
+        return false;
     }
 }
