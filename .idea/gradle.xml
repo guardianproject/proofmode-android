@@ -17,7 +17,6 @@
             <option value="$PROJECT_DIR$/proofmodeipfs" />
           </set>
         </option>
-        <option name="resolveModulePerSourceSet" value="false" />
       </GradleProjectSettings>
     </option>
   </component>
