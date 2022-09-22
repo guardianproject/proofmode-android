@@ -4,6 +4,7 @@ buildscript {
         mavenCentral()
         jcenter()
         google()
+        maven { url 'https://jitpack.io' }
 
     }
     dependencies {
