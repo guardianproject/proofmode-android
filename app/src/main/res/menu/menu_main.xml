@@ -4,6 +4,14 @@
     tools:context="org.witness.proofmode.MainActivity">
 
 
+<!--
+    <item
+        android:id="@+id/action_open_media"
+        android:orderInCategory="100"
+        android:title="Open Picture or Video"
+        />
+-->
+
     <item
         android:id="@+id/action_publish_key"
         android:orderInCategory="100"

@@ -2,41 +2,37 @@ package org.witness.proofmode;
 
 import static android.content.Intent.ACTION_SEND;
 import static android.content.Intent.ACTION_SEND_MULTIPLE;
+import static org.witness.proofmode.ProofMode.PREFS_DOPROOF;
 
 import android.Manifest;
 import android.animation.Animator;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
-import androidx.annotation.NonNull;
-import com.google.android.material.navigation.NavigationView;
-import androidx.drawerlayout.widget.DrawerLayout;
-import androidx.appcompat.app.ActionBarDrawerToggle;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
-
-import android.provider.MediaStore;
-import android.text.TextUtils;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.ActionBarDrawerToggle;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
+
+import com.google.android.material.navigation.NavigationView;
+
 import org.witness.proofmode.crypto.PgpUtils;
 import org.witness.proofmode.onboarding.OnboardingActivity;
 import org.witness.proofmode.util.GPSTracker;
 
-import java.io.File;
 import java.io.IOException;
-
-import static org.witness.proofmode.ProofMode.PREFS_DOPROOF;
 
 public class MainActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
 
@@ -241,8 +237,34 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
             return true;
         }
-
         return super.onOptionsItemSelected(item);
+    }
+
+    private void pickMedia () {
+
+
+        // create an instance of the
+        // intent of the type image
+        Intent i = new Intent();
+        i.setType("image/*");
+        i.setAction(Intent.ACTION_GET_CONTENT);
+
+        // pass the constant to compare it
+        // with the returned requestCode
+        startActivityForResult(Intent.createChooser(i, "Open Picture"), 9999);
+
+        /**
+        Matisse.from(MainActivity.this)
+                .choose(MimeType.ofAll())
+                .countable(true)
+             //   .maxSelectable(9)
+           //     .gridExpectedSize(getResources().getDimensionPixelSize(R.dimen.grid_expected_size))
+                .restrictOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED)
+                .thumbnailScale(0.85f)
+                .showPreview(false) // Default is `true`
+                .forResult(9999);
+         **/
+
     }
 
     /**
@@ -402,21 +424,21 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             //    drawer.closeDrawer(Gravity.START);
             //    return true;
             case R.id.menu_how_it_works:
-                drawer.closeDrawer(Gravity.START);
+                drawer.closeDrawer(GravityCompat.START);
                 Intent intent = new Intent(this, OnboardingActivity.class);
                 intent.putExtra(OnboardingActivity.ARG_ONLY_TUTORIAL, true);
                 startActivityForResult(intent, REQUEST_CODE_INTRO);
                 return true;
             case R.id.menu_settings:
-                drawer.closeDrawer(Gravity.START);
+                drawer.closeDrawer(GravityCompat.START);
                 openSettings();
                 return true;
             case R.id.menu_datalegend:
-                drawer.closeDrawer(Gravity.START);
+                drawer.closeDrawer(GravityCompat.START);
                 openDataLegend();
                 return true;
             case R.id.menu_digital_signatures:
-                drawer.closeDrawer(Gravity.START);
+                drawer.closeDrawer(GravityCompat.START);
                 openDigitalSignatures();
                 return true;
 
