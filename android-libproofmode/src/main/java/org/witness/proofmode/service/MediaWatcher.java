@@ -719,7 +719,7 @@ public class MediaWatcher extends BroadcastReceiver {
         return true;
     }
 
-    public static FileObserver observerMedia;
+  //  public static FileObserver observerMedia;
 
     public Stack<String> qMedia = new Stack<>();
     public Timer qTimer = null;
@@ -730,6 +730,7 @@ public class MediaWatcher extends BroadcastReceiver {
 
             String pathToWatch = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).getAbsolutePath();
 
+            /**
             observerMedia = new RecursiveFileObserver(pathToWatch, FileObserver.MODIFY|FileObserver.CLOSE_WRITE|FileObserver.MOVED_TO) { // set up a file observer to watch this directory on sd card
                 @Override
                 public void onEvent(int event, final String mediaPath) {
@@ -764,6 +765,7 @@ public class MediaWatcher extends BroadcastReceiver {
                 }
             };
             observerMedia.startWatching();
+            **/
 
         }
 
@@ -772,9 +774,10 @@ public class MediaWatcher extends BroadcastReceiver {
 
     public void stop () {
 
+        /**
         if (observerMedia != null)
         {
             observerMedia.stopWatching();
-        }
+        }**/
     }
 }

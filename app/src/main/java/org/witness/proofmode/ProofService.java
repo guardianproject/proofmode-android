@@ -72,9 +72,10 @@ public class ProofService extends Service {
 
             if (intent.getAction().equals(ACTION_START))
             {
-                ProofMode.init(this);
 
                 showNotification(getString(R.string.waiting_proof_notify));
+
+                ProofMode.init(this);
 
             }
             else if (intent.getAction().equals(ACTION_UPDATE_NOTIFICATION))
