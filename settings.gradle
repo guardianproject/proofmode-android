@@ -1,2 +1,1 @@
 include ':app', ':android-libproofmode'
-include ':proofmodeipfs'
