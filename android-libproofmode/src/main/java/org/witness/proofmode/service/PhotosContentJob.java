@@ -68,10 +68,12 @@ public class PhotosContentJob extends JobService {
     public boolean onStartJob(JobParameters params) {
         Timber.d("Photos JOB STARTED!");
         mRunningParams = params;
-
         doWork ();
         jobFinished(mRunningParams, false);
-        scheduleJob(PhotosContentJob.this);
+
+        // manual reschedule
+        cancelJob(getApplicationContext());
+        scheduleJob(getApplicationContext());
 
         return true;
     }
@@ -91,7 +93,27 @@ public class PhotosContentJob extends JobService {
 
                 }
 
-                processMedia();
+                ArrayList<Uri> uris = new ArrayList<>(mUriStack.keySet());
+
+                for (Uri uri : uris) {
+                    MediaWatcher.getInstance(PhotosContentJob.this).processUri(uri, true);
+                    mUriStack.remove(uri);
+                }
+
+                /**
+                Timer t = new Timer();
+                t.schedule(new TimerTask() {
+                    @Override
+                    public void run() {
+                        ArrayList<Uri> uris = new ArrayList<>(mUriStack.keySet());
+
+                        for (Uri uri : uris) {
+                            MediaWatcher.getInstance(PhotosContentJob.this).processUri(uri, true);
+                            mUriStack.remove(uri);
+                        }
+
+                    }
+                }, MediaWatcher.PROOF_GENERATION_DELAY_TIME_MS);**/
 
             } else {
                 // We don't have any details about URIs (because too many changed at once),
@@ -108,23 +130,6 @@ public class PhotosContentJob extends JobService {
 
     }
 
-    private void processMedia ()
-    {
-        Timer t = new Timer();
-        t.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                ArrayList<Uri> uris = new ArrayList<>(mUriStack.keySet());
-
-                for (Uri uri : uris) {
-                    MediaWatcher.getInstance(PhotosContentJob.this).processUri(uri, true);
-                    mUriStack.remove(uri);
-                }
-
-            }
-        }, MediaWatcher.PROOF_GENERATION_DELAY_TIME_MS);
-
-    }
 
     @Override
     public boolean onStopJob(JobParameters params) {
