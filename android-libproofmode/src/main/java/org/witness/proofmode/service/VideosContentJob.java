@@ -94,6 +94,10 @@ public class VideosContentJob extends JobService {
         doWork ();
         jobFinished(mRunningParams, false);
 
+        // manual reschedule
+        cancelJob(getApplicationContext());
+        scheduleJob(getApplicationContext());
+
         return true;
     }
 
@@ -107,18 +111,15 @@ public class VideosContentJob extends JobService {
             if (mRunningParams.getTriggeredContentUris() != null) {
 
                 for (Uri uri : mRunningParams.getTriggeredContentUris()) {
-
-                    Timer t = new Timer();
-                    t.schedule(new TimerTask() {
-                        @Override
-                        public void run() {
-                            mUriStack.put(uri,uri.toString());
-                        }
-                    }, MediaWatcher.PROOF_GENERATION_DELAY_TIME_MS);
-
+                    mUriStack.put(uri,uri.toString());
                 }
 
-                processMedia();
+                Set<Uri> uris = mUriStack.keySet();
+
+                for (Uri uri : uris) {
+                    MediaWatcher.getInstance(VideosContentJob.this).processUri(uri, true);
+                    mUriStack.remove(uri);
+                }
 
             } else {
                 // We don't have any details about URIs (because too many changed at once),
@@ -132,23 +133,6 @@ public class VideosContentJob extends JobService {
 
     }
 
-    private void processMedia ()
-    {
-        Timer t = new Timer();
-        t.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                Set<Uri> uris = mUriStack.keySet();
-
-                for (Uri uri : uris) {
-                    MediaWatcher.getInstance(VideosContentJob.this).processUri(uri, true);
-                    mUriStack.remove(uri);
-                }
-
-            }
-        }, MediaWatcher.PROOF_GENERATION_DELAY_TIME_MS);
-
-    }
 
     @Override
     public boolean onStopJob(JobParameters params) {

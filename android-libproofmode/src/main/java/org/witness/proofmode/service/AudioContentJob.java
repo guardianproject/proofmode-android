@@ -64,6 +64,10 @@ public class AudioContentJob extends JobService {
         jobFinished(mRunningParams, false);
         scheduleJob(AudioContentJob.this);
 
+
+        cancelJob(getApplicationContext());
+        scheduleJob(getApplicationContext());
+
         return true;
     }
 
@@ -80,9 +84,14 @@ public class AudioContentJob extends JobService {
 
                     mUriStack.put(uri,uri.toString());
 
-                }
+                }   
 
-                processMedia();
+                ArrayList<Uri> uris = new ArrayList<>(mUriStack.keySet());
+
+                for (Uri uri : uris) {
+                    MediaWatcher.getInstance(AudioContentJob.this).processUri(uri, true);
+                    mUriStack.remove(uri);
+                }
 
             } else {
                 // We don't have any details about URIs (because too many changed at once),
@@ -96,24 +105,6 @@ public class AudioContentJob extends JobService {
 
         }
 
-
-    }
-
-    private void processMedia ()
-    {
-        Timer t = new Timer();
-        t.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                ArrayList<Uri> uris = new ArrayList<>(mUriStack.keySet());
-
-                for (Uri uri : uris) {
-                    MediaWatcher.getInstance(AudioContentJob.this).processUri(uri, true);
-                    mUriStack.remove(uri);
-                }
-
-            }
-        }, MediaWatcher.PROOF_GENERATION_DELAY_TIME_MS);
 
     }
 
