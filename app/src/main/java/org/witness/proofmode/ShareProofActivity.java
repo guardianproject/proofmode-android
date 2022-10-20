@@ -34,6 +34,7 @@ import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.webkit.MimeTypeMap;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.TextView;
@@ -1325,6 +1326,8 @@ public class ShareProofActivity extends AppCompatActivity {
         String[] projection = new String[2];
 
         String mimeType = getContentResolver().getType(uri);
+        MimeTypeMap mimeTypeMap = MimeTypeMap.getSingleton();
+        String fileExt = mimeTypeMap.getExtensionFromMimeType(mimeType);
 
         if (mimeType != null)
         {
@@ -1350,7 +1353,13 @@ public class ShareProofActivity extends AppCompatActivity {
 
         Cursor cursor = getContentResolver().query(getRealUri(uri),      projection,null, null, null);
         boolean result = false;
+
+        //default name with file extension
         String fileName = uri.getLastPathSegment();
+
+        if (fileExt != null && fileName.indexOf(".")==-1)
+            fileName += "." + fileExt;
+
 
         if (cursor != null) {
             if (cursor.getCount() > 0) {
