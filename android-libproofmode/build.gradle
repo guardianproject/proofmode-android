@@ -41,6 +41,7 @@ dependencies {
         exclude group: 'net.jcip'
         exclude group: 'commons-cli'
         exclude group: 'org.json'
+        exclude group: 'com.sun.xml'
     }
 
     implementation 'org.bouncycastle:bcpkix-jdk15to18:1.71'

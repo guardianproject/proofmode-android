@@ -84,7 +84,7 @@ public class AudioContentJob extends JobService {
 
                     mUriStack.put(uri,uri.toString());
 
-                }   
+                }
 
                 ArrayList<Uri> uris = new ArrayList<>(mUriStack.keySet());
 

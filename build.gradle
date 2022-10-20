@@ -23,9 +23,8 @@ allprojects {
         jcenter()
         google()
     //    maven { url "https://raw.githubusercontent.com/guardianproject/gpmaven/master" }
-        maven { url 'https://dl.bintray.com/textile/maven' }
         maven { url 'https://jitpack.io' }
-
+       // maven {url 'https://zendesk.jfrog.io/zendesk/oss-releases-local'}
     }
     project.ext {
         // these are common variables used in */build.gradle

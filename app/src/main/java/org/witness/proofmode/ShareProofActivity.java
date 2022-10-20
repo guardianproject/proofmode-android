@@ -10,6 +10,7 @@ import static org.witness.proofmode.ProofMode.PROVIDER_TAG;
 import android.Manifest;
 import android.app.Dialog;
 import android.content.ComponentName;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -637,14 +638,25 @@ public class ShareProofActivity extends AppCompatActivity {
         return true;
     }
 
+    private final static String DOCUMENT_IMAGE = "content://com.android.providers.media.documents/document/image%3A";
+    private final static String MEDIA_IMAGE = "content://media/external/images/media/";
+
     private String proofExists (Uri mediaUri) throws FileNotFoundException {
 
+        String sMediaUri = mediaUri.toString();
 
+        if (sMediaUri.contains(DOCUMENT_IMAGE))
+        {
+            sMediaUri = sMediaUri.replace(DOCUMENT_IMAGE,MEDIA_IMAGE);
+            mediaUri = Uri.parse(sMediaUri);
+        }
+
+        ContentResolver cr = getContentResolver();
         String hash = HashUtils.getSHA256FromFileContent(getContentResolver().openInputStream(mediaUri));
 
         if (hash != null) {
 
-            hashCache.put (mediaUri.toString(), hash);
+            hashCache.put (sMediaUri, hash);
 
             Timber.d("Proof check if exists for URI %s and hash %s", mediaUri, hash);
 

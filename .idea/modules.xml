@@ -11,10 +11,6 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/proofmode.app.androidTest.iml" filepath="$PROJECT_DIR$/.idea/modules/app/proofmode.app.androidTest.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/proofmode.app.main.iml" filepath="$PROJECT_DIR$/.idea/modules/app/proofmode.app.main.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/proofmode.app.unitTest.iml" filepath="$PROJECT_DIR$/.idea/modules/app/proofmode.app.unitTest.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/proofmodeipfs/proofmode.proofmodeipfs.iml" filepath="$PROJECT_DIR$/.idea/modules/proofmodeipfs/proofmode.proofmodeipfs.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/proofmodeipfs/proofmode.proofmodeipfs.androidTest.iml" filepath="$PROJECT_DIR$/.idea/modules/proofmodeipfs/proofmode.proofmodeipfs.androidTest.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/proofmodeipfs/proofmode.proofmodeipfs.main.iml" filepath="$PROJECT_DIR$/.idea/modules/proofmodeipfs/proofmode.proofmodeipfs.main.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/proofmodeipfs/proofmode.proofmodeipfs.unitTest.iml" filepath="$PROJECT_DIR$/.idea/modules/proofmodeipfs/proofmode.proofmodeipfs.unitTest.iml" />
     </modules>
   </component>
 </project>

@@ -18,6 +18,7 @@
         <entry key="app/src/main/res/layout/dialog_share_robust.xml" value="0.33061594202898553" />
         <entry key="app/src/main/res/layout/permission_location.xml" value="0.2817028985507246" />
         <entry key="app/src/main/res/menu/menu_main.xml" value="0.26510416666666664" />
+        <entry key="app/src/main/res/menu/menu_share_proof.xml" value="0.2453125" />
         <entry key="camera/src/main/res/layout/activity_camera_main.xml" value="0.24592391304347827" />
         <entry key="camera/src/main/res/layout/content_camera_main.xml" value="0.24592391304347827" />
         <entry key="camera/src/main/res/layout/fragment_camera.xml" value="0.24592391304347827" />

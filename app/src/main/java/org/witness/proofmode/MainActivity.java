@@ -6,6 +6,7 @@ import static org.witness.proofmode.ProofMode.PREFS_DOPROOF;
 
 import android.Manifest;
 import android.animation.Animator;
+import android.content.ClipData;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
@@ -22,17 +23,26 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.PopupMenu;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 
 import com.google.android.material.navigation.NavigationView;
 
+import org.jetbrains.annotations.NotNull;
 import org.witness.proofmode.crypto.PgpUtils;
 import org.witness.proofmode.onboarding.OnboardingActivity;
 import org.witness.proofmode.util.GPSTracker;
 
 import java.io.IOException;
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.List;
+
+import gun0912.tedimagepicker.builder.TedImagePicker;
+import gun0912.tedimagepicker.builder.listener.OnMultiSelectedListener;
+import gun0912.tedimagepicker.builder.listener.OnSelectedListener;
 
 public class MainActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
 
@@ -76,20 +86,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         View rootView = findViewById(R.id.root);
         layoutOn = rootView.findViewById(R.id.layout_on);
         layoutOff = rootView.findViewById(R.id.layout_off);
-/*        layoutOn.setOnLongClickListener(new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View v) {
-                setProofModeOn(false);
-                return true;
-            }
-        });
-        layoutOff.setOnLongClickListener(new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View v) {
-                setProofModeOn(true);
-                return true;
-            }
-        });*/
 
         if (mPrefs.getBoolean("firsttime",true)) {
             startActivityForResult(new Intent(this, OnboardingActivity.class), REQUEST_CODE_INTRO);
@@ -110,16 +106,72 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
         View btnShareProof = findViewById(R.id.btnShareProof);
         btnShareProof.setOnClickListener(v -> {
-            Intent intent = new Intent();
-            intent.setType("image/*");
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
-                intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-            }
-            intent.setAction(Intent.ACTION_GET_CONTENT);
-            startActivityForResult(Intent.createChooser(intent,getString(R.string.share_proof_action)), REQUEST_CODE_CHOOSE_MEDIA);
+
+            // Initializing the popup menu and giving the reference as current context
+            PopupMenu popupMenu = new PopupMenu(MainActivity.this, v);
+
+            // Inflating popup menu from popup_menu.xml file
+            popupMenu.getMenuInflater().inflate(R.menu.menu_share_proof, popupMenu.getMenu());
+            popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+                @Override
+                public boolean onMenuItemClick(MenuItem menuItem) {
+
+                    if (menuItem.getItemId()==R.id.menu_photo)
+                        showImagePicker();
+                    else if (menuItem.getItemId()==R.id.menu_video)
+                        showVideoPicker();
+                    else if (menuItem.getItemId()==R.id.menu_files)
+                        showDocumentPicker();
+
+                    return true;
+                }
+            });
+            // Showing the popup menu
+            popupMenu.show();
+
+
+
+
         });
 
         updateOnOffState(false);
+    }
+
+    private void showDocumentPicker () {
+        Intent intent = new Intent();
+        intent.setType("*/*");
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+            intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+        }
+        intent.setAction(Intent.ACTION_GET_CONTENT);
+        startActivityForResult(Intent.createChooser(intent,getString(R.string.share_proof_action)), REQUEST_CODE_CHOOSE_MEDIA);
+
+    }
+
+    private void showImagePicker () {
+        TedImagePicker.with(this).image().dropDownAlbum()
+                .startMultiImage(mediaList -> {
+                    showShareProof(mediaList);
+                });
+    }
+
+    private void showVideoPicker () {
+        TedImagePicker.with(this).video().showVideoDuration(true).dropDownAlbum()
+                .startMultiImage(mediaList -> {
+                    showShareProof(mediaList);
+                });
+    }
+
+    private void showShareProof (List<? extends Uri> mediaList) {
+        Intent intentShare = new Intent(this,ShareProofActivity.class);
+        intentShare.setAction(ACTION_SEND_MULTIPLE);
+
+        ArrayList<Uri> aList = new ArrayList<>();
+        for (Uri uri : mediaList)
+            aList.add(uri);
+
+        intentShare.putParcelableArrayListExtra(Intent.EXTRA_STREAM,aList);
+        startActivity(intentShare);
     }
 
     public void toggleOnClicked(View view) {
