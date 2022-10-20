@@ -18,7 +18,7 @@ android {
         minSdkVersion 17
         targetSdkVersion 31
         versionCode 170301
-        versionName "0.0.17-RC-!"
+        versionName "0.0.17-RC-1"
         multiDexEnabled true
         archivesBaseName = "ProofMode-$versionName"
     }
