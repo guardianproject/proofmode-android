@@ -2,8 +2,8 @@
 <resources>
     <string name="app_name">ProofMode</string>
     <string name="action_settings">Configuracion</string>
-    <string name="action_share_key">Compartir la llave pública</string>
-    <string name="action_publish_key">Publicar la llave pública</string>
+    <string name="action_share_key">Compartir la clave pública...</string>
+    <string name="action_publish_key">Publicar la clave pública...</string>
     <string name="action_about">Acerca de ProofMode </string>
     <string name="switch_include_device">Incluir la identidad del dispositivo</string>
     <string name="switch_include_location">Ubicacion GPS incluida</string>
@@ -17,19 +17,19 @@
     <string name="intro3_desc">ProofMode esta siempre activado en tu dispositivo, agregando evidencias a todas las fotos y videos que tu tomas.</string>
     <string name="intro4_title">Comparte la evidencia</string>
     <string name="intro4_desc">Cuando necesitas compartir un archivo con evidencia, abre la foto o el video, y selecciona COMPARTIR EVIDENCIA de el menu  SHARE. </string>
-    <string name="share_notarization">COMPARTIR LA NOTARIZACION CON</string>
-    <string name="share_proof">COMPARTIR LA EVIDENCIA CON</string>
-    <string name="proof_error_message">ERROR: La evidencia no existe o ha sido modificada.</string>
+    <string name="share_notarization">COMPARTIR LA NOTARIZACIÓN A...</string>
+    <string name="share_proof">COMPARTIR LA PRUEBA A...</string>
+    <string name="proof_error_message">La prueba no existe</string>
     <string name="last_modified">Fue modificado por ultima vez </string>
-    <string name="has_hash">y tiene un SHA-256 hash of</string>
+    <string name="has_hash">Tiene un hash SHA-256 de</string>
     <string name="proof_signed">Esta evidencia es respaldada por PGP llave 0x</string>
     <string name="notarize_only">Notariar Unicamente ( Short Text )</string>
     <string name="share_proof_only">Compartir la evidencia ( Unicamente archivos de Metadatos )</string>
     <string name="share_proof_with_media">Compartir la evidencia con Multimedia ( Everything! )</string>
     <string name="open_public_key_page">Abriendo la pagina de la llave publica</string>
-    <string name="no_external_storage">Advertencia: ProofMode esta habilitado, pero no hay memoria externa dosponible. </string>
+    <string name="no_external_storage">ADVERTENCIA: ¡ProofMode activado, pero no hay almacenamiento externo disponible!</string>
     <string name="no_hash_generated">ProofMode Alert: No fue posible accessar los datos multimedia</string>
-    <string name="generating_proof_notify">Creando Evidencia</string>
+    <string name="generating_proof_notify">Generar pruebas...</string>
     <string name="inspect_photos">Inspeccionando Fotos</string>
     <string name="inspect_videos">Inspeccionando Videos</string>
     <string name="select_app">SEleccionar la aplicacion para compartir la evidencia con ...</string>
@@ -116,4 +116,11 @@
 \n• Requiere acceso a Internet
 \n• Comparte archivos .csv con datos, PGP y huellas dactilares únicas</string>
     <string name="digital_signatures_whatis_info">Cada vez que instala ProofMode, se crea una identidad digital única, que consta de claves PGP públicas y secretas. Esto funciona con el estándar OpenPGP. Se utiliza para firmar criptográficamente tus medios y archivos de prueba de apoyo. Si las firmas PGP coinciden con la identidad digital (clave PGP) de su instancia actual de ProofMode, entonces la firma fue creada por esa instancia de ProofMode.</string>
+    <string name="waiting_proof_notify">Listo para agregar prueba</string>
+    <string name="share_save_robust">Guardar robusto</string>
+    <string name="publish_key_to">\"Clave de publicación para: \"</string>
+    <string name="progress_checking_proof">Buscando pruebas...</string>
+    <string name="progress_building_proof">Construir un paquete de pruebas...</string>
+    <string name="progress_generating_proof">Generar pruebas...</string>
+    <string name="share_save_downloads">Prueba guardada en la carpeta de descargas</string>
 </resources>
