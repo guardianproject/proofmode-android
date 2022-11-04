@@ -47,9 +47,9 @@ class PermissionsFragment : Fragment() {
 
     private fun checkPermissionsAndNavigate() {
         if (hasAllPermissions(requireContext(), cameraPermissions.toTypedArray())) {
-            val directions =
-                PermissionsFragmentDirections.actionPermissionsFragmentToCameraFragment()
-            findNavController().navigate(directions)
+         //   val directions =
+           //     PermissionsFragmentDirections.actionPermissionsFragmentToCameraFragment()
+           // findNavController().navigate(directions)
         }
     }
 
@@ -62,7 +62,7 @@ class PermissionsFragment : Fragment() {
     ) {
         if (requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
             if (grantResults.isNotEmpty()) {
-                findNavController().navigate(PermissionsFragmentDirections.actionPermissionsFragmentToCameraFragment())
+             //   findNavController().navigate(PermissionsFragmentDirections.actionPermissionsFragmentToCameraFragment())
             } else {
                 AlertDialog.Builder(requireContext())
                     .setMessage("Enable permissions in settings to be able to use  camera")

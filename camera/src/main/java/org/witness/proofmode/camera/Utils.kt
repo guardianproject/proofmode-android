@@ -90,6 +90,15 @@ fun bindBitmap(imageView: ImageView,bitmap:LiveData<Bitmap?>){
     }
 }
 
+@BindingAdapter("videoImageBitmap")
+fun bindVideoImageBitmap(imageView: ImageView,bitmap:LiveData<Bitmap?>){
+    bitmap.value?.let {
+        imageView.setImageBitmap(it)
+    }
+}
+
+
+
 @BindingAdapter("videoUri")
 fun bindVideoUri(videoView: VideoView,uri:LiveData<Uri?>){
     uri.value?.let {

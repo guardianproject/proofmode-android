@@ -131,7 +131,7 @@ class CameraFragment : Fragment() {
             }
         } else {
             requestAllPermissions(
-                requireActivity(),
+                requireParentFragment(),
                 permissions = permissions.toTypedArray(),
                 requestCode = CAMERA_PERMISSION_REQUEST_CODE
             )
@@ -193,8 +193,8 @@ class CameraFragment : Fragment() {
         capturedPreview.setOnClickListener {
             viewModel.mediaType.value?.let {
                 if (it == MediaType.TypeVideo) {
-                    val action = CameraFragmentDirections.actionCameraFragmentToViewCapturedFragment()
-                    findNavController().navigate(action)
+                 //   val action = CameraFragmentDirections.actionCameraFragmentToViewCapturedFragment()
+                   // findNavController().navigate(action)
                 }
             }
         }

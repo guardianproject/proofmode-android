@@ -39,12 +39,14 @@
             app:layout_constraintGuide_end="32dp" />
 
         <Button
-            android:id="@+id/button"
+            android:id="@+id/buttonRequestPermissions"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:minWidth="170dp"
             android:layout_marginTop="24dp"
-            android:text="Allow access"
-            style="@style/Widget.Material3.Button.ElevatedButton"
+            android:text="@string/allow_access"
+            android:padding="4dp"
+            android:textAllCaps="true"
             app:layout_constraintEnd_toStartOf="@+id/guideline5"
             app:layout_constraintStart_toStartOf="@+id/guideline4"
             app:layout_constraintTop_toBottomOf="@+id/textView" />

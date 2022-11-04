@@ -2,6 +2,7 @@ package org.witness.proofmode.camera
 
 import android.content.Context
 import android.content.res.ColorStateList
+import android.graphics.Bitmap
 import android.net.Uri
 import android.view.KeyEvent
 import android.widget.ImageView
@@ -12,6 +13,7 @@ import androidx.core.widget.ImageViewCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import org.witness.proofmode.camera.data.MediaType
 
 class FlashModeViewModel: ViewModel() {
     private val _flashMode:MutableLiveData<Int> = MutableLiveData(ImageCapture.FLASH_MODE_OFF)
