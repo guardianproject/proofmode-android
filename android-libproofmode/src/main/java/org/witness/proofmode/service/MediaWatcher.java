@@ -33,6 +33,7 @@ import org.witness.proofmode.ProofMode;
 import org.witness.proofmode.crypto.HashUtils;
 import org.witness.proofmode.crypto.PgpUtils;
 import org.witness.proofmode.notarization.GoogleSafetyNetNotarizationProvider;
+import org.witness.proofmode.notarization.IPFSNotarizationProvider;
 import org.witness.proofmode.notarization.NotarizationListener;
 import org.witness.proofmode.notarization.NotarizationProvider;
 import org.witness.proofmode.notarization.OpenTimestampsNotarizationProvider;
@@ -67,6 +68,7 @@ import java.util.concurrent.Executors;
 import timber.log.Timber;
 
 import static org.witness.proofmode.ProofMode.GOOGLE_SAFETYNET_FILE_TAG;
+import static org.witness.proofmode.ProofMode.IPFS_FILE_TAG;
 import static org.witness.proofmode.ProofMode.OPENPGP_FILE_TAG;
 import static org.witness.proofmode.ProofMode.OPENTIMESTAMPS_FILE_TAG;
 import static org.witness.proofmode.ProofMode.PREFS_DOPROOF;
@@ -275,6 +277,33 @@ public class MediaWatcher extends BroadcastReceiver {
 
                             }
                         });
+
+                        try {
+                            final NotarizationProvider ipfsProvider = new IPFSNotarizationProvider(context);
+
+                            ipfsProvider.notarize(mediaHash, context.getContentResolver().openInputStream(uriMedia), new NotarizationListener() {
+                                @Override
+                                public void notarizationSuccessful(String notarizedHash, String resultData) {
+
+
+                                    Timber.d("Got IPFS success response timestamp: %s", resultData);
+                                    File fileMediaNotarizeData = new File(getHashStorageDir(context,notarizedHash),notarizedHash + IPFS_FILE_TAG);
+                                    byte[] rawNotarizeData = Base64.decode(resultData, Base64.DEFAULT);
+                                    writeBytesToFile(context, fileMediaNotarizeData, rawNotarizeData);
+
+                                }
+
+                                @Override
+                                public void notarizationFailed(int errCode, String message) {
+
+                                    Timber.d("Got IPFS error response: %s", message);
+
+                                }
+                            });
+
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
 
                     } catch (FileNotFoundException e) {
                         //write immediate proof

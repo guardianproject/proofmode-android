@@ -164,8 +164,7 @@ class CameraFragment : Fragment() {
 
     // GestureDetecctor to detect long press
     private val gestureDetector = GestureDetector(object : GestureDetector.SimpleOnGestureListener() {
-
-        override fun onSingleTapUp(e: MotionEvent?): Boolean {
+        override fun onSingleTapUp(e: MotionEvent): Boolean {
             captureImage()
             return super.onSingleTapUp(e)
         }

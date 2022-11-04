@@ -1,6 +1,7 @@
 package org.witness.proofmode;
 
 import static org.witness.proofmode.ProofMode.GOOGLE_SAFETYNET_FILE_TAG;
+import static org.witness.proofmode.ProofMode.IPFS_FILE_TAG;
 import static org.witness.proofmode.ProofMode.OPENPGP_FILE_TAG;
 import static org.witness.proofmode.ProofMode.OPENTIMESTAMPS_FILE_TAG;
 import static org.witness.proofmode.ProofMode.PROVIDER_TAG;
@@ -946,6 +947,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
             File fileMediaOpentimestamps = new File(fileFolder, hash + OPENTIMESTAMPS_FILE_TAG);
             File fileMediaGoogleSafetyNet = new File(fileFolder, hash + GOOGLE_SAFETYNET_FILE_TAG);
+            File fileMediaIPFS = new File(fileFolder, hash + IPFS_FILE_TAG);
 
 
             if (fileMediaProof.exists()) {
@@ -953,8 +955,13 @@ public class ShareProofActivity extends AppCompatActivity {
                 if (fileMedia != null)
                     lastModified = new Date(fileMedia.lastModified());
 
+                ArrayList<File> listNotaries = new ArrayList<>();
+                listNotaries.add(fileMediaOpentimestamps);
+                listNotaries.add(fileMediaGoogleSafetyNet);
+                listNotaries.add(fileMediaIPFS);
+
                 try {
-                    generateProofOutput(uriMedia, fileMedia, lastModified, fileMediaSig, fileMediaProof, fileMediaProofSig, fileMediaProofJSON, fileMediaProofJSONSig, fileMediaOpentimestamps, fileMediaGoogleSafetyNet, hash, shareMedia, fBatchProofOut, shareUris, sb);
+                    generateProofOutput(uriMedia, fileMedia, lastModified, fileMediaSig, fileMediaProof, fileMediaProofSig, fileMediaProofJSON, fileMediaProofJSONSig, listNotaries, hash, shareMedia, fBatchProofOut, shareUris, sb);
                     return true;
                 } catch (IOException e) {
                     Timber.d(e,"unable to geenrate proof output");
@@ -996,7 +1003,11 @@ public class ShareProofActivity extends AppCompatActivity {
 
         try {
 
-            generateProofOutput(mediaUri, fileMedia, new Date(fileMedia.lastModified()), fileMediaSig, fileMediaProof, fileMediaProofSig, null, null, null, null, hash, shareMedia, fBatchProofOut, shareUris, sb);
+
+            ArrayList<File> listNotaries = new ArrayList<>();
+            //none?
+
+            generateProofOutput(mediaUri, fileMedia, new Date(fileMedia.lastModified()), fileMediaSig, fileMediaProof, fileMediaProofSig, null, null, listNotaries,  hash, shareMedia, fBatchProofOut, shareUris, sb);
             return true;
         }
         catch (IOException ioe)
@@ -1006,7 +1017,7 @@ public class ShareProofActivity extends AppCompatActivity {
         }
     }
 
-    private void generateProofOutput (Uri uriMedia, File fileMedia, Date fileLastModified, File fileMediaSig, File fileMediaProof, File fileMediaProofSig, File fileMediaProofJSON, File fileMediaProofJSONSig, File fileMediaNotary, File fileMediaNotary2, String hash, boolean shareMedia, PrintWriter fBatchProofOut, ArrayList<Uri> shareUris, StringBuffer sb) throws IOException {
+    private void generateProofOutput (Uri uriMedia, File fileMedia, Date fileLastModified, File fileMediaSig, File fileMediaProof, File fileMediaProofSig, File fileMediaProofJSON, File fileMediaProofJSONSig, ArrayList<File> fileMediaNotaries, String hash, boolean shareMedia, PrintWriter fBatchProofOut, ArrayList<Uri> shareUris, StringBuffer sb) throws IOException {
         DateFormat sdf = SimpleDateFormat.getDateTimeInstance();
 
         String fingerprint = PgpUtils.getInstance(this).getPublicKeyFingerprint();
@@ -1047,13 +1058,13 @@ public class ShareProofActivity extends AppCompatActivity {
                 shareUris.add(Uri.fromFile(fileMediaProofJSONSig));
 
 
-            if (fileMediaNotary != null
-                    && fileMediaNotary.exists())
-                shareUris.add(Uri.fromFile(fileMediaNotary));
+            for (File fileMediaNotary : fileMediaNotaries) {
+                if (fileMediaNotary != null
+                        && fileMediaNotary.exists())
+                    shareUris.add(Uri.fromFile(fileMediaNotary));
+            }
 
-            if (fileMediaNotary2 != null
-                    && fileMediaNotary2.exists())
-                shareUris.add(Uri.fromFile(fileMediaNotary2));
+
 
         }
 

@@ -39,6 +39,7 @@ public class ProofMode {
     public final static String OPENPGP_FILE_TAG = ".asc";
     public final static String OPENTIMESTAMPS_FILE_TAG = ".ots";
     public final static String GOOGLE_SAFETYNET_FILE_TAG = ".gst";
+    public final static String IPFS_FILE_TAG = ".ipfs";
     public final static String PROVIDER_TAG = ".provider";
 
     public final static String PREFS_DOPROOF = "doProof";
