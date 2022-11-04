@@ -13,7 +13,7 @@
 
   <androidx.constraintlayout.widget.ConstraintLayout
       android:layout_width="match_parent"
-      android:background="#88000000"
+      android:background="@android:color/black"
       android:layout_height="match_parent">
 
       <com.google.android.material.card.MaterialCardView
@@ -25,7 +25,7 @@
           app:strokeWidth="@dimen/cardview_default_radius"
           android:layout_height="48dp"
           android:layout_marginBottom="12dp"
-          app:layout_constraintBottom_toTopOf="@+id/guideline"
+          app:layout_constraintBottom_toBottomOf="parent"
           app:layout_constraintEnd_toEndOf="parent"
           app:cardCornerRadius="40dp"
           tools:visibility="visible"
@@ -133,10 +133,10 @@
 
         android:layout_marginBottom="12dp"
         android:scaleType="fitCenter"
-        app:layout_constraintBottom_toTopOf="@+id/guideline"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-
+        app:tint="@android:color/darker_gray"
         app:srcCompat="@drawable/ic_capture" />
 
 
@@ -151,9 +151,9 @@
         android:layout_marginBottom="12dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="@string/flip_camera"
-        app:layout_constraintBottom_toTopOf="@+id/guideline"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/buttonCapturePicture"
-
+        app:tint="@android:color/darker_gray"
         app:srcCompat="@drawable/ic_flip_camera" />
 
 
@@ -168,8 +168,8 @@
         android:visibility="invisible"
         android:textColor="@android:color/holo_red_dark"
         tools:visibility="visible"
-        android:text="0"
-        app:layout_constraintBottom_toTopOf="@+id/guideline"
+        android:text="00:00"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toEndOf="@+id/buttonCapturePicture"
          />
 
@@ -207,12 +207,6 @@
         app:layout_constraintGuide_end="64dp"
         android:orientation="horizontal" />
 
-    <androidx.constraintlayout.widget.Guideline
-        android:id="@+id/guideline"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        app:layout_constraintGuide_end="0dp" />
 
   </androidx.constraintlayout.widget.ConstraintLayout>
 </layout>

@@ -29,6 +29,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.chip.Chip
@@ -175,10 +176,7 @@ class CameraFragment : Fragment() {
 
     private fun setClickListeners() {
 
-        /**
-        captureImageButton.setOnClickListener {
-            captureImage()
-        }**/
+
 
         flipCameraButton.setOnClickListener {
             flipCamera()
@@ -326,7 +324,7 @@ class CameraFragment : Fragment() {
             return
         }
 
-        flipCameraButton.visibility = View.INVISIBLE
+    //    flipCameraButton.visibility = View.INVISIBLE
         videoTimer.visibility = View.VISIBLE
         val name = SimpleDateFormat(FILE_NAME_FORMAT, Locale.US)
             .format(System.currentTimeMillis())
@@ -377,6 +375,7 @@ class CameraFragment : Fragment() {
                     is VideoRecordEvent.Finalize -> {
 
                         viewModel.setVideoUri(recordEvent.outputResults.outputUri)
+
                         val bitmap =
                             createVideoThumb(requireContext(), recordEvent.outputResults.outputUri)
                         Log.d(TAG, "captureVideo: ${recordEvent.outputResults.outputUri}")
@@ -386,13 +385,15 @@ class CameraFragment : Fragment() {
            //             stopRecordingVideoButton.visibility = viewInvisible
                         captureImageButton.visibility = viewVisible
              //           pauseRecordingVideoButton.visibility = viewInvisible
-                        flipCameraButton.visibility = viewVisible
+            //            flipCameraButton.visibility = viewVisible
                         captureImageButton.isEnabled = true
                //         recordVideoButton.isEnabled = true
                         videoTimer.visibility = viewInvisible
                         imageViewContainer.visibility = viewVisible
                         videoTimer.text = ""
                         if (!recordEvent.hasError()) {
+
+                            sendLocalCameraEvent(recordEvent.outputResults.outputUri)
 
 
                         } else {
@@ -447,6 +448,7 @@ class CameraFragment : Fragment() {
                 put(MediaStore.Images.ImageColumns.RELATIVE_PATH, proofModeDir)
             }
         }
+
         val outputDir = getExternalMediaDirs(requireContext().applicationContext)
         // On Android Q and above you can modify content of volume only if it is a primary volume
         val imagesCollection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -481,6 +483,8 @@ class CameraFragment : Fragment() {
 
                     }
                     imageViewContainer.visibility = View.VISIBLE
+
+                    //sendLocalCameraEvent(savedUri)
 
                 }
 
@@ -562,6 +566,13 @@ class CameraFragment : Fragment() {
         }
     }
 
+    fun sendLocalCameraEvent(newMediaFile : Uri) {
+
+        var intent = Intent("org.witness.proofmode.NEW_MEDIA")
+        intent.data = newMediaFile
+        LocalBroadcastManager.getInstance(requireContext()).sendBroadcast(intent)
+
+    }
 
     override fun onDestroyView() {
         super.onDestroyView()

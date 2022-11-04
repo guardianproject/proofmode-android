@@ -6,6 +6,8 @@ import android.content.IntentFilter;
 import android.net.Uri;
 import android.os.Build;
 
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.witness.proofmode.library.R;
 import org.witness.proofmode.service.AudioContentJob;
@@ -66,6 +68,10 @@ public class ProofMode {
             context.registerReceiver(mReceiver, new IntentFilter("com.android.camera.NEW_PICTURE"));
             context.registerReceiver(mReceiver, new IntentFilter("android.hardware.action.NEW_PICTURE"));
             context.registerReceiver(mReceiver, new IntentFilter("com.android.camera.NEW_VIDEO"));
+            context.registerReceiver(mReceiver, new IntentFilter("org.witness.proofmode.NEW_MEDIA"));
+
+            LocalBroadcastManager.getInstance(context).
+                    registerReceiver(mReceiver, new IntentFilter("org.witness.proofmode.NEW_MEDIA"));
         }
 
         mInit = true;
@@ -88,6 +94,8 @@ public class ProofMode {
         {
             if (mReceiver != null)
                 context.unregisterReceiver(mReceiver);
+
+            LocalBroadcastManager.getInstance(context).unregisterReceiver(mReceiver);
         }
 
         MediaWatcher.getInstance(context).stop();
