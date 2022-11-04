@@ -31,6 +31,7 @@ import androidx.drawerlayout.widget.DrawerLayout;
 import com.google.android.material.navigation.NavigationView;
 
 import org.jetbrains.annotations.NotNull;
+import org.witness.proofmode.camera.CameraModuleActivity;
 import org.witness.proofmode.crypto.PgpUtils;
 import org.witness.proofmode.onboarding.OnboardingActivity;
 import org.witness.proofmode.util.GPSTracker;
@@ -500,5 +501,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
     public void startCamera (View view) {
 
+        startActivity(new Intent(this, CameraModuleActivity.class));
     }
+
 }
