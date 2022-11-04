@@ -1,6 +1,6 @@
 package org.witness.proofmode.camera
 
-import android.app.Activity
+import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.database.Cursor
@@ -21,21 +21,26 @@ import androidx.lifecycle.LiveData
 import java.text.DecimalFormat
 import java.util.concurrent.TimeUnit
 
-fun requestAllPermissions(activity: Activity, permissions: Array<String>, requestCode: Int) {
-    ActivityCompat.requestPermissions(
-        activity,
-        permissions,
-        requestCode
-    )
+val cameraPermissions =
+    arrayListOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO).apply {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            add(Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
+    }
+
+@Suppress("DEPRECATION")
+fun requestAllPermissions(fragment: Fragment, permissions: Array<String>, requestCode: Int) {
+    fragment.requestPermissions(permissions,requestCode)
 }
 
 fun hasAllPermissions(context: Context, permissions: Array<String>): Boolean = permissions.all {
-    ActivityCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+    ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
 }
 
 
 const val PREFS_FILE_NAME = "prefs"
 const val FLASH_KEY = "flash"
+const val CAMERA_PERMISSION_REQUEST_CODE = 100
 
 /**
  * Method takes [nanoseconds] and formats it to the string form hh:mm:ss
@@ -71,21 +76,21 @@ fun createVideoThumb(context: Context, uri: Uri): Bitmap? {
 
 }
 
-@BindingAdapter("app:imageUri")
+@BindingAdapter("imageUri")
 fun bindImageUri(imageView: ImageView,uri:LiveData<Uri?>){
     uri.value?.let {
         imageView.setImageURI(it)
     }
 }
 
-@BindingAdapter("app:imageBitmap")
+@BindingAdapter("imageBitmap")
 fun bindBitmap(imageView: ImageView,bitmap:LiveData<Bitmap?>){
     bitmap.value?.let {
         imageView.setImageBitmap(it)
     }
 }
 
-@BindingAdapter("app:videoUri")
+@BindingAdapter("videoUri")
 fun bindVideoUri(videoView: VideoView,uri:LiveData<Uri?>){
     uri.value?.let {
         val mediaController = MediaController(videoView.context)

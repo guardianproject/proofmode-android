@@ -23,6 +23,7 @@
         <entry key="camera/src/main/res/layout/content_camera_main.xml" value="0.24592391304347827" />
         <entry key="camera/src/main/res/layout/fragment_camera.xml" value="0.24592391304347827" />
         <entry key="camera/src/main/res/layout/fragment_permissions.xml" value="0.24592391304347827" />
+        <entry key="camera/src/main/res/layout/fragment_view_captured.xml" value="0.17753623188405798" />
       </map>
     </option>
   </component>
