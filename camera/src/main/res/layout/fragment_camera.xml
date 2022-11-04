@@ -13,7 +13,7 @@
 
   <androidx.constraintlayout.widget.ConstraintLayout
       android:layout_width="match_parent"
-      android:background="@android:color/darker_gray"
+      android:background="#88000000"
       android:layout_height="match_parent">
 
       <com.google.android.material.card.MaterialCardView
@@ -24,9 +24,9 @@
           app:strokeColor="@android:color/black"
           app:strokeWidth="@dimen/cardview_default_radius"
           android:layout_height="48dp"
+          android:layout_marginBottom="12dp"
           app:layout_constraintBottom_toTopOf="@+id/guideline"
           app:layout_constraintEnd_toEndOf="parent"
-          app:layout_constraintStart_toEndOf="@+id/buttonCaptureVideo"
           app:cardCornerRadius="40dp"
           tools:visibility="visible"
           app:cardElevation="2dp">
@@ -44,43 +44,32 @@
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/guideline3"
         android:layout_width="wrap_content"
-        app:layout_constraintGuide_begin="45dp"
+        app:layout_constraintGuide_begin="0dp"
         android:layout_height="wrap_content"
         android:orientation="horizontal" />
 
-    <com.google.android.material.chip.Chip
-        android:id="@+id/videoTimerView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:textSize="16sp"
-        android:visibility="invisible"
-        android:textColor="@android:color/holo_red_dark"
-        tools:visibility="visible"
-        android:text="0"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/guideline" />
 
-
+<!--
     <ImageButton
         android:id="@+id/buttonDot"
         android:contentDescription="@null"
-        android:layout_width="wrap_content"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:scaleType="fitCenter"
         android:visibility="invisible"
-        android:layout_height="wrap_content"
         android:background="?attr/selectableItemBackgroundBorderless"
         app:layout_constraintBottom_toBottomOf="@+id/buttonResume"
         app:layout_constraintEnd_toEndOf="@+id/buttonResume"
         app:layout_constraintStart_toStartOf="@+id/buttonResume"
         app:layout_constraintTop_toTopOf="@+id/buttonResume"
-        app:srcCompat="@drawable/ic_circle" />
+        app:srcCompat="@drawable/ic_circle"
+        />
 
     <ImageButton
         android:id="@+id/buttonResume"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:scaleType="fitCenter"
         android:layout_marginEnd="24dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="@string/resume_recording"
@@ -88,66 +77,117 @@
         app:layout_constraintBottom_toTopOf="@+id/guideline"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/buttonCapturePicture"
+
         app:srcCompat="@drawable/ic_resume" />
+
 
     <ImageButton
         android:id="@+id/buttonPauseVideoRecording"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:scaleType="fitCenter"
         android:layout_marginEnd="24dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="@string/pause_video_recording"
         android:visibility="invisible"
         app:layout_constraintBottom_toTopOf="@+id/guideline"
         app:layout_constraintEnd_toStartOf="@+id/buttonCapturePicture"
+
         app:srcCompat="@drawable/ic_pause" />
 
     <ImageButton
         android:id="@+id/buttonCaptureVideo"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:scaleType="fitCenter"
         android:layout_marginStart="24dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="@string/capture_video"
         app:layout_constraintBottom_toBottomOf="@id/guideline"
         app:layout_constraintStart_toEndOf="@id/buttonCapturePicture"
+
         app:srcCompat="@drawable/ic_videocam" />
 
 
     <ImageButton
         android:id="@+id/buttonStopRecording"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:scaleType="fitCenter"
         android:layout_marginStart="24dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="@string/stop_video_record"
         android:visibility="invisible"
         app:layout_constraintBottom_toBottomOf="@id/guideline"
         app:layout_constraintStart_toEndOf="@id/buttonCapturePicture"
+
         app:srcCompat="@drawable/ic_stop" />
+-->
 
     <ImageButton
         android:contentDescription="@string/capture_image"
         android:id="@+id/buttonCapturePicture"
         android:background="?attr/selectableItemBackgroundBorderless"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+
+        android:layout_marginBottom="12dp"
+        android:scaleType="fitCenter"
         app:layout_constraintBottom_toTopOf="@+id/guideline"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
+
         app:srcCompat="@drawable/ic_capture" />
+
+
 
     <ImageButton
         android:id="@+id/buttonFlipCamera"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:scaleType="fitCenter"
         android:layout_marginEnd="24dp"
+
+        android:layout_marginBottom="12dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="@string/flip_camera"
         app:layout_constraintBottom_toTopOf="@+id/guideline"
         app:layout_constraintEnd_toStartOf="@+id/buttonCapturePicture"
+
         app:srcCompat="@drawable/ic_flip_camera" />
 
+
+    <com.google.android.material.chip.Chip
+        android:id="@+id/videoTimerView"
+        android:layout_width="wrap_content"
+        android:layout_height="48dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
+        android:layout_marginBottom="12dp"
+        android:textSize="16sp"
+        android:visibility="invisible"
+        android:textColor="@android:color/holo_red_dark"
+        tools:visibility="visible"
+        android:text="0"
+        app:layout_constraintBottom_toTopOf="@+id/guideline"
+        app:layout_constraintStart_toEndOf="@+id/buttonCapturePicture"
+         />
+
+<!--
+    <ImageButton
+        android:id="@+id/buttonFlashSettings"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:scaleType="fitCenter"
+        android:contentDescription="@string/flash_settings"
+        android:drawableEnd="@drawable/ic_arrow_down"
+        android:minHeight="48dp"
+        app:icon="@drawable/ic_settings"
+        app:layout_constraintBottom_toTopOf="@+id/guideline"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        />
+-->
 
     <androidx.camera.view.PreviewView
         android:id="@+id/viewFinderView"
@@ -164,7 +204,7 @@
         android:id="@+id/guideline2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        app:layout_constraintGuide_end="140dp"
+        app:layout_constraintGuide_end="64dp"
         android:orientation="horizontal" />
 
     <androidx.constraintlayout.widget.Guideline
@@ -172,18 +212,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        app:layout_constraintGuide_end="65dp" />
+        app:layout_constraintGuide_end="0dp" />
 
-    <Button
-        android:id="@+id/buttonFlashSettings"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:contentDescription="@string/flash_settings"
-        android:drawableEnd="@drawable/ic_arrow_down"
-        android:minHeight="48dp"
-        app:icon="@drawable/ic_settings"
-        app:layout_constraintBottom_toTopOf="@id/guideline3"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
   </androidx.constraintlayout.widget.ConstraintLayout>
 </layout>

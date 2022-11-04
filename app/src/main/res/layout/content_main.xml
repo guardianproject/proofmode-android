@@ -84,6 +84,14 @@
                 android:textColor="@android:color/black"
                 app:layout_constraintBottom_toTopOf="@id/toggle_y_guideline" />
 
+
+            <TextView
+                style="@style/OnboardingStepTextStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/share_proof_action"
+                android:textColor="@color/onboarding_gray" />
+
             <ImageView
                 android:contentDescription="@string/start_camera"
                 android:id="@+id/cameraLauncher"
@@ -94,14 +102,17 @@
                 android:src="@drawable/ic_camera"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/toggleOff" />
+                app:tint="#666666"
+                />
+
 
             <TextView
                 style="@style/OnboardingStepTextStyle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/share_proof_action"
+                android:text="@string/start_camera"
                 android:textColor="@color/onboarding_gray" />
+
         </LinearLayout>
 
         <LinearLayout
@@ -111,8 +122,7 @@
             android:orientation="vertical"
             android:paddingLeft="@dimen/activity_horizontal_margin"
             android:paddingRight="@dimen/activity_horizontal_margin"
-            android:paddingTop="@dimen/appIntroDefaultPaddingTop"
-            app:layout_constraintTop_toBottomOf="@id/viewShareProof">
+            app:layout_constraintBottom_toBottomOf="parent">
 
             <ImageButton
                 android:id="@+id/btnSettings"
