@@ -1,6 +1,8 @@
 package org.witness.proofmode.camera
 
 import android.Manifest
+import android.app.Activity
+import android.app.Activity.RESULT_OK
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
@@ -74,6 +76,7 @@ class CameraFragment : Fragment() {
 
     private val binding get() = _binding!!
 
+    private var resultData : Intent = Intent()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -177,6 +180,11 @@ class CameraFragment : Fragment() {
     private fun setClickListeners() {
 
 
+        capturedPreview.setOnClickListener {
+
+            requireActivity()?.setResult(RESULT_OK,resultData)
+            requireActivity()?.finish()
+        }
 
         flipCameraButton.setOnClickListener {
             flipCamera()
@@ -213,6 +221,7 @@ class CameraFragment : Fragment() {
             dialog.show(requireActivity().supportFragmentManager, "dialog")
         }**/
 
+        /**
         capturedPreview.setOnClickListener {
             viewModel.mediaType.value?.let {
                 if (it == MediaType.TypeVideo) {
@@ -220,7 +229,7 @@ class CameraFragment : Fragment() {
                    // findNavController().navigate(action)
                 }
             }
-        }
+        }**/
     }
 
 
@@ -393,7 +402,7 @@ class CameraFragment : Fragment() {
                         videoTimer.text = ""
                         if (!recordEvent.hasError()) {
 
-                            sendLocalCameraEvent(recordEvent.outputResults.outputUri)
+                            sendLocalCameraEvent(recordEvent.outputResults.outputUri,"video/mp4")
 
 
                         } else {
@@ -484,7 +493,7 @@ class CameraFragment : Fragment() {
                     }
                     imageViewContainer.visibility = View.VISIBLE
 
-                    //sendLocalCameraEvent(savedUri)
+                    sendLocalCameraEvent(savedUri,"image/jpeg")
 
                 }
 
@@ -566,7 +575,10 @@ class CameraFragment : Fragment() {
         }
     }
 
-    fun sendLocalCameraEvent(newMediaFile : Uri) {
+    fun sendLocalCameraEvent(newMediaFile : Uri, mediaType : String) {
+
+        resultData.data = newMediaFile
+        resultData.type = mediaType
 
         var intent = Intent("org.witness.proofmode.NEW_MEDIA")
         intent.data = newMediaFile

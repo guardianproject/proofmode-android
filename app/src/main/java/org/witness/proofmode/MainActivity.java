@@ -54,6 +54,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     private final static int REQUEST_CODE_OPTIONAL_PERMISSIONS = 9997;
     private final static int REQUEST_CODE_CHOOSE_MEDIA = 9996;
 
+    private final static int REQUEST_CODE_CAMERA = 9995;
 
 
     private PgpUtils mPgpUtils;
@@ -436,6 +437,15 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             }
             startActivity(intentShare);
 
+        } else if (requestCode == REQUEST_CODE_CAMERA) {
+
+            if (resultCode == RESULT_OK) {
+
+                if (data.getType()!=null && data.getType().startsWith("image"))
+                    showImagePicker();
+                else if (data.getType()!=null && data.getType().startsWith("video"))
+                    showVideoPicker();
+            }
         }
     }
 
@@ -500,8 +510,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     }
 
     public void startCamera (View view) {
-
-        startActivity(new Intent(this, CameraModuleActivity.class));
+        startActivityForResult(new Intent(this, CameraModuleActivity.class),REQUEST_CODE_CAMERA);
     }
 
 }
