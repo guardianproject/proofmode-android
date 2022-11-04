@@ -109,7 +109,7 @@
         app:layout_constraintBottom_toTopOf="@+id/guideline"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:srcCompat="@drawable/double_circle" />
+        app:srcCompat="@drawable/ic_capture" />
 
     <ImageButton
         android:id="@+id/buttonFlipCamera"
@@ -120,7 +120,7 @@
         android:contentDescription="@string/flip_camera"
         app:layout_constraintBottom_toTopOf="@+id/guideline"
         app:layout_constraintEnd_toStartOf="@+id/buttonCapturePicture"
-        app:srcCompat="@drawable/ic_flip_camera_android" />
+        app:srcCompat="@drawable/ic_flip_camera" />
 
 
     <androidx.camera.view.PreviewView

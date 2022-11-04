@@ -497,4 +497,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }
         return false;
     }
+
+    public void startCamera (View view) {
+
+    }
 }

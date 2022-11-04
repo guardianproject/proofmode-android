@@ -125,4 +125,5 @@
     <string name="progress_building_proof">Building proof bundle...</string>
     <string name="progress_generating_proof">Generating proof...</string>
     <string name="share_save_downloads">Proof saved to Downloads folder</string>
+
 </resources>

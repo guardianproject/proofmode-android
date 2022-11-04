@@ -472,7 +472,7 @@ class CameraFragment : Fragment() {
                     "Permissions are required to use the Camera.Enable in settings",
                     Snackbar.LENGTH_LONG
                 )
-                    .setAction(getString(R.string.open_settings)) {
+                    .setAction(getString(android.R.string.ok)) {
 
                         val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
                         val uri = Uri.fromParts("package", "org.witness.proofmode", null)

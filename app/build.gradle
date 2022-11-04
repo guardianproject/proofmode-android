@@ -15,8 +15,8 @@ android {
 
     defaultConfig {
         applicationId "org.witness.proofmode"
-        minSdkVersion 17
-        targetSdkVersion 31
+        minSdkVersion 21
+        targetSdkVersion 33
         versionCode 170301
         versionName "0.0.17-RC-1"
         multiDexEnabled true

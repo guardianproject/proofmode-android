@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="start_camera">Open Camera</string>
+    <string name="resume_recording">Resume</string>
+    <string name="pause_video_recording">Pause</string>
+    <string name="capture_video">Record</string>
+    <string name="stop_video_record">Stop</string>
+    <string name="capture_image">Capture</string>
+    <string name="flip_camera">Flip</string>
+    <string name="permission_reason">We need to use the Camera</string>
+</resources>
