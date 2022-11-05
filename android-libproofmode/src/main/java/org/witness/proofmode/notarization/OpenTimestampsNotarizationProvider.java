@@ -1,5 +1,6 @@
 package org.witness.proofmode.notarization;
 
+/**
 import android.util.Base64;
 
 import com.eternitywall.ots.DetachedTimestampFile;
@@ -8,6 +9,7 @@ import com.eternitywall.ots.OpenTimestamps;
 import com.eternitywall.ots.Timestamp;
 import com.eternitywall.ots.Utils;
 import com.eternitywall.ots.op.OpSHA256;
+**/
 
 import java.io.File;
 import java.io.IOException;
@@ -25,6 +27,7 @@ public class OpenTimestampsNotarizationProvider implements NotarizationProvider 
     @Override
     public void notarize(String mediaHash, InputStream is, NotarizationListener listener) {
 
+        /**
         try {
             Hash hash = new Hash(Utils.hexToBytes(mediaHash), ALGO);
 
@@ -40,7 +43,7 @@ public class OpenTimestampsNotarizationProvider implements NotarizationProvider 
         {
             listener.notarizationFailed(-1,ioe.getMessage());
 
-        }
+        }**/
     }
 
     @Override

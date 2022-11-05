@@ -2,18 +2,17 @@ package org.witness.proofmode.notarization;
 
 import android.content.Context;
 
+import com.google.protobuf.ByteString;
+
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
+import crypto.pb.Crypto;
 import threads.lite.IPFS;
 import threads.lite.cid.Cid;
-import threads.lite.cid.Multiaddr;
-import threads.lite.core.Connection;
-import threads.lite.core.Parameters;
+import threads.lite.core.Keys;
 import threads.lite.core.Session;
-import threads.lite.utils.TimeoutCancellable;
+import threads.lite.crypto.Key;
 
 public class IPFSNotarizationProvider  implements NotarizationProvider  {
 

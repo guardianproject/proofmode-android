@@ -15,6 +15,21 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/camera/proofmode.camera.androidTest.iml" filepath="$PROJECT_DIR$/.idea/modules/camera/proofmode.camera.androidTest.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/camera/proofmode.camera.main.iml" filepath="$PROJECT_DIR$/.idea/modules/camera/proofmode.camera.main.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/camera/proofmode.camera.unitTest.iml" filepath="$PROJECT_DIR$/.idea/modules/camera/proofmode.camera.unitTest.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/external/proofmode.external.iml" filepath="$PROJECT_DIR$/.idea/modules/external/proofmode.external.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/external/threads-lite/proofmode.external.threads-lite.iml" filepath="$PROJECT_DIR$/.idea/modules/external/threads-lite/proofmode.external.threads-lite.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/external/threads-lite/kwik/proofmode.external.threads-lite.kwik.iml" filepath="$PROJECT_DIR$/.idea/modules/external/threads-lite/kwik/proofmode.external.threads-lite.kwik.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/external/threads-lite/kwik/proofmode.external.threads-lite.kwik.androidTest.iml" filepath="$PROJECT_DIR$/.idea/modules/external/threads-lite/kwik/proofmode.external.threads-lite.kwik.androidTest.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/external/threads-lite/kwik/proofmode.external.threads-lite.kwik.main.iml" filepath="$PROJECT_DIR$/.idea/modules/external/threads-lite/kwik/proofmode.external.threads-lite.kwik.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/external/threads-lite/kwik/proofmode.external.threads-lite.kwik.unitTest.iml" filepath="$PROJECT_DIR$/.idea/modules/external/threads-lite/kwik/proofmode.external.threads-lite.kwik.unitTest.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/external/threads-lite/lite/proofmode.external.threads-lite.lite.iml" filepath="$PROJECT_DIR$/.idea/modules/external/threads-lite/lite/proofmode.external.threads-lite.lite.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/external/threads-lite/lite/proofmode.external.threads-lite.lite.androidTest.iml" filepath="$PROJECT_DIR$/.idea/modules/external/threads-lite/lite/proofmode.external.threads-lite.lite.androidTest.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/external/threads-lite/lite/proofmode.external.threads-lite.lite.main.iml" filepath="$PROJECT_DIR$/.idea/modules/external/threads-lite/lite/proofmode.external.threads-lite.lite.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/external/threads-lite/lite/proofmode.external.threads-lite.lite.unitTest.iml" filepath="$PROJECT_DIR$/.idea/modules/external/threads-lite/lite/proofmode.external.threads-lite.lite.unitTest.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/external/threads-lite/minidns/proofmode.external.threads-lite.minidns.iml" filepath="$PROJECT_DIR$/.idea/modules/external/threads-lite/minidns/proofmode.external.threads-lite.minidns.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/external/threads-lite/noise/proofmode.external.threads-lite.noise.iml" filepath="$PROJECT_DIR$/.idea/modules/external/threads-lite/noise/proofmode.external.threads-lite.noise.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/external/threads-lite/noise/proofmode.external.threads-lite.noise.androidTest.iml" filepath="$PROJECT_DIR$/.idea/modules/external/threads-lite/noise/proofmode.external.threads-lite.noise.androidTest.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/external/threads-lite/noise/proofmode.external.threads-lite.noise.main.iml" filepath="$PROJECT_DIR$/.idea/modules/external/threads-lite/noise/proofmode.external.threads-lite.noise.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/external/threads-lite/noise/proofmode.external.threads-lite.noise.unitTest.iml" filepath="$PROJECT_DIR$/.idea/modules/external/threads-lite/noise/proofmode.external.threads-lite.noise.unitTest.iml" />
     </modules>
   </component>
 </project>

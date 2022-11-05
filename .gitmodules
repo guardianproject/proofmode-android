@@ -1,0 +1,3 @@
+[submodule "external/threads-lite"]
+	path = external/threads-lite
+	url = https://gitlab.com/remmer.wilts/threads-lite.git
