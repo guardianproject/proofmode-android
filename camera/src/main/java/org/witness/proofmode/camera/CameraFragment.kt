@@ -37,6 +37,7 @@ import com.google.android.material.card.MaterialCardView
 import com.google.android.material.chip.Chip
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
+import org.witness.proofmode.camera.CameraFragment.CameraConstants.NEW_MEDIA_EVENT
 import org.witness.proofmode.camera.data.MediaType
 import org.witness.proofmode.camera.databinding.FragmentCameraBinding
 import java.io.File
@@ -575,12 +576,16 @@ class CameraFragment : Fragment() {
         }
     }
 
+    object CameraConstants {
+        const val NEW_MEDIA_EVENT = "org.witness.proofmode.NEW_MEDIA"
+    }
+
     fun sendLocalCameraEvent(newMediaFile : Uri, mediaType : String) {
 
         resultData.data = newMediaFile
         resultData.type = mediaType
 
-        var intent = Intent("org.witness.proofmode.NEW_MEDIA")
+        var intent = Intent(NEW_MEDIA_EVENT)
         intent.data = newMediaFile
         LocalBroadcastManager.getInstance(requireContext()).sendBroadcast(intent)
 
