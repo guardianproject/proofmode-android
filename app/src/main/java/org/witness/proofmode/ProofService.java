@@ -61,7 +61,6 @@ public class ProofService extends Service {
     public void onDestroy() {
         super.onDestroy();
 
-
         ProofMode.stop(this);
     }
 

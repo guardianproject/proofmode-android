@@ -3,6 +3,7 @@ package org.witness.proofmode;
 import static android.content.Intent.ACTION_SEND;
 import static android.content.Intent.ACTION_SEND_MULTIPLE;
 import static org.witness.proofmode.ProofMode.PREFS_DOPROOF;
+import static org.witness.proofmode.ProofService.ACTION_START;
 
 import android.Manifest;
 import android.animation.Animator;
@@ -137,6 +138,25 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         });
 
         updateOnOffState(false);
+
+        startProofService();
+    }
+
+    private void startProofService () {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+
+        if (prefs.getBoolean(PREFS_DOPROOF,false)) {
+
+            Intent intentService = new Intent(this, ProofService.class);
+            intentService.setAction(ACTION_START);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                this.startForegroundService ( intentService );
+            } else {
+                this.startService ( intentService );
+            }
+
+        }
     }
 
     private void showDocumentPicker () {
@@ -158,7 +178,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     }
 
     private void showVideoPicker () {
-        TedImagePicker.with(this).video().showVideoDuration(true).dropDownAlbum()
+        TedImagePicker.with(this).video().showVideoDuration(false).dropDownAlbum()
                 .startMultiImage(mediaList -> {
                     showShareProof(mediaList);
                 });
