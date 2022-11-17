@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         minSdkVersion 16
-        targetSdkVersion 33
+        targetSdkVersion 31
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
     }
@@ -42,6 +42,7 @@ dependencies {
         exclude group: 'commons-cli'
         exclude group: 'org.json'
         exclude group: 'com.sun.xml'
+        exclude group: 'org.glassfish.jaxb'
     }
 
     implementation 'org.bouncycastle:bcpkix-jdk15to18:1.72'
