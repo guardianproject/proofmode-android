@@ -67,10 +67,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
      * The permissions needed for "base" ProofMode to work, without extra options.
      */
     private final static String[] requiredPermissions = new String[] {
-            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.READ_EXTERNAL_STORAGE
     };
     private final static String[] optionalPermissions = new String[] {
-            Manifest.permission.READ_PHONE_STATE,
+    //        Manifest.permission.READ_PHONE_STATE,
             Manifest.permission.ACCESS_NETWORK_STATE,
             Manifest.permission.CAMERA
     };
