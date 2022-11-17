@@ -64,11 +64,14 @@ public class ProofMode {
         }
 
         mReceiver = new CameraEventReceiver();
+
+        //external potential camera events
         context.registerReceiver(mReceiver, new IntentFilter("com.android.camera.NEW_PICTURE"));
         context.registerReceiver(mReceiver, new IntentFilter("android.hardware.action.NEW_PICTURE"));
         context.registerReceiver(mReceiver, new IntentFilter("com.android.camera.NEW_VIDEO"));
         context.registerReceiver(mReceiver, new IntentFilter("org.witness.proofmode.NEW_MEDIA"));
 
+        //internet camera event
         LocalBroadcastManager.getInstance(context).
                 registerReceiver(mReceiver, new IntentFilter("org.witness.proofmode.NEW_MEDIA"));
 
