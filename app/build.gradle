@@ -10,7 +10,7 @@ android {
     buildToolsVersion "31.0.0"
 
     buildFeatures {
-        dataBinding true
+        viewBinding true
     }
 
     flavorDimensions 'default'
@@ -57,7 +57,9 @@ dependencies {
     implementation project(':android-libproofmode')
 
     implementation 'androidx.appcompat:appcompat:1.5.1'
-    implementation 'androidx.core:core:1.9.0'
+    implementation 'androidx.core:core-ktx:1.9.0'
+    implementation "androidx.preference:preference-ktx:1.2.0"
+
 
     implementation project(":camera")
     implementation 'com.google.android.material:material:1.7.0-alpha03'
