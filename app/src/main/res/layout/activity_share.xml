@@ -211,5 +211,27 @@
 
     </LinearLayout>
 
+    <LinearLayout
+        android:id="@+id/view_proof_saved"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center_horizontal|center_vertical"
+        android:visibility="gone"
+        tools:visibility="visible"
+        android:padding="12dp"
+        >
+        <TextView
+            android:id="@+id/view_proof_saved_message"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/share_save_downloads"
+            android:layout_margin="12dp"
+            style="@style/OnboardingStepContentStyle"
+            />
+
+
+    </LinearLayout>
+
 
 </LinearLayout>
