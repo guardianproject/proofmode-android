@@ -1,8 +1,11 @@
 package org.witness.proofmode.camera
 
+import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.ViewGroup
+import android.view.Window
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -23,6 +26,19 @@ class CameraModuleActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         WindowCompat.setDecorFitsSystemWindows(window, false)
+
+        if (Build.VERSION.SDK_INT >= 21) {
+
+            requestWindowFeature(Window.FEATURE_NO_TITLE);
+            getWindow().setFlags(
+                WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN
+            );
+
+            getWindow().setStatusBarColor(this.getResources().getColor(R.color.black));
+
+        }
+
         super.onCreate(savedInstanceState)
         binding = ActivityCameraMainBinding.inflate(layoutInflater)
         displayEdgeToEdge()
