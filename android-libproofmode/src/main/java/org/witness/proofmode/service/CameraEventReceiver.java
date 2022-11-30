@@ -12,7 +12,7 @@ public class CameraEventReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
 
         if (intent != null && intent.getData() != null)
-        MediaWatcher.getInstance(context).processUri(intent.getData(), true);
+            MediaWatcher.getInstance(context).processUri(intent.getData(), true);
 
     }
 }
