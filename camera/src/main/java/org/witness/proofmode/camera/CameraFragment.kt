@@ -79,6 +79,25 @@ class CameraFragment : Fragment() {
 
     private var resultData : Intent = Intent()
 
+    private val orientationEventListener by lazy {
+        object : OrientationEventListener(requireActivity()) {
+            override fun onOrientationChanged(orientation: Int) {
+                if (orientation == ORIENTATION_UNKNOWN) {
+                    return
+                }
+
+                val rotation = when (orientation) {
+                    in 45 until 135 -> Surface.ROTATION_270
+                    in 135 until 225 -> Surface.ROTATION_180
+                    in 225 until 315 -> Surface.ROTATION_90
+                    else -> Surface.ROTATION_0
+                }
+
+                imageCapture?.targetRotation = rotation
+            }
+        }
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -90,6 +109,7 @@ class CameraFragment : Fragment() {
         initViews()
         observeSettingsChange()
         observeKeyEventChanges()
+
         return binding.root
 
     }
@@ -258,6 +278,7 @@ class CameraFragment : Fragment() {
                 videoCapture
             )
 
+            orientationEventListener.enable()
         } catch (ex: Exception) {
             Toast.makeText(requireContext(), getString(R.string.capture_error), Toast.LENGTH_SHORT).show()
         }
@@ -593,6 +614,8 @@ class CameraFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        orientationEventListener.disable()
+
         _binding = null
     }
 }
