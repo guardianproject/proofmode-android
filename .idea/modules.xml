@@ -3,19 +3,6 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/proofmode.iml" filepath="$PROJECT_DIR$/.idea/modules/proofmode.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/proofmode-android-1.iml" filepath="$PROJECT_DIR$/.idea/modules/proofmode-android-1.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/android-libproofmode/proofmode-android-1.android-libproofmode.iml" filepath="$PROJECT_DIR$/.idea/modules/android-libproofmode/proofmode-android-1.android-libproofmode.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/android-libproofmode/proofmode-android-1.android-libproofmode.androidTest.iml" filepath="$PROJECT_DIR$/.idea/modules/android-libproofmode/proofmode-android-1.android-libproofmode.androidTest.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/android-libproofmode/proofmode-android-1.android-libproofmode.main.iml" filepath="$PROJECT_DIR$/.idea/modules/android-libproofmode/proofmode-android-1.android-libproofmode.main.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/android-libproofmode/proofmode-android-1.android-libproofmode.unitTest.iml" filepath="$PROJECT_DIR$/.idea/modules/android-libproofmode/proofmode-android-1.android-libproofmode.unitTest.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/proofmode-android-1.app.iml" filepath="$PROJECT_DIR$/.idea/modules/app/proofmode-android-1.app.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/proofmode-android-1.app.androidTest.iml" filepath="$PROJECT_DIR$/.idea/modules/app/proofmode-android-1.app.androidTest.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/proofmode-android-1.app.main.iml" filepath="$PROJECT_DIR$/.idea/modules/app/proofmode-android-1.app.main.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/proofmode-android-1.app.unitTest.iml" filepath="$PROJECT_DIR$/.idea/modules/app/proofmode-android-1.app.unitTest.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/camera/proofmode-android-1.camera.iml" filepath="$PROJECT_DIR$/.idea/modules/camera/proofmode-android-1.camera.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/camera/proofmode-android-1.camera.androidTest.iml" filepath="$PROJECT_DIR$/.idea/modules/camera/proofmode-android-1.camera.androidTest.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/camera/proofmode-android-1.camera.main.iml" filepath="$PROJECT_DIR$/.idea/modules/camera/proofmode-android-1.camera.main.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/camera/proofmode-android-1.camera.unitTest.iml" filepath="$PROJECT_DIR$/.idea/modules/camera/proofmode-android-1.camera.unitTest.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/android-libproofmode/proofmode.android-libproofmode.iml" filepath="$PROJECT_DIR$/.idea/modules/android-libproofmode/proofmode.android-libproofmode.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/android-libproofmode/proofmode.android-libproofmode.androidTest.iml" filepath="$PROJECT_DIR$/.idea/modules/android-libproofmode/proofmode.android-libproofmode.androidTest.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/android-libproofmode/proofmode.android-libproofmode.main.iml" filepath="$PROJECT_DIR$/.idea/modules/android-libproofmode/proofmode.android-libproofmode.main.iml" />
