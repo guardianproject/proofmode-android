@@ -81,9 +81,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private fun showDocumentPicker() {
         val intent = Intent()
         intent.type = "*/*"
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
-            intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
-        }
+        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
         intent.action = Intent.ACTION_GET_CONTENT
         startActivityForResult(
             Intent.createChooser(intent, getString(R.string.share_proof_action)),
@@ -130,12 +128,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private fun setProofModeOn(isOn: Boolean) {
         if (isOn) {
             if (!askForPermissions(requiredPermissions, REQUEST_CODE_REQUIRED_PERMISSIONS)) {
-                mPrefs.edit().putBoolean(ProofMode.PREFS_DOPROOF, isOn).commit()
+                mPrefs.edit().putBoolean(ProofMode.PREFS_DOPROOF, isOn).apply()
                 updateOnOffState(true)
                 (application as ProofModeApp).init(this)
             }
         } else {
-            mPrefs.edit().putBoolean(ProofMode.PREFS_DOPROOF, isOn).commit()
+            mPrefs.edit().putBoolean(ProofMode.PREFS_DOPROOF, isOn).apply()
             updateOnOffState(true)
             (application as ProofModeApp).cancel(this)
         }
@@ -427,7 +425,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             Manifest.permission.READ_EXTERNAL_STORAGE
         )
         private val optionalPermissions = arrayOf(
-            Manifest.permission.READ_PHONE_STATE,
+       //     Manifest.permission.READ_PHONE_STATE,
             Manifest.permission.ACCESS_NETWORK_STATE,
             Manifest.permission.CAMERA
         )
