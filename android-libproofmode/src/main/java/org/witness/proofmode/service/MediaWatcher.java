@@ -215,42 +215,50 @@ public class MediaWatcher extends BroadcastReceiver {
 
                 if (isOnline(context)) {
 
-                    final GoogleSafetyNetNotarizationProvider gProvider = new GoogleSafetyNetNotarizationProvider(context);
                     final String mediaHashNotarize = mediaHash;
                     final String mediaNotesNotarize = notes;
 
                     try
                     {
 
-                        //notarize and then write proof so we can include notarization response
+                        try {
 
-                        gProvider.notarize(mediaHash, context.getContentResolver().openInputStream(uriMedia), new NotarizationListener() {
-                            @Override
-                            public void notarizationSuccessful(String notarizedHash, String result) {
+                            Class.forName("com.google.android.gms.safetynet.SafetyNetApi");
 
-                                SafetyNetResponse resp = gProvider.parseJsonWebSignature(result);
+                            //notarize and then write proof so we can include notarization response
+                            final GoogleSafetyNetNotarizationProvider gProvider = new GoogleSafetyNetNotarizationProvider(context);
+                            gProvider.notarize(mediaHash, context.getContentResolver().openInputStream(uriMedia), new NotarizationListener() {
+                                @Override
+                                public void notarizationSuccessful(String notarizedHash, String result) {
 
-                                File fileMediaNotarizeData = new File(getHashStorageDir(context,notarizedHash),notarizedHash + GOOGLE_SAFETYNET_FILE_TAG);
-                                try {
-                                    writeBytesToFile(context,fileMediaNotarizeData, result.getBytes("UTF-8"));
-                                } catch (UnsupportedEncodingException e) {
-                                    e.printStackTrace();
+                                    SafetyNetResponse resp = gProvider.parseJsonWebSignature(result);
+
+                                    File fileMediaNotarizeData = new File(getHashStorageDir(context, notarizedHash), notarizedHash + GOOGLE_SAFETYNET_FILE_TAG);
+                                    try {
+                                        writeBytesToFile(context, fileMediaNotarizeData, result.getBytes("UTF-8"));
+                                    } catch (UnsupportedEncodingException e) {
+                                        e.printStackTrace();
+                                    }
+
+                                    writeProof(context, uriMedia, mediaHashNotarize, showDeviceIds, showLocation, showMobileNetwork, mediaNotesNotarize, resp);
+
+
                                 }
 
-                                writeProof(context, uriMedia, mediaHashNotarize, showDeviceIds, showLocation, showMobileNetwork, mediaNotesNotarize, resp);
+                                @Override
+                                public void notarizationFailed(int errCode, String message) {
 
+                                    //if failed, write proof without response
+                                    Timber.d("Got Google SafetyNet error response: %s", message);
+                                    writeProof(context, uriMedia, mediaHashNotarize, showDeviceIds, showLocation, showMobileNetwork, mediaNotesNotarize, null);
 
-                            }
-
-                            @Override
-                            public void notarizationFailed(int errCode, String message) {
-
-                                //if failed, write proof without response
-                                Timber.d("Got Google SafetyNet error response: %s", message);
-                                writeProof(context, uriMedia, mediaHashNotarize, showDeviceIds, showLocation, showMobileNetwork, mediaNotesNotarize, null);
-
-                            }
-                        });
+                                }
+                            });
+                        }
+                        catch (ClassNotFoundException ce)
+                        {
+                            //SafetyNet API not available
+                        }
 
                         try {
 
