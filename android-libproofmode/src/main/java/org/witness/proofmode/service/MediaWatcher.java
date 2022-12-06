@@ -54,6 +54,7 @@ import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.text.DateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -84,6 +85,8 @@ public class MediaWatcher extends BroadcastReceiver {
     private ExecutorService mExec = Executors.newFixedThreadPool(1);
 
     private Context mContext = null;
+
+    private ArrayList<NotarizationProvider> mProviders = new ArrayList<>();
 
     private MediaWatcher (Context context) {
         if (mPrefs == null)
@@ -121,6 +124,10 @@ public class MediaWatcher extends BroadcastReceiver {
         });
 
 
+    }
+
+    public void addNotarizationProvider (NotarizationProvider provider) {
+        mProviders.add(provider);
     }
 
 
@@ -233,7 +240,7 @@ public class MediaWatcher extends BroadcastReceiver {
 
                                     SafetyNetResponse resp = gProvider.parseJsonWebSignature(result);
 
-                                    File fileMediaNotarizeData = new File(getHashStorageDir(context, notarizedHash), notarizedHash + GOOGLE_SAFETYNET_FILE_TAG);
+                                    File fileMediaNotarizeData = new File(getHashStorageDir(context, notarizedHash), notarizedHash + gProvider.getNotarizationFileExtension());
                                     try {
                                         writeBytesToFile(context, fileMediaNotarizeData, result.getBytes("UTF-8"));
                                     } catch (UnsupportedEncodingException e) {
@@ -289,6 +296,28 @@ public class MediaWatcher extends BroadcastReceiver {
                         catch (ClassNotFoundException e)
                         {
                             //class not available
+                        }
+
+                        for (NotarizationProvider provider : mProviders)
+                        {
+                            provider.notarize(mediaHash, context.getContentResolver().openInputStream(uriMedia), new NotarizationListener() {
+                                @Override
+                                public void notarizationSuccessful(String hash, String result) {
+                                    Timber.d("Got notarization success response timestamp: %s", result);
+                                    File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + provider.getNotarizationFileExtension());
+
+                                    byte[] rawNotarizeData = Base64.decode(result, Base64.DEFAULT);
+                                    writeBytesToFile(context, fileMediaNotarizeData, rawNotarizeData);
+
+                                }
+
+                                @Override
+                                public void notarizationFailed(int errCode, String message) {
+
+                                    Timber.d("Got notarization error response: %s", message);
+
+                                }
+                            });
                         }
 
                     } catch (FileNotFoundException e) {

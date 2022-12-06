@@ -12,6 +12,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.witness.proofmode.library.R;
+import org.witness.proofmode.notarization.NotarizationProvider;
 import org.witness.proofmode.service.AudioContentJob;
 import org.witness.proofmode.service.CameraEventReceiver;
 import org.witness.proofmode.service.MediaWatcher;
@@ -150,6 +151,10 @@ public class ProofMode {
 
         editor.apply();
 
+    }
+
+    public static void addNotarizationProvider (Context context, NotarizationProvider provider) {
+        MediaWatcher.getInstance(context).addNotarizationProvider(provider);
     }
 
 
