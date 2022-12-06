@@ -3,8 +3,10 @@ package org.witness.proofmode;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Build;
+import android.preference.PreferenceManager;
 
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
@@ -52,7 +54,7 @@ public class ProofMode {
 
     private static boolean mInit = false;
 
-    public synchronized static void init (Context context)
+    public synchronized static void initBackgroundService (Context context)
     {
         if (mInit)
             return;
@@ -64,17 +66,7 @@ public class ProofMode {
         }
 
         mReceiver = new CameraEventReceiver();
-
-        //external potential camera events
-        context.registerReceiver(mReceiver, new IntentFilter("com.android.camera.NEW_PICTURE"));
-        context.registerReceiver(mReceiver, new IntentFilter("android.hardware.action.NEW_PICTURE"));
-        context.registerReceiver(mReceiver, new IntentFilter("com.android.camera.NEW_VIDEO"));
-        context.registerReceiver(mReceiver, new IntentFilter("org.witness.proofmode.NEW_MEDIA"));
-
-        //internet camera event
-        LocalBroadcastManager.getInstance(context).
-                registerReceiver(mReceiver, new IntentFilter("org.witness.proofmode.NEW_MEDIA"));
-
+        addCameraEventListeners(context, mReceiver);
 
         mInit = true;
 
@@ -85,7 +77,22 @@ public class ProofMode {
 
     }
 
-    public static void stop (Context context)
+    private static void addCameraEventListeners (Context context, CameraEventReceiver receiver) {
+
+        //external potential camera events
+        context.registerReceiver(receiver, new IntentFilter("com.android.camera.NEW_PICTURE"));
+        context.registerReceiver(receiver, new IntentFilter("android.hardware.action.NEW_PICTURE"));
+        context.registerReceiver(receiver, new IntentFilter("com.android.camera.NEW_VIDEO"));
+        context.registerReceiver(receiver, new IntentFilter("org.witness.proofmode.NEW_MEDIA"));
+
+        //internet camera event
+        LocalBroadcastManager.getInstance(context).
+                registerReceiver(receiver, new IntentFilter("org.witness.proofmode.NEW_MEDIA"));
+
+
+    }
+
+    public static void stopBackgroundService (Context context)
     {
         if (Build.VERSION.SDK_INT >= 24) {
             PhotosContentJob.cancelJob(context);
@@ -128,6 +135,21 @@ public class ProofMode {
     public static File getProofDir (Context context, String mediaHash)
     {
         return MediaWatcher.getHashStorageDir(context, mediaHash);
+    }
+
+    public static void setProofPoints (Context context, boolean deviceIds, boolean location, boolean networks, boolean notarization)
+    {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+
+        SharedPreferences.Editor editor = prefs.edit();
+
+        editor.putBoolean(ProofMode.PREF_OPTION_PHONE, deviceIds);
+        editor.putBoolean(ProofMode.PREF_OPTION_LOCATION, location);
+        editor.putBoolean(ProofMode.PREF_OPTION_NOTARY, notarization);
+        editor.putBoolean(ProofMode.PREF_OPTION_NETWORK, networks);
+
+        editor.apply();
+
     }
 
 

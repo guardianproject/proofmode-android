@@ -35,7 +35,6 @@ import org.witness.proofmode.crypto.PgpUtils;
 import org.witness.proofmode.notarization.GoogleSafetyNetNotarizationProvider;
 import org.witness.proofmode.notarization.NotarizationListener;
 import org.witness.proofmode.notarization.NotarizationProvider;
-import org.witness.proofmode.notarization.OpenTimestampsNotarizationProvider;
 import org.witness.proofmode.util.DeviceInfo;
 import org.witness.proofmode.util.GPSTracker;
 import org.witness.proofmode.util.RecursiveFileObserver;
@@ -253,28 +252,36 @@ public class MediaWatcher extends BroadcastReceiver {
                             }
                         });
 
+                        try {
 
-                        final NotarizationProvider nProvider = new OpenTimestampsNotarizationProvider();
-                        nProvider.notarize(mediaHash, context.getContentResolver().openInputStream(uriMedia), new NotarizationListener() {
-                            @Override
-                            public void notarizationSuccessful(String notarizedHash, String resultData) {
+                            //this may not be included in the current build
+                            Class.forName("com.eternitywall.ots.OpenTimestamps");
 
+                            final NotarizationProvider nProvider = new org.witness.proofmode.notarization.OpenTimestampsNotarizationProvider();
+                            nProvider.notarize(mediaHash, context.getContentResolver().openInputStream(uriMedia), new NotarizationListener() {
+                                @Override
+                                public void notarizationSuccessful(String notarizedHash, String resultData) {
 
-                                Timber.d("Got OpenTimestamps success response timestamp: %s", resultData);
-                                File fileMediaNotarizeData = new File(getHashStorageDir(context,notarizedHash),notarizedHash + OPENTIMESTAMPS_FILE_TAG);
+                                    Timber.d("Got OpenTimestamps success response timestamp: %s", resultData);
+                                    File fileMediaNotarizeData = new File(getHashStorageDir(context, notarizedHash), notarizedHash + OPENTIMESTAMPS_FILE_TAG);
 
-                                byte[] rawNotarizeData = Base64.decode(resultData, Base64.DEFAULT);
-                                writeBytesToFile(context, fileMediaNotarizeData, rawNotarizeData);
+                                    byte[] rawNotarizeData = Base64.decode(resultData, Base64.DEFAULT);
+                                    writeBytesToFile(context, fileMediaNotarizeData, rawNotarizeData);
 
-                            }
+                                }
 
-                            @Override
-                            public void notarizationFailed(int errCode, String message) {
+                                @Override
+                                public void notarizationFailed(int errCode, String message) {
 
-                                Timber.d("Got OpenTimestamps error response: %s", message);
+                                    Timber.d("Got OpenTimestamps error response: %s", message);
 
-                            }
-                        });
+                                }
+                            });
+                        }
+                        catch (ClassNotFoundException e)
+                        {
+                            //class not available
+                        }
 
                     } catch (FileNotFoundException e) {
                         //write immediate proof
