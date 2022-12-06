@@ -20,7 +20,6 @@ class DataLegendActivity : AppCompatActivity() {
             setDisplayShowHomeEnabled(true)
             setDisplayShowTitleEnabled(false)
         }
-        binding.toolbarTitle.text = title
         val webView = binding.webView
         val webSetting = webView.settings
         webSetting.apply {
