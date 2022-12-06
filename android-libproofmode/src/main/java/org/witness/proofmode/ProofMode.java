@@ -11,6 +11,7 @@ import android.preference.PreferenceManager;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.witness.proofmode.crypto.PgpUtils;
 import org.witness.proofmode.library.R;
 import org.witness.proofmode.notarization.NotarizationProvider;
 import org.witness.proofmode.service.AudioContentJob;
@@ -21,7 +22,10 @@ import org.witness.proofmode.service.VideosContentJob;
 import org.witness.proofmode.util.SafetyNetCheck;
 
 import java.io.File;
+import java.io.IOException;
 import java.security.Security;
+
+import timber.log.Timber;
 
 
 public class ProofMode {
@@ -155,6 +159,20 @@ public class ProofMode {
 
     public static void addNotarizationProvider (Context context, NotarizationProvider provider) {
         MediaWatcher.getInstance(context).addNotarizationProvider(provider);
+    }
+
+    public static String getPublicKey (Context context) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        PgpUtils pu = PgpUtils.getInstance(context,prefs.getString("password",PgpUtils.DEFAULT_PASSWORD));
+        String pubKey = null;
+
+        try {
+            pubKey = pu.getPublicKey();
+        } catch (IOException e) {
+            Timber.d("error getting public key");
+        }
+
+        return pubKey;
     }
 
 

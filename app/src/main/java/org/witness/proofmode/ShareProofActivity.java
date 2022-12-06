@@ -1315,11 +1315,10 @@ public class ShareProofActivity extends AppCompatActivity {
 
         Timber.d("Adding public key");
         //add public key
-        String pubKey = getPublicKey();
+        String pubKey = ProofMode.getPublicKey(this);
         ZipEntry entry = new ZipEntry("pubkey.asc");
         out.putNextEntry(entry);
         out.write(pubKey.getBytes());
-
 
         Timber.d("Adding HowToVerifyProofData.txt");
         String howToFile = "HowToVerifyProofData.txt";
@@ -1444,19 +1443,6 @@ public class ShareProofActivity extends AppCompatActivity {
         currentDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
     }
 
-    private String getPublicKey () {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        PgpUtils pu = PgpUtils.getInstance(this,prefs.getString("password",PgpUtils.DEFAULT_PASSWORD));
-        String pubKey = null;
-
-        try {
-            pubKey = pu.getPublicKey();
-        } catch (IOException e) {
-            Timber.d("error getting public key");
-        }
-
-        return pubKey;
-    }
 
     /**
      * User the PermissionActivity to ask for permissions, but show no UI when calling from here.
