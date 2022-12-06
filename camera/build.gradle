@@ -36,6 +36,7 @@ android {
 
 dependencies {
 
+    implementation 'androidx.core:core-ktx:+'
     def camerax_version = "1.2.0-rc01"
     implementation 'androidx.core:core-ktx:1.9.0'
     implementation 'androidx.appcompat:appcompat:1.5.1'
