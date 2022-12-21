@@ -76,6 +76,18 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             popupMenu.show()
         }
         updateOnOffState(false)
+        startService()
+    }
+
+    private fun startService () {
+        val intentService = Intent(this, ProofService::class.java)
+        intentService.action = ProofService.ACTION_START
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intentService)
+        } else {
+            startService(intentService)
+        }
     }
 
     private fun showDocumentPicker() {
