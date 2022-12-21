@@ -49,6 +49,14 @@ dependencies {
     implementation 'org.bouncycastle:bcprov-jdk15to18:1.72'
     api 'org.bouncycastle:bcpg-jdk15to18:1.71'
 
+    // Required -- JUnit 4 framework
+    androidTestImplementation 'junit:junit:4.13.2'
+
+    // Testing-only dependencies
+    androidTestImplementation 'androidx.test:core:' + rootProject.coreVersion;
+    androidTestImplementation 'androidx.test.ext:junit:' + rootProject.extJUnitVersion;
+    androidTestImplementation 'androidx.test:runner:' + rootProject.runnerVersion;
+
 
 }
 
