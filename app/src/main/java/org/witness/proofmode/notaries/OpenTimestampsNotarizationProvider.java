@@ -1,4 +1,4 @@
-package org.witness.proofmode.notarization;
+package org.witness.proofmode.notaries;
 
 import static org.witness.proofmode.ProofMode.OPENTIMESTAMPS_FILE_TAG;
 
@@ -9,6 +9,10 @@ import com.eternitywall.ots.Hash;
 import com.eternitywall.ots.OpenTimestamps;
 import com.eternitywall.ots.Timestamp;
 import com.eternitywall.ots.Utils;
+
+import org.witness.proofmode.notarization.NotarizationListener;
+import org.witness.proofmode.notarization.NotarizationProvider;
+
 import java.io.IOException;
 import java.io.InputStream;
 

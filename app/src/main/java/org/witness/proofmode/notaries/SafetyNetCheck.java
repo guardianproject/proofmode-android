@@ -1,4 +1,4 @@
-package org.witness.proofmode.util;
+package org.witness.proofmode.notaries;
 
 import android.content.Context;
 import android.util.Log;

@@ -1,7 +1,6 @@
-package org.witness.proofmode.notarization;
+package org.witness.proofmode.notaries;
 
 import static org.witness.proofmode.ProofMode.GOOGLE_SAFETYNET_FILE_TAG;
-import static org.witness.proofmode.ProofMode.OPENTIMESTAMPS_FILE_TAG;
 
 import android.content.Context;
 import android.util.Base64;
@@ -12,8 +11,8 @@ import com.google.android.gms.safetynet.SafetyNetApi;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 
-import org.witness.proofmode.util.SafetyNetCheck;
-import org.witness.proofmode.util.SafetyNetResponse;
+import org.witness.proofmode.notarization.NotarizationListener;
+import org.witness.proofmode.notarization.NotarizationProvider;
 
 import java.io.IOException;
 import java.io.InputStream;

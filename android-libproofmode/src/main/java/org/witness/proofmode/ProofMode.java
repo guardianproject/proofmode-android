@@ -1,7 +1,6 @@
 package org.witness.proofmode;
 
 import android.content.Context;
-import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.net.Uri;
@@ -19,10 +18,8 @@ import org.witness.proofmode.service.CameraEventReceiver;
 import org.witness.proofmode.service.MediaWatcher;
 import org.witness.proofmode.service.PhotosContentJob;
 import org.witness.proofmode.service.VideosContentJob;
-import org.witness.proofmode.util.SafetyNetCheck;
 
 import java.io.File;
-import java.io.InputStream;
 import java.io.IOException;
 import java.security.Security;
 
@@ -79,7 +76,6 @@ public class ProofMode {
         MediaWatcher.getInstance(context);
 
 
-        SafetyNetCheck.setApiKey(context.getString(R.string.verification_api_key));
 
     }
 
@@ -91,7 +87,7 @@ public class ProofMode {
         context.registerReceiver(receiver, new IntentFilter("com.android.camera.NEW_VIDEO"));
         context.registerReceiver(receiver, new IntentFilter("org.witness.proofmode.NEW_MEDIA"));
 
-        //internet camera event
+        //internal camera event
         LocalBroadcastManager.getInstance(context).
                 registerReceiver(receiver, new IntentFilter("org.witness.proofmode.NEW_MEDIA"));
 
@@ -164,9 +160,6 @@ public class ProofMode {
 
     }
 
-    public static void addDefaultNotarizationProviders (Context context) {
-        MediaWatcher.getInstance(context).addDefaultNotarizationProviders();
-    }
 
     public static void addNotarizationProvider (Context context, NotarizationProvider provider) {
         MediaWatcher.getInstance(context).addNotarizationProvider(provider);

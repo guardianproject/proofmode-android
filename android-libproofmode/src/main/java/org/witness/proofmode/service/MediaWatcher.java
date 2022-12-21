@@ -28,12 +28,10 @@ import org.json.JSONObject;
 import org.witness.proofmode.ProofMode;
 import org.witness.proofmode.crypto.HashUtils;
 import org.witness.proofmode.crypto.PgpUtils;
-import org.witness.proofmode.notarization.GoogleSafetyNetNotarizationProvider;
 import org.witness.proofmode.notarization.NotarizationListener;
 import org.witness.proofmode.notarization.NotarizationProvider;
 import org.witness.proofmode.util.DeviceInfo;
 import org.witness.proofmode.util.GPSTracker;
-import org.witness.proofmode.util.SafetyNetResponse;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataOutputStream;
@@ -114,32 +112,7 @@ public class MediaWatcher extends BroadcastReceiver {
         mProviders.add(provider);
     }
 
-    public void addDefaultNotarizationProviders () {
-        try {
 
-            Class.forName("com.google.android.gms.safetynet.SafetyNetApi");
-
-            //notarize and then write proof so we can include notarization response
-            final GoogleSafetyNetNotarizationProvider gProvider = new GoogleSafetyNetNotarizationProvider(mContext);
-            mProviders.add(gProvider);
-        }
-        catch (ClassNotFoundException ce)
-        {
-            //SafetyNet API not available
-        }
-
-        try {
-            //this may not be included in the current build
-            Class.forName("com.eternitywall.ots.OpenTimestamps");
-
-            final NotarizationProvider nProvider = new org.witness.proofmode.notarization.OpenTimestampsNotarizationProvider();
-            mProviders.add(nProvider);
-        }
-        catch (ClassNotFoundException e)
-        {
-            //class not available
-        }
-    }
 
     public String processUri (Uri uriMedia, boolean autogen) {
         try {
