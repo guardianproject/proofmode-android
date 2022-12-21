@@ -240,7 +240,7 @@ public class MediaWatcher extends BroadcastReceiver {
 
                                 try {
                                     byte[] rawNotarizeData = Base64.decode(result, Base64.DEFAULT);
-                                    writeBytesToFile(context, fileMediaNotarizeData,` rawNotarizeData);
+                                    writeBytesToFile(context, fileMediaNotarizeData, rawNotarizeData);
                                 } catch (Exception e) {
                                     //if an error, then just write the bytes
                                     try {
