@@ -53,6 +53,7 @@ public class GoogleSafetyNetNotarizationProvider implements NotarizationProvider
             public void onFailure(@NonNull Exception e) {
                 // An error occurred while communicating with the service.
                 Timber.d(e,"SafetyNet check failed");
+                listener.notarizationFailed(-1,e.getMessage());
             }
         });
     }
