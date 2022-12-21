@@ -1,6 +1,8 @@
 package org.witness.proofmode.camera
 
 import android.Manifest
+import android.app.Activity
+import android.app.Activity.RESULT_OK
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
@@ -35,6 +37,7 @@ import com.google.android.material.card.MaterialCardView
 import com.google.android.material.chip.Chip
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
+import org.witness.proofmode.camera.CameraFragment.CameraConstants.NEW_MEDIA_EVENT
 import org.witness.proofmode.camera.data.MediaType
 import org.witness.proofmode.camera.databinding.FragmentCameraBinding
 import java.io.File
@@ -74,6 +77,26 @@ class CameraFragment : Fragment() {
 
     private val binding get() = _binding!!
 
+    private var resultData : Intent = Intent()
+
+    private val orientationEventListener by lazy {
+        object : OrientationEventListener(requireActivity()) {
+            override fun onOrientationChanged(orientation: Int) {
+                if (orientation == ORIENTATION_UNKNOWN) {
+                    return
+                }
+
+                val rotation = when (orientation) {
+                    in 45 until 135 -> Surface.ROTATION_270
+                    in 135 until 225 -> Surface.ROTATION_180
+                    in 225 until 315 -> Surface.ROTATION_90
+                    else -> Surface.ROTATION_0
+                }
+
+                imageCapture?.targetRotation = rotation
+            }
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -86,6 +109,7 @@ class CameraFragment : Fragment() {
         initViews()
         observeSettingsChange()
         observeKeyEventChanges()
+
         return binding.root
 
     }
@@ -177,6 +201,11 @@ class CameraFragment : Fragment() {
     private fun setClickListeners() {
 
 
+        capturedPreview.setOnClickListener {
+
+            requireActivity()?.setResult(RESULT_OK,resultData)
+            requireActivity()?.finish()
+        }
 
         flipCameraButton.setOnClickListener {
             flipCamera()
@@ -213,6 +242,7 @@ class CameraFragment : Fragment() {
             dialog.show(requireActivity().supportFragmentManager, "dialog")
         }**/
 
+        /**
         capturedPreview.setOnClickListener {
             viewModel.mediaType.value?.let {
                 if (it == MediaType.TypeVideo) {
@@ -220,7 +250,7 @@ class CameraFragment : Fragment() {
                    // findNavController().navigate(action)
                 }
             }
-        }
+        }**/
     }
 
 
@@ -248,6 +278,7 @@ class CameraFragment : Fragment() {
                 videoCapture
             )
 
+            orientationEventListener.enable()
         } catch (ex: Exception) {
             Toast.makeText(requireContext(), getString(R.string.capture_error), Toast.LENGTH_SHORT).show()
         }
@@ -393,7 +424,7 @@ class CameraFragment : Fragment() {
                         videoTimer.text = ""
                         if (!recordEvent.hasError()) {
 
-                            sendLocalCameraEvent(recordEvent.outputResults.outputUri)
+                            sendLocalCameraEvent(recordEvent.outputResults.outputUri,"video/mp4")
 
 
                         } else {
@@ -484,7 +515,7 @@ class CameraFragment : Fragment() {
                     }
                     imageViewContainer.visibility = View.VISIBLE
 
-                    //sendLocalCameraEvent(savedUri)
+                    sendLocalCameraEvent(savedUri,"image/jpeg")
 
                 }
 
@@ -566,9 +597,16 @@ class CameraFragment : Fragment() {
         }
     }
 
-    fun sendLocalCameraEvent(newMediaFile : Uri) {
+    object CameraConstants {
+        const val NEW_MEDIA_EVENT = "org.witness.proofmode.NEW_MEDIA"
+    }
 
-        var intent = Intent("org.witness.proofmode.NEW_MEDIA")
+    fun sendLocalCameraEvent(newMediaFile : Uri, mediaType : String) {
+
+        resultData.data = newMediaFile
+        resultData.type = mediaType
+
+        var intent = Intent(NEW_MEDIA_EVENT)
         intent.data = newMediaFile
         LocalBroadcastManager.getInstance(requireContext()).sendBroadcast(intent)
 
@@ -576,6 +614,8 @@ class CameraFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        orientationEventListener.disable()
+
         _binding = null
     }
 }

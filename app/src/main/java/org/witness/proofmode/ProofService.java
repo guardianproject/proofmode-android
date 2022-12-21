@@ -61,8 +61,7 @@ public class ProofService extends Service {
     public void onDestroy() {
         super.onDestroy();
 
-
-        ProofMode.stop(this);
+        ProofMode.stopBackgroundService(this);
     }
 
     @Override
@@ -75,7 +74,7 @@ public class ProofService extends Service {
 
                 showNotification(getString(R.string.waiting_proof_notify));
 
-                ProofMode.init(this);
+                ProofMode.initBackgroundService(this);
 
             }
             else if (intent.getAction().equals(ACTION_UPDATE_NOTIFICATION))

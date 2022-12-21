@@ -1,5 +1,10 @@
 package org.witness.proofmode.service;
 
+import static org.witness.proofmode.ProofMode.OPENPGP_FILE_TAG;
+import static org.witness.proofmode.ProofMode.PREFS_DOPROOF;
+import static org.witness.proofmode.ProofMode.PROOF_FILE_JSON_TAG;
+import static org.witness.proofmode.ProofMode.PROOF_FILE_TAG;
+
 import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -14,19 +19,10 @@ import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
-import android.os.FileObserver;
-import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.provider.MediaStore;
 import android.text.TextUtils;
 import android.util.Base64;
-import android.util.Log;
-
-import androidx.annotation.NonNull;
-
-import com.google.android.gms.safetynet.SafetyNetApi;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 
 import org.json.JSONObject;
 import org.witness.proofmode.ProofMode;
@@ -35,11 +31,8 @@ import org.witness.proofmode.crypto.PgpUtils;
 import org.witness.proofmode.notarization.GoogleSafetyNetNotarizationProvider;
 import org.witness.proofmode.notarization.NotarizationListener;
 import org.witness.proofmode.notarization.NotarizationProvider;
-import org.witness.proofmode.notarization.OpenTimestampsNotarizationProvider;
 import org.witness.proofmode.util.DeviceInfo;
 import org.witness.proofmode.util.GPSTracker;
-import org.witness.proofmode.util.RecursiveFileObserver;
-import org.witness.proofmode.util.SafetyNetCheck;
 import org.witness.proofmode.util.SafetyNetResponse;
 
 import java.io.ByteArrayInputStream;
@@ -50,29 +43,19 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
-import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.text.DateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.Stack;
 import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import timber.log.Timber;
-
-import static org.witness.proofmode.ProofMode.GOOGLE_SAFETYNET_FILE_TAG;
-import static org.witness.proofmode.ProofMode.OPENPGP_FILE_TAG;
-import static org.witness.proofmode.ProofMode.OPENTIMESTAMPS_FILE_TAG;
-import static org.witness.proofmode.ProofMode.PREFS_DOPROOF;
-import static org.witness.proofmode.ProofMode.PROOF_FILE_JSON_TAG;
-import static org.witness.proofmode.ProofMode.PROOF_FILE_TAG;
 
 public class MediaWatcher extends BroadcastReceiver {
 
@@ -86,6 +69,8 @@ public class MediaWatcher extends BroadcastReceiver {
     private ExecutorService mExec = Executors.newFixedThreadPool(1);
 
     private Context mContext = null;
+
+    private ArrayList<NotarizationProvider> mProviders = new ArrayList<>();
 
     private MediaWatcher (Context context) {
         if (mPrefs == null)
@@ -125,6 +110,36 @@ public class MediaWatcher extends BroadcastReceiver {
 
     }
 
+    public void addNotarizationProvider (NotarizationProvider provider) {
+        mProviders.add(provider);
+    }
+
+    public void addDefaultNotarizationProviders () {
+        try {
+
+            Class.forName("com.google.android.gms.safetynet.SafetyNetApi");
+
+            //notarize and then write proof so we can include notarization response
+            final GoogleSafetyNetNotarizationProvider gProvider = new GoogleSafetyNetNotarizationProvider(mContext);
+            mProviders.add(gProvider);
+        }
+        catch (ClassNotFoundException ce)
+        {
+            //SafetyNet API not available
+        }
+
+        try {
+            //this may not be included in the current build
+            Class.forName("com.eternitywall.ots.OpenTimestamps");
+
+            final NotarizationProvider nProvider = new org.witness.proofmode.notarization.OpenTimestampsNotarizationProvider();
+            mProviders.add(nProvider);
+        }
+        catch (ClassNotFoundException e)
+        {
+            //class not available
+        }
+    }
 
     public String processUri (Uri uriMedia, boolean autogen) {
         try {
@@ -212,84 +227,53 @@ public class MediaWatcher extends BroadcastReceiver {
 
             if (!autoNotarize) {
                 //write immediate proof
-                writeProof(context, uriMedia, context.getContentResolver().openInputStream(uriMedia), mediaHash, showDeviceIds, showLocation, showMobileNetwork, notes, null);
+                writeProof(context, uriMedia, context.getContentResolver().openInputStream(uriMedia), mediaHash, showDeviceIds, showLocation, showMobileNetwork, notes);
 
             }
             else {
 
                 if (isOnline(context)) {
 
-                    final GoogleSafetyNetNotarizationProvider gProvider = new GoogleSafetyNetNotarizationProvider(context);
                     final String mediaHashNotarize = mediaHash;
                     final String mediaNotesNotarize = notes;
 
                     try
                     {
+                        for (NotarizationProvider provider : mProviders)
+                        {
+                            provider.notarize(mediaHash, context.getContentResolver().openInputStream(uriMedia), new NotarizationListener() {
+                                @Override
+                                public void notarizationSuccessful(String hash, String result) {
+                                    Timber.d("Got notarization success response for %s, timestamp: %s", provider.getNotarizationFileExtension(), result);
+                                    File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + provider.getNotarizationFileExtension());
 
-                        //notarize and then write proof so we can include notarization response
-
-                        gProvider.notarize(mediaHash, context.getContentResolver().openInputStream(uriMedia), new NotarizationListener() {
-                            @Override
-                            public void notarizationSuccessful(String notarizedHash, String result) {
-
-                                SafetyNetResponse resp = gProvider.parseJsonWebSignature(result);
-
-                                File fileMediaNotarizeData = new File(getHashStorageDir(context,notarizedHash),notarizedHash + GOOGLE_SAFETYNET_FILE_TAG);
-                                try {
-                                    writeBytesToFile(context,fileMediaNotarizeData, result.getBytes("UTF-8"));
-                                } catch (UnsupportedEncodingException e) {
-                                    e.printStackTrace();
+                                    try {
+                                        byte[] rawNotarizeData = Base64.decode(result, Base64.DEFAULT);
+                                        writeBytesToFile(context, fileMediaNotarizeData, rawNotarizeData);
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        //if an error, then just write the bytes
+                                        try {
+                                            writeBytesToFile(context, fileMediaNotarizeData, result.getBytes("UTF-8"));
+                                        } catch (UnsupportedEncodingException ex) {
+                                            ex.printStackTrace();
+                                        }
+                                    }
                                 }
 
-                                try {
-                                    writeProof(context, uriMedia, context.getContentResolver().openInputStream(uriMedia), mediaHashNotarize, showDeviceIds, showLocation, showMobileNetwork, mediaNotesNotarize, resp);
-                                } catch (FileNotFoundException e) {
-                                    e.printStackTrace();
+                                @Override
+                                public void notarizationFailed(int errCode, String message) {
+
+                                    Timber.d("Got notarization error response for %s: %s", provider.getNotarizationFileExtension(), message);
+
                                 }
-
-
-                            }
-
-                            @Override
-                            public void notarizationFailed(int errCode, String message) {
-
-                                //if failed, write proof without response
-                                Timber.d("Got Google SafetyNet error response: %s", message);
-                                try {
-                                    writeProof(context, uriMedia, context.getContentResolver().openInputStream(uriMedia), mediaHashNotarize, showDeviceIds, showLocation, showMobileNetwork, mediaNotesNotarize, null);
-                                } catch (FileNotFoundException e) {
-                                    e.printStackTrace();
-                                }
-
-                            }
-                        });
-
-
-                        final NotarizationProvider nProvider = new OpenTimestampsNotarizationProvider();
-                        nProvider.notarize(mediaHash, context.getContentResolver().openInputStream(uriMedia), new NotarizationListener() {
-                            @Override
-                            public void notarizationSuccessful(String notarizedHash, String resultData) {
-
-
-                                Timber.d("Got OpenTimestamps success response timestamp: %s", resultData);
-                                File fileMediaNotarizeData = new File(getHashStorageDir(context,notarizedHash),notarizedHash + OPENTIMESTAMPS_FILE_TAG);
-
-                                byte[] rawNotarizeData = Base64.decode(resultData, Base64.DEFAULT);
-                                writeBytesToFile(context, fileMediaNotarizeData, rawNotarizeData);
-
-                            }
-
-                            @Override
-                            public void notarizationFailed(int errCode, String message) {
-
-                                Timber.d("Got OpenTimestamps error response: %s", message);
-
-                            }
-                        });
+                            });
+                        }
 
                     } catch (FileNotFoundException e) {
                         //write immediate proof
-                        writeProof(context, uriMedia, context.getContentResolver().openInputStream(uriMedia), mediaHash, showDeviceIds, showLocation, showMobileNetwork, notes, null);
+                        writeProof(context, uriMedia, context.getContentResolver().openInputStream(uriMedia), mediaHash, showDeviceIds, showLocation, showMobileNetwork, notes);
 
                         Timber.e(e);
                     }
@@ -297,7 +281,7 @@ public class MediaWatcher extends BroadcastReceiver {
                 else
                 {
                     //write immediate proof
-                    writeProof(context, uriMedia, context.getContentResolver().openInputStream(uriMedia), mediaHash, showDeviceIds, showLocation, showMobileNetwork, notes, null);
+                    writeProof(context, uriMedia, context.getContentResolver().openInputStream(uriMedia), mediaHash, showDeviceIds, showLocation, showMobileNetwork, notes);
 
                 }
             }
@@ -349,76 +333,43 @@ public class MediaWatcher extends BroadcastReceiver {
 
             if (!autoNotarize) {
                 //write immediate proof
-                writeProof(context, null, new ByteArrayInputStream(mediaBytes), mediaHash, showDeviceIds, showLocation, showMobileNetwork, notes, null);
+                writeProof(context, null, new ByteArrayInputStream(mediaBytes), mediaHash, showDeviceIds, showLocation, showMobileNetwork, notes);
 
             }
             else {
 
                 if (isOnline(context)) {
 
-                    final GoogleSafetyNetNotarizationProvider gProvider = new GoogleSafetyNetNotarizationProvider(context);
-                    final String mediaHashNotarize = mediaHash;
-                    final String mediaNotesNotarize = notes;
+                        for (NotarizationProvider provider : mProviders)
+                        {
+                            provider.notarize(mediaHash, new ByteArrayInputStream(mediaBytes), new NotarizationListener() {
+                                @Override
+                                public void notarizationSuccessful(String hash, String result) {
+                                    Timber.d("Got notarization success response timestamp: %s", result);
+                                    File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + provider.getNotarizationFileExtension());
 
+                                    byte[] rawNotarizeData = Base64.decode(result, Base64.DEFAULT);
+                                    writeBytesToFile(context, fileMediaNotarizeData, rawNotarizeData);
 
-                    //notarize and then write proof so we can include notarization response
+                                }
 
-                    gProvider.notarize(mediaHash, new ByteArrayInputStream(mediaBytes), new NotarizationListener() {
-                        @Override
-                        public void notarizationSuccessful(String notarizedHash, String result) {
+                                @Override
+                                public void notarizationFailed(int errCode, String message) {
 
-                            SafetyNetResponse resp = gProvider.parseJsonWebSignature(result);
+                                    Timber.d("Got notarization error response: %s", message);
 
-                            File fileMediaNotarizeData = new File(getHashStorageDir(context,notarizedHash),notarizedHash + GOOGLE_SAFETYNET_FILE_TAG);
-                            try {
-                                writeBytesToFile(context,fileMediaNotarizeData, result.getBytes("UTF-8"));
-                            } catch (UnsupportedEncodingException e) {
-                                e.printStackTrace();
-                            }
-
-                            writeProof(context, uriMedia, new ByteArrayInputStream(mediaBytes), mediaHashNotarize, showDeviceIds, showLocation, showMobileNetwork, mediaNotesNotarize, resp);
-
-
+                                }
+                            });
                         }
 
-                        @Override
-                        public void notarizationFailed(int errCode, String message) {
-
-                            //if failed, write proof without response
-                            Timber.d("Got Google SafetyNet error response: %s", message);
-                            writeProof(context, uriMedia, new ByteArrayInputStream(mediaBytes), mediaHashNotarize, showDeviceIds, showLocation, showMobileNetwork, mediaNotesNotarize, null);
-
-                        }
-                    });
 
 
-                    final NotarizationProvider nProvider = new OpenTimestampsNotarizationProvider();
-                    nProvider.notarize(mediaHash, new ByteArrayInputStream(mediaBytes), new NotarizationListener() {
-                        @Override
-                        public void notarizationSuccessful(String notarizedHash, String resultData) {
-
-
-                            Timber.d("Got OpenTimestamps success response timestamp: %s", resultData);
-                            File fileMediaNotarizeData = new File(getHashStorageDir(context,notarizedHash),notarizedHash + OPENTIMESTAMPS_FILE_TAG);
-
-                            byte[] rawNotarizeData = Base64.decode(resultData, Base64.DEFAULT);
-                            writeBytesToFile(context, fileMediaNotarizeData, rawNotarizeData);
-
-                        }
-
-                        @Override
-                        public void notarizationFailed(int errCode, String message) {
-
-                            Timber.d("Got OpenTimestamps error response: %s", message);
-
-                        }
-                    });
 
                 }
                 else
                 {
                     //write immediate proof
-                    writeProof(context, uriMedia, new ByteArrayInputStream(mediaBytes), mediaHash, showDeviceIds, showLocation, showMobileNetwork, notes, null);
+                    writeProof(context, uriMedia, new ByteArrayInputStream(mediaBytes), mediaHash, showDeviceIds, showLocation, showMobileNetwork, notes);
 
                 }
             }
@@ -472,7 +423,7 @@ public class MediaWatcher extends BroadcastReceiver {
     }
 
 
-    private void writeProof (Context context, Uri uriMedia, InputStream is, String mediaHash, boolean showDeviceIds, boolean showLocation, boolean showMobileNetwork, String notes, SafetyNetResponse resp)
+    private void writeProof (Context context, Uri uriMedia, InputStream is, String mediaHash, boolean showDeviceIds, boolean showLocation, boolean showMobileNetwork, String notes)
     {
 
         boolean usePgpArmor = true;
@@ -490,7 +441,7 @@ public class MediaWatcher extends BroadcastReceiver {
                 //add data to proof csv and sign again
                 boolean writeHeaders = !fileMediaProof.exists();
 
-                HashMap<String,String> hmProof = buildProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, notes, resp);
+                HashMap<String,String> hmProof = buildProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, notes);
                 writeMapToCSV(context, fileMediaProof, hmProof, writeHeaders);
 
                 JSONObject jProof = new JSONObject(hmProof);
@@ -566,7 +517,7 @@ public class MediaWatcher extends BroadcastReceiver {
         return false;
     }
 
-    private HashMap<String,String> buildProof (Context context, Uri uriMedia, String mediaHash, boolean showDeviceIds, boolean showLocation, boolean showMobileNetwork, String notes, SafetyNetResponse resp)
+    private HashMap<String,String> buildProof (Context context, Uri uriMedia, String mediaHash, boolean showDeviceIds, boolean showLocation, boolean showMobileNetwork, String notes)
     {
         String mediaPath = null;
 
@@ -697,7 +648,12 @@ public class MediaWatcher extends BroadcastReceiver {
             hmProof.put("Location.Time", "");
         }
 
+        hmProof.put("SafetyCheck", "false");
+        hmProof.put("SafetyCheckBasicIntegrity", "");
+        hmProof.put("SafetyCheckCtsMatch", "");
+        hmProof.put("SafetyCheckTimestamp", "");
 
+        /**
         if (resp != null) {
             hmProof.put("SafetyCheck", "true");
             hmProof.put("SafetyCheckBasicIntegrity", resp.isBasicIntegrity()+"");
@@ -710,7 +666,7 @@ public class MediaWatcher extends BroadcastReceiver {
             hmProof.put("SafetyCheckBasicIntegrity", "");
             hmProof.put("SafetyCheckCtsMatch", "");
             hmProof.put("SafetyCheckTimestamp", "");
-        }
+        }**/
 
         if (!TextUtils.isEmpty(notes))
             hmProof.put("Notes",notes);

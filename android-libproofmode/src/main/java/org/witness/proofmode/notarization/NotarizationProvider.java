@@ -14,4 +14,5 @@ public interface NotarizationProvider {
 
     public String getProof(String hash) throws IOException;
 
+    public String getNotarizationFileExtension ();
 }

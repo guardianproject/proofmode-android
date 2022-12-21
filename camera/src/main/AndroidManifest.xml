@@ -17,7 +17,9 @@
         <activity
             android:name="org.witness.proofmode.camera.CameraModuleActivity"
             android:exported="true"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.Proofmode">
+
         </activity>
     </application>
 

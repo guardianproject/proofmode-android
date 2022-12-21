@@ -343,7 +343,7 @@ public class ShareProofActivity extends AppCompatActivity {
         }
     }
 
-    private synchronized boolean saveProofAsync (boolean shareMedia, boolean shareProof) throws FileNotFoundException {
+    private synchronized File saveProofAsync (boolean shareMedia, boolean shareProof) throws FileNotFoundException {
 
         // Get intent, action and MIME type
         Intent intent = getIntent();
@@ -351,6 +351,8 @@ public class ShareProofActivity extends AppCompatActivity {
 
         ArrayList<Uri> shareUris = new ArrayList<>();
         StringBuffer shareText = new StringBuffer ();
+
+        File fileProofDownloads = null;
 
         if (Intent.ACTION_SEND_MULTIPLE.equals(action))
         {
@@ -365,13 +367,13 @@ public class ShareProofActivity extends AppCompatActivity {
                 File fileFolder = MediaWatcher.getHashStorageDir(this, "batch");
 
                 if (fileFolder == null)
-                    return false;
+                    return null;
 
                 fileBatchProof = new File(fileFolder,new Date().getTime() + "batchproof.csv");
                 fBatchProofOut = new PrintWriter(new FileWriter(fileBatchProof,  true));
             }
             catch (IOException ioe) {
-                return false; //unable to open batch proof
+                return null; //unable to open batch proof
             }
 
             int successProof = 0;
@@ -402,7 +404,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
                 String mediaHash = hashCache.get(mediaUri);
                 if (!processUri(mediaHash, mediaUri, shareUris, shareText, null, shareMedia))
-                    return false;
+                    return null;
             }
 
         }
@@ -431,7 +433,7 @@ public class ShareProofActivity extends AppCompatActivity {
                     zipProof(shareUris,fileZip);
                 } catch (IOException e) {
                     Timber.e(e,"Error generating proof Zip");
-                    return false;
+                    return null;
                 }
 
                 if (fileZip.length() > 0) {
@@ -458,7 +460,7 @@ public class ShareProofActivity extends AppCompatActivity {
                     shareFiltered(getString(R.string.select_app), shareText.toString(), shareUris, uriZip);
                      **/
 
-                    File fileProofDownloads = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileZip.getName());
+                    fileProofDownloads = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileZip.getName());
 
                     FileOutputStream fos = new FileOutputStream(fileProofDownloads);
                     FileInputStream fis = new FileInputStream(fileZip);
@@ -479,7 +481,7 @@ public class ShareProofActivity extends AppCompatActivity {
                     {
                         Timber.e(e,"Proof zip failed due to file copy:" + fileProofDownloads.getAbsolutePath());
 
-                        return false;
+                        return null;
                     }
 
                     //copy IO utils
@@ -489,18 +491,18 @@ public class ShareProofActivity extends AppCompatActivity {
                 {
                     Timber.d("Proof zip failed due to empty size:" + fileZip.length());
 
-                    return false;
+                    return null;
                 }
 
             }
         }
         else
         {
-            return false;
+            return null;
         }
 
 
-        return true;
+        return fileProofDownloads;
     }
 
     private void shareProof (final boolean shareMedia, final boolean shareProof) {
@@ -751,7 +753,7 @@ public class ShareProofActivity extends AppCompatActivity {
         }
     }
 
-    private static class SaveProofTask extends AsyncTask<Boolean, Void, Boolean> {
+    private static class SaveProofTask extends AsyncTask<Boolean, Void, File> {
 
         private final ShareProofActivity activity;
 
@@ -761,23 +763,23 @@ public class ShareProofActivity extends AppCompatActivity {
             activity = context;
         }
 
-        protected Boolean doInBackground(Boolean... params) {
+        protected File doInBackground(Boolean... params) {
 
-            boolean result = false;
+            File result = null;
             try {
                 result = activity.saveProofAsync(params[0],params[1]);
                 return result;
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
-                return false;
+                return null;
             }
 
 
         }
 
-        protected void onPostExecute(Boolean result) {
+        protected void onPostExecute(File result) {
 
-            if (!result)
+            if (result == null)
             {
                 //do something
                 Timber.d("unable to shareProofAsync");
@@ -785,8 +787,7 @@ public class ShareProofActivity extends AppCompatActivity {
             }
             else
             {
-                Snackbar.make(activity.findViewById(R.id.view_proof), activity.getString(R.string.share_save_downloads),Snackbar.LENGTH_LONG).show();
-               // activity.finish();
+                activity.showProofSaved(result);
             }
         }
     }
@@ -837,13 +838,28 @@ public class ShareProofActivity extends AppCompatActivity {
 
     }
 
+
     private void showProofError ()
     {
         findViewById(R.id.view_proof).setVisibility(View.GONE);
         findViewById(R.id.view_no_proof).setVisibility(View.GONE);
         findViewById(R.id.view_proof_progress).setVisibility(View.GONE);
+        findViewById(R.id.view_proof_saved).setVisibility(View.GONE);
         findViewById(R.id.view_proof_failed).setVisibility(View.VISIBLE);
     }
+
+    private void showProofSaved (File fileProof)
+    {
+        findViewById(R.id.view_proof).setVisibility(View.GONE);
+        findViewById(R.id.view_no_proof).setVisibility(View.GONE);
+        findViewById(R.id.view_proof_progress).setVisibility(View.GONE);
+        findViewById(R.id.view_proof_failed).setVisibility(View.GONE);
+        findViewById(R.id.view_proof_saved).setVisibility(View.VISIBLE);
+
+        TextView tv = findViewById(R.id.view_proof_saved_message);
+        tv.setText(getString(R.string.share_save_downloads)+"\n\n" + fileProof.getAbsolutePath());
+    }
+
 
     private Uri getRealUri (Uri contentUri)
     {
@@ -1299,11 +1315,10 @@ public class ShareProofActivity extends AppCompatActivity {
 
         Timber.d("Adding public key");
         //add public key
-        String pubKey = getPublicKey();
+        String pubKey = ProofMode.getPublicKey(this);
         ZipEntry entry = new ZipEntry("pubkey.asc");
         out.putNextEntry(entry);
         out.write(pubKey.getBytes());
-
 
         Timber.d("Adding HowToVerifyProofData.txt");
         String howToFile = "HowToVerifyProofData.txt";
@@ -1428,19 +1443,6 @@ public class ShareProofActivity extends AppCompatActivity {
         currentDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
     }
 
-    private String getPublicKey () {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        PgpUtils pu = PgpUtils.getInstance(this,prefs.getString("password",PgpUtils.DEFAULT_PASSWORD));
-        String pubKey = null;
-
-        try {
-            pubKey = pu.getPublicKey();
-        } catch (IOException e) {
-            Timber.d("error getting public key");
-        }
-
-        return pubKey;
-    }
 
     /**
      * User the PermissionActivity to ask for permissions, but show no UI when calling from here.

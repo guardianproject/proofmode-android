@@ -38,7 +38,7 @@ public class ProofModeApp extends MultiDexApplication {
     {
 
         if (BuildConfig.DEBUG) {
-            Timber.plant(new Timber.DebugTree());
+        //    Timber.plant(new Timber.DebugTree());
         }
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
@@ -48,11 +48,16 @@ public class ProofModeApp extends MultiDexApplication {
             Intent intentService = new Intent(context, ProofService.class);
             intentService.setAction(ACTION_START);
 
-            if (Build.VERSION.SDK_INT >= 26) {
-                context.startForegroundService(intentService);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+             //   OneTimeWorkRequest request = new OneTimeWorkRequest.Builder ( BackupWorker.class ).addTag ( "BACKUP_WORKER_TAG" ).build ();
+            //    WorkManager.getInstance ( context ).enqueue ( request );
 
+                //not sure what to do here yet!
+
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService ( intentService );
             } else {
-                context.startService(intentService);
+                context.startService ( intentService );
             }
 
         }

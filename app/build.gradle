@@ -7,10 +7,10 @@ plugins {
 
 android {
     compileSdkVersion 33
-    buildToolsVersion "31.0.0"
+    buildToolsVersion "33.0.0"
 
     buildFeatures {
-        dataBinding true
+        viewBinding true
     }
 
     flavorDimensions 'default'
@@ -24,9 +24,9 @@ android {
     defaultConfig {
         applicationId "org.witness.proofmode"
         minSdkVersion 21
-        targetSdkVersion 33
-        versionCode 170301
-        versionName "0.0.17-RC-1"
+        targetSdkVersion 31
+        versionCode 180103
+        versionName "0.0.18-BETA-1"
         multiDexEnabled true
         archivesBaseName = "ProofMode-$versionName"
     }
@@ -57,7 +57,9 @@ dependencies {
     implementation project(':android-libproofmode')
 
     implementation 'androidx.appcompat:appcompat:1.5.1'
-    implementation 'androidx.core:core:1.9.0'
+    implementation 'androidx.core:core-ktx:1.9.0'
+    implementation "androidx.preference:preference-ktx:1.2.0"
+
 
     implementation project(":camera")
     implementation 'com.google.android.material:material:1.7.0-alpha03'

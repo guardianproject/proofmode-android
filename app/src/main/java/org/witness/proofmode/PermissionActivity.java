@@ -89,7 +89,7 @@ public class PermissionActivity extends AppCompatActivity {
         if (missingPermissions == null) {
             finish();
         } else {
-            ActivityCompat.requestPermissions(PermissionActivity.this, missingPermissions, 1);
+            ActivityCompat.requestPermissions(PermissionActivity.this, missingPermissions, 7777);
         }
     }
 
