@@ -39,10 +39,12 @@ public class GoogleSafetyNetNotarizationProvider implements NotarizationProvider
                 // Use response.getJwsResult() to get the result data.
 
                 String resultString = response.getJwsResult();
+                SafetyNetResponse resp = parseJsonWebSignature(resultString);
 
                 listener.notarizationSuccessful(mediaHash, resultString);
            //     Timber.d("Success! SafetyNet result: isBasicIntegrity: " + isBasicIntegrity + " isCts:" + isCtsMatch);
 //                writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, resultString, isBasicIntegrity, isCtsMatch, timestamp, null);
+
 
 
             }

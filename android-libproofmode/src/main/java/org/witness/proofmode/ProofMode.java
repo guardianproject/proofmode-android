@@ -164,6 +164,10 @@ public class ProofMode {
 
     }
 
+    public static void addDefaultNotarizationProviders (Context context) {
+        MediaWatcher.getInstance(context).addDefaultNotarizationProviders();
+    }
+
     public static void addNotarizationProvider (Context context, NotarizationProvider provider) {
         MediaWatcher.getInstance(context).addNotarizationProvider(provider);
     }

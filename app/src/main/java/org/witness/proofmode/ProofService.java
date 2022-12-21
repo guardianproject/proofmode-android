@@ -74,6 +74,8 @@ public class ProofService extends Service {
 
                 showNotification(getString(R.string.waiting_proof_notify));
 
+                //add google safetynet and opentimestamps
+                ProofMode.addDefaultNotarizationProviders(this);
                 ProofMode.initBackgroundService(this);
 
             }
