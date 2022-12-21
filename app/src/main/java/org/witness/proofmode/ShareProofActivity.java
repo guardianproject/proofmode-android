@@ -656,7 +656,6 @@ public class ShareProofActivity extends AppCompatActivity {
             mediaUri = Uri.parse(sMediaUri);
         }
 
-        ContentResolver cr = getContentResolver();
         String hash = HashUtils.getSHA256FromFileContent(getContentResolver().openInputStream(mediaUri));
 
         if (hash != null) {
