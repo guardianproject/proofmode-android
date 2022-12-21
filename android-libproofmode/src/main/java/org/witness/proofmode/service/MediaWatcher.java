@@ -225,66 +225,48 @@ public class MediaWatcher extends BroadcastReceiver {
             }
 
 
-            if (!autoNotarize) {
-                //write immediate proof
-                writeProof(context, uriMedia, context.getContentResolver().openInputStream(uriMedia), mediaHash, showDeviceIds, showLocation, showMobileNetwork, notes);
+            writeProof(context, uriMedia, context.getContentResolver().openInputStream(uriMedia), mediaHash, showDeviceIds, showLocation, showMobileNetwork, notes);
 
-            }
-            else {
 
-                if (isOnline(context)) {
+            if (autoNotarize && isOnline(context)) {
 
-                    final String mediaHashNotarize = mediaHash;
-                    final String mediaNotesNotarize = notes;
+                try {
+                    for (NotarizationProvider provider : mProviders) {
+                        provider.notarize(mediaHash, context.getContentResolver().openInputStream(uriMedia), new NotarizationListener() {
+                            @Override
+                            public void notarizationSuccessful(String hash, String result) {
+                                Timber.d("Got notarization success response for %s, timestamp: %s", provider.getNotarizationFileExtension(), result);
+                                File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + provider.getNotarizationFileExtension());
 
-                    try
-                    {
-                        for (NotarizationProvider provider : mProviders)
-                        {
-                            provider.notarize(mediaHash, context.getContentResolver().openInputStream(uriMedia), new NotarizationListener() {
-                                @Override
-                                public void notarizationSuccessful(String hash, String result) {
-                                    Timber.d("Got notarization success response for %s, timestamp: %s", provider.getNotarizationFileExtension(), result);
-                                    File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + provider.getNotarizationFileExtension());
-
+                                try {
+                                    byte[] rawNotarizeData = Base64.decode(result, Base64.DEFAULT);
+                                    writeBytesToFile(context, fileMediaNotarizeData,` rawNotarizeData);
+                                } catch (Exception e) {
+                                    //if an error, then just write the bytes
                                     try {
-                                        byte[] rawNotarizeData = Base64.decode(result, Base64.DEFAULT);
-                                        writeBytesToFile(context, fileMediaNotarizeData, rawNotarizeData);
-                                    }
-                                    catch (Exception e)
-                                    {
-                                        //if an error, then just write the bytes
-                                        try {
-                                            writeBytesToFile(context, fileMediaNotarizeData, result.getBytes("UTF-8"));
-                                        } catch (UnsupportedEncodingException ex) {
-                                            ex.printStackTrace();
-                                        }
+                                        writeBytesToFile(context, fileMediaNotarizeData, result.getBytes("UTF-8"));
+                                    } catch (UnsupportedEncodingException ex) {
+                                        ex.printStackTrace();
                                     }
                                 }
+                            }
 
-                                @Override
-                                public void notarizationFailed(int errCode, String message) {
+                            @Override
+                            public void notarizationFailed(int errCode, String message) {
 
-                                    Timber.d("Got notarization error response for %s: %s", provider.getNotarizationFileExtension(), message);
+                                Timber.d("Got notarization error response for %s: %s", provider.getNotarizationFileExtension(), message);
 
-                                }
-                            });
-                        }
-
-                    } catch (FileNotFoundException e) {
-                        //write immediate proof
-                        writeProof(context, uriMedia, context.getContentResolver().openInputStream(uriMedia), mediaHash, showDeviceIds, showLocation, showMobileNetwork, notes);
-
-                        Timber.e(e);
+                            }
+                        });
                     }
-                }
-                else
-                {
-                    //write immediate proof
-                    writeProof(context, uriMedia, context.getContentResolver().openInputStream(uriMedia), mediaHash, showDeviceIds, showLocation, showMobileNetwork, notes);
 
+                } catch (FileNotFoundException e) {
+
+                    Timber.e(e);
                 }
+
             }
+
 
             return mediaHash;
         }
