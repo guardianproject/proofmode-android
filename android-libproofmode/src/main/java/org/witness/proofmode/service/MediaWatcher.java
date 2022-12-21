@@ -45,10 +45,12 @@ import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Stack;
+import java.util.TimeZone;
 import java.util.Timer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -285,48 +287,34 @@ public class MediaWatcher extends BroadcastReceiver {
                 e.printStackTrace();
             }
 
+            //write immediate proof
+            writeProof(context, uriMedia, new ByteArrayInputStream(mediaBytes), mediaHash, showDeviceIds, showLocation, showMobileNetwork, notes);
 
-            if (!autoNotarize) {
-                //write immediate proof
-                writeProof(context, null, new ByteArrayInputStream(mediaBytes), mediaHash, showDeviceIds, showLocation, showMobileNetwork, notes);
+            if (autoNotarize && isOnline(context)) {
 
-            }
-            else {
+                    for (NotarizationProvider provider : mProviders)
+                    {
+                        provider.notarize(mediaHash, new ByteArrayInputStream(mediaBytes), new NotarizationListener() {
+                            @Override
+                            public void notarizationSuccessful(String hash, String result) {
+                                Timber.d("Got notarization success response timestamp: %s", result);
+                                File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + provider.getNotarizationFileExtension());
 
-                if (isOnline(context)) {
+                                byte[] rawNotarizeData = Base64.decode(result, Base64.DEFAULT);
+                                writeBytesToFile(context, fileMediaNotarizeData, rawNotarizeData);
 
-                        for (NotarizationProvider provider : mProviders)
-                        {
-                            provider.notarize(mediaHash, new ByteArrayInputStream(mediaBytes), new NotarizationListener() {
-                                @Override
-                                public void notarizationSuccessful(String hash, String result) {
-                                    Timber.d("Got notarization success response timestamp: %s", result);
-                                    File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + provider.getNotarizationFileExtension());
+                            }
 
-                                    byte[] rawNotarizeData = Base64.decode(result, Base64.DEFAULT);
-                                    writeBytesToFile(context, fileMediaNotarizeData, rawNotarizeData);
+                            @Override
+                            public void notarizationFailed(int errCode, String message) {
 
-                                }
+                                Timber.d("Got notarization error response: %s", message);
 
-                                @Override
-                                public void notarizationFailed(int errCode, String message) {
-
-                                    Timber.d("Got notarization error response: %s", message);
-
-                                }
-                            });
-                        }
+                            }
+                        });
+                    }
 
 
-
-
-                }
-                else
-                {
-                    //write immediate proof
-                    writeProof(context, uriMedia, new ByteArrayInputStream(mediaBytes), mediaHash, showDeviceIds, showLocation, showMobileNetwork, notes);
-
-                }
             }
 
             return mediaHash;
@@ -506,7 +494,9 @@ public class MediaWatcher extends BroadcastReceiver {
             }
         }
 
-        DateFormat df = DateFormat.getDateTimeInstance(DateFormat.FULL,DateFormat.FULL);
+        TimeZone tz = TimeZone.getTimeZone("UTC");
+        DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'"); // Quoted "Z" to indicate UTC, no timezone offset
+        df.setTimeZone(tz);
 
         HashMap<String, String> hmProof = new HashMap<>();
 
@@ -522,26 +512,24 @@ public class MediaWatcher extends BroadcastReceiver {
 
         hmProof.put("Proof Generated",df.format(new Date()));
 
-        if (showDeviceIds) {
-            hmProof.put("DeviceID", DeviceInfo.getDeviceId(context));
-            hmProof.put("Wifi MAC", DeviceInfo.getWifiMacAddr());
-        }
-
-        hmProof.put("IPv4",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_IP_ADDRESS_IPV4));
-        hmProof.put("IPv6",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_IP_ADDRESS_IPV6));
-
-        hmProof.put("DataType",DeviceInfo.getDataType(context));
-        hmProof.put("Network",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_NETWORK));
-
-        hmProof.put("NetworkType",DeviceInfo.getNetworkType(context));
-        hmProof.put("Hardware",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_HARDWARE_MODEL));
-        hmProof.put("Manufacturer",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_MANUFACTURE));
-        hmProof.put("ScreenSize",DeviceInfo.getDeviceInch(context));
-
         hmProof.put("Language",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_LANGUAGE));
         hmProof.put("Locale",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_LOCALE));
 
+        if (showDeviceIds) {
+            try {
+                hmProof.put("DeviceID", DeviceInfo.getDeviceId(context));
+                hmProof.put("Wifi MAC", DeviceInfo.getWifiMacAddr());
+                hmProof.put("IPv4", DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_IP_ADDRESS_IPV4));
+                hmProof.put("IPv6", DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_IP_ADDRESS_IPV6));
+                hmProof.put("Network", DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_NETWORK));
+                hmProof.put("DataType", DeviceInfo.getDataType(context));
+                hmProof.put("NetworkType", DeviceInfo.getNetworkType(context));
+            }catch (SecurityException se){}
+        }
 
+        hmProof.put("Hardware",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_HARDWARE_MODEL));
+        hmProof.put("Manufacturer",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_MANUFACTURE));
+        hmProof.put("ScreenSize",DeviceInfo.getDeviceInch(context));
 
         if (showLocation)
         {
