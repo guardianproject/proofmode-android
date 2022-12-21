@@ -18,6 +18,7 @@ import org.witness.proofmode.service.VideosContentJob;
 import org.witness.proofmode.util.SafetyNetCheck;
 
 import java.io.File;
+import java.io.InputStream;
 import java.security.Security;
 
 
@@ -114,6 +115,12 @@ public class ProofMode {
 
     }
 
+    public static String generateProof (Context context, Uri uri, byte[] mediaBytes, String mimeType)
+    {
+
+        return MediaWatcher.getInstance(context).processBytes (context, uri, mediaBytes, mimeType);
+
+    }
 
     public static String generateProof (Context context, Uri uri, String proofHash)
     {

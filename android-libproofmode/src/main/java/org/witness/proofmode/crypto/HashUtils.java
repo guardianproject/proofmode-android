@@ -56,6 +56,23 @@ public class HashUtils {
         }
     }
 
+    public static String getSHA256FromBytes(byte[] fileBytes)
+    {
+
+        try
+        {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            digest.update(fileBytes);
+            byte[] digestResult = digest.digest();
+            return asHex(digestResult);
+        }
+        catch (NoSuchAlgorithmException e)
+        {
+            Timber.w(e,"Error generating hash; No such algorithm");
+            return null;
+        }
+    }
+
     public static String asHex(byte[] arrayBytes) {
         StringBuffer stringBuffer = new StringBuffer();
         for (int i = 0; i < arrayBytes.length; i++) {
