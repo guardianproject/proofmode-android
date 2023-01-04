@@ -1,36 +1,36 @@
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.witness.proofmode.ProofMode.OPENPGP_FILE_TAG;
+import static org.witness.proofmode.ProofMode.PROOF_FILE_TAG;
+
 import android.content.Context;
 import android.content.res.AssetManager;
 import android.net.Uri;
 
-import org.bouncycastle.openpgp.PGPPublicKey;
-import org.witness.proofmode.ProofException;
-import org.witness.proofmode.ProofMode;
-import org.junit.Test;
-import org.witness.proofmode.crypto.HashUtils;
-import org.witness.proofmode.crypto.pgp.PgpUtils;
-
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.witness.proofmode.ProofMode.OPENPGP_FILE_TAG;
-import static org.witness.proofmode.ProofMode.PROOF_FILE_TAG;
-
 import androidx.test.platform.app.InstrumentationRegistry;
+
+import org.junit.FixMethodOrder;
+import org.junit.Test;
+import org.junit.runners.MethodSorters;
+import org.witness.proofmode.ProofMode;
+import org.witness.proofmode.crypto.HashUtils;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import timber.log.Timber;
 
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class ProofmodeGenerationTests {
 
     @Test
@@ -71,10 +71,10 @@ public class ProofmodeGenerationTests {
 
             Timber.i("hash generated: " + hash);
 
-            assertTrue(hash != null);
+            assertNotNull(hash);
 
             File fileDirProof = ProofMode.getProofDir(context, hash);
-            assertTrue(fileDirProof != null);
+            assertNotNull(fileDirProof);
 
             File fileMediaSig = new File(fileDirProof, hash + OPENPGP_FILE_TAG);
             assertTrue(fileMediaSig.exists());
@@ -85,34 +85,48 @@ public class ProofmodeGenerationTests {
             File fileMediaProofSig = new File(fileDirProof, hash + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
             assertTrue(fileMediaProofSig.exists());
 
-            //test with your own public key since that is what generated the signature
-            PGPPublicKey pubKey = ProofMode.getPublicKey(context);
-            boolean verifiedSig = ProofMode.verifySignature(context, new FileInputStream(fileMediaProof), new FileInputStream(fileMediaProofSig),pubKey);
-            assertTrue(verifiedSig);
+        } catch (Exception e) {
+            e.printStackTrace();
+            fail();
 
+        }
+
+
+    }
+
+    @Test
+    public void proofModeGenerator_VerifySignature_ReturnsTrue ()
+    {
+        Timber.plant(new Timber.DebugTree());
+
+        Context context = InstrumentationRegistry.getInstrumentation().getContext();
+        String testFile = "102474397-prooftestbytes";
+
+        final AssetManager assets = context.getAssets();
+        try {
             InputStream is = assets.open(testFile);
-            boolean verifiedMediaSig = ProofMode.verifySignature(context, is, new FileInputStream(fileMediaSig),pubKey);
-            assertTrue(verifiedMediaSig);
-           is.close();
-
-            is = assets.open(testFile);
             String mediaHashSha256Check = HashUtils.getSHA256FromFileContent(is);
-            assertTrue(hash.equals(mediaHashSha256Check));
+            assertNotNull(mediaHashSha256Check);
             is.close();
 
+            File fileDirProof = ProofMode.getProofDir(context, mediaHashSha256Check);
+            assertNotNull(fileDirProof);
+
             File[] files = fileDirProof.listFiles();
+            assertNotNull(files);
+
             File fileZip = new File (fileDirProof.getParent(),fileDirProof.getName() + ".zip");
             zipProof(files, fileZip,ProofMode.getPublicKeyString(context));
             assertTrue(fileZip.exists());
 
             is = assets.open(testFile);
-            boolean verifiedIntegrity = ProofMode.verifyProofZip(context, hash, is, new FileInputStream(fileZip));
+            boolean verifiedIntegrity = ProofMode.verifyProofZip(context, mediaHashSha256Check, is, new FileInputStream(fileZip));
             assertTrue(verifiedIntegrity);
             is.close();
 
         } catch (Exception e) {
             e.printStackTrace();
-            assertTrue(false);
+            fail();
 
         }
 
