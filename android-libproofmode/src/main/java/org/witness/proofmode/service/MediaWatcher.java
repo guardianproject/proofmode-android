@@ -27,7 +27,7 @@ import android.util.Base64;
 import org.json.JSONObject;
 import org.witness.proofmode.ProofMode;
 import org.witness.proofmode.crypto.HashUtils;
-import org.witness.proofmode.crypto.PgpUtils;
+import org.witness.proofmode.crypto.pgp.PgpUtils;
 import org.witness.proofmode.notarization.NotarizationListener;
 import org.witness.proofmode.notarization.NotarizationProvider;
 import org.witness.proofmode.util.DeviceInfo;

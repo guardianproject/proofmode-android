@@ -1,4 +1,4 @@
-package org.witness.proofmode.crypto;
+package org.witness.proofmode.crypto.pgp;
 
 
 import org.bouncycastle.bcpg.ArmoredInputStream;
@@ -51,6 +51,7 @@ import org.bouncycastle.util.encoders.Hex;
 import org.witness.proofmode.ProofMode;
 
 import java.io.BufferedInputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -71,36 +72,21 @@ import java.security.GeneralSecurityException;
  */
 public class DetachedSignatureProcessor
 {
-    public static boolean verifySignature(
-            String fileName,
-            String inputFileName,
-            String keyFileName)
-            throws GeneralSecurityException, IOException, PGPException
-    {
-        InputStream in = new BufferedInputStream(new FileInputStream(inputFileName));
-        InputStream keyIn = new BufferedInputStream(new FileInputStream(keyFileName));
 
-        boolean result = verifySignature(fileName, in, keyIn);
-
-        keyIn.close();
-        in.close();
-
-        return result;
-    }
 
     /*
      * verify the signature in in against the file fileName.
      */
     public static boolean verifySignature(
-            String          fileName,
-            InputStream     in,
-            InputStream     keyIn)
+            InputStream          fileStream,
+            InputStream     fileSignatureDetached,
+            PGPPublicKey     publicKey)
             throws GeneralSecurityException, IOException, PGPException
     {
-        in = PGPUtil.getDecoderStream(in);
+        InputStream inSig = PGPUtil.getDecoderStream(fileSignatureDetached);
 
-        PGPObjectFactory pgpFact = new PGPObjectFactory(in, null);
-        PGPSignatureList p3;
+        PGPObjectFactory pgpFact = new PGPObjectFactory(inSig, null);
+        PGPSignatureList pgpSignatureList;
 
         Object    o = pgpFact.nextObject();
         if (o instanceof PGPCompressedData)
@@ -109,41 +95,25 @@ public class DetachedSignatureProcessor
 
             pgpFact = new PGPObjectFactory(c1.getDataStream(), null);
 
-            p3 = (PGPSignatureList)pgpFact.nextObject();
+            pgpSignatureList = (PGPSignatureList)pgpFact.nextObject();
         }
         else
         {
-            p3 = (PGPSignatureList)o;
+            pgpSignatureList = (PGPSignatureList)o;
         }
 
-        PGPPublicKeyRingCollection pgpPubRingCollection = new PGPPublicKeyRingCollection(PGPUtil.getDecoderStream(keyIn),new BcKeyFingerprintCalculator());
-
-
-        InputStream                 dIn = new BufferedInputStream(new FileInputStream(fileName));
-
-        PGPSignature                sig = p3.get(0);
-        PGPPublicKey                key = pgpPubRingCollection.getPublicKey(sig.getKeyID());
-
-        sig.init(new JcaPGPContentVerifierBuilderProvider().setProvider("BC"), key);
+        PGPSignature proofSig = pgpSignatureList.get(0);
+        proofSig.init(new JcaPGPContentVerifierBuilderProvider().setProvider(ProofMode.getProvider()), publicKey);
 
         int ch;
-        while ((ch = dIn.read()) >= 0)
+        while ((ch = fileStream.read()) != -1)
         {
-            sig.update((byte)ch);
+            proofSig.update((byte)ch);
         }
 
-        dIn.close();
+        fileStream.close();
 
-        if (sig.verify())
-        {
-            System.out.println("signature verified.");
-            return true;
-        }
-        else
-        {
-            System.out.println("signature verification failed.");
-            return false;
-        }
+        return proofSig.verify();
     }
 
     public static void createSignature(

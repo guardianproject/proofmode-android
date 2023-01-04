@@ -21,7 +21,7 @@ import androidx.preference.PreferenceManager
 import com.google.android.material.navigation.NavigationView
 import gun0912.tedimagepicker.builder.TedImagePicker
 import org.witness.proofmode.camera.CameraModuleActivity
-import org.witness.proofmode.crypto.PgpUtils
+import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.databinding.ActivityMainBinding
 import org.witness.proofmode.onboarding.OnboardingActivity
 import org.witness.proofmode.util.GPSTracker
@@ -294,7 +294,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 mPrefs.getString("password", PgpUtils.DEFAULT_PASSWORD)
             )
             mPgpUtils?.publishPublicKey()
-            val pubKey = mPgpUtils?.publicKey
+            val pubKey = mPgpUtils?.publicKeyString
             val intent = Intent(Intent.ACTION_SEND)
             intent.type = "text/plain"
             intent.putExtra(Intent.EXTRA_TEXT, pubKey)

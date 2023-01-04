@@ -1,4 +1,4 @@
-package org.witness.proofmode.crypto;
+package org.witness.proofmode.crypto.pgp;
 
 import android.content.Context;
 import android.util.Base64;
@@ -14,7 +14,6 @@ import org.bouncycastle.bcpg.sig.Features;
 import org.bouncycastle.bcpg.sig.KeyFlags;
 import org.bouncycastle.crypto.generators.RSAKeyPairGenerator;
 import org.bouncycastle.crypto.params.RSAKeyGenerationParameters;
-import org.bouncycastle.jcajce.provider.symmetric.util.PBE;
 import org.bouncycastle.openpgp.PGPCompressedDataGenerator;
 import org.bouncycastle.openpgp.PGPEncryptedData;
 import org.bouncycastle.openpgp.PGPEncryptedDataGenerator;
@@ -30,6 +29,8 @@ import org.bouncycastle.openpgp.PGPSecretKey;
 import org.bouncycastle.openpgp.PGPSecretKeyRing;
 import org.bouncycastle.openpgp.PGPSignature;
 import org.bouncycastle.openpgp.PGPSignatureSubpacketGenerator;
+import org.bouncycastle.openpgp.PGPUtil;
+import org.bouncycastle.openpgp.jcajce.JcaPGPPublicKeyRingCollection;
 import org.bouncycastle.openpgp.operator.PBESecretKeyDecryptor;
 import org.bouncycastle.openpgp.operator.PBESecretKeyEncryptor;
 import org.bouncycastle.openpgp.operator.PGPDigestCalculator;
@@ -45,8 +46,10 @@ import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyEncryptorBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcePGPDataEncryptorBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcePublicKeyKeyEncryptionMethodGenerator;
 import org.bouncycastle.util.encoders.Hex;
+import org.bouncycastle.util.io.Streams;
 import org.witness.proofmode.ProofMode;
 
+import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -62,14 +65,16 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.security.InvalidKeyException;
 import java.security.NoSuchProviderException;
+import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.SignatureException;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+
 
 public class PgpUtils {
 
@@ -118,6 +123,9 @@ public class PgpUtils {
         return fullKey.substring(fullKey.length()-16);
     }
 
+    public PGPPublicKey getPublicKey () {
+        return pkr.getPublicKey();
+    }
 
     private static PGPPublicKey getPublicKey(PGPPublicKeyRing publicKeyRing) {
         Iterator<?> kIt = publicKeyRing.getPublicKeys();
@@ -217,7 +225,7 @@ public class PgpUtils {
 
 
 
-    public String getPublicKey () throws IOException {
+    public String getPublicKeyString () throws IOException {
         ByteArrayOutputStream baosPkr = new ByteArrayOutputStream();
         ArmoredOutputStream armoredStreamPkr = new ArmoredOutputStream(baosPkr);
         pkr.encode(armoredStreamPkr);
@@ -285,6 +293,10 @@ public class PgpUtils {
 
     }
 
+    public boolean verifyDetachedSignature (InputStream fileStream, InputStream sigStream, PGPPublicKey pubKey) throws Exception
+    {
+        return DetachedSignatureProcessor.verifySignature(fileStream, sigStream, pubKey);
+    }
 
     public synchronized void initCrypto (Context context, String password)
     {
@@ -412,5 +424,36 @@ public class PgpUtils {
         return parametersAsQueryString.toString();
     }
 
+    public static boolean verifyStream () throws IOException {
 
+        return true;
+
+    }
+
+    public static PGPPublicKey getPublicKey(InputStream encodedKey) throws IOException, PGPException, Exception {
+
+        InputStream decodedKey = PGPUtil.getDecoderStream(encodedKey);
+
+        JcaPGPPublicKeyRingCollection pgpPub = new JcaPGPPublicKeyRingCollection(decodedKey);
+        decodedKey.close();
+
+        PGPPublicKey key = null;
+        Iterator<PGPPublicKeyRing> rIt = pgpPub.getKeyRings();
+        while (key == null && rIt.hasNext()) {
+            PGPPublicKeyRing kRing = rIt.next();
+            Iterator<PGPPublicKey> kIt = kRing.getPublicKeys();
+
+            while (key == null && kIt.hasNext()) {
+                PGPPublicKey k = kIt.next();
+
+                if (k.isEncryptionKey()) {
+                    key = k;
+                }
+            }
+        }
+        if (key == null) {
+            throw new Exception("Can't find key");
+        }
+        return key;
+    }
 }

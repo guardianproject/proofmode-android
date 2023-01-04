@@ -3,24 +3,20 @@ package org.witness.proofmode;
 import static org.witness.proofmode.ProofMode.GOOGLE_SAFETYNET_FILE_TAG;
 import static org.witness.proofmode.ProofMode.OPENPGP_FILE_TAG;
 import static org.witness.proofmode.ProofMode.OPENTIMESTAMPS_FILE_TAG;
-import static org.witness.proofmode.ProofMode.PROVIDER_TAG;
 import static org.witness.proofmode.ProofMode.PROOF_FILE_JSON_TAG;
 import static org.witness.proofmode.ProofMode.PROOF_FILE_TAG;
 
 import android.Manifest;
 import android.app.Dialog;
 import android.content.ComponentName;
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.LabeledIntent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
-import android.content.res.AssetManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
@@ -29,14 +25,12 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.provider.MediaStore;
-import android.provider.OpenableColumns;
 import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.webkit.MimeTypeMap;
 import android.widget.CheckBox;
-import android.widget.CompoundButton;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
@@ -45,14 +39,9 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
-import androidx.documentfile.provider.DocumentFile;
-
-import com.google.android.material.snackbar.Snackbar;
-
-import com.google.android.material.appbar.MaterialToolbar;
 
 import org.witness.proofmode.crypto.HashUtils;
-import org.witness.proofmode.crypto.PgpUtils;
+import org.witness.proofmode.crypto.pgp.PgpUtils;
 import org.witness.proofmode.service.MediaWatcher;
 
 import java.io.BufferedInputStream;
@@ -69,9 +58,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
-import java.lang.ref.WeakReference;
 import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -1314,7 +1301,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
         Timber.d("Adding public key");
         //add public key
-        String pubKey = ProofMode.getPublicKey(this);
+        String pubKey = ProofMode.getPublicKeyString(this);
         ZipEntry entry = new ZipEntry("pubkey.asc");
         out.putNextEntry(entry);
         out.write(pubKey.getBytes());

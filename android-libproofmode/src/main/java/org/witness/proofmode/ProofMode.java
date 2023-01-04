@@ -10,8 +10,10 @@ import android.preference.PreferenceManager;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.witness.proofmode.crypto.PgpUtils;
-import org.witness.proofmode.library.R;
+import org.bouncycastle.openpgp.PGPPublicKey;
+import org.bouncycastle.openpgp.PGPUtil;
+import org.witness.proofmode.crypto.HashUtils;
+import org.witness.proofmode.crypto.pgp.PgpUtils;
 import org.witness.proofmode.notarization.NotarizationProvider;
 import org.witness.proofmode.service.AudioContentJob;
 import org.witness.proofmode.service.CameraEventReceiver;
@@ -19,9 +21,18 @@ import org.witness.proofmode.service.MediaWatcher;
 import org.witness.proofmode.service.PhotosContentJob;
 import org.witness.proofmode.service.VideosContentJob;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.security.PublicKey;
 import java.security.Security;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 import timber.log.Timber;
 
@@ -45,6 +56,8 @@ public class ProofMode {
     public final static String OPENTIMESTAMPS_FILE_TAG = ".ots";
     public final static String GOOGLE_SAFETYNET_FILE_TAG = ".gst";
     public final static String PROVIDER_TAG = ".provider";
+
+    public final static String PUBKEY_FILE = "pubkey.asc";
 
     public final static String PREFS_DOPROOF = "doProof";
 
@@ -165,19 +178,109 @@ public class ProofMode {
         MediaWatcher.getInstance(context).addNotarizationProvider(provider);
     }
 
-    public static String getPublicKey (Context context) {
+    public static PGPPublicKey getPublicKey (Context context) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         PgpUtils pu = PgpUtils.getInstance(context,prefs.getString("password",PgpUtils.DEFAULT_PASSWORD));
-        String pubKey = null;
+        PGPPublicKey pubKey = null;
+        return pubKey = pu.getPublicKey();
 
-        try {
-            pubKey = pu.getPublicKey();
-        } catch (IOException e) {
-            Timber.d("error getting public key");
-        }
+    }
+
+    public static String getPublicKeyString (Context context) throws IOException {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        PgpUtils pu = PgpUtils.getInstance(context,prefs.getString("password",PgpUtils.DEFAULT_PASSWORD));
+        String pubKey = pu.getPublicKeyString();
 
         return pubKey;
     }
 
+    public static boolean verifyProofZip (Context context, String mediaHashSha256, InputStream mediaFile, InputStream proofZipStream) throws Exception {
+
+        InputStream mediaSig = null;
+        InputStream proofFile = null;
+        InputStream proofFileSig = null;
+        InputStream pubKey = null;
+
+        try (ZipInputStream zis = new ZipInputStream(proofZipStream)) {
+
+            // list files in zip
+            ZipEntry zipEntry = zis.getNextEntry();
+
+            while (zipEntry != null) {
+
+
+               if (!zipEntry.getName().endsWith(File.separator)) {
+
+                   if (zipEntry.getName().equals(mediaHashSha256 + OPENPGP_FILE_TAG))
+                   {
+                       mediaSig = copyStream(zis);
+                   }
+                   else if (zipEntry.getName().equals(mediaHashSha256 + PROOF_FILE_TAG)) {
+                       //the proof file
+                       proofFile = copyStream(zis);
+                   }
+                   else if (zipEntry.getName().equals(mediaHashSha256 + PROOF_FILE_TAG + OPENPGP_FILE_TAG)) {
+                       //the proof file
+                       proofFileSig = copyStream(zis);
+                   }
+                   else if (zipEntry.getName().equals(PUBKEY_FILE)) {
+                       //the proof file
+                       pubKey = copyStream(zis);
+                   }
+               }
+
+
+
+                zipEntry = zis.getNextEntry();
+
+            }
+            zis.closeEntry();
+
+        }
+
+        if (mediaSig == null)
+            throw new ProofException("No media signature found");
+
+        if (proofFile == null)
+            throw new ProofException("No proof json found");
+
+        if (proofFileSig == null)
+            throw new ProofException("No proof json signature found");
+
+        if (pubKey == null)
+            throw new ProofException("No public key pubkey.asc found");
+
+        PGPPublicKey pgpPublicKey = PgpUtils.getPublicKey(pubKey);
+
+        boolean proofSigVerified = ProofMode.verifySignature(context, proofFile, proofFileSig, pgpPublicKey);
+        if (!proofSigVerified)
+            throw new ProofException("Proof json signature not valid");
+
+        boolean mediaSigVerified = ProofMode.verifySignature(context, mediaFile, mediaSig, pgpPublicKey);
+        if (!mediaSigVerified)
+            throw new ProofException("Media signature not valid");
+
+        return true;
+    }
+
+    private static InputStream copyStream (InputStream is) throws IOException {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        int count;
+        int BUFFER = 1024;
+        byte[] data = new byte[BUFFER];
+        while ((count = is.read(data, 0, BUFFER)) != -1) {
+            bos.write(data,0,count);
+        }
+        return new ByteArrayInputStream(bos.toByteArray());
+    }
+
+
+    public static boolean verifySignature (Context context, InputStream fileStream, InputStream sigStream, PGPPublicKey publicKey) throws Exception {
+
+        //PgpUtils.getInstance(context).
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        PgpUtils pu = PgpUtils.getInstance(context,prefs.getString("password",PgpUtils.DEFAULT_PASSWORD));
+        return pu.verifyDetachedSignature(fileStream, sigStream, publicKey);
+    }
 
 }
