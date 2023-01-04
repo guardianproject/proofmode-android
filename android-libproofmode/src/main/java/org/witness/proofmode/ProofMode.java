@@ -196,6 +196,14 @@ public class ProofMode {
 
     public static boolean verifyProofZip (Context context, String mediaHashSha256, InputStream mediaFile, InputStream proofZipStream) throws Exception {
 
+        boolean verifiedIntegrity = verifyProofZipIntegrity(context, mediaHashSha256, mediaFile, proofZipStream);
+
+
+        return verifiedIntegrity;
+    }
+
+    public static boolean verifyProofZipIntegrity (Context context, String mediaHashSha256, InputStream mediaFile, InputStream proofZipStream) throws Exception {
+
         InputStream mediaSig = null;
         InputStream proofFile = null;
         InputStream proofFileSig = null;
