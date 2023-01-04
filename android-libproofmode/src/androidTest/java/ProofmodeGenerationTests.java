@@ -41,6 +41,13 @@ public class ProofmodeGenerationTests {
         Context context = InstrumentationRegistry.getInstrumentation().getContext();
         String testFile = "102474397-prooftestbytes";
         Uri uriMedia = Uri.parse("assets://" + testFile);
+
+        boolean useDeviceIds = true;
+        boolean useLocation = true;
+        boolean useNetworks = true;
+        boolean useNotarization = true;
+        ProofMode.setProofPoints(context, useDeviceIds, useLocation, useNetworks, useNotarization);
+
         final ByteArrayOutputStream result = new ByteArrayOutputStream();
         final AssetManager assets = context.getAssets();
         try {

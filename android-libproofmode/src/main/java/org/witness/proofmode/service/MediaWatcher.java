@@ -596,21 +596,6 @@ public class MediaWatcher extends BroadcastReceiver {
         hmProof.put("SafetyCheckCtsMatch", "");
         hmProof.put("SafetyCheckTimestamp", "");
 
-        /**
-        if (resp != null) {
-            hmProof.put("SafetyCheck", "true");
-            hmProof.put("SafetyCheckBasicIntegrity", resp.isBasicIntegrity()+"");
-            hmProof.put("SafetyCheckCtsMatch", resp.isCtsProfileMatch()+"");
-            hmProof.put("SafetyCheckTimestamp", resp.getTimestampMs()+"");
-        }
-        else
-        {
-            hmProof.put("SafetyCheck", "false");
-            hmProof.put("SafetyCheckBasicIntegrity", "");
-            hmProof.put("SafetyCheckCtsMatch", "");
-            hmProof.put("SafetyCheckTimestamp", "");
-        }**/
-
         if (!TextUtils.isEmpty(notes))
             hmProof.put("Notes",notes);
         else
