@@ -1,4 +1,6 @@
-package org.witness.proofmode.notarization;
+package org.witness.proofmode.notaries;
+
+import static org.witness.proofmode.ProofMode.OPENTIMESTAMPS_FILE_TAG;
 
 import android.util.Base64;
 
@@ -7,6 +9,10 @@ import com.eternitywall.ots.Hash;
 import com.eternitywall.ots.OpenTimestamps;
 import com.eternitywall.ots.Timestamp;
 import com.eternitywall.ots.Utils;
+
+import org.witness.proofmode.notarization.NotarizationListener;
+import org.witness.proofmode.notarization.NotarizationProvider;
+
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -42,6 +48,11 @@ public class OpenTimestampsNotarizationProvider implements NotarizationProvider 
     @Override
     public String getProof(String hash) throws IOException {
         return null;
+    }
+
+    @Override
+    public String getNotarizationFileExtension () {
+        return OPENTIMESTAMPS_FILE_TAG;
     }
 
     /**

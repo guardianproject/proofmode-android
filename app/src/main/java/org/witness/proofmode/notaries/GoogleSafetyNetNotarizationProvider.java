@@ -1,4 +1,6 @@
-package org.witness.proofmode.notarization;
+package org.witness.proofmode.notaries;
+
+import static org.witness.proofmode.ProofMode.GOOGLE_SAFETYNET_FILE_TAG;
 
 import android.content.Context;
 import android.util.Base64;
@@ -9,8 +11,8 @@ import com.google.android.gms.safetynet.SafetyNetApi;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 
-import org.witness.proofmode.util.SafetyNetCheck;
-import org.witness.proofmode.util.SafetyNetResponse;
+import org.witness.proofmode.notarization.NotarizationListener;
+import org.witness.proofmode.notarization.NotarizationProvider;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,10 +38,12 @@ public class GoogleSafetyNetNotarizationProvider implements NotarizationProvider
                 // Use response.getJwsResult() to get the result data.
 
                 String resultString = response.getJwsResult();
+                SafetyNetResponse resp = parseJsonWebSignature(resultString);
 
                 listener.notarizationSuccessful(mediaHash, resultString);
            //     Timber.d("Success! SafetyNet result: isBasicIntegrity: " + isBasicIntegrity + " isCts:" + isCtsMatch);
 //                writeProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, resultString, isBasicIntegrity, isCtsMatch, timestamp, null);
+
 
 
             }
@@ -48,6 +52,7 @@ public class GoogleSafetyNetNotarizationProvider implements NotarizationProvider
             public void onFailure(@NonNull Exception e) {
                 // An error occurred while communicating with the service.
                 Timber.d(e,"SafetyNet check failed");
+                listener.notarizationFailed(-1,e.getMessage());
             }
         });
     }
@@ -73,5 +78,11 @@ public class GoogleSafetyNetNotarizationProvider implements NotarizationProvider
     @Override
     public String getProof(String hash) throws IOException {
         return null;
+    }
+
+
+    @Override
+    public String getNotarizationFileExtension () {
+        return GOOGLE_SAFETYNET_FILE_TAG;
     }
 }

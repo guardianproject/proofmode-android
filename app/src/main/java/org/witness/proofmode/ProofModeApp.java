@@ -12,7 +12,6 @@ import android.content.SharedPreferences;
 import android.os.Build;
 import android.preference.PreferenceManager;
 import android.util.Log;
-import org.witness.proofmode.util.SafetyNetCheck;
 
 import timber.log.Timber;
 
@@ -38,7 +37,7 @@ public class ProofModeApp extends MultiDexApplication {
     {
 
         if (BuildConfig.DEBUG) {
-        //    Timber.plant(new Timber.DebugTree());
+            Timber.plant(new Timber.DebugTree());
         }
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);

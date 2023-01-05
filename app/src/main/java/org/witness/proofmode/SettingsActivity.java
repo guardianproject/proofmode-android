@@ -13,7 +13,7 @@ import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.TextView;
 
-import org.witness.proofmode.crypto.PgpUtils;
+import org.witness.proofmode.crypto.pgp.PgpUtils;
 import org.witness.proofmode.util.GPSTracker;
 
 public class SettingsActivity extends AppCompatActivity {
