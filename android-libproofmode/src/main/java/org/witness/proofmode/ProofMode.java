@@ -21,9 +21,13 @@ import org.witness.proofmode.service.MediaWatcher;
 import org.witness.proofmode.service.PhotosContentJob;
 import org.witness.proofmode.service.VideosContentJob;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -33,6 +37,7 @@ import java.security.PublicKey;
 import java.security.Security;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 import timber.log.Timber;
 
@@ -289,6 +294,51 @@ public class ProofMode {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         PgpUtils pu = PgpUtils.getInstance(context,prefs.getString("password",PgpUtils.DEFAULT_PASSWORD));
         return pu.verifyDetachedSignature(fileStream, sigStream, publicKey);
+    }
+
+    public static void generateProofZip(Context context, String proofHash) throws IOException {
+
+        File fileDirProof = ProofMode.getProofDir(context, proofHash);
+        File[] files = fileDirProof.listFiles();
+        File fileZip = new File (fileDirProof.getParent(),fileDirProof.getName() + ".zip");
+
+        BufferedInputStream origin;
+        FileOutputStream dest = new FileOutputStream(fileZip);
+        ZipOutputStream out = new ZipOutputStream(new BufferedOutputStream(
+                dest));
+        int BUFFER = 1024;
+        byte[] data = new byte[BUFFER];
+
+        for (File proofFile : files) {
+            try {
+                String fileName = proofFile.getName();
+                Timber.d("adding to zip: " + fileName);
+                origin = new BufferedInputStream(new FileInputStream(proofFile), BUFFER);
+                ZipEntry entry = new ZipEntry(fileName);
+                out.putNextEntry(entry);
+                int count;
+
+                while ((count = origin.read(data, 0, BUFFER)) != -1) {
+                    out.write(data, 0, count);
+                }
+                origin.close();
+            }
+            catch (Exception e)
+            {
+                Timber.d(e, "Failed adding URI to zip: " + proofFile.getName());
+            }
+        }
+
+        Timber.d("Adding public key");
+        //add public key
+        ZipEntry entry = new ZipEntry(PUBKEY_FILE);
+        out.putNextEntry(entry);
+        out.write(getPublicKeyString(context).getBytes());
+
+        Timber.d("Zip complete");
+
+        out.close();
+
     }
 
 }
