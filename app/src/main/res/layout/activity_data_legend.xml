@@ -23,6 +23,7 @@
 
         <TextView
             android:id="@+id/toolbar_title"
+            android:text="@string/menu_datalegend"
             style="@style/SettingsToolBarTitleStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
