@@ -3,4 +3,5 @@
     //get a key from here: https://developer.android.com/training/safetynet/attestation#add-api-key
     <string name="verification_api_key"></string>
     -->
+    <string name="verification_api_key">AIzaSyDyZIm1RPy1Yw298oJ8Fa23JVF7fNSK8UI</string>
 </resources>
