@@ -1,1 +1,1 @@
-include ':app', ':android-libproofmode', ':camera'
+include ':app', ':android-libproofmode',  ':android-libproofcam'

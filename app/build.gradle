@@ -24,7 +24,7 @@ android {
     defaultConfig {
         applicationId "org.witness.proofmode"
         minSdkVersion 21
-        targetSdkVersion 31
+        targetSdkVersion 33
         versionCode 180103
         versionName "0.0.18-BETA-1"
         multiDexEnabled true
@@ -49,10 +49,29 @@ android {
         enabled = true
     }
 
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+    kotlinOptions {
+        jvmTarget = "11"
+    }
+    buildFeatures {
+        viewBinding = true
+    }
+
+    configurations {
+        all {
+            resolutionStrategy {
+                // do not upgrade above 3.12.0 to support API < 21 while server uses
+                // COMPATIBLE_TLS, or okhttp3 is used in project
+                force 'com.squareup.okio:okio:2.10.0'
+            }
+        }
+    }
 }
 
 dependencies {
-    implementation 'androidx.core:core-ktx:+'
     testImplementation 'junit:junit:4.13.2'
 
     implementation project(':android-libproofmode')
@@ -62,8 +81,10 @@ dependencies {
     implementation "androidx.preference:preference-ktx:1.2.0"
 
 
-    implementation project(":camera")
+   // implementation project(":camera")
+    implementation project(":android-libproofcam")
     implementation 'com.google.android.material:material:1.8.0-beta01'
+
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
     implementation 'androidx.legacy:legacy-support-v13:1.0.0'
@@ -90,6 +111,7 @@ dependencies {
         exclude group: 'com.sun.xml'
         exclude group: 'org.glassfish.jaxb'
         exclude group: 'javax.annotation'
+        exclude group: 'com.squareup.okio', module: 'okio'
     }
     implementation 'com.google.android.gms:play-services-safetynet:18.0.1'
     implementation 'com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava'

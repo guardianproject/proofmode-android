@@ -137,7 +137,7 @@
                 android:orientation="vertical">
 
                 <CheckBox
-                    android:id="@+id/switchCellInfo"
+                    android:id="@+id/switchNetwork"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
                     android:button="@drawable/option_network_selector" />

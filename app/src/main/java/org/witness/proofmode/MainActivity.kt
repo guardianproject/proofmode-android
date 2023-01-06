@@ -19,8 +19,8 @@ import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.preference.PreferenceManager
 import com.google.android.material.navigation.NavigationView
+import com.robertlevonyan.demo.camerax.CameraActivity
 import gun0912.tedimagepicker.builder.TedImagePicker
-import org.witness.proofmode.camera.CameraModuleActivity
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.databinding.ActivityMainBinding
 import org.witness.proofmode.onboarding.OnboardingActivity
@@ -366,7 +366,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private fun askForOptionals() {
         if (!askForPermissions(optionalPermissions, REQUEST_CODE_OPTIONAL_PERMISSIONS)) {
             mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_NETWORK, true).commit()
-            mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_PHONE, true).commit()
+           // mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_PHONE, true).commit()
         }
     }
 
@@ -421,7 +421,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     fun startCamera(view: View?) {
-        startActivity(Intent(this, CameraModuleActivity::class.java))
+        startActivity(Intent(this, CameraActivity::class.java))
     }
 
     companion object {
@@ -434,12 +434,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
          * The permissions needed for "base" ProofMode to work, without extra options.
          */
         private val requiredPermissions = arrayOf(
-            Manifest.permission.READ_EXTERNAL_STORAGE
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.ACCESS_MEDIA_LOCATION
         )
         private val optionalPermissions = arrayOf(
-       //     Manifest.permission.READ_PHONE_STATE,
-            Manifest.permission.ACCESS_NETWORK_STATE,
-            Manifest.permission.CAMERA
+            Manifest.permission.ACCESS_NETWORK_STATE
         )
     }
 }

@@ -27,7 +27,7 @@ public class SettingsActivity extends AppCompatActivity {
 
     private PgpUtils mPgpUtils;
     private CheckBox switchLocation;
-    private CheckBox switchMobile;
+    private CheckBox switchNetwork;
     private CheckBox switchDevice;
     private CheckBox switchNotarize;
 
@@ -45,74 +45,62 @@ public class SettingsActivity extends AppCompatActivity {
 
         mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
 
-        switchLocation = (CheckBox)findViewById(R.id.switchLocation);
-        switchMobile = (CheckBox)findViewById(R.id.switchCellInfo);
-        switchDevice = (CheckBox)findViewById(R.id.switchDevice);
-        switchNotarize = (CheckBox) findViewById(R.id.switchNotarize);
+        switchLocation = findViewById(R.id.switchLocation);
+        switchNetwork = findViewById(R.id.switchNetwork);
+        switchDevice = findViewById(R.id.switchDevice);
+        switchNotarize = findViewById(R.id.switchNotarize);
         updateUI();
 
-        switchLocation.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (isChecked)
-                {
-                    if (!askForPermission(Manifest.permission.ACCESS_FINE_LOCATION, REQUEST_CODE_LOCATION, R.layout.permission_location)) {
-                        if (!askForPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION, REQUEST_CODE_LOCATION_BACKGROUND, 0)) {
-                            mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_LOCATION,isChecked).commit();
-                            refreshLocation();
-                        }
+        switchLocation.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked)
+            {
+                if (!askForPermission(Manifest.permission.ACCESS_FINE_LOCATION, REQUEST_CODE_LOCATION, R.layout.permission_location)) {
+                    if (!askForPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION, REQUEST_CODE_LOCATION_BACKGROUND, 0)) {
+                        mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_LOCATION, true).commit();
+                        refreshLocation();
                     }
-
-                } else {
-                    mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_LOCATION,isChecked).commit();
                 }
 
-                updateUI();
+            } else {
+                mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_LOCATION, false).commit();
             }
+
+            updateUI();
         });
 
-        switchMobile.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (isChecked)
-                {
-                    if (!askForPermission(Manifest.permission.ACCESS_NETWORK_STATE, REQUEST_CODE_NETWORK_STATE, 0)) {
-                        mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_NETWORK,isChecked).commit();
-                    }
-                } else {
-                    mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_NETWORK,isChecked).commit();
+        switchNetwork.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked)
+            {
+                if (!askForPermission(Manifest.permission.ACCESS_NETWORK_STATE, REQUEST_CODE_NETWORK_STATE, 0)) {
+                    mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_NETWORK, true).commit();
                 }
-                updateUI();
+            } else {
+                mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_NETWORK,false).commit();
             }
+            updateUI();
         });
 
-        switchDevice.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (isChecked)
-                {
-                    if (!askForPermission(Manifest.permission.READ_PHONE_STATE, REQUEST_CODE_READ_PHONE_STATE, 0)) {
-                        mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_PHONE,isChecked).commit();
-                    }
-                } else {
-                    mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_PHONE,isChecked).commit();
+        switchDevice.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked)
+            {
+                if (!askForPermission(Manifest.permission.READ_PHONE_STATE, REQUEST_CODE_READ_PHONE_STATE, 0)) {
+                    mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_PHONE, true).commit();
                 }
-                updateUI();
+            } else {
+                mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_PHONE, false).commit();
             }
+            updateUI();
         });
 
-        switchNotarize.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_NOTARY, switchNotarize.isChecked()).commit();
-                updateUI();
-            }
+        switchNotarize.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_NOTARY, switchNotarize.isChecked()).commit();
+            updateUI();
         });
     }
 
     private void updateUI() {
         switchLocation.setChecked(mPrefs.getBoolean(ProofMode.PREF_OPTION_LOCATION,ProofMode.PREF_OPTION_LOCATION_DEFAULT));
-        switchMobile.setChecked(mPrefs.getBoolean(ProofMode.PREF_OPTION_NETWORK,ProofMode.PREF_OPTION_NETWORK_DEFAULT));
+        switchNetwork.setChecked(mPrefs.getBoolean(ProofMode.PREF_OPTION_NETWORK,ProofMode.PREF_OPTION_NETWORK_DEFAULT));
         switchDevice.setChecked(mPrefs.getBoolean(ProofMode.PREF_OPTION_PHONE,ProofMode.PREF_OPTION_PHONE_DEFAULT));
         switchNotarize.setChecked(mPrefs.getBoolean(ProofMode.PREF_OPTION_NOTARY,ProofMode.PREF_OPTION_NOTARY_DEFAULT));
     }
