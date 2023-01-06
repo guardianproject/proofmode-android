@@ -29,11 +29,11 @@ public class ProofModeApp extends MultiDexApplication {
         super.onCreate();
 
 
-            init(this);
+            init(this, false);
 
     }
 
-    public void init (Context context)
+    public void init (Context context, boolean startService)
     {
 
         if (BuildConfig.DEBUG) {
@@ -48,10 +48,18 @@ public class ProofModeApp extends MultiDexApplication {
             intentService.setAction(ACTION_START);
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-             //   OneTimeWorkRequest request = new OneTimeWorkRequest.Builder ( BackupWorker.class ).addTag ( "BACKUP_WORKER_TAG" ).build ();
+                ProofMode.initBackgroundService(this);
+
+                //   OneTimeWorkRequest request = new OneTimeWorkRequest.Builder ( BackupWorker.class ).addTag ( "BACKUP_WORKER_TAG" ).build ();
             //    WorkManager.getInstance ( context ).enqueue ( request );
 
                 //not sure what to do here yet!
+
+                if (startService)
+                {
+                    context.startForegroundService ( intentService );
+
+                }
 
             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService ( intentService );

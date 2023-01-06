@@ -142,7 +142,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             if (!askForPermissions(requiredPermissions, REQUEST_CODE_REQUIRED_PERMISSIONS)) {
                 mPrefs.edit().putBoolean(ProofMode.PREFS_DOPROOF, isOn).apply()
                 updateOnOffState(true)
-                (application as ProofModeApp).init(this)
+                (application as ProofModeApp).init(this, true)
             }
         } else {
             mPrefs.edit().putBoolean(ProofMode.PREFS_DOPROOF, isOn).apply()
