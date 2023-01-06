@@ -6,6 +6,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import coil.decode.VideoFrameDecoder
 import coil.load
 import coil.request.videoFrameMillis
 import org.witness.proofmode.camera.utils.layoutInflater
@@ -48,7 +49,7 @@ class MediaAdapter(
             imagePlay.visibility = if (item.isVideo) View.VISIBLE else View.GONE
             imagePreview.load(item.uri) {
                 if (item.isVideo) {
-                    videoFrameMillis(0)
+                    decoderFactory { result, options, _ -> VideoFrameDecoder(result.source, options) }
                 }
             }
             imagePreview.setOnClickListener { onItemClick(item.isVideo, item.uri) }

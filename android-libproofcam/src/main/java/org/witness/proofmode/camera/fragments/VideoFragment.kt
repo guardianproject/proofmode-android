@@ -26,6 +26,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.Navigation
+import coil.decode.VideoFrameDecoder
 import coil.load
 import coil.request.ErrorResult
 import coil.request.ImageRequest
@@ -385,14 +386,16 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
             btnGallery.load(savedUri) {
                 placeholder(R.drawable.ic_no_picture)
                 transformations(CircleCropTransformation())
+                decoderFactory { result, options, _ -> VideoFrameDecoder(result.source, options) }
+
                 listener(object : ImageRequest.Listener {
                     override fun onError(request: ImageRequest, result: ErrorResult) {
                         super.onError(request, result)
                         binding.btnGallery.load(savedUri) {
                             placeholder(R.drawable.ic_no_picture)
                             transformations(CircleCropTransformation())
-
-                            //  videoFrameMillis(0)
+//                            decoderFactory { result, options, _ -> VideoFrameDecoder(result.source, options) }
+//                            videoFrameMillis(0)
                         }
                     }
 
