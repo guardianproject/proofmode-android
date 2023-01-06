@@ -57,6 +57,9 @@ public class VideosContentJob extends JobService {
         builder.addTriggerContentUri(
                 new JobInfo.TriggerContentUri(MediaStore.Video.Media.INTERNAL_CONTENT_URI,
                         JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS));
+        builder.addTriggerContentUri(
+                new JobInfo.TriggerContentUri(Uri.parse("content://media/external_primary"),
+                        JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS));
 
 
         // Get all media changes within a tenth of a second.

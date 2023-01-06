@@ -150,6 +150,10 @@ public class PhotosContentJob extends JobService {
                 new JobInfo.TriggerContentUri(MediaStore.Images.Media.INTERNAL_CONTENT_URI,
                         JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS));
 
+        builder.addTriggerContentUri(
+                new JobInfo.TriggerContentUri(Uri.parse("content://media/external_primary"),
+                        JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS));
+
 
         // Get all media changes within a tenth of a second.
         builder.setTriggerContentUpdateDelay(1);
