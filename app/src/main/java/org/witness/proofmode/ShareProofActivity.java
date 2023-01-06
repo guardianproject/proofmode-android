@@ -358,17 +358,20 @@ public class ShareProofActivity extends AppCompatActivity {
 
                 fileBatchProof = new File(fileFolder,new Date().getTime() + "batchproof.csv");
                 fBatchProofOut = new PrintWriter(new FileWriter(fileBatchProof,  true));
+
             }
             catch (IOException ioe) {
                 return null; //unable to open batch proof
             }
 
             int successProof = 0;
+            boolean isFirstProof = true;
 
             for (Uri mediaUri : mediaUris)
             {
-                if (processUri (null, mediaUri, shareUris, shareText, fBatchProofOut, shareMedia)) {
+                if (processUri (null, mediaUri, shareUris, shareText, fBatchProofOut, shareMedia, isFirstProof)) {
                     successProof++;
+                    isFirstProof = false;
                 } else {
                     Timber.d("share proof failed for: " + mediaUri);
                 }
@@ -390,7 +393,7 @@ public class ShareProofActivity extends AppCompatActivity {
                 mediaUri = cleanUri(mediaUri);
 
                 String mediaHash = hashCache.get(mediaUri);
-                if (!processUri(mediaHash, mediaUri, shareUris, shareText, null, shareMedia))
+                if (!processUri(mediaHash, mediaUri, shareUris, shareText, null, shareMedia, true))
                     return null;
             }
 
@@ -533,11 +536,13 @@ public class ShareProofActivity extends AppCompatActivity {
             }
 
             int successProof = 0;
+            boolean isFirstProof = true;
 
             for (Uri mediaUri : mediaUris)
             {
-                if (processUri (null, mediaUri, shareUris, shareText, fBatchProofOut, shareMedia)) {
+                if (processUri (null, mediaUri, shareUris, shareText, fBatchProofOut, shareMedia, isFirstProof)) {
                     successProof++;
+                    isFirstProof = false;
                 } else {
                     Timber.d("share proof failed for: " + mediaUri);
                 }
@@ -559,7 +564,7 @@ public class ShareProofActivity extends AppCompatActivity {
                 mediaUri = cleanUri(mediaUri);
 
                 String mediaHash = hashCache.get(mediaUri);
-                if (!processUri(mediaHash, mediaUri, shareUris, shareText, null, shareMedia))
+                if (!processUri(mediaHash, mediaUri, shareUris, shareText, null, shareMedia, true))
                     return false;
             }
 
@@ -864,7 +869,7 @@ public class ShareProofActivity extends AppCompatActivity {
             return contentUri;
     }
 
-    private boolean processUri (String mediaHash, Uri mediaUri, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut, boolean shareMedia) throws FileNotFoundException {
+    private boolean processUri (String mediaHash, Uri mediaUri, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut, boolean shareMedia, boolean isFirstProof) throws FileNotFoundException {
 
 
         String[] projection = new String[1];
@@ -912,7 +917,7 @@ public class ShareProofActivity extends AppCompatActivity {
             //check proof metadata against original image
 
             File fileMedia = new File(mediaPath);
-            result = shareProof(mediaHash, mediaUri, fileMedia, shareUris, sb, fBatchProofOut, shareMedia);
+            result = shareProof(mediaHash, mediaUri, fileMedia, shareUris, sb, fBatchProofOut, shareMedia, isFirstProof);
 
             if (!result)
                 result = shareProofClassic(mediaUri, mediaPath, shareUris, sb, fBatchProofOut, shareMedia);
@@ -920,7 +925,7 @@ public class ShareProofActivity extends AppCompatActivity {
         }
         else
         {
-            result = shareProof(mediaHash, mediaUri, null, shareUris, sb, fBatchProofOut, shareMedia);
+            result = shareProof(mediaHash, mediaUri, null, shareUris, sb, fBatchProofOut, shareMedia, isFirstProof);
 
         }
 
@@ -929,7 +934,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
 
 
-    private boolean shareProof (String hash, Uri uriMedia, File fileMedia, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut, boolean shareMedia) throws FileNotFoundException {
+    private boolean shareProof (String hash, Uri uriMedia, File fileMedia, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut, boolean shareMedia, boolean isFirstProof) throws FileNotFoundException {
 
         if (hash == null)
             hash = HashUtils.getSHA256FromFileContent(getContentResolver().openInputStream(uriMedia));
@@ -956,7 +961,7 @@ public class ShareProofActivity extends AppCompatActivity {
                     lastModified = new Date(fileMedia.lastModified());
 
                 try {
-                    generateProofOutput(uriMedia, fileMedia, lastModified, fileMediaSig, fileMediaProof, fileMediaProofSig, fileMediaProofJSON, fileMediaProofJSONSig, fileMediaOpentimestamps, fileMediaGoogleSafetyNet, hash, shareMedia, fBatchProofOut, shareUris, sb);
+                    generateProofOutput(uriMedia, fileMedia, lastModified, fileMediaSig, fileMediaProof, fileMediaProofSig, fileMediaProofJSON, fileMediaProofJSONSig, fileMediaOpentimestamps, fileMediaGoogleSafetyNet, hash, shareMedia, fBatchProofOut, shareUris, sb, isFirstProof);
                     return true;
                 } catch (IOException e) {
                     Timber.d(e,"unable to geenrate proof output");
@@ -998,7 +1003,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
         try {
 
-            generateProofOutput(mediaUri, fileMedia, new Date(fileMedia.lastModified()), fileMediaSig, fileMediaProof, fileMediaProofSig, null, null, null, null, hash, shareMedia, fBatchProofOut, shareUris, sb);
+            generateProofOutput(mediaUri, fileMedia, new Date(fileMedia.lastModified()), fileMediaSig, fileMediaProof, fileMediaProofSig, null, null, null, null, hash, shareMedia, fBatchProofOut, shareUris, sb, true);
             return true;
         }
         catch (IOException ioe)
@@ -1008,7 +1013,7 @@ public class ShareProofActivity extends AppCompatActivity {
         }
     }
 
-    private void generateProofOutput (Uri uriMedia, File fileMedia, Date fileLastModified, File fileMediaSig, File fileMediaProof, File fileMediaProofSig, File fileMediaProofJSON, File fileMediaProofJSONSig, File fileMediaNotary, File fileMediaNotary2, String hash, boolean shareMedia, PrintWriter fBatchProofOut, ArrayList<Uri> shareUris, StringBuffer sb) throws IOException {
+    private void generateProofOutput (Uri uriMedia, File fileMedia, Date fileLastModified, File fileMediaSig, File fileMediaProof, File fileMediaProofSig, File fileMediaProofJSON, File fileMediaProofJSONSig, File fileMediaNotary, File fileMediaNotary2, String hash, boolean shareMedia, PrintWriter fBatchProofOut, ArrayList<Uri> shareUris, StringBuffer sb, boolean isFirstProof) throws IOException {
         DateFormat sdf = SimpleDateFormat.getDateTimeInstance();
 
         String fingerprint = PgpUtils.getInstance(this).getPublicKeyFingerprint();
@@ -1063,9 +1068,16 @@ public class ShareProofActivity extends AppCompatActivity {
         {
 
                 BufferedReader br = new BufferedReader(new FileReader(fileMediaProof));
-                br.readLine();//skip header
+
+                if (!isFirstProof) {
+                    br.readLine();//skip header
+                }
+                else {
+                    //get header from proof
+                    fBatchProofOut.println(br.readLine());
+                }
+
                 String csvLine = br.readLine();
-                // Log.i("ShareProof","batching csv line: " + csvLine);
                 fBatchProofOut.println(csvLine);
                 br.close();
 
