@@ -384,7 +384,8 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
                         binding.btnGallery.load(savedUri) {
                             placeholder(R.drawable.ic_no_picture)
                             transformations(CircleCropTransformation())
-                            videoFrameMillis(0)
+
+                            //  videoFrameMillis(0)
                         }
                     }
 

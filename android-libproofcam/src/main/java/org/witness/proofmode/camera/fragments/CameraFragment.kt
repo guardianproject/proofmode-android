@@ -15,6 +15,9 @@ import android.provider.MediaStore
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.GestureDetector
+import android.view.OrientationEventListener
+import android.view.OrientationEventListener.ORIENTATION_UNKNOWN
+import android.view.Surface
 import android.view.View
 import android.widget.Toast
 import androidx.camera.core.*
@@ -389,6 +392,10 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
             localCameraProvider.unbindAll()
             // Bind all use cases to the camera with lifecycle
             bindToLifecycle(localCameraProvider, viewFinder)
+
+            //listen for rotation
+            orientationEventListener.enable()
+
         }, ContextCompat.getMainExecutor(requireContext()))
     }
 
@@ -580,6 +587,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
     override fun onDestroyView() {
         super.onDestroyView()
         displayManager.unregisterDisplayListener(displayListener)
+        orientationEventListener.disable()
     }
 
     override fun onBackPressed() = when {
@@ -609,5 +617,24 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
         intent.data = newMediaFile
         LocalBroadcastManager.getInstance(requireContext()).sendBroadcast(intent)
 
+    }
+
+    private val orientationEventListener by lazy {
+        object : OrientationEventListener(requireActivity()) {
+            override fun onOrientationChanged(orientation: Int) {
+                if (orientation == ORIENTATION_UNKNOWN) {
+                    return
+                }
+
+                val rotation = when (orientation) {
+                    in 45 until 135 -> Surface.ROTATION_270
+                    in 135 until 225 -> Surface.ROTATION_180
+                    in 225 until 315 -> Surface.ROTATION_90
+                    else -> Surface.ROTATION_0
+                }
+
+                imageCapture?.targetRotation = rotation
+            }
+        }
     }
 }
