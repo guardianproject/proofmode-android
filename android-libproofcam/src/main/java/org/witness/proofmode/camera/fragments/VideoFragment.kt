@@ -14,6 +14,8 @@ import android.provider.MediaStore
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.GestureDetector
+import android.view.OrientationEventListener
+import android.view.Surface
 import android.view.View
 import android.widget.Toast
 import androidx.camera.core.*
@@ -237,6 +239,11 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
 
                 // Attach the viewfinder's surface provider to preview use case
                 preview?.setSurfaceProvider(viewFinder.surfaceProvider)
+
+
+                //listen for rotation
+                orientationEventListener.enable()
+
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to bind use cases", e)
             }
@@ -399,6 +406,7 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
     override fun onStop() {
         super.onStop()
         camera?.cameraControl?.enableTorch(false)
+
     }
 
     companion object {
@@ -421,5 +429,24 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
         intent.data = newMediaFile
         LocalBroadcastManager.getInstance(requireContext()).sendBroadcast(intent)
 
+    }
+
+    private val orientationEventListener by lazy {
+        object : OrientationEventListener(requireActivity()) {
+            override fun onOrientationChanged(orientation: Int) {
+                if (orientation == ORIENTATION_UNKNOWN) {
+                    return
+                }
+
+                val rotation = when (orientation) {
+                    in 45 until 135 -> Surface.ROTATION_270
+                    in 135 until 225 -> Surface.ROTATION_180
+                    in 225 until 315 -> Surface.ROTATION_90
+                    else -> Surface.ROTATION_0
+                }
+
+                videoCapture?.setTargetRotation(rotation)
+            }
+        }
     }
 }
