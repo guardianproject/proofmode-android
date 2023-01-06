@@ -108,7 +108,7 @@ public class PhotosContentJob extends JobService {
                         ArrayList<Uri> uris = new ArrayList<>(mUriStack.keySet());
 
                         for (Uri uri : uris) {
-                            MediaWatcher.getInstance(PhotosContentJob.this).processUri(uri, true);
+                            MediaWatcher.getInstance(PhotosContentJob.this).processUri(uri, true, null);
                             mUriStack.remove(uri);
                         }
 

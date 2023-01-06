@@ -35,6 +35,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.security.PublicKey;
 import java.security.Security;
+import java.util.Date;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
@@ -139,24 +140,30 @@ public class ProofMode {
     public static String generateProof (Context context, Uri uri)
     {
 
-        return MediaWatcher.getInstance(context).processUri (uri, false);
+        return MediaWatcher.getInstance(context).processUri (uri, false, null);
 
     }
 
     public static String generateProof (Context context, Uri uri, byte[] mediaBytes, String mimeType)
     {
 
-        return MediaWatcher.getInstance(context).processBytes (context, uri, mediaBytes, mimeType);
+        return MediaWatcher.getInstance(context).processBytes (context, uri, mediaBytes, mimeType, null);
+
+    }
+
+    public static String generateProof (Context context, Uri uri, byte[] mediaBytes, String mimeType, Date createdAt)
+    {
+
+        return MediaWatcher.getInstance(context).processBytes (context, uri, mediaBytes, mimeType, createdAt);
 
     }
 
     public static String generateProof (Context context, Uri uri, String proofHash)
     {
 
-        return MediaWatcher.getInstance(context).processUri (uri, proofHash, false);
+        return MediaWatcher.getInstance(context).processUri (uri, proofHash, false, null);
 
     }
-
 
     public static File getProofDir (Context context, String mediaHash)
     {

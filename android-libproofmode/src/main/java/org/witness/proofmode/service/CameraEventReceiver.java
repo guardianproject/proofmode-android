@@ -6,13 +6,15 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 
+import java.util.Date;
+
 public class CameraEventReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
 
         if (intent != null && intent.getData() != null)
-            MediaWatcher.getInstance(context).processUri(intent.getData(), true);
+            MediaWatcher.getInstance(context).processUri(intent.getData(), true, new Date());
 
     }
 }
