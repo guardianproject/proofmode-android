@@ -102,10 +102,18 @@ fun Window.fitSystemWindows() {
 }
 
 fun Fragment.share(media: Media, title: String = "Share with...") {
-    val share = Intent(Intent.ACTION_SEND)
-    share.type = "image/*"
+
+    val share = Intent("org.witness.proofmode.action.SHARE_PROOF")
+    if (media.isVideo)
+        share.type = "video/*"
+    else
+        share.type = "image/*"
+    share.setDataAndType(media.uri, share.type)
     share.putExtra(Intent.EXTRA_STREAM, media.uri)
-    startActivity(Intent.createChooser(share, title))
+    share.setPackage(context?.packageName);//this did the trick actually
+    share.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+   // startActivity(Intent.createChooser(share, title))
+    startActivity(share)
 }
 
 fun ViewPager2.onPageSelected(action: (Int) -> Unit) {

@@ -119,7 +119,6 @@
             />
 
         <Button
-            style="@style/OnboardingButtonStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
@@ -158,7 +157,6 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal">
         <Button
-            style="@style/OnboardingButtonStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_margin="10dp"
@@ -166,7 +164,6 @@
             android:onClick="clickAll"
             />
             <Button
-                style="@style/OnboardingButtonStyle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_margin="10dp"

@@ -33,9 +33,9 @@ abstract class BaseFragment<B : ViewBinding>(private val fragmentLayout: Int) : 
     // The Folder location where all the files will be stored
     protected val outputDirectory: String by lazy {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            "${Environment.DIRECTORY_DCIM}/CameraXDemo/"
+            "${Environment.DIRECTORY_DCIM}/ProofMode/"
         } else {
-            "${requireContext().getExternalFilesDir(Environment.DIRECTORY_DCIM)}/CameraXDemo/"
+            "${requireContext().getExternalFilesDir(Environment.DIRECTORY_DCIM)}/ProofMode/"
         }
     }
 
@@ -151,6 +151,8 @@ abstract class BaseFragment<B : ViewBinding>(private val fragmentLayout: Int) : 
                 }
             }
         }
+        items.sortBy { it.date }
+
         return items
     }
 

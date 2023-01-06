@@ -144,9 +144,16 @@
                     android:label="@string/share_proof_action" />
 
                 <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeGroup="audio/*"/>
+                <data android:mimeType="audio/*"/>
                 <data android:mimeType="image/*" />
                 <data android:mimeType="video/*" />
+            </intent-filter>
+            <intent-filter>
+                <action
+                    android:name="org.witness.proofmode.action.SHARE_PROOF"
+                    android:label="@string/share_proof_action" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
             </intent-filter>
         </activity>
 

@@ -1,5 +1,6 @@
 package org.witness.proofmode;
 
+import static android.content.Intent.ACTION_SEND;
 import static org.witness.proofmode.ProofMode.GOOGLE_SAFETYNET_FILE_TAG;
 import static org.witness.proofmode.ProofMode.OPENPGP_FILE_TAG;
 import static org.witness.proofmode.ProofMode.OPENTIMESTAMPS_FILE_TAG;
@@ -117,8 +118,9 @@ public class ShareProofActivity extends AppCompatActivity {
             }
 
 
-        } else if (Intent.ACTION_SEND.equals(action)) {
+        } else if (ACTION_SEND.equals(action) || action.endsWith("SHARE_PROOF")) {
 
+            intent.setAction(ACTION_SEND);
 
             Uri mediaUri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
             if (mediaUri == null)
@@ -242,7 +244,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
 
 
-        } else if (Intent.ACTION_SEND.equals(action)) {
+        } else if (ACTION_SEND.equals(action) || action.endsWith("SHARE_PROOF")) {
 
             Uri mediaUri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
             if (mediaUri == null)
@@ -383,7 +385,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
 
         }
-        else if (Intent.ACTION_SEND.equals(action)) {
+        else if (ACTION_SEND.equals(action) || action.endsWith("SHARE_PROOF")) {
 
             Uri mediaUri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
             if (mediaUri == null)
@@ -554,7 +556,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
 
         }
-        else if (Intent.ACTION_SEND.equals(action)) {
+        else if (ACTION_SEND.equals(action) || action.endsWith("SHARE_PROOF")) {
 
             Uri mediaUri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
             if (mediaUri == null)
@@ -1087,7 +1089,7 @@ public class ShareProofActivity extends AppCompatActivity {
     private void shareNotarization (String shareText)
     {
 
-        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+        Intent shareIntent = new Intent(ACTION_SEND);
         shareIntent.putExtra(Intent.EXTRA_TEXT, shareText);
         shareIntent.setType("*/*");
 
@@ -1100,7 +1102,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
 
         PackageManager pm = getPackageManager();
-        Intent sendIntent = new Intent(Intent.ACTION_SEND);
+        Intent sendIntent = new Intent(ACTION_SEND);
         sendIntent.setType("*/*");
 
         List<ResolveInfo> resInfo = pm.queryIntentActivities(sendIntent, 0);
@@ -1126,7 +1128,7 @@ public class ShareProofActivity extends AppCompatActivity {
                 Intent intent = new Intent();
                 intent.setComponent(new ComponentName(packageName,
                         ri.activityInfo.name));
-                intent.setAction(Intent.ACTION_SEND);
+                intent.setAction(ACTION_SEND);
                 intent.setDataAndType(shareUri, shareMimeType);
                 intent.putExtra(Intent.EXTRA_TEXT, shareText);
                 intent.putExtra(Intent.EXTRA_STREAM,shareUri);
@@ -1138,7 +1140,7 @@ public class ShareProofActivity extends AppCompatActivity {
                 Intent intent = new Intent();
                 intent.setComponent(new ComponentName(packageName,
                         ri.activityInfo.name));
-                intent.setAction(Intent.ACTION_SEND);
+                intent.setAction(ACTION_SEND);
          //       intent.setDataAndType(shareUri, shareMimeType);
                 intent.putExtra(Intent.EXTRA_EMAIL, new String[] { "" });
                 intent.putExtra(Intent.EXTRA_TEXT, shareText);
@@ -1154,7 +1156,7 @@ public class ShareProofActivity extends AppCompatActivity {
                 intent.setComponent(new ComponentName(packageName,
                         ri.activityInfo.name));
 
-                intent.setAction(Intent.ACTION_SEND);
+                intent.setAction(ACTION_SEND);
            //     intent.setDataAndType(shareUri, shareMimeType);
                 intent.putExtra(Intent.EXTRA_TEXT, shareText);
                 intent.putExtra(Intent.EXTRA_STREAM,shareUri);
@@ -1169,7 +1171,7 @@ public class ShareProofActivity extends AppCompatActivity {
                 intent.setComponent(new ComponentName(packageName,
                         ri.activityInfo.name));
 
-                intent.setAction(Intent.ACTION_SEND);
+                intent.setAction(ACTION_SEND);
             //    intent.setDataAndType(shareUri, shareMimeType);
                 intent.putExtra(Intent.EXTRA_TEXT, shareText);
                 intent.putExtra(Intent.EXTRA_STREAM,shareUri);
@@ -1185,7 +1187,7 @@ public class ShareProofActivity extends AppCompatActivity {
                 intent.setComponent(new ComponentName(packageName,
                         ri.activityInfo.name));
 
-                intent.setAction(Intent.ACTION_SEND);
+                intent.setAction(ACTION_SEND);
            //     intent.setDataAndType(shareUri, shareMimeType);
                 intent.putExtra(Intent.EXTRA_TEXT, shareText);
                 intent.putExtra(Intent.EXTRA_STREAM,shareUri);
@@ -1200,7 +1202,7 @@ public class ShareProofActivity extends AppCompatActivity {
                 intent.setComponent(new ComponentName(packageName,
                         ri.activityInfo.name));
 
-                intent.setAction(Intent.ACTION_SEND);
+                intent.setAction(ACTION_SEND);
                 intent.setDataAndType(shareUri, shareMimeType);
                 intent.putExtra(Intent.EXTRA_TEXT, shareText);
                 intent.putExtra(Intent.EXTRA_STREAM,shareUri);
@@ -1215,7 +1217,7 @@ public class ShareProofActivity extends AppCompatActivity {
                 intent.setComponent(new ComponentName(packageName,
                         ri.activityInfo.name));
 
-                intent.setAction(Intent.ACTION_SEND);
+                intent.setAction(ACTION_SEND);
                 intent.setDataAndType(shareUri, shareMimeType);
                 intent.putExtra(Intent.EXTRA_TEXT, shareText);
                 intent.putExtra(Intent.EXTRA_STREAM,shareUri);
@@ -1229,7 +1231,7 @@ public class ShareProofActivity extends AppCompatActivity {
         }
 
         Intent baseIntent = new Intent();
-        baseIntent.setAction(Intent.ACTION_SEND);
+        baseIntent.setAction(ACTION_SEND);
 
         // convert intentList to array
         LabeledIntent[] extraIntents = intentList
@@ -1245,7 +1247,7 @@ public class ShareProofActivity extends AppCompatActivity {
         int modeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION;
 
         Intent shareIntent = new Intent();
-        shareIntent.setAction(Intent.ACTION_SEND);
+        shareIntent.setAction(ACTION_SEND);
 
         shareIntent.setDataAndType(shareZipUri,"application/zip");
         shareIntent.putExtra(Intent.EXTRA_TEXT, shareText);

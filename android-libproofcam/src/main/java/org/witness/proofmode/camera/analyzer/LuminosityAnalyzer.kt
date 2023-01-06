@@ -30,7 +30,7 @@ class LuminosityAnalyzer: ImageAnalysis.Analyzer {
             // Compute average luminance for the image
             val luma = pixels.average()
             // Log the new luma value
-            Log.e("CameraXDemo", "Average luminosity: $luma")
+          //  Log.e("CameraXDemo", "Average luminosity: $luma")
             // Update timestamp of last analyzed frame
             lastAnalyzedTimestamp = currentTimestamp
         }
