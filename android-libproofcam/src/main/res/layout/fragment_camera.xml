@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:animateLayoutChanges="true"
     android:background="@android:color/black"
-    tools:context=".fragments.CameraFragment">
+    tools:context="org.witness.proofmode.camera.fragments.CameraFragment">
 
     <androidx.camera.view.PreviewView
         android:id="@+id/viewFinder"

@@ -1,14 +1,14 @@
-package com.robertlevonyan.demo.camerax.fragments
+package org.witness.proofmode.camera.fragments
 
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import androidx.core.view.WindowInsetsCompat
 import androidx.navigation.Navigation
-import com.robertlevonyan.demo.camerax.R
-import com.robertlevonyan.demo.camerax.adapter.MediaAdapter
-import com.robertlevonyan.demo.camerax.databinding.FragmentPreviewBinding
-import com.robertlevonyan.demo.camerax.utils.*
+import org.witness.proofmode.camera.R
+import org.witness.proofmode.camera.adapter.MediaAdapter
+import org.witness.proofmode.camera.databinding.FragmentPreviewBinding
+import org.witness.proofmode.camera.utils.*
 
 class PreviewFragment : BaseFragment<FragmentPreviewBinding>(R.layout.fragment_preview) {
     private val mediaAdapter = MediaAdapter(

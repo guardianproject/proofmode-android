@@ -19,7 +19,7 @@ import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.preference.PreferenceManager
 import com.google.android.material.navigation.NavigationView
-import com.robertlevonyan.demo.camerax.CameraActivity
+import org.witness.proofmode.camera.CameraActivity
 import gun0912.tedimagepicker.builder.TedImagePicker
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.databinding.ActivityMainBinding

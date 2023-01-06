@@ -1,4 +1,4 @@
-package com.robertlevonyan.demo.camerax.adapter
+package org.witness.proofmode.camera.adapter
 
 import android.net.Uri
 import android.view.View
@@ -8,9 +8,8 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import coil.request.videoFrameMillis
-import com.robertlevonyan.demo.camerax.R
-import com.robertlevonyan.demo.camerax.utils.layoutInflater
-
+import org.witness.proofmode.camera.utils.layoutInflater
+import org.witness.proofmode.camera.R
 /**
  * This is an adapter to preview taken photos or videos
  * */

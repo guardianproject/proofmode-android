@@ -7,7 +7,7 @@
 
     <fragment
         android:id="@+id/cameraFragment"
-        android:name="com.robertlevonyan.demo.camerax.fragments.CameraFragment"
+        android:name="org.witness.proofmode.camera.fragments.CameraFragment"
         android:label="fragment_camera"
         tools:layout="@layout/fragment_camera" >
         <action
@@ -31,12 +31,12 @@
     </fragment>
     <fragment
         android:id="@+id/previewFragment"
-        android:name="com.robertlevonyan.demo.camerax.fragments.PreviewFragment"
+        android:name="org.witness.proofmode.camera.fragments.PreviewFragment"
         android:label="fragment_preview"
         tools:layout="@layout/fragment_preview" />
     <fragment
         android:id="@+id/videoFragment"
-        android:name="com.robertlevonyan.demo.camerax.fragments.VideoFragment"
+        android:name="org.witness.proofmode.camera.fragments.VideoFragment"
         android:label="fragment_video"
         tools:layout="@layout/fragment_video" >
         <action

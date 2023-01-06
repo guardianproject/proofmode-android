@@ -1,4 +1,4 @@
-package com.robertlevonyan.demo.camerax.adapter
+package org.witness.proofmode.camera.adapter
 
 import android.net.Uri
 import java.util.*

@@ -1,4 +1,4 @@
-package com.robertlevonyan.demo.camerax.utils
+package org.witness.proofmode.camera.utils
 
 import android.view.GestureDetector
 import android.view.MotionEvent

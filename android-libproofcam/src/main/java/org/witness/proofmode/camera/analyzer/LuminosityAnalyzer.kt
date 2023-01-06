@@ -1,4 +1,4 @@
-package com.robertlevonyan.demo.camerax.analyzer
+package org.witness.proofmode.camera.analyzer
 
 import android.util.Log
 import androidx.camera.core.ImageAnalysis

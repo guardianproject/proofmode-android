@@ -1,4 +1,4 @@
-package com.robertlevonyan.demo.camerax.enums
+package org.witness.proofmode.camera.enums
 
 enum class CameraTimer {
     OFF,

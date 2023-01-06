@@ -1,4 +1,4 @@
-package com.robertlevonyan.demo.camerax.fragments
+package org.witness.proofmode.camera.fragments
 
 import android.Manifest
 import android.content.ContentUris
@@ -19,8 +19,8 @@ import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import androidx.viewbinding.ViewBinding
 import com.google.android.material.snackbar.Snackbar
-import com.robertlevonyan.demo.camerax.R
-import com.robertlevonyan.demo.camerax.adapter.Media
+import org.witness.proofmode.camera.R
+import org.witness.proofmode.camera.adapter.Media
 import java.io.File
 
 /**Parent class of all the fragments in this project*/

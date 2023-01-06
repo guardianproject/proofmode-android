@@ -1,4 +1,4 @@
-package com.robertlevonyan.demo.camerax.utils
+package org.witness.proofmode.camera.utils
 
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
@@ -19,7 +19,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
 import androidx.viewpager2.widget.ViewPager2
-import com.robertlevonyan.demo.camerax.adapter.Media
+import org.witness.proofmode.camera.adapter.Media
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay

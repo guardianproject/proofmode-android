@@ -1,4 +1,4 @@
-package com.robertlevonyan.demo.camerax.fragments
+package org.witness.proofmode.camera.fragments
 
 import android.annotation.SuppressLint
 import android.content.ContentValues
@@ -29,16 +29,15 @@ import androidx.navigation.Navigation
 import coil.load
 import coil.request.ErrorResult
 import coil.request.ImageRequest
-import coil.request.videoFrameMillis
 import coil.transform.CircleCropTransformation
-import com.robertlevonyan.demo.camerax.R
-import com.robertlevonyan.demo.camerax.analyzer.LuminosityAnalyzer
-import com.robertlevonyan.demo.camerax.databinding.FragmentCameraBinding
-import com.robertlevonyan.demo.camerax.enums.CameraTimer
-import com.robertlevonyan.demo.camerax.utils.*
+import org.witness.proofmode.camera.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.witness.proofmode.camera.analyzer.LuminosityAnalyzer
+import org.witness.proofmode.camera.databinding.FragmentCameraBinding
+import org.witness.proofmode.camera.enums.CameraTimer
+import org.witness.proofmode.camera.utils.*
 import java.io.File
 import java.util.concurrent.ExecutionException
 import kotlin.math.abs

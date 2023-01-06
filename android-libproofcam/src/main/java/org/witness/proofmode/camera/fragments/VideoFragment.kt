@@ -1,4 +1,4 @@
-package com.robertlevonyan.demo.camerax.fragments
+package org.witness.proofmode.camera.fragments
 
 import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
@@ -27,17 +27,16 @@ import coil.request.ErrorResult
 import coil.request.ImageRequest
 import coil.request.videoFrameMillis
 import coil.transform.CircleCropTransformation
-import com.robertlevonyan.demo.camerax.R
-import com.robertlevonyan.demo.camerax.databinding.FragmentVideoBinding
-import com.robertlevonyan.demo.camerax.utils.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.witness.proofmode.camera.databinding.FragmentVideoBinding
+import org.witness.proofmode.camera.utils.*
 import java.io.File
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.properties.Delegates
-
+import org.witness.proofmode.camera.R
 
 @SuppressLint("RestrictedApi")
 class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video) {
