@@ -4,6 +4,7 @@ import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
 import android.content.res.Configuration
 import android.hardware.display.DisplayManager
 import android.net.Uri
@@ -21,6 +22,7 @@ import androidx.core.animation.doOnCancel
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.Navigation
 import coil.load
 import coil.request.ErrorResult
@@ -37,6 +39,7 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.properties.Delegates
 import org.witness.proofmode.camera.R
+import org.witness.proofmode.camera.fragments.VideoFragment.CameraConstants.NEW_MEDIA_EVENT
 
 @SuppressLint("RestrictedApi")
 class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video) {
@@ -297,6 +300,7 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
                         outputFileResults.savedUri
                             ?.let { uri ->
                                 setGalleryThumbnail(uri)
+                                sendLocalCameraEvent(uri)
                                 Log.d(TAG, "Video saved in $uri")
                             }
                             ?: setLastPictureThumbnail()
@@ -397,11 +401,24 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
     }
 
     companion object {
-        private const val TAG = "CameraXDemo"
+        private const val TAG = "libProofCam"
 
         const val KEY_GRID = "sPrefGridVideo"
 
         private const val RATIO_4_3_VALUE = 4.0 / 3.0 // aspect ratio 4x3
         private const val RATIO_16_9_VALUE = 16.0 / 9.0 // aspect ratio 16x9
+    }
+
+
+    object CameraConstants {
+        const val NEW_MEDIA_EVENT = "org.witness.proofmode.NEW_MEDIA"
+    }
+
+    fun sendLocalCameraEvent(newMediaFile : Uri) {
+
+        var intent = Intent(NEW_MEDIA_EVENT)
+        intent.data = newMediaFile
+        LocalBroadcastManager.getInstance(requireContext()).sendBroadcast(intent)
+
     }
 }

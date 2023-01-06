@@ -3,6 +3,7 @@ package org.witness.proofmode.camera.fragments
 import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
 import android.content.res.Configuration
 import android.hardware.display.DisplayManager
 import android.net.Uri
@@ -25,6 +26,7 @@ import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.Navigation
 import coil.load
 import coil.request.ErrorResult
@@ -37,6 +39,7 @@ import kotlinx.coroutines.launch
 import org.witness.proofmode.camera.analyzer.LuminosityAnalyzer
 import org.witness.proofmode.camera.databinding.FragmentCameraBinding
 import org.witness.proofmode.camera.enums.CameraTimer
+import org.witness.proofmode.camera.fragments.CameraFragment.CameraConstants.NEW_MEDIA_EVENT
 import org.witness.proofmode.camera.utils.*
 import java.io.File
 import java.util.concurrent.ExecutionException
@@ -541,6 +544,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
                     outputFileResults.savedUri
                         ?.let { uri ->
                             setGalleryThumbnail(uri)
+                            sendLocalCameraEvent(uri)
                             Log.d(TAG, "Photo saved in $uri")
                         }
                         ?: setLastPictureThumbnail()
@@ -593,5 +597,17 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
 
         private const val RATIO_4_3_VALUE = 4.0 / 3.0 // aspect ratio 4x3
         private const val RATIO_16_9_VALUE = 16.0 / 9.0 // aspect ratio 16x9
+    }
+
+    object CameraConstants {
+        const val NEW_MEDIA_EVENT = "org.witness.proofmode.NEW_MEDIA"
+    }
+
+    fun sendLocalCameraEvent(newMediaFile : Uri) {
+
+        var intent = Intent(NEW_MEDIA_EVENT)
+        intent.data = newMediaFile
+        LocalBroadcastManager.getInstance(requireContext()).sendBroadcast(intent)
+
     }
 }
