@@ -50,16 +50,8 @@ public class ProofModeApp extends MultiDexApplication {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 ProofMode.initBackgroundService(this);
 
-                //   OneTimeWorkRequest request = new OneTimeWorkRequest.Builder ( BackupWorker.class ).addTag ( "BACKUP_WORKER_TAG" ).build ();
-            //    WorkManager.getInstance ( context ).enqueue ( request );
-
-                //not sure what to do here yet!
-
                 if (startService)
-                {
                     context.startForegroundService ( intentService );
-
-                }
 
             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService ( intentService );
