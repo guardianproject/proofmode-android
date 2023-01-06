@@ -64,7 +64,7 @@ public class MediaWatcher extends BroadcastReceiver {
 
     private SharedPreferences mPrefs;
 
-    public final static int PROOF_GENERATION_DELAY_TIME_MS = 60 * 1000; // 30 seconds
+    public final static int PROOF_GENERATION_DELAY_TIME_MS = 2 * 1000; // 30 seconds
     private static MediaWatcher mInstance;
 
     private ExecutorService mExec = Executors.newFixedThreadPool(1);

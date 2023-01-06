@@ -93,14 +93,14 @@ public class PhotosContentJob extends JobService {
 
                 }
 
+                /**
                 ArrayList<Uri> uris = new ArrayList<>(mUriStack.keySet());
 
                 for (Uri uri : uris) {
                     MediaWatcher.getInstance(PhotosContentJob.this).processUri(uri, true);
                     mUriStack.remove(uri);
-                }
+                }**/
 
-                /**
                 Timer t = new Timer();
                 t.schedule(new TimerTask() {
                     @Override
@@ -113,7 +113,7 @@ public class PhotosContentJob extends JobService {
                         }
 
                     }
-                }, MediaWatcher.PROOF_GENERATION_DELAY_TIME_MS);**/
+                }, MediaWatcher.PROOF_GENERATION_DELAY_TIME_MS);
 
             } else {
                 // We don't have any details about URIs (because too many changed at once),

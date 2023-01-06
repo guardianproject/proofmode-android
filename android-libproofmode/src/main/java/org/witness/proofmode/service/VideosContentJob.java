@@ -114,12 +114,21 @@ public class VideosContentJob extends JobService {
                     mUriStack.put(uri,uri.toString());
                 }
 
-                ArrayList<Uri> uriKeys = new ArrayList<Uri>(mUriStack.keySet());
+                Timer t = new Timer();
+                t.schedule(new TimerTask() {
+                    @Override
+                    public void run() {
+                        ArrayList<Uri> uriKeys = new ArrayList<Uri>(mUriStack.keySet());
 
-                for (Uri uri : uriKeys) {
-                    MediaWatcher.getInstance(VideosContentJob.this).processUri(uri, true);
-                    mUriStack.remove(uri);
-                }
+                        for (Uri uri : uriKeys) {
+                            MediaWatcher.getInstance(VideosContentJob.this).processUri(uri, true);
+                            mUriStack.remove(uri);
+                        }
+
+                    }
+                }, MediaWatcher.PROOF_GENERATION_DELAY_TIME_MS);
+
+
 
             } else {
                 // We don't have any details about URIs (because too many changed at once),
