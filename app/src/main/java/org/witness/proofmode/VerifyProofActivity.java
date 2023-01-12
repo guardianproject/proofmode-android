@@ -277,11 +277,11 @@ public class VerifyProofActivity extends AppCompatActivity {
 
             if (verified)
             {
-                Toast.makeText(activity,"Verified!",Toast.LENGTH_LONG).show();
+                Toast.makeText(activity,activity.getString(R.string.proof_integrity_verified_success),Toast.LENGTH_LONG).show();
 
             }
             else {
-                Toast.makeText(activity,"NOT Verified!",Toast.LENGTH_LONG).show();
+                Toast.makeText(activity, activity.getString(R.string.proof_integrity_verified_failed),Toast.LENGTH_LONG).show();
 
             }
 

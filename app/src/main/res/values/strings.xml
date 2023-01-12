@@ -128,4 +128,6 @@
 
     <string name="start_camera">Start Camera</string>
     <string name="verify_proof">Verify Proof</string>
+    <string name="proof_integrity_verified_success">Proof Integrity Verified</string>
+    <string name="proof_integrity_verified_failed">Proof Integrity Check Failed!</string>
 </resources>
