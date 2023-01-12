@@ -27,6 +27,7 @@ import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -144,6 +145,12 @@ public class ProofMode {
 
     }
 
+    public static String generateProof (Context context, Uri uri, FileDescriptor fdMediaFile, String mimeType) throws IOException {
+
+        return MediaWatcher.getInstance(context).processFileDescriptor (context, uri, fdMediaFile, mimeType);
+
+    }
+
     public static String generateProof (Context context, Uri uri, byte[] mediaBytes, String mimeType)
     {
 
@@ -204,6 +211,51 @@ public class ProofMode {
         String pubKey = pu.getPublicKeyString();
 
         return pubKey;
+    }
+
+    public static boolean verifyProofZip (Context context, FileDescriptor proofZip) throws Exception {
+
+        InputStream proofZipStream = new FileInputStream(proofZip);
+
+        try (ZipInputStream zis = new ZipInputStream(proofZipStream)) {
+
+            // list files in zip
+            ZipEntry zipEntry = zis.getNextEntry();
+
+            while (zipEntry != null) {
+
+                ByteArrayInputStream mediaFile = null;
+                String mediaHashSha256 = null;
+
+                if (!zipEntry.getName().endsWith(File.separator)) {
+
+                    String mimeType = getMimeType(zipEntry.getName());
+
+                    if (mimeType != null && (mimeType.startsWith("audio")||mimeType.startsWith("image")||mimeType.startsWith("video"))) {
+                        mediaFile = (ByteArrayInputStream) copyStream(zis);
+                        mediaHashSha256 = HashUtils.getSHA256FromFileContent(mediaFile);
+                        mediaFile.reset();
+
+                        //reopen stream
+                        InputStream proofZipStream2 = new FileInputStream(proofZip);
+                        boolean verifiedIntegrity = verifyProofZipIntegrity(context, mediaHashSha256, mediaFile, proofZipStream2);
+                        proofZipStream2.close();
+                        if (!verifiedIntegrity)
+                            return false;
+                    }
+
+                }
+
+                zipEntry = zis.getNextEntry();
+
+
+            }
+            zis.closeEntry();
+
+        }
+
+        return true;
+
     }
 
     public static boolean verifyProofZip (Context context, Uri proofZipUri) throws Exception {

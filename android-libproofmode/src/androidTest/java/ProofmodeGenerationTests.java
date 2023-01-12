@@ -119,11 +119,13 @@ public class ProofmodeGenerationTests {
             zipProof(files, fileZip,ProofMode.getPublicKeyString(context));
             assertTrue(fileZip.exists());
 
+            //verify specific file and hash
             is = assets.open(testFile);
             boolean verifiedIntegrity = ProofMode.verifyProofZip(context, mediaHashSha256Check, is, new FileInputStream(fileZip));
             assertTrue(verifiedIntegrity);
             is.close();
 
+            //verify all contents
             is = assets.open(testFile);
             verifiedIntegrity = ProofMode.verifyProofZip(context, Uri.fromFile(fileZip));
             assertTrue(verifiedIntegrity);
