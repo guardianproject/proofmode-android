@@ -124,6 +124,11 @@ public class ProofmodeGenerationTests {
             assertTrue(verifiedIntegrity);
             is.close();
 
+            is = assets.open(testFile);
+            verifiedIntegrity = ProofMode.verifyProofZip(context, Uri.fromFile(fileZip));
+            assertTrue(verifiedIntegrity);
+            is.close();
+
         } catch (Exception e) {
             e.printStackTrace();
             fail();
