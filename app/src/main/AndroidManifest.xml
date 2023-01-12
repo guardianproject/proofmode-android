@@ -157,6 +157,22 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".VerifyProofActivity"
+            android:label="@string/verify_proof"
+            android:theme="@style/AppTheme.NoActionBar"
+            android:exported="true">
+            <intent-filter>
+                <action
+                    android:name="android.intent.action.SEND"
+                    android:label="@string/verify_proof" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:mimeType="application/zip" />
+            </intent-filter>
+        </activity>
+
         <service
             android:name=".service.PhotosContentJob"
             android:exported="true"
