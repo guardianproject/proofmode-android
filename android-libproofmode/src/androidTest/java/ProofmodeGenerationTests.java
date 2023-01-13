@@ -68,9 +68,7 @@ public class ProofmodeGenerationTests {
 
             String mediaMime = "image/jpeg";
             String hash = ProofMode.generateProof(context, uriMedia, result.toByteArray(), mediaMime);
-
             Timber.i("hash generated: " + hash);
-
             assertNotNull(hash);
 
             File fileDirProof = ProofMode.getProofDir(context, hash);
@@ -119,10 +117,21 @@ public class ProofmodeGenerationTests {
             zipProof(files, fileZip,ProofMode.getPublicKeyString(context));
             assertTrue(fileZip.exists());
 
+            //verify specific file and hash
             is = assets.open(testFile);
             boolean verifiedIntegrity = ProofMode.verifyProofZip(context, mediaHashSha256Check, is, new FileInputStream(fileZip));
             assertTrue(verifiedIntegrity);
             is.close();
+
+            //verify all contents
+            is = assets.open(testFile);
+            verifiedIntegrity = ProofMode.verifyProofZip(context, Uri.fromFile(fileZip));
+            assertTrue(verifiedIntegrity);
+            is.close();
+
+            //verify all contents using FileDescriptor
+            verifiedIntegrity = ProofMode.verifyProofZip(context, new FileInputStream(fileZip).getFD());
+            assertTrue(verifiedIntegrity);
 
         } catch (Exception e) {
             e.printStackTrace();

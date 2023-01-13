@@ -6,6 +6,7 @@ import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Build;
 import android.preference.PreferenceManager;
+import android.webkit.MimeTypeMap;
 
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
@@ -26,6 +27,7 @@ import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -81,21 +83,20 @@ public class ProofMode {
         if (mInit)
             return;
 
+        MediaWatcher.getInstance(context);
+
         if (Build.VERSION.SDK_INT >= 24) {
             PhotosContentJob.scheduleJob(context);
             VideosContentJob.scheduleJob(context);
             AudioContentJob.scheduleJob(context);
         }
 
-        mReceiver = new CameraEventReceiver();
-        addCameraEventListeners(context, mReceiver);
+        if (mReceiver == null) {
+            mReceiver = new CameraEventReceiver();
+            addCameraEventListeners(context, mReceiver);
+        }
 
         mInit = true;
-
-        MediaWatcher.getInstance(context);
-
-
-
     }
 
     private static void addCameraEventListeners (Context context, CameraEventReceiver receiver) {
@@ -141,6 +142,12 @@ public class ProofMode {
     {
 
         return MediaWatcher.getInstance(context).processUri (uri, false, null);
+
+    }
+
+    public static String generateProof (Context context, Uri uri, FileDescriptor fdMediaFile, String mimeType) throws IOException {
+
+        return MediaWatcher.getInstance(context).processFileDescriptor (context, uri, fdMediaFile, mimeType);
 
     }
 
@@ -204,6 +211,104 @@ public class ProofMode {
         String pubKey = pu.getPublicKeyString();
 
         return pubKey;
+    }
+
+    public static boolean verifyProofZip (Context context, FileDescriptor proofZip) throws Exception {
+
+        InputStream proofZipStream = new FileInputStream(proofZip);
+
+        try (ZipInputStream zis = new ZipInputStream(proofZipStream)) {
+
+            // list files in zip
+            ZipEntry zipEntry = zis.getNextEntry();
+
+            while (zipEntry != null) {
+
+                ByteArrayInputStream mediaFile = null;
+                String mediaHashSha256 = null;
+
+                if (!zipEntry.getName().endsWith(File.separator)) {
+
+                    String mimeType = getMimeType(zipEntry.getName());
+
+                    if (mimeType != null && (mimeType.startsWith("audio")||mimeType.startsWith("image")||mimeType.startsWith("video"))) {
+                        mediaFile = (ByteArrayInputStream) copyStream(zis);
+                        mediaHashSha256 = HashUtils.getSHA256FromFileContent(mediaFile);
+                        mediaFile.reset();
+
+                        //reopen stream
+                        InputStream proofZipStream2 = new FileInputStream(proofZip);
+                        boolean verifiedIntegrity = verifyProofZipIntegrity(context, mediaHashSha256, mediaFile, proofZipStream2);
+                        proofZipStream2.close();
+                        if (!verifiedIntegrity)
+                            return false;
+                    }
+
+                }
+
+                zipEntry = zis.getNextEntry();
+
+
+            }
+            zis.closeEntry();
+
+        }
+
+        return true;
+
+    }
+
+    public static boolean verifyProofZip (Context context, Uri proofZipUri) throws Exception {
+
+        InputStream proofZipStream = context.getContentResolver().openInputStream(proofZipUri);
+
+        try (ZipInputStream zis = new ZipInputStream(proofZipStream)) {
+
+            // list files in zip
+            ZipEntry zipEntry = zis.getNextEntry();
+
+            while (zipEntry != null) {
+
+                ByteArrayInputStream mediaFile = null;
+                String mediaHashSha256 = null;
+
+                if (!zipEntry.getName().endsWith(File.separator)) {
+
+                    String mimeType = getMimeType(zipEntry.getName());
+
+                    if (mimeType != null && (mimeType.startsWith("audio")||mimeType.startsWith("image")||mimeType.startsWith("video"))) {
+                        mediaFile = (ByteArrayInputStream) copyStream(zis);
+                        mediaHashSha256 = HashUtils.getSHA256FromFileContent(mediaFile);
+                        mediaFile.reset();
+
+                        //reopen stream
+                        InputStream proofZipStream2 = context.getContentResolver().openInputStream(proofZipUri);
+                        boolean verifiedIntegrity = verifyProofZipIntegrity(context, mediaHashSha256, mediaFile, proofZipStream2);
+                        proofZipStream2.close();
+                        if (!verifiedIntegrity)
+                            return false;
+                    }
+
+                }
+
+                zipEntry = zis.getNextEntry();
+
+
+            }
+            zis.closeEntry();
+
+        }
+
+        return true;
+    }
+
+    private static String getMimeType(String url) {
+        String type = null;
+        String extension = MimeTypeMap.getFileExtensionFromUrl(url);
+        if (extension != null) {
+            type = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+        }
+        return type;
     }
 
     public static boolean verifyProofZip (Context context, String mediaHashSha256, InputStream mediaFile, InputStream proofZipStream) throws Exception {
