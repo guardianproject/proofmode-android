@@ -55,6 +55,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -99,13 +100,11 @@ public class PgpUtils {
 
     }
 
-    public static synchronized PgpUtils getInstance (Context context)
-    {
+    public static synchronized PgpUtils getInstance (Context context) throws PGPException, IOException {
         return getInstance(context, DEFAULT_PASSWORD);
     }
 
-    public static synchronized PgpUtils getInstance (Context context, String password)
-    {
+    public static synchronized PgpUtils getInstance (Context context, String password) throws PGPException, IOException {
         if (mInstance == null)
         {
             mInstance = new PgpUtils();
@@ -281,14 +280,12 @@ public class PgpUtils {
         publicOut.close();
     }
 
-    public void createDetachedSignature (File media, File mediaSig, String password, boolean armor) throws Exception
-    {
+    public void createDetachedSignature (File media, File mediaSig, String password, boolean armor) throws IOException, PGPException {
         createDetachedSignature(new FileInputStream(media),new FileOutputStream(mediaSig), password, armor);
 
     }
 
-    public void createDetachedSignature (InputStream is, OutputStream mediaSig, String password, boolean armor) throws Exception
-    {
+    public void createDetachedSignature (InputStream is, OutputStream mediaSig, String password, boolean armor) throws PGPException, IOException {
         DetachedSignatureProcessor.createSignature(pgpSec, new DataInputStream(is), mediaSig, password.toCharArray(), armor);
 
     }
@@ -298,10 +295,9 @@ public class PgpUtils {
         return DetachedSignatureProcessor.verifySignature(fileStream, sigStream, pubKey);
     }
 
-    public synchronized void initCrypto (Context context, String password)
-    {
+    public synchronized void initCrypto (Context context, String password) throws IOException, PGPException {
         if (pgpSec == null) {
-            try {
+
                 File fileSecKeyRing = new File(context.getFilesDir(),FILE_SECRET_KEY_RING);
                 File filePubKeyRing = new File(context.getFilesDir(),FILE_PUBLIC_KEY_RING);
 
@@ -335,12 +331,6 @@ public class PgpUtils {
                 pgpSec = skr.getSecretKey();
 
 
-            } catch (PGPException pgpe) {
-                pgpe.printStackTrace();
-            } catch (Exception pgpe) {
-                pgpe.printStackTrace();
-
-            }
         }
     }
 

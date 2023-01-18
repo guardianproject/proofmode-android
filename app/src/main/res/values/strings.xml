@@ -130,4 +130,6 @@
     <string name="verify_proof">Verify Proof</string>
     <string name="proof_integrity_verified_success">Proof Integrity Verified</string>
     <string name="proof_integrity_verified_failed">Proof Integrity Check Failed!</string>
+    <string name="pub_key_id">Public key identity generated:</string>
+    <string name="pub_key_gen_error">Error generating identity key. Please reinstall.</string>
 </resources>
