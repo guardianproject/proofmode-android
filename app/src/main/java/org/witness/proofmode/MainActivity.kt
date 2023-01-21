@@ -37,6 +37,13 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private lateinit var mainBinding:ActivityMainBinding
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            requiredPermissions = arrayOf(
+                Manifest.permission.ACCESS_MEDIA_LOCATION
+            )
+        }
+
         mainBinding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(mainBinding.root)
         val toolbar = mainBinding.toolbar
@@ -140,12 +147,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private fun setProofModeOn(isOn: Boolean) {
         if (isOn) {
             if (!askForPermissions(requiredPermissions, REQUEST_CODE_REQUIRED_PERMISSIONS)) {
-                mPrefs.edit().putBoolean(ProofMode.PREFS_DOPROOF, isOn).apply()
+                mPrefs.edit().putBoolean(ProofMode.PREFS_DOPROOF, true).apply()
                 updateOnOffState(true)
                 (application as ProofModeApp).init(this, true)
             }
         } else {
-            mPrefs.edit().putBoolean(ProofMode.PREFS_DOPROOF, isOn).apply()
+            mPrefs.edit().putBoolean(ProofMode.PREFS_DOPROOF, false).apply()
             updateOnOffState(true)
             (application as ProofModeApp).cancel(this)
         }
@@ -436,7 +443,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         /**
          * The permissions needed for "base" ProofMode to work, without extra options.
          */
-        private val requiredPermissions = arrayOf(
+        private var requiredPermissions = arrayOf(
             Manifest.permission.READ_EXTERNAL_STORAGE,
             Manifest.permission.ACCESS_MEDIA_LOCATION
         )
