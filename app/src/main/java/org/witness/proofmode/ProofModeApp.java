@@ -10,8 +10,19 @@ import androidx.multidex.MultiDexApplication;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.preference.PreferenceManager;
 import android.util.Log;
+import android.widget.Toast;
+
+import org.bouncycastle.openpgp.PGPException;
+import org.bouncycastle.openpgp.PGPPublicKey;
+import org.witness.proofmode.crypto.pgp.PgpUtils;
+
+import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import timber.log.Timber;
 
@@ -23,14 +34,42 @@ public class ProofModeApp extends MultiDexApplication {
 
     public final static String TAG = "ProofMode";
 
-
     @Override
     public void onCreate() {
         super.onCreate();
 
+        init(this, false);
 
-            init(this, false);
+    }
 
+    public void checkAndGeneratePublicKey ()
+    {
+
+        Executors.newSingleThreadExecutor().execute(() -> {
+            //Background work here
+            String pubKey = null;
+
+            try {
+                pubKey = PgpUtils.getInstance(getApplicationContext()).getPublicKeyFingerprint();
+                showToastMessage(getString(R.string.pub_key_id) + " " + pubKey);
+            } catch (PGPException e) {
+                Timber.e(e,"error getting public key");
+                showToastMessage(getString(R.string.pub_key_gen_error));
+            } catch (IOException e) {
+                Timber.e(e,"error getting public key");
+                showToastMessage(getString(R.string.pub_key_gen_error));
+            }
+
+        });
+    }
+
+    private void showToastMessage (String message) {
+        Handler handler = new Handler(Looper.getMainLooper());
+        handler.post(() -> {
+            //UI Thread work here
+            Toast.makeText(getApplicationContext(), message,Toast.LENGTH_LONG).show();
+
+        });
     }
 
     public void init (Context context, boolean startService)

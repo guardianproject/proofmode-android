@@ -11,6 +11,7 @@ import android.webkit.MimeTypeMap;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.openpgp.PGPException;
 import org.bouncycastle.openpgp.PGPPublicKey;
 import org.bouncycastle.openpgp.PGPUtil;
 import org.witness.proofmode.crypto.HashUtils;
@@ -38,6 +39,7 @@ import java.nio.file.StandardCopyOption;
 import java.security.PublicKey;
 import java.security.Security;
 import java.util.Date;
+import java.util.concurrent.Executors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
@@ -145,21 +147,19 @@ public class ProofMode {
 
     }
 
-    public static String generateProof (Context context, Uri uri, FileDescriptor fdMediaFile, String mimeType) throws IOException {
+    public static String generateProof (Context context, Uri uri, FileDescriptor fdMediaFile, String mimeType) throws IOException, PGPException {
 
         return MediaWatcher.getInstance(context).processFileDescriptor (context, uri, fdMediaFile, mimeType);
 
     }
 
-    public static String generateProof (Context context, Uri uri, byte[] mediaBytes, String mimeType)
-    {
+    public static String generateProof (Context context, Uri uri, byte[] mediaBytes, String mimeType) throws PGPException, IOException {
 
         return MediaWatcher.getInstance(context).processBytes (context, uri, mediaBytes, mimeType, null);
 
     }
 
-    public static String generateProof (Context context, Uri uri, byte[] mediaBytes, String mimeType, Date createdAt)
-    {
+    public static String generateProof (Context context, Uri uri, byte[] mediaBytes, String mimeType, Date createdAt) throws PGPException, IOException {
 
         return MediaWatcher.getInstance(context).processBytes (context, uri, mediaBytes, mimeType, createdAt);
 
@@ -197,7 +197,7 @@ public class ProofMode {
         MediaWatcher.getInstance(context).addNotarizationProvider(provider);
     }
 
-    public static PGPPublicKey getPublicKey (Context context) {
+    public static PGPPublicKey getPublicKey (Context context) throws PGPException, IOException {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         PgpUtils pu = PgpUtils.getInstance(context,prefs.getString("password",PgpUtils.DEFAULT_PASSWORD));
         PGPPublicKey pubKey = null;
@@ -205,7 +205,7 @@ public class ProofMode {
 
     }
 
-    public static String getPublicKeyString (Context context) throws IOException {
+    public static String getPublicKeyString (Context context) throws IOException, PGPException {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         PgpUtils pu = PgpUtils.getInstance(context,prefs.getString("password",PgpUtils.DEFAULT_PASSWORD));
         String pubKey = pu.getPublicKeyString();
@@ -408,7 +408,7 @@ public class ProofMode {
         return pu.verifyDetachedSignature(fileStream, sigStream, publicKey);
     }
 
-    public static void generateProofZip(Context context, String proofHash) throws IOException {
+    public static void generateProofZip(Context context, String proofHash) throws IOException, PGPException {
 
         File fileDirProof = ProofMode.getProofDir(context, proofHash);
         File[] files = fileDirProof.listFiles();
@@ -453,4 +453,20 @@ public class ProofMode {
 
     }
 
+    public static void checkAndGeneratePublicKeyAsync (Context context)
+    {
+        Executors.newSingleThreadExecutor().execute(() -> {
+            //Background work here
+            String pubKey = null;
+
+            try {
+                pubKey = PgpUtils.getInstance(context).getPublicKeyFingerprint();
+            } catch (PGPException e) {
+                Timber.e(e,"error getting public key");
+            } catch (IOException e) {
+                Timber.e(e,"error getting public key");
+            }
+
+        });
+    }
 }

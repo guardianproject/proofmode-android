@@ -41,6 +41,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
+import org.bouncycastle.openpgp.PGPException;
 import org.witness.proofmode.crypto.HashUtils;
 import org.witness.proofmode.crypto.pgp.PgpUtils;
 import org.witness.proofmode.service.MediaWatcher;
@@ -332,7 +333,7 @@ public class ShareProofActivity extends AppCompatActivity {
         }
     }
 
-    private synchronized File saveProofAsync (boolean shareMedia, boolean shareProof) throws FileNotFoundException {
+    private synchronized File saveProofAsync (boolean shareMedia, boolean shareProof) throws IOException, PGPException {
 
         // Get intent, action and MIME type
         Intent intent = getIntent();
@@ -506,7 +507,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
     }
 
-    private synchronized boolean shareProofAsync (boolean shareMedia, boolean shareProof) throws FileNotFoundException {
+    private synchronized boolean shareProofAsync (boolean shareMedia, boolean shareProof) throws IOException, PGPException {
 
     // Get intent, action and MIME type
         Intent intent = getIntent();
@@ -762,8 +763,8 @@ public class ShareProofActivity extends AppCompatActivity {
             try {
                 result = activity.saveProofAsync(params[0],params[1]);
                 return result;
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
+            } catch (IOException | PGPException e) {
+               Timber.e(e,"error saving proof");
                 return null;
             }
 
@@ -801,8 +802,8 @@ public class ShareProofActivity extends AppCompatActivity {
             try {
                 result = activity.shareProofAsync(params[0],params[1]);
                 return result;
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
+            } catch (IOException | PGPException e) {
+                Timber.e(e, "error sharing proof");
                 return false;
             }
 
@@ -871,7 +872,7 @@ public class ShareProofActivity extends AppCompatActivity {
             return contentUri;
     }
 
-    private boolean processUri (String mediaHash, Uri mediaUri, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut, boolean shareMedia, boolean isFirstProof) throws FileNotFoundException {
+    private boolean processUri (String mediaHash, Uri mediaUri, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut, boolean shareMedia, boolean isFirstProof) throws IOException, PGPException {
 
 
         String[] projection = new String[1];
@@ -936,7 +937,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
 
 
-    private boolean shareProof (String hash, Uri uriMedia, File fileMedia, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut, boolean shareMedia, boolean isFirstProof) throws FileNotFoundException {
+    private boolean shareProof (String hash, Uri uriMedia, File fileMedia, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut, boolean shareMedia, boolean isFirstProof) throws IOException, PGPException {
 
         if (hash == null)
             hash = HashUtils.getSHA256FromFileContent(getContentResolver().openInputStream(uriMedia));
@@ -962,13 +963,10 @@ public class ShareProofActivity extends AppCompatActivity {
                 if (fileMedia != null)
                     lastModified = new Date(fileMedia.lastModified());
 
-                try {
-                    generateProofOutput(uriMedia, fileMedia, lastModified, fileMediaSig, fileMediaProof, fileMediaProofSig, fileMediaProofJSON, fileMediaProofJSONSig, fileMediaOpentimestamps, fileMediaGoogleSafetyNet, hash, shareMedia, fBatchProofOut, shareUris, sb, isFirstProof);
-                    return true;
-                } catch (IOException e) {
-                    Timber.d(e,"unable to geenrate proof output");
-                    return false;
-                }
+
+                generateProofOutput(uriMedia, fileMedia, lastModified, fileMediaSig, fileMediaProof, fileMediaProofSig, fileMediaProofJSON, fileMediaProofJSONSig, fileMediaOpentimestamps, fileMediaGoogleSafetyNet, hash, shareMedia, fBatchProofOut, shareUris, sb, isFirstProof);
+                return true;
+
             }
         }
 
@@ -976,7 +974,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
     }
 
-    private boolean shareProofClassic (Uri mediaUri, String mediaPath, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut, boolean shareMedia) throws FileNotFoundException {
+    private boolean shareProofClassic (Uri mediaUri, String mediaPath, ArrayList<Uri> shareUris, StringBuffer sb, PrintWriter fBatchProofOut, boolean shareMedia) throws IOException, PGPException {
 
         String baseFolder = "proofmode";
 
@@ -1003,19 +1001,12 @@ public class ShareProofActivity extends AppCompatActivity {
 
         }
 
-        try {
+        generateProofOutput(mediaUri, fileMedia, new Date(fileMedia.lastModified()), fileMediaSig, fileMediaProof, fileMediaProofSig, null, null, null, null, hash, shareMedia, fBatchProofOut, shareUris, sb, true);
+        return true;
 
-            generateProofOutput(mediaUri, fileMedia, new Date(fileMedia.lastModified()), fileMediaSig, fileMediaProof, fileMediaProofSig, null, null, null, null, hash, shareMedia, fBatchProofOut, shareUris, sb, true);
-            return true;
-        }
-        catch (IOException ioe)
-        {
-            Timber.d(ioe,"unable to generate classic proof");
-            return false;
-        }
     }
 
-    private void generateProofOutput (Uri uriMedia, File fileMedia, Date fileLastModified, File fileMediaSig, File fileMediaProof, File fileMediaProofSig, File fileMediaProofJSON, File fileMediaProofJSONSig, File fileMediaNotary, File fileMediaNotary2, String hash, boolean shareMedia, PrintWriter fBatchProofOut, ArrayList<Uri> shareUris, StringBuffer sb, boolean isFirstProof) throws IOException {
+    private void generateProofOutput (Uri uriMedia, File fileMedia, Date fileLastModified, File fileMediaSig, File fileMediaProof, File fileMediaProofSig, File fileMediaProofJSON, File fileMediaProofJSONSig, File fileMediaNotary, File fileMediaNotary2, String hash, boolean shareMedia, PrintWriter fBatchProofOut, ArrayList<Uri> shareUris, StringBuffer sb, boolean isFirstProof) throws IOException, PGPException {
         DateFormat sdf = SimpleDateFormat.getDateTimeInstance();
 
         String fingerprint = PgpUtils.getInstance(this).getPublicKeyFingerprint();
@@ -1285,7 +1276,7 @@ public class ShareProofActivity extends AppCompatActivity {
 
     private final static int BUFFER = 1024*8;
 
-    public void zipProof(ArrayList<Uri> uris, File fileZip) throws IOException {
+    public void zipProof(ArrayList<Uri> uris, File fileZip) throws IOException, PGPException {
 
         BufferedInputStream origin;
         FileOutputStream dest = new FileOutputStream(fileZip);

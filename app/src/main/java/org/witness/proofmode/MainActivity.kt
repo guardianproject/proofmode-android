@@ -19,8 +19,8 @@ import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.preference.PreferenceManager
 import com.google.android.material.navigation.NavigationView
-import org.witness.proofmode.camera.CameraActivity
 import gun0912.tedimagepicker.builder.TedImagePicker
+import org.witness.proofmode.camera.CameraActivity
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.databinding.ActivityMainBinding
 import org.witness.proofmode.onboarding.OnboardingActivity
@@ -321,6 +321,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 setProofModeOn(true)
                 askForOptionals()
             }
+
+            (application as ProofModeApp).checkAndGeneratePublicKey();
+
         } else if (requestCode == REQUEST_CODE_REQUIRED_PERMISSIONS) {
             // We call with REQUEST_CODE_REQUIRED_PERMISSIONS to turn ProofMode on, so set it to on if we have the permissions
             if (PermissionActivity.hasPermissions(this, requiredPermissions)) {
