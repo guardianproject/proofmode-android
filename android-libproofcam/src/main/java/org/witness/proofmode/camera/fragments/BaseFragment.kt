@@ -48,6 +48,9 @@ abstract class BaseFragment<B : ViewBinding>(private val fragmentLayout: Int) : 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             add(Manifest.permission.ACCESS_MEDIA_LOCATION)
         }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            remove(Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
     }
 
     private val permissionRequest = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
