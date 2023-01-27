@@ -44,7 +44,6 @@
 
     <Button
         android:id="@+id/btnClose"
-        style="@style/ShareButtonStyle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"

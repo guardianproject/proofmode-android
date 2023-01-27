@@ -26,6 +26,10 @@
     <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION"
        />
 
+    <!-- SDK 33 and up -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+
     <uses-permission
         android:name="android.permission.CAMERA"
         tools:remove="android:maxSdkVersion" />
