@@ -83,7 +83,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             popupMenu.show()
         }
         updateOnOffState(false)
-        startService()
+
     }
 
     private fun startService () {
@@ -201,6 +201,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             layoutOff.alpha = if (isOn) 0.0f else 1.0f
             layoutOff.visibility = if (isOn) View.GONE else View.VISIBLE
         }
+
     }
 
     override fun onResume() {
@@ -445,8 +446,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
          */
         private var requiredPermissions = arrayOf(
             Manifest.permission.READ_EXTERNAL_STORAGE,
-            Manifest.permission.ACCESS_MEDIA_LOCATION
-        )
+            Manifest.permission.ACCESS_MEDIA_LOCATION,
+            Manifest.permission.POST_NOTIFICATIONS
+            )
         private val optionalPermissions = arrayOf(
             Manifest.permission.ACCESS_NETWORK_STATE
         )

@@ -8,6 +8,7 @@ import static org.witness.proofmode.ProofMode.PROOF_FILE_JSON_TAG;
 import static org.witness.proofmode.ProofMode.PROOF_FILE_TAG;
 
 import android.Manifest;
+import android.app.Activity;
 import android.app.Dialog;
 import android.content.ComponentName;
 import android.content.Context;
@@ -22,11 +23,14 @@ import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.ParcelFileDescriptor;
 import android.preference.PreferenceManager;
 import android.provider.MediaStore;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -34,12 +38,18 @@ import android.webkit.MimeTypeMap;
 import android.widget.CheckBox;
 import android.widget.TextView;
 
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
+import androidx.documentfile.provider.DocumentFile;
 
 import org.bouncycastle.openpgp.PGPException;
 import org.witness.proofmode.crypto.HashUtils;
@@ -67,6 +77,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -324,14 +335,46 @@ public class ShareProofActivity extends AppCompatActivity {
 
     private void saveProof (final boolean shareMedia, final boolean shareProof) {
 
-        if (!askForWritePermissions()) {
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)        {
+            showSaveDirectoryPicker();
+        }
+        else {
+            if (!askForWritePermissions()) {
 
-            displayProgress(getString(R.string.progress_building_proof));
+                displayProgress(getString(R.string.progress_building_proof));
 
-            new SaveProofTask(this).execute(shareMedia, shareProof);
+                new SaveProofTask(this).execute(shareMedia, shareProof);
 
+            }
         }
     }
+
+    private Uri baseDocumentTreeUri;
+
+    ActivityResultLauncher<Intent> mStartForResult = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
+            new ActivityResultCallback<ActivityResult>() {
+                @Override
+                public void onActivityResult(ActivityResult result) {
+                    if (result.getResultCode() == Activity.RESULT_OK) {
+                        baseDocumentTreeUri = Objects.requireNonNull(result.getData().getData());
+                        final int takeFlags = (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+
+                        // take persistable Uri Permission for future use
+                        getContentResolver().takePersistableUriPermission(result.getData().getData(), takeFlags);
+                        new SaveProofTask(ShareProofActivity.this).execute(true, true);
+
+
+                    }
+                }
+            });
+
+    private void showSaveDirectoryPicker () {
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.setType("*/*");
+        mStartForResult.launch(intent);
+    }
+
+
 
     private synchronized File saveProofAsync (boolean shareMedia, boolean shareProof) throws IOException, PGPException {
 
@@ -453,28 +496,60 @@ public class ShareProofActivity extends AppCompatActivity {
                     shareFiltered(getString(R.string.select_app), shareText.toString(), shareUris, uriZip);
                      **/
 
-                    fileProofDownloads = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileZip.getName());
-
-                    FileOutputStream fos = new FileOutputStream(fileProofDownloads);
-                    FileInputStream fis = new FileInputStream(fileZip);
-
-                    try {
-
-                        int count;
-                        byte[] data = new byte[BUFFER];
-                        while ((count = fis.read(data, 0, BUFFER)) != -1) {
-                            fos.write(data, 0, count);
-                        }
-                        fis.close();
-                        fos.close();
-
-
-                    }
-                    catch (Exception e)
+                    if (baseDocumentTreeUri != null)
                     {
-                        Timber.e(e,"Proof zip failed due to file copy:" + fileProofDownloads.getAbsolutePath());
+                        try {
+                            FileInputStream fis = new FileInputStream(fileZip);
 
-                        return null;
+                            DocumentFile directory = DocumentFile.fromTreeUri(this, baseDocumentTreeUri);
+                            DocumentFile file = directory.createFile("application/zip", fileZip.getName());
+                            ParcelFileDescriptor pfd = getContentResolver().openFileDescriptor(file.getUri(), "w");
+                            FileOutputStream fos = new FileOutputStream(pfd.getFileDescriptor());
+
+                            try {
+
+                                int count;
+                                byte[] data = new byte[BUFFER];
+                                while ((count = fis.read(data, 0, BUFFER)) != -1) {
+                                    fos.write(data, 0, count);
+                                }
+                                fis.close();
+                                fos.close();
+
+
+                            } catch (Exception e) {
+                                Timber.e(e, "Proof zip failed due to file copy:" + fileProofDownloads.getAbsolutePath());
+
+                                return null;
+                            }
+
+                            fos.close();
+                        } catch (IOException e) {
+                            Timber.e(e);
+                        }
+                    }
+                    else {
+                        fileProofDownloads = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileZip.getName());
+
+                        FileOutputStream fos = new FileOutputStream(fileProofDownloads);
+                        FileInputStream fis = new FileInputStream(fileZip);
+
+                        try {
+
+                            int count;
+                            byte[] data = new byte[BUFFER];
+                            while ((count = fis.read(data, 0, BUFFER)) != -1) {
+                                fos.write(data, 0, count);
+                            }
+                            fis.close();
+                            fos.close();
+
+
+                        } catch (Exception e) {
+                            Timber.e(e, "Proof zip failed due to file copy:" + fileProofDownloads.getAbsolutePath());
+
+                            return null;
+                        }
                     }
 
                     //copy IO utils
