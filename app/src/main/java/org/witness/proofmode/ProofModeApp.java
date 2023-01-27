@@ -19,6 +19,10 @@ import android.widget.Toast;
 import org.bouncycastle.openpgp.PGPException;
 import org.bouncycastle.openpgp.PGPPublicKey;
 import org.witness.proofmode.crypto.pgp.PgpUtils;
+import org.witness.proofmode.notaries.GoogleSafetyNetNotarizationProvider;
+import org.witness.proofmode.notaries.OpenTimestampsNotarizationProvider;
+import org.witness.proofmode.notaries.SafetyNetCheck;
+import org.witness.proofmode.notarization.NotarizationProvider;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
@@ -83,6 +87,9 @@ public class ProofModeApp extends MultiDexApplication {
 
         if (prefs.getBoolean(PREFS_DOPROOF,false)) {
 
+            //add google safetynet and opentimestamps
+            addDefaultNotarizationProviders();
+
             Intent intentService = new Intent(context, ProofService.class);
             intentService.setAction(ACTION_START);
 
@@ -116,6 +123,36 @@ public class ProofModeApp extends MultiDexApplication {
                 return;
             }
         }
+    }
+
+    private void addDefaultNotarizationProviders ()
+    {
+        try {
+
+            Class.forName("com.google.android.gms.safetynet.SafetyNetApi");
+            SafetyNetCheck.setApiKey(getString(org.witness.proofmode.library.R.string.verification_api_key));
+
+            //notarize and then write proof so we can include notarization response
+            final GoogleSafetyNetNotarizationProvider gProvider = new GoogleSafetyNetNotarizationProvider(this);
+            ProofMode.addNotarizationProvider(this, gProvider);
+        }
+        catch (ClassNotFoundException ce)
+        {
+            //SafetyNet API not available
+        }
+
+        try {
+            //this may not be included in the current build
+            Class.forName("com.eternitywall.ots.OpenTimestamps");
+
+            final NotarizationProvider nProvider = new OpenTimestampsNotarizationProvider();
+            ProofMode.addNotarizationProvider(this, nProvider);
+        }
+        catch (ClassNotFoundException e)
+        {
+            //class not available
+        }
+
     }
 
 }

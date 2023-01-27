@@ -336,7 +336,14 @@ public class ShareProofActivity extends AppCompatActivity {
     private void saveProof (final boolean shareMedia, final boolean shareProof) {
 
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)        {
-            showSaveDirectoryPicker();
+            try {
+                generateProofZipName();
+                showSaveDirectoryPicker(proofZipName);
+            } catch (PGPException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         else {
             if (!askForWritePermissions()) {
@@ -352,7 +359,7 @@ public class ShareProofActivity extends AppCompatActivity {
     private Uri baseDocumentTreeUri;
 
     ActivityResultLauncher<Intent> mStartForResult = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
-            new ActivityResultCallback<ActivityResult>() {
+            new ActivityResultCallback<>() {
                 @Override
                 public void onActivityResult(ActivityResult result) {
                     if (result.getResultCode() == Activity.RESULT_OK) {
@@ -368,13 +375,27 @@ public class ShareProofActivity extends AppCompatActivity {
                 }
             });
 
-    private void showSaveDirectoryPicker () {
-        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
-        intent.setType("*/*");
+    private void showSaveDirectoryPicker (String fileName) {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
         mStartForResult.launch(intent);
+
     }
 
 
+    private String proofZipName = "";
+
+    private void generateProofZipName () throws PGPException, IOException {
+
+        SimpleDateFormat sdf = new SimpleDateFormat(ZIP_FILE_DATETIME_FORMAT);
+        String dateString = sdf.format(new Date());
+
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        PgpUtils pu = PgpUtils.getInstance(this,prefs.getString("password",PgpUtils.DEFAULT_PASSWORD));
+        String userId = pu.getPublicKeyFingerprint();
+
+        proofZipName = "proofmode-" + userId + "-" + dateString + ".zip";
+
+    }
 
     private synchronized File saveProofAsync (boolean shareMedia, boolean shareProof) throws IOException, PGPException {
 
@@ -454,14 +475,9 @@ public class ShareProofActivity extends AppCompatActivity {
                 File fileCacheFolder = new File(getCacheDir(),"zips");
                 fileCacheFolder.mkdir();
 
-                SimpleDateFormat sdf = new SimpleDateFormat(ZIP_FILE_DATETIME_FORMAT);
-                String dateString = sdf.format(new Date());
+                generateProofZipName();
 
-                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-                PgpUtils pu = PgpUtils.getInstance(this,prefs.getString("password",PgpUtils.DEFAULT_PASSWORD));
-                String userId = pu.getPublicKeyFingerprint();
-
-                File fileZip = new File(fileCacheFolder,"proofmode-" + userId + "-" + dateString + ".zip");
+                File fileZip = new File(fileCacheFolder,proofZipName);
 
                 Timber.d("Preparing proof bundle zip: " + fileZip.getAbsolutePath());
 
@@ -473,12 +489,12 @@ public class ShareProofActivity extends AppCompatActivity {
                 }
 
                 if (fileZip.length() > 0) {
-                    Timber.d("Proof zip completed. Size:" + fileZip.length());
+                    Timber.d("Proof zip completed. Size:%s", fileZip.length());
 
                     boolean encryptZip = false;
 
                     if (encryptZip) {
-                        File fileZipEnc = new File(fileCacheFolder, "proofmode-" + userId + "-" + dateString + ".zip.gpg");
+                        File fileZipEnc = new File(fileCacheFolder, proofZipName + ".gpg");
                         try {
                             PgpUtils.getInstance(this).encrypt(new FileInputStream(fileZip), fileZip.length(), new FileOutputStream(fileZipEnc));
 
@@ -501,7 +517,7 @@ public class ShareProofActivity extends AppCompatActivity {
                         try {
                             FileInputStream fis = new FileInputStream(fileZip);
 
-                            DocumentFile directory = DocumentFile.fromTreeUri(this, baseDocumentTreeUri);
+                            DocumentFile directory = DocumentFile.fromTreeUri(ShareProofActivity.this, baseDocumentTreeUri);
                             DocumentFile file = directory.createFile("application/zip", fileZip.getName());
                             ParcelFileDescriptor pfd = getContentResolver().openFileDescriptor(file.getUri(), "w");
                             FileOutputStream fos = new FileOutputStream(pfd.getFileDescriptor());

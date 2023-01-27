@@ -84,6 +84,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
         updateOnOffState(false)
 
+        val isOn = mPrefs.getBoolean("doProof", false)
+
+        if (isOn)
+        (application as ProofModeApp).init(this, true)
+
+
     }
 
     private fun startService () {

@@ -34,9 +34,9 @@ public class OpenTimestampsNotarizationProvider implements NotarizationProvider 
             Timestamp stampResult = OpenTimestamps.stamp(detached,null,0, null);
             DetachedTimestampFile detachedToSerialize = new DetachedTimestampFile(hash.getOp(), stampResult);
 
-            String result = new String(Base64.encode(detachedToSerialize.serialize(),Base64.DEFAULT));
+          //  String result = new String(Base64.encode(detachedToSerialize.serialize(),Base64.DEFAULT));
 
-            listener.notarizationSuccessful(mediaHash, result);
+            listener.notarizationSuccessful(mediaHash, detachedToSerialize.serialize());
         }
         catch (IOException ioe)
         {

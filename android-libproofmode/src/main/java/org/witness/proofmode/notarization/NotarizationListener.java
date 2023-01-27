@@ -8,6 +8,8 @@ public interface NotarizationListener {
 
     public void notarizationSuccessful(String hash, String result);
 
+    public void notarizationSuccessful(String hash, byte[] result);
+
     public void notarizationFailed(int errCode, String message);
 
 }

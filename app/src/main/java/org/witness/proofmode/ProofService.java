@@ -78,8 +78,6 @@ public class ProofService extends Service {
 
                 showNotification(getString(R.string.waiting_proof_notify));
 
-                //add google safetynet and opentimestamps
-                addDefaultNotarizationProviders();
                 ProofMode.initBackgroundService(this);
 
             }
@@ -92,35 +90,7 @@ public class ProofService extends Service {
         return START_REDELIVER_INTENT;
     }
 
-    private void addDefaultNotarizationProviders ()
-    {
-        try {
 
-            Class.forName("com.google.android.gms.safetynet.SafetyNetApi");
-            SafetyNetCheck.setApiKey(getString(org.witness.proofmode.library.R.string.verification_api_key));
-
-            //notarize and then write proof so we can include notarization response
-            final GoogleSafetyNetNotarizationProvider gProvider = new GoogleSafetyNetNotarizationProvider(this);
-            ProofMode.addNotarizationProvider(this, gProvider);
-        }
-        catch (ClassNotFoundException ce)
-        {
-            //SafetyNet API not available
-        }
-
-        try {
-            //this may not be included in the current build
-            Class.forName("com.eternitywall.ots.OpenTimestamps");
-
-            final NotarizationProvider nProvider = new OpenTimestampsNotarizationProvider();
-            ProofMode.addNotarizationProvider(this, nProvider);
-        }
-        catch (ClassNotFoundException e)
-        {
-            //class not available
-        }
-
-    }
 
     @Override
     public IBinder onBind(Intent intent) {

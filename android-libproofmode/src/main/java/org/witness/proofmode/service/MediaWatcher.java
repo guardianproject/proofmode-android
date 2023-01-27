@@ -45,6 +45,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.security.MessageDigest;
@@ -231,8 +232,9 @@ public class MediaWatcher extends BroadcastReceiver {
                                 File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + provider.getNotarizationFileExtension());
 
                                 try {
-                                    byte[] rawNotarizeData = Base64.decode(result, Base64.DEFAULT);
-                                    writeBytesToFile(context, fileMediaNotarizeData, rawNotarizeData);
+                                    //byte[] rawNotarizeData = Base64.decode(result, Base64.DEFAULT);
+
+                                    writeBytesToFile(context, fileMediaNotarizeData, result.getBytes(StandardCharsets.UTF_8));
                                 } catch (Exception e) {
                                     //if an error, then just write the bytes
                                     try {
@@ -241,6 +243,13 @@ public class MediaWatcher extends BroadcastReceiver {
                                         ex.printStackTrace();
                                     }
                                 }
+                            }
+
+                            @Override
+                            public void notarizationSuccessful(String hash, byte[] result) {
+                                Timber.d("Got notarization success response for %s, timestamp: %s", provider.getNotarizationFileExtension(), result);
+                                File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + provider.getNotarizationFileExtension());
+                                writeBytesToFile(context, fileMediaNotarizeData, result);
                             }
 
                             @Override
@@ -319,9 +328,17 @@ public class MediaWatcher extends BroadcastReceiver {
                                 Timber.d("Got notarization success response timestamp: %s", result);
                                 File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + provider.getNotarizationFileExtension());
 
-                                byte[] rawNotarizeData = Base64.decode(result, Base64.DEFAULT);
-                                writeBytesToFile(context, fileMediaNotarizeData, rawNotarizeData);
+                                //byte[] rawNotarizeData = Base64.decode(result, Base64.DEFAULT);
 
+                                writeBytesToFile(context, fileMediaNotarizeData, result.getBytes(StandardCharsets.UTF_8));
+
+                            }
+
+                            @Override
+                            public void notarizationSuccessful(String hash, byte[] result) {
+                                Timber.d("Got notarization success response for %s, timestamp: %s", provider.getNotarizationFileExtension(), result);
+                                File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + provider.getNotarizationFileExtension());
+                                writeBytesToFile(context, fileMediaNotarizeData, result);
                             }
 
                             @Override
@@ -398,9 +415,16 @@ public class MediaWatcher extends BroadcastReceiver {
                             Timber.d("Got notarization success response timestamp: %s", result);
                             File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + provider.getNotarizationFileExtension());
 
-                            byte[] rawNotarizeData = Base64.decode(result, Base64.DEFAULT);
-                            writeBytesToFile(context, fileMediaNotarizeData, rawNotarizeData);
+                         //   byte[] rawNotarizeData = Base64.decode(result, Base64.DEFAULT);
+                            writeBytesToFile(context, fileMediaNotarizeData, result.getBytes(StandardCharsets.UTF_8));
 
+                        }
+
+                        @Override
+                        public void notarizationSuccessful(String hash, byte[] result) {
+                            Timber.d("Got notarization success response for %s, timestamp: %s", provider.getNotarizationFileExtension(), result);
+                            File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + provider.getNotarizationFileExtension());
+                            writeBytesToFile(context, fileMediaNotarizeData, result);
                         }
 
                         @Override
@@ -717,10 +741,10 @@ public class MediaWatcher extends BroadcastReceiver {
 
     }
 
-    private static void writeBytesToFile (Context context, File fileOut, byte[] data)
+    private static synchronized void writeBytesToFile (Context context, File fileOut, byte[] data)
     {
         try {
-            DataOutputStream os = new DataOutputStream(new FileOutputStream(fileOut,true));
+            DataOutputStream os = new DataOutputStream(new FileOutputStream(fileOut,false));
             os.write(data);
             os.flush();
             os.close();
