@@ -82,9 +82,6 @@ public class ProofMode {
 
     public synchronized static void initBackgroundService (Context context)
     {
-        if (mInit)
-            return;
-
         MediaWatcher.getInstance(context);
 
         if (Build.VERSION.SDK_INT >= 24) {

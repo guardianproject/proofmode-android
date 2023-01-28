@@ -68,7 +68,7 @@ public class MediaWatcher extends BroadcastReceiver {
 
     private SharedPreferences mPrefs;
 
-    public final static int PROOF_GENERATION_DELAY_TIME_MS = 2 * 1000; // 30 seconds
+    public final static int PROOF_GENERATION_DELAY_TIME_MS = 500; // 30 seconds
     private static MediaWatcher mInstance;
 
     private ExecutorService mExec = Executors.newFixedThreadPool(1);
@@ -136,6 +136,7 @@ public class MediaWatcher extends BroadcastReceiver {
             } catch (SecurityException e) {
                 Timber.d( "SecurityException: security exception accessing URI: %s", uriMedia);
                 return null;
+
             } catch (PGPException e) {
                 Timber.d( "SecurityException: security exception accessing URI: %s", uriMedia);
                 return null;
@@ -234,7 +235,7 @@ public class MediaWatcher extends BroadcastReceiver {
                                 try {
                                     //byte[] rawNotarizeData = Base64.decode(result, Base64.DEFAULT);
 
-                                    writeBytesToFile(context, fileMediaNotarizeData, result.getBytes(StandardCharsets.UTF_8));
+                                    writeBytesToFile(context, fileMediaNotarizeData, result.getBytes("UTF-8"));
                                 } catch (Exception e) {
                                     //if an error, then just write the bytes
                                     try {
@@ -330,7 +331,11 @@ public class MediaWatcher extends BroadcastReceiver {
 
                                 //byte[] rawNotarizeData = Base64.decode(result, Base64.DEFAULT);
 
-                                writeBytesToFile(context, fileMediaNotarizeData, result.getBytes(StandardCharsets.UTF_8));
+                                try {
+                                    writeBytesToFile(context, fileMediaNotarizeData, result.getBytes("UTF-8"));
+                                } catch (UnsupportedEncodingException e) {
+                                    e.printStackTrace();
+                                }
 
                             }
 
@@ -416,7 +421,11 @@ public class MediaWatcher extends BroadcastReceiver {
                             File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + provider.getNotarizationFileExtension());
 
                          //   byte[] rawNotarizeData = Base64.decode(result, Base64.DEFAULT);
-                            writeBytesToFile(context, fileMediaNotarizeData, result.getBytes(StandardCharsets.UTF_8));
+                            try {
+                                writeBytesToFile(context, fileMediaNotarizeData, result.getBytes("UTF-8"));
+                            } catch (UnsupportedEncodingException e) {
+                                e.printStackTrace();
+                            }
 
                         }
 

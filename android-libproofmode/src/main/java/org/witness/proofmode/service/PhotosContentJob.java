@@ -14,6 +14,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.provider.MediaStore;
@@ -78,9 +79,9 @@ public class PhotosContentJob extends JobService {
         return true;
     }
 
-    private HashMap<Uri,String> mUriStack = new HashMap<>();
+    private static HashMap<Uri,String> mUriStack = new HashMap<>();
 
-    private void doWork ()
+    private synchronized void doWork ()
     {
 
         if (mRunningParams.getTriggeredContentAuthorities() != null) {
@@ -89,7 +90,8 @@ public class PhotosContentJob extends JobService {
 
                 for (Uri uri : mRunningParams.getTriggeredContentUris()) {
 
-                    mUriStack.put(uri,uri.toString());
+                    if (!mUriStack.containsKey(uri))
+                        mUriStack.put(uri,uri.toString());
 
                 }
 
@@ -108,6 +110,11 @@ public class PhotosContentJob extends JobService {
                         ArrayList<Uri> uris = new ArrayList<>(mUriStack.keySet());
 
                         for (Uri uri : uris) {
+
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                uri = MediaStore.setRequireOriginal(uri);
+                            }
+
                             MediaWatcher.getInstance(PhotosContentJob.this).processUri(uri, true, null);
                             mUriStack.remove(uri);
                         }
