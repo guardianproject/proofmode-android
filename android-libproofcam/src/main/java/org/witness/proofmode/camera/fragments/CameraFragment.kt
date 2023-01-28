@@ -16,7 +16,6 @@ import android.util.DisplayMetrics
 import android.util.Log
 import android.view.GestureDetector
 import android.view.OrientationEventListener
-import android.view.OrientationEventListener.ORIENTATION_UNKNOWN
 import android.view.Surface
 import android.view.View
 import android.widget.Toast
@@ -27,6 +26,7 @@ import androidx.camera.extensions.ExtensionsManager
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
+import androidx.core.net.toFile
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
@@ -35,16 +35,17 @@ import coil.load
 import coil.request.ErrorResult
 import coil.request.ImageRequest
 import coil.transform.CircleCropTransformation
-import org.witness.proofmode.camera.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.witness.proofmode.camera.R
 import org.witness.proofmode.camera.analyzer.LuminosityAnalyzer
 import org.witness.proofmode.camera.databinding.FragmentCameraBinding
 import org.witness.proofmode.camera.enums.CameraTimer
 import org.witness.proofmode.camera.fragments.CameraFragment.CameraConstants.NEW_MEDIA_EVENT
 import org.witness.proofmode.camera.utils.*
 import java.io.File
+import java.io.FileNotFoundException
 import java.util.concurrent.ExecutionException
 import kotlin.math.abs
 import kotlin.math.max
@@ -612,6 +613,23 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
     }
 
     fun sendLocalCameraEvent(newMediaFile : Uri) {
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            var f = newMediaFile.toFile()
+            try {
+                MediaStore.Images.Media.insertImage(
+                    context?.contentResolver,
+                    f.getAbsolutePath(), f.getName(), null
+                )
+                context?.sendBroadcast(
+                    Intent(
+                        Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(f)
+                    )
+                )
+            } catch (e: FileNotFoundException) {
+                e.printStackTrace()
+            }
+        }
 
         var intent = Intent(NEW_MEDIA_EVENT)
         intent.data = newMediaFile
