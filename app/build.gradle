@@ -29,7 +29,9 @@ android {
         versionName "0.0.19-BETA-2"
         multiDexEnabled true
         archivesBaseName = "ProofMode-$versionName"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
+
     buildTypes {
         release {
             minifyEnabled false
