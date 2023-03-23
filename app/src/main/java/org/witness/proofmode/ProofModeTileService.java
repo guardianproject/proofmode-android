@@ -75,6 +75,7 @@ public class ProofModeTileService extends TileService {
         } else if (Tile.STATE_INACTIVE == getQsTile().getState()) {
             changeTileState(Tile.STATE_ACTIVE);
             mPrefs.edit().putBoolean("doProof",true).commit();
+
         }
     }
 
@@ -83,6 +84,7 @@ public class ProofModeTileService extends TileService {
         getQsTile().setState(newState);
         getQsTile().updateTile();
     }
+
 
 
 }
