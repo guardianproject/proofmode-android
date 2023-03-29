@@ -7,7 +7,9 @@
     android:fitsSystemWindows="true"
     tools:context="org.witness.proofmode.SettingsActivity">
 
-    <include layout="@layout/content_settings" />
+    <include
+        android:id="@+id/content_settings"
+        layout="@layout/content_settings" />
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"
