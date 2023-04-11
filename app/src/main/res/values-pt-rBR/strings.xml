@@ -113,4 +113,10 @@
     <string name="progress_building_proof">Construindo o pacote de provas...</string>
     <string name="progress_generating_proof">Gerando provas...</string>
     <string name="share_save_downloads">A prova foi salva na pasta Downloads</string>
+    <string name="start_camera">Iniciar a câmera</string>
+    <string name="verify_proof">Verifique a prova</string>
+    <string name="proof_integrity_verified_success">A prova de integridade foi verificada</string>
+    <string name="proof_integrity_verified_failed">A prova de verificação da integridade falhou!</string>
+    <string name="pub_key_id">A identidade da chave pública foi gerada:</string>
+    <string name="pub_key_gen_error">Houve um erro ao gerar a chave de identidade. Reinstale.</string>
 </resources>
