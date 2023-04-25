@@ -54,6 +54,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Stack;
 import java.util.TimeZone;
 import java.util.Timer;
@@ -62,8 +63,9 @@ import java.util.concurrent.Executors;
 
 import timber.log.Timber;
 
-public class MediaWatcher extends BroadcastReceiver {
+public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Constants {
 
+    public static final String UTF_8 = "UTF-8";
     private final static String PROOF_BASE_FOLDER = "proofmode/";
 
     private SharedPreferences mPrefs;
@@ -235,11 +237,11 @@ public class MediaWatcher extends BroadcastReceiver {
                                 try {
                                     //byte[] rawNotarizeData = Base64.decode(result, Base64.DEFAULT);
 
-                                    writeBytesToFile(context, fileMediaNotarizeData, result.getBytes("UTF-8"));
+                                    writeBytesToFile(context, fileMediaNotarizeData, result.getBytes(UTF_8));
                                 } catch (Exception e) {
                                     //if an error, then just write the bytes
                                     try {
-                                        writeBytesToFile(context, fileMediaNotarizeData, result.getBytes("UTF-8"));
+                                        writeBytesToFile(context, fileMediaNotarizeData, result.getBytes(UTF_8));
                                     } catch (UnsupportedEncodingException ex) {
                                         ex.printStackTrace();
                                     }
@@ -619,21 +621,21 @@ public class MediaWatcher extends BroadcastReceiver {
             }
         }
 
-        TimeZone tz = TimeZone.getTimeZone("UTC");
-        DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'"); // Quoted "Z" to indicate UTC, no timezone offset
+        TimeZone tz = TimeZone.getDefault();
+        DateFormat df = new SimpleDateFormat(ISO_DATE_TIME_FORMAT, Locale.US); // Quoted "Z" to indicate UTC, no timezone offset
         df.setTimeZone(tz);
 
         HashMap<String, String> hmProof = new HashMap<>();
 
         if (mediaPath != null)
-            hmProof.put("File Path",mediaPath);
+            hmProof.put(FILE_PATH,mediaPath);
         else
-            hmProof.put("File Path",uriMedia.toString());
+            hmProof.put(FILE_PATH,uriMedia.toString());
 
-        hmProof.put("File Hash SHA256",mediaHash);
+        hmProof.put(FILE_HASH_SHA_256,mediaHash);
 
         if (createdAt != null)
-            hmProof.put("File Created",df.format(createdAt));
+            hmProof.put(FILE_CREATED,df.format(createdAt));
         else if (mediaPath != null) {
             File fileMedia = new File(mediaPath);
             if (fileMedia.exists()) {
@@ -643,7 +645,7 @@ public class MediaWatcher extends BroadcastReceiver {
                     try {
                         attr = Files.readAttributes(fileMedia.toPath(), BasicFileAttributes.class);
                         long createdAtMs = attr.creationTime().toMillis();
-                        hmProof.put("File Created",df.format(new Date(createdAtMs)));
+                        hmProof.put(FILE_CREATED,df.format(new Date(createdAtMs)));
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -653,28 +655,28 @@ public class MediaWatcher extends BroadcastReceiver {
         }
 
         if (mediaPath != null)
-            hmProof.put("File Modified",df.format(new Date(new File(mediaPath).lastModified())));
+            hmProof.put(FILE_MODIFIED,df.format(new Date(new File(mediaPath).lastModified())));
 
-        hmProof.put("Proof Generated",df.format(new Date()));
+        hmProof.put(PROOF_GENERATED,df.format(new Date()));
 
-        hmProof.put("Language",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_LANGUAGE));
-        hmProof.put("Locale",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_LOCALE));
+        hmProof.put(LANGUAGE,DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_LANGUAGE));
+        hmProof.put(LOCALE,DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_LOCALE));
 
         if (showDeviceIds) {
             try {
-                hmProof.put("DeviceID", DeviceInfo.getDeviceId(context));
-                hmProof.put("Wifi MAC", DeviceInfo.getWifiMacAddr());
-                hmProof.put("IPv4", DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_IP_ADDRESS_IPV4));
-                hmProof.put("IPv6", DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_IP_ADDRESS_IPV6));
-                hmProof.put("Network", DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_NETWORK));
-                hmProof.put("DataType", DeviceInfo.getDataType(context));
-                hmProof.put("NetworkType", DeviceInfo.getNetworkType(context));
+                hmProof.put(DEVICE_ID, DeviceInfo.getDeviceId(context));
+                hmProof.put(WIFI_MAC, DeviceInfo.getWifiMacAddr());
+                hmProof.put(I_PV_4, DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_IP_ADDRESS_IPV4));
+                hmProof.put(I_PV_6, DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_IP_ADDRESS_IPV6));
+                hmProof.put(NETWORK, DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_NETWORK));
+                hmProof.put(DATA_TYPE, DeviceInfo.getDataType(context));
+                hmProof.put(NETWORK_TYPE, DeviceInfo.getNetworkType(context));
             }catch (SecurityException se){}
         }
 
-        hmProof.put("Hardware",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_HARDWARE_MODEL));
-        hmProof.put("Manufacturer",DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_MANUFACTURE));
-        hmProof.put("ScreenSize",DeviceInfo.getDeviceInch(context));
+        hmProof.put(HARDWARE,DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_HARDWARE_MODEL));
+        hmProof.put(MANUFACTURER,DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_MANUFACTURE));
+        hmProof.put(SCREEN_SIZE,DeviceInfo.getDeviceInch(context));
 
         if (showLocation)
         {
@@ -695,56 +697,56 @@ public class MediaWatcher extends BroadcastReceiver {
                 }
 
                 if (loc != null) {
-                    hmProof.put("Location.Latitude", loc.getLatitude() + "");
-                    hmProof.put("Location.Longitude", loc.getLongitude() + "");
-                    hmProof.put("Location.Provider", loc.getProvider());
-                    hmProof.put("Location.Accuracy", loc.getAccuracy() + "");
-                    hmProof.put("Location.Altitude", loc.getAltitude() + "");
-                    hmProof.put("Location.Bearing", loc.getBearing() + "");
-                    hmProof.put("Location.Speed", loc.getSpeed() + "");
-                    hmProof.put("Location.Time", loc.getTime() + "");
+                    hmProof.put(LOCATION_LATITUDE, loc.getLatitude() + "");
+                    hmProof.put(LOCATION_LONGITUDE, loc.getLongitude() + "");
+                    hmProof.put(LOCATION_PROVIDER, loc.getProvider());
+                    hmProof.put(LOCATION_ACCURACY, loc.getAccuracy() + "");
+                    hmProof.put(LOCATION_ALTITUDE, loc.getAltitude() + "");
+                    hmProof.put(LOCATION_BEARING, loc.getBearing() + "");
+                    hmProof.put(LOCATION_SPEED, loc.getSpeed() + "");
+                    hmProof.put(LOCATION_TIME, loc.getTime() + "");
                 }
                 else
                 {
-                    hmProof.put("Location.Latitude", "");
-                    hmProof.put("Location.Longitude", "");
-                    hmProof.put("Location.Provider", "none");
-                    hmProof.put("Location.Accuracy", "");
-                    hmProof.put("Location.Altitude", "");
-                    hmProof.put("Location.Bearing", "");
-                    hmProof.put("Location.Speed", "");
-                    hmProof.put("Location.Time", "");
+                    hmProof.put(LOCATION_LATITUDE, "");
+                    hmProof.put(LOCATION_LONGITUDE, "");
+                    hmProof.put(LOCATION_PROVIDER, "none");
+                    hmProof.put(LOCATION_ACCURACY, "");
+                    hmProof.put(LOCATION_ALTITUDE, "");
+                    hmProof.put(LOCATION_BEARING, "");
+                    hmProof.put(LOCATION_SPEED, "");
+                    hmProof.put(LOCATION_TIME, "");
                 }
 
             }
 
             if (showMobileNetwork)
-                hmProof.put("CellInfo", DeviceInfo.getCellInfo(context));
+                hmProof.put(CELL_INFO, DeviceInfo.getCellInfo(context));
             else
-                hmProof.put("CellInfo", "none");
+                hmProof.put(CELL_INFO, "none");
 
         }
         else
         {
-            hmProof.put("Location.Latitude", "");
-            hmProof.put("Location.Longitude", "");
-            hmProof.put("Location.Provider", "none");
-            hmProof.put("Location.Accuracy", "");
-            hmProof.put("Location.Altitude", "");
-            hmProof.put("Location.Bearing", "");
-            hmProof.put("Location.Speed", "");
-            hmProof.put("Location.Time", "");
+            hmProof.put(LOCATION_LATITUDE, "");
+            hmProof.put(LOCATION_LONGITUDE, "");
+            hmProof.put(LOCATION_PROVIDER, "none");
+            hmProof.put(LOCATION_ACCURACY, "");
+            hmProof.put(LOCATION_ALTITUDE, "");
+            hmProof.put(LOCATION_BEARING, "");
+            hmProof.put(LOCATION_SPEED, "");
+            hmProof.put(LOCATION_TIME, "");
         }
 
-        hmProof.put("SafetyCheck", "false");
-        hmProof.put("SafetyCheckBasicIntegrity", "");
-        hmProof.put("SafetyCheckCtsMatch", "");
-        hmProof.put("SafetyCheckTimestamp", "");
+        hmProof.put(SAFETY_CHECK, "false");
+        hmProof.put(SAFETY_CHECK_BASIC_INTEGRITY, "");
+        hmProof.put(SAFETY_CHECK_CTS_MATCH, "");
+        hmProof.put(SAFETY_CHECK_TIMESTAMP, "");
 
         if (!TextUtils.isEmpty(notes))
-            hmProof.put("Notes",notes);
+            hmProof.put(NOTES,notes);
         else
-            hmProof.put("Notes","");
+            hmProof.put(NOTES,"");
 
         return hmProof;
 
