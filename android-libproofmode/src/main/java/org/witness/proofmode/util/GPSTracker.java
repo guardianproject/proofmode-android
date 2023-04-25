@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -81,32 +82,40 @@ public final class GPSTracker implements LocationListener {
 
         if (!isGPSEnabled && !isNetworkEnabled) {
             // no network provider is enabled
-        } else {
+        } else if (locationManager != null) {
             this.canGetLocation = true;
 
             //first try network based GPS
             if (isNetworkEnabled) {
                 location = null;
-                if (locationManager != null) {
-
-                    location = locationManager
-                            .getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-                    if (location != null) {
-                        latitude = location.getLatitude();
-                        longitude = location.getLongitude();
-                    }
+                location = locationManager
+                        .getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+                if (location != null) {
+                    latitude = location.getLatitude();
+                    longitude = location.getLongitude();
                 }
             }
 
             // if true GPS Enabled get lat/long using GPS Services
-            if (isGPSEnabled && location == null) {
-                if (locationManager != null) {
-                    location = locationManager
-                            .getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                    if (location != null) {
+            if (isGPSEnabled) {
+
+                Location locationGps = locationManager
+                        .getLastKnownLocation(LocationManager.GPS_PROVIDER);
+
+                if (location == null) {
+                    location = locationGps;
+                    latitude = location.getLatitude();
+                    longitude = location.getLongitude();
+                }
+                else {
+                    //if network location accuracy is a bigger distance range than GPS, then use GPS instead
+                    if (location.getAccuracy() > locationGps.getAccuracy())
+                    {
+                        location = locationGps;
                         latitude = location.getLatitude();
                         longitude = location.getLongitude();
                     }
+
                 }
             }
         }
