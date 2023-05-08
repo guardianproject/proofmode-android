@@ -15,6 +15,8 @@ import android.os.Build
 import android.os.Handler
 import android.preference.PreferenceManager
 import android.util.Log
+import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
+import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
 import org.witness.proofmode.notaries.SafetyNetCheck
 import org.witness.proofmode.notaries.GoogleSafetyNetNotarizationProvider
 import org.witness.proofmode.notarization.NotarizationProvider
@@ -38,8 +40,10 @@ class ProofModeApp : MultiDexApplication() {
             //Background work here
             var pubKey: String? = null
             try {
-                pubKey = PgpUtils.getInstance(applicationContext).publicKeyFingerprint
-           //     showToastMessage(getString(R.string.pub_key_id) + " " + pubKey)
+                val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+                pubKey = PgpUtils.getInstance(applicationContext,prefs.getString(PREFS_KEY_PASSPHRASE,
+                    PREFS_KEY_PASSPHRASE_DEFAULT)).publicKeyFingerprint
+
             } catch (e: PGPException) {
                 Timber.e(e, "error getting public key")
                 showToastMessage(getString(R.string.pub_key_gen_error))
