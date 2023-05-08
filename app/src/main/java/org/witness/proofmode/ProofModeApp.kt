@@ -24,6 +24,7 @@ import org.witness.proofmode.notaries.OpenTimestampsNotarizationProvider
 import timber.log.Timber
 import java.io.IOException
 import java.util.concurrent.Executors
+import kotlin.random.Random
 
 /**
  * Created by n8fr8 on 10/10/16.
@@ -41,8 +42,24 @@ class ProofModeApp : MultiDexApplication() {
             var pubKey: String? = null
             try {
                 val prefs = PreferenceManager.getDefaultSharedPreferences(this)
-                pubKey = PgpUtils.getInstance(applicationContext,prefs.getString(PREFS_KEY_PASSPHRASE,
-                    PREFS_KEY_PASSPHRASE_DEFAULT)).publicKeyFingerprint
+
+                if (PgpUtils.keyRingExists(this)) {
+                    pubKey = PgpUtils.getInstance(
+                        applicationContext, prefs.getString(
+                            PREFS_KEY_PASSPHRASE,
+                            PREFS_KEY_PASSPHRASE_DEFAULT
+                        )
+                    ).publicKeyFingerprint
+                }
+                else
+                {
+                    var newPassPhrase = getRandPassword(12)
+                    prefs.edit().putString(PREFS_KEY_PASSPHRASE,newPassPhrase).commit()
+                    pubKey = PgpUtils.getInstance(
+                        applicationContext, newPassPhrase
+                    ).publicKeyFingerprint
+
+                }
 
             } catch (e: PGPException) {
                 Timber.e(e, "error getting public key")
@@ -52,6 +69,22 @@ class ProofModeApp : MultiDexApplication() {
                 showToastMessage(getString(R.string.pub_key_gen_error))
             }
         }
+    }
+
+    fun getRandPassword(n: Int): String
+    {
+        val characterSet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+        val random = Random(System.nanoTime())
+        val password = StringBuilder()
+
+        for (i in 0 until n)
+        {
+            val rIndex = random.nextInt(characterSet.length)
+            password.append(characterSet[rIndex])
+        }
+
+        return password.toString()
     }
 
     private fun showToastMessage(message: String) {

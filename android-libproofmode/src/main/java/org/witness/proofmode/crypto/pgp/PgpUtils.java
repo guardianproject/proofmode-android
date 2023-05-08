@@ -297,6 +297,14 @@ public class PgpUtils {
         return DetachedSignatureProcessor.verifySignature(fileStream, sigStream, pubKey);
     }
 
+    public static boolean keyRingExists (Context context)
+    {
+        File fileSecKeyRing = new File(context.getFilesDir(),FILE_SECRET_KEY_RING);
+        File filePubKeyRing = new File(context.getFilesDir(),FILE_PUBLIC_KEY_RING);
+
+        return fileSecKeyRing.exists() && filePubKeyRing.exists();
+    }
+
     public synchronized void initCrypto (Context context, String password) throws IOException, PGPException {
         if (pgpSec == null) {
 
