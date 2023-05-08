@@ -10,6 +10,7 @@ import com.eternitywall.ots.OpenTimestamps;
 import com.eternitywall.ots.Timestamp;
 import com.eternitywall.ots.Utils;
 
+import org.witness.proofmode.ProofMode;
 import org.witness.proofmode.notarization.NotarizationListener;
 import org.witness.proofmode.notarization.NotarizationProvider;
 
@@ -52,7 +53,7 @@ public class OpenTimestampsNotarizationProvider implements NotarizationProvider 
 
     @Override
     public String getNotarizationFileExtension () {
-        return OPENTIMESTAMPS_FILE_TAG;
+        return ProofMode.OPENTIMESTAMPS_FILE_TAG;
     }
 
     /**
