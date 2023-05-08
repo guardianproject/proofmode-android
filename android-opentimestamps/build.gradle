@@ -71,5 +71,18 @@ dependencies {
 
 }
 
+project.afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                groupId 'org.proofmode'
+                artifactId 'android-opentimestamps'
+                version '1.0.26'
+                from components.release
+            }
+        }
+    }
+}
+
 
 
