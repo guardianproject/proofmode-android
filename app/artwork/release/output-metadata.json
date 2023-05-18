@@ -1,0 +1,20 @@
+{
+  "version": 3,
+  "artifactType": {
+    "type": "APK",
+    "kind": "Directory"
+  },
+  "applicationId": "org.witness.proofmode",
+  "variantName": "artworkRelease",
+  "elements": [
+    {
+      "type": "SINGLE",
+      "filters": [],
+      "attributes": [],
+      "versionCode": 190301,
+      "versionName": "0.0.19-RC-1",
+      "outputFile": "ProofMode-0.0.19-RC-1-artwork-release.apk"
+    }
+  ],
+  "elementType": "File"
+}
