@@ -63,17 +63,15 @@ public final class GPSTracker implements LocationListener {
             return;
         }
 
+        Timber.d("enabling location listener updates");
+
         // getting GPS status
         isGPSEnabled = locationManager
                 .isProviderEnabled(LocationManager.GPS_PROVIDER);
 
-        Timber.d(isGPSEnabled + "=" + isGPSEnabled);
-
         // getting network status
         isNetworkEnabled = locationManager
                 .isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-
-        Timber.d(isNetworkEnabled + "=" + isNetworkEnabled);
 
         if (isGPSEnabled)
             locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,60000,0,this);
@@ -101,13 +99,9 @@ public final class GPSTracker implements LocationListener {
         isGPSEnabled = locationManager
                 .isProviderEnabled(LocationManager.GPS_PROVIDER);
 
-        Timber.d(isGPSEnabled + "=" + isGPSEnabled);
-
         // getting network status
         isNetworkEnabled = locationManager
                 .isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-
-        Timber.d(isNetworkEnabled + "=" + isNetworkEnabled);
 
         if (!isGPSEnabled && !isNetworkEnabled) {
             // no network provider is enabled
