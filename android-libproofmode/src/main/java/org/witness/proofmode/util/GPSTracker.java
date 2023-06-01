@@ -55,6 +55,33 @@ public final class GPSTracker implements LocationListener {
 
     }
 
+    public void updateLocation () {
+
+        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                || ActivityCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            Timber.d("permission not granted for location check");
+            return;
+        }
+
+        Timber.d("enabling location listener updates");
+
+        // getting GPS status
+        isGPSEnabled = locationManager
+                .isProviderEnabled(LocationManager.GPS_PROVIDER);
+
+        // getting network status
+        isNetworkEnabled = locationManager
+                .isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+
+        if (isGPSEnabled)
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,60000,0,this);
+        else if (isNetworkEnabled)
+            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER,60000,0,this);
+    }
+
+    public void stopUpdateLocation () {
+        locationManager.removeUpdates(this);
+    }
     /**
      * Function to get the user's current location
      *
@@ -72,13 +99,9 @@ public final class GPSTracker implements LocationListener {
         isGPSEnabled = locationManager
                 .isProviderEnabled(LocationManager.GPS_PROVIDER);
 
-        Timber.d(isGPSEnabled + "=" + isGPSEnabled);
-
         // getting network status
         isNetworkEnabled = locationManager
                 .isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-
-        Timber.d(isNetworkEnabled + "=" + isNetworkEnabled);
 
         if (!isGPSEnabled && !isNetworkEnabled) {
             // no network provider is enabled
@@ -90,6 +113,7 @@ public final class GPSTracker implements LocationListener {
                 location = null;
                 location = locationManager
                         .getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+
                 if (location != null) {
                     latitude = location.getLatitude();
                     longitude = location.getLongitude();
@@ -104,8 +128,11 @@ public final class GPSTracker implements LocationListener {
 
                 if (location == null) {
                     location = locationGps;
-                    latitude = location.getLatitude();
-                    longitude = location.getLongitude();
+
+                    if (location != null) {
+                        latitude = location.getLatitude();
+                        longitude = location.getLongitude();
+                    }
                 }
                 else {
                     //if network location accuracy is a bigger distance range than GPS, then use GPS instead

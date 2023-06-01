@@ -106,7 +106,6 @@
             android:layout_margin="10dp"
             android:textAllCaps="true"
             style="@style/OnboardingStepContentStyle"
-            android:visibility="gone"
             />
 
         <TextView
@@ -141,7 +140,6 @@
             android:layout_margin="10dp"
             android:textAllCaps="true"
             style="@style/OnboardingStepContentStyle"
-            android:visibility="gone"
             />
 
         <TextView
@@ -160,14 +158,14 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal">
         <Button
-            android:layout_width="100dp"
+            android:layout_width="160dp"
             android:layout_height="wrap_content"
             android:layout_margin="10dp"
             android:text="@string/share_share_robust"
             android:onClick="clickAll"
-            />wrap_content
+            />
             <Button
-                android:layout_width="100dp"
+                android:layout_width="160dp"
                 android:layout_height="wrap_content"
                 android:layout_margin="10dp"
                 android:text="@string/share_save_robust"

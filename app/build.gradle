@@ -23,10 +23,10 @@ android {
 
     defaultConfig {
         applicationId "org.witness.proofmode"
-        minSdkVersion 21
+        minSdkVersion 24
         targetSdkVersion 33
-        versionCode 190302
-        versionName "0.0.19-RC-2"
+        versionCode 200201
+        versionName "0.0.20-BETA-1"
         multiDexEnabled true
         archivesBaseName = "ProofMode-$versionName"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -80,7 +80,7 @@ dependencies {
     implementation project(':android-opentimestamps')
 
     implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'androidx.core:core-ktx:1.10.0'
+    implementation 'androidx.core:core-ktx:1.10.1'
     implementation "androidx.preference:preference-ktx:1.2.0"
 
 
@@ -106,7 +106,6 @@ dependencies {
 
     implementation 'com.google.android.gms:play-services-safetynet:18.0.1'
     implementation 'com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava'
-
 
     // Required -- JUnit 4 framework
     androidTestImplementation 'junit:junit:4.13.2'
