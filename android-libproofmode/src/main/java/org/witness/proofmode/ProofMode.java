@@ -22,6 +22,7 @@ import org.witness.proofmode.service.CameraEventReceiver;
 import org.witness.proofmode.service.MediaWatcher;
 import org.witness.proofmode.service.PhotosContentJob;
 import org.witness.proofmode.service.VideosContentJob;
+import org.witness.proofmode.util.GPSTracker;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -95,7 +96,16 @@ public class ProofMode {
             addCameraEventListeners(context, mReceiver);
         }
 
+        startLocationListener (context);
+
         mInit = true;
+    }
+
+    private static GPSTracker mLocationTracker;
+
+    private static void startLocationListener (Context context) {
+        mLocationTracker = new GPSTracker(context);
+        mLocationTracker.updateLocation();
     }
 
     private static void addCameraEventListeners (Context context, CameraEventReceiver receiver) {
@@ -130,6 +140,8 @@ public class ProofMode {
 
         MediaWatcher.getInstance(context).stop();
 
+        if (mLocationTracker != null)
+            mLocationTracker.stopUpdateLocation();
     }
 
     public static BouncyCastleProvider getProvider ()
