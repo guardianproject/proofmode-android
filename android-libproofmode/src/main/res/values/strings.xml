@@ -3,4 +3,5 @@
 
     <string name="inspect_photos">Inspecting photos</string>
     <string name="inspect_videos">Inspecting videos</string>
+    <string name="proof_generated_success">Proof generated!</string>
 </resources>

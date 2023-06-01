@@ -19,6 +19,7 @@ import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.provider.MediaStore;
+import android.text.TextUtils;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -104,7 +105,7 @@ public class VideosContentJob extends JobService {
     }
 
     private HashMap<Uri,String> mUriStack = new HashMap<>();
-
+    private Handler mHandler = new Handler();
     private void doWork ()
     {
 
@@ -123,7 +124,13 @@ public class VideosContentJob extends JobService {
                         ArrayList<Uri> uriKeys = new ArrayList<Uri>(mUriStack.keySet());
 
                         for (Uri uri : uriKeys) {
-                            MediaWatcher.getInstance(VideosContentJob.this).processUri(uri, true, null);
+                            String resultProofHash = MediaWatcher.getInstance(VideosContentJob.this).processUri(uri, true, null);
+
+                            if (!TextUtils.isEmpty(resultProofHash)) {
+                                mHandler.post(() -> Toast.makeText(getApplicationContext(), R.string.proof_generated_success, Toast.LENGTH_SHORT).show());
+
+                            }
+
                             mUriStack.remove(uri);
                         }
 

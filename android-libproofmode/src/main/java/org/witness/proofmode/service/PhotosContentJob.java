@@ -18,9 +18,14 @@ import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.provider.MediaStore;
+import android.text.TextUtils;
 import android.widget.Toast;
 
+import org.witness.proofmode.crypto.HashUtils;
+import org.witness.proofmode.library.R;
+
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -43,6 +48,9 @@ public class PhotosContentJob extends JobService {
 
     JobParameters mRunningParams;
 
+    Handler mHandler = new Handler();
+
+    private Context mContext = null;
 
     // Check whether this job is currently scheduled.
     public static boolean isScheduled(Context context) {
@@ -115,8 +123,30 @@ public class PhotosContentJob extends JobService {
                                 uri = MediaStore.setRequireOriginal(uri);
                             }
 
-                            MediaWatcher.getInstance(PhotosContentJob.this).processUri(uri, true, null);
-                            mUriStack.remove(uri);
+                            String mediaHash = null;
+                            try {
+                                MediaWatcher mw = MediaWatcher.getInstance(PhotosContentJob.this);
+
+                               // mediaHash = mw.generateHash(uri);
+
+                                //if (mediaHash != null && (!mw.proofExists(PhotosContentJob.this,mediaHash))) {
+
+                                    String resultProofHash = mw.processUri(uri,  true, null);
+
+                                    if (!TextUtils.isEmpty(resultProofHash)) {
+                                        mHandler.post(() -> Toast.makeText(getApplicationContext(), R.string.proof_generated_success, Toast.LENGTH_SHORT).show());
+
+                                    }
+                                //}
+
+                                mUriStack.remove(uri);
+
+                            } catch (RuntimeException e) {
+                                Timber.d(e,"Error generating hash from proof URI");
+
+                            }
+
+
                         }
 
                     }
