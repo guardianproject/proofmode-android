@@ -209,7 +209,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
 
             try {
                 if (proofExists(context,mediaHash))
-                    return mediaHash;
+                    return null;
             } catch (FileNotFoundException e) {
                 //must not exist!
             }
@@ -467,7 +467,11 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
         return null;
     }
 
-    private boolean proofExists (Context context, String hash) throws FileNotFoundException {
+    public String generateHash (Uri uri) throws FileNotFoundException {
+        return HashUtils.getSHA256FromFileContent(mContext.getContentResolver().openInputStream(uri));
+    }
+
+    public boolean proofExists (Context context, String hash) throws FileNotFoundException {
         boolean result = false;
 
         if (hash != null) {
