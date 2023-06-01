@@ -20,6 +20,8 @@ import androidx.drawerlayout.widget.DrawerLayout
 import androidx.preference.PreferenceManager
 import com.google.android.material.navigation.NavigationView
 import gun0912.tedimagepicker.builder.TedImagePicker
+import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
+import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
 import org.witness.proofmode.camera.CameraActivity
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.databinding.ActivityMainBinding
@@ -285,7 +287,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         try {
             if (mPgpUtils == null) mPgpUtils = PgpUtils.getInstance(
                 this,
-                mPrefs.getString("password", PgpUtils.DEFAULT_PASSWORD)
+                mPrefs.getString(PREFS_KEY_PASSPHRASE, PREFS_KEY_PASSPHRASE_DEFAULT)
             )
             mPgpUtils?.publishPublicKey()
             Toast.makeText(
@@ -308,7 +310,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         try {
             if (mPgpUtils == null) mPgpUtils = PgpUtils.getInstance(
                 this,
-                mPrefs.getString("password", PgpUtils.DEFAULT_PASSWORD)
+                mPrefs.getString(PREFS_KEY_PASSPHRASE, PREFS_KEY_PASSPHRASE_DEFAULT)
             )
             mPgpUtils?.publishPublicKey()
             val pubKey = mPgpUtils?.publicKeyString

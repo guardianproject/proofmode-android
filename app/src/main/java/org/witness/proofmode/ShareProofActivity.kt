@@ -31,6 +31,8 @@ import androidx.core.content.FileProvider
 import androidx.documentfile.provider.DocumentFile
 import org.bouncycastle.openpgp.PGPException
 import org.witness.proofmode.PermissionActivity.Companion.hasPermissions
+import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
+import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
 import org.witness.proofmode.crypto.HashUtils
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.databinding.ActivityShareBinding
@@ -48,9 +50,13 @@ class ShareProofActivity : AppCompatActivity() {
     private var sendMedia = true
 
     private val hashCache = HashMap<String, String?>()
+
+    private lateinit var pgpUtils : PgpUtils
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityShareBinding.inflate(layoutInflater)
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        pgpUtils = PgpUtils.getInstance(this, prefs.getString(PREFS_KEY_PASSPHRASE,PREFS_KEY_PASSPHRASE_DEFAULT))
         setContentView(binding.root)
     }
 
@@ -274,9 +280,7 @@ class ShareProofActivity : AppCompatActivity() {
     private fun generateProofZipName() {
         val sdf = SimpleDateFormat(ZIP_FILE_DATETIME_FORMAT)
         val dateString = sdf.format(Date())
-        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
-        val pu = PgpUtils.getInstance(this, prefs.getString("password", PgpUtils.DEFAULT_PASSWORD))
-        val userId = pu.publicKeyFingerprint
+        val userId = pgpUtils.publicKeyFingerprint
         proofZipName = "proofmode-$userId-$dateString.zip"
     }
 
@@ -360,7 +364,7 @@ class ShareProofActivity : AppCompatActivity() {
                     if (encryptZip) {
                         val fileZipEnc = File(fileCacheFolder, "$proofZipName.gpg")
                         try {
-                            PgpUtils.getInstance(this).encrypt(
+                            pgpUtils.encrypt(
                                 FileInputStream(fileZip),
                                 fileZip.length(),
                                 FileOutputStream(fileZipEnc)
@@ -515,12 +519,7 @@ class ShareProofActivity : AppCompatActivity() {
                 fileCacheFolder.mkdir()
                 val sdf = SimpleDateFormat(ZIP_FILE_DATETIME_FORMAT)
                 val dateString = sdf.format(Date())
-                val prefs = PreferenceManager.getDefaultSharedPreferences(this)
-                val pu = PgpUtils.getInstance(
-                    this,
-                    prefs.getString("password", PgpUtils.DEFAULT_PASSWORD)
-                )
-                val userId = pu.publicKeyFingerprint
+                val userId = pgpUtils.publicKeyFingerprint
                 val fileZip = File(fileCacheFolder, "proofmode-$userId-$dateString.zip")
                 Timber.d("Preparing proof bundle zip: " + fileZip.absolutePath)
                 try {
@@ -536,7 +535,7 @@ class ShareProofActivity : AppCompatActivity() {
                         val fileZipEnc =
                             File(fileCacheFolder, "proofmode-$userId-$dateString.zip.gpg")
                         try {
-                            PgpUtils.getInstance(this).encrypt(
+                            pgpUtils.encrypt(
                                 FileInputStream(fileZip),
                                 fileZip.length(),
                                 FileOutputStream(fileZipEnc)
@@ -934,7 +933,7 @@ class ShareProofActivity : AppCompatActivity() {
         isFirstProof: Boolean
     ) {
         val sdf = SimpleDateFormat.getDateTimeInstance()
-        val fingerprint = PgpUtils.getInstance(this).publicKeyFingerprint
+        val fingerprint = pgpUtils.publicKeyFingerprint
         if (fileMedia != null) {
             sb.append(fileMedia.name).append(' ')
             sb.append(getString(R.string.last_modified)).append(' ')
@@ -1224,7 +1223,7 @@ class ShareProofActivity : AppCompatActivity() {
         }
         Timber.d("Adding public key")
         //add public key
-        val pubKey = ProofMode.getPublicKeyString(this)
+        val pubKey = ProofMode.getPublicKeyString(this, "")
         var entry: ZipEntry? = ZipEntry("pubkey.asc")
         out.putNextEntry(entry)
         out.write(pubKey.toByteArray())

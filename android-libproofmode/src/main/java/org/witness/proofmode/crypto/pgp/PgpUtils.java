@@ -90,7 +90,7 @@ public class PgpUtils {
     private final static String FILE_SECRET_KEY_RING = "pkr.asc";
     private final static String FILE_PUBLIC_KEY_RING = "pub.asc";
 
-    public final static String DEFAULT_PASSWORD = "password"; //static string for local keystore
+    //public final static String DEFAULT_PASSWORD = "password"; //static string for local keystore
     private final static String URL_POST_KEY_ENDPOINT = "https://keys.openpgp.org/vks/v1/upload";
 
     public final static String URL_LOOKUP_ENDPOINT = "https://keys.openpgp.org/search?q=0x";
@@ -100,9 +100,11 @@ public class PgpUtils {
 
     }
 
+    /**
     public static synchronized PgpUtils getInstance (Context context) throws PGPException, IOException {
         return getInstance(context, DEFAULT_PASSWORD);
     }
+    **/
 
     public static synchronized PgpUtils getInstance (Context context, String password) throws PGPException, IOException {
         if (mInstance == null)
@@ -295,6 +297,14 @@ public class PgpUtils {
         return DetachedSignatureProcessor.verifySignature(fileStream, sigStream, pubKey);
     }
 
+    public static boolean keyRingExists (Context context)
+    {
+        File fileSecKeyRing = new File(context.getFilesDir(),FILE_SECRET_KEY_RING);
+        File filePubKeyRing = new File(context.getFilesDir(),FILE_PUBLIC_KEY_RING);
+
+        return fileSecKeyRing.exists() && filePubKeyRing.exists();
+    }
+
     public synchronized void initCrypto (Context context, String password) throws IOException, PGPException {
         if (pgpSec == null) {
 
@@ -312,9 +322,12 @@ public class PgpUtils {
                     sin.close();
                 }
                 else {
+
+                    if (password.isEmpty())
+                        throw new IOException("Empty PGP Key password not allowed for key generation");
+
                     final PGPKeyRingGenerator krgen = generateKeyRingGenerator(keyId, password.toCharArray());
                     skr = krgen.generateSecretKeyRing();
-
 
                     ArmoredOutputStream sout = new ArmoredOutputStream((new FileOutputStream(fileSecKeyRing)));
                     skr.encode(sout);

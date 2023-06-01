@@ -4,6 +4,8 @@ import static org.witness.proofmode.ProofMode.OPENPGP_FILE_TAG;
 import static org.witness.proofmode.ProofMode.PREFS_DOPROOF;
 import static org.witness.proofmode.ProofMode.PROOF_FILE_JSON_TAG;
 import static org.witness.proofmode.ProofMode.PROOF_FILE_TAG;
+import static org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE;
+import static org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT;
 
 import android.Manifest;
 import android.content.BroadcastReceiver;
@@ -77,6 +79,8 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
 
     private Context mContext = null;
 
+    private String mPassphrase = null;
+
     private ArrayList<NotarizationProvider> mProviders = new ArrayList<>();
 
     private MediaWatcher (Context context) {
@@ -84,9 +88,11 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
             mPrefs = PreferenceManager.getDefaultSharedPreferences(context);
 
         mContext = context;
+        mPassphrase = mPrefs.getString(PREFS_KEY_PASSPHRASE,PREFS_KEY_PASSPHRASE_DEFAULT);
 
         startFileSystemMonitor();
     }
+
 
     public static synchronized MediaWatcher getInstance (Context context)
     {
@@ -520,20 +526,22 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
             JSONObject jProof = new JSONObject(hmProof);
             writeTextToFile(context, fileMediaProofJson, jProof.toString());
 
+            PgpUtils pu = PgpUtils.getInstance(context, null);
+
             if (fileMediaProof.exists()) {
                 //sign the proof file again
-                PgpUtils.getInstance(context).createDetachedSignature(fileMediaProof, new File(fileFolder, mediaHash + PROOF_FILE_TAG + OPENPGP_FILE_TAG), PgpUtils.DEFAULT_PASSWORD, usePgpArmor);
+                pu.createDetachedSignature(fileMediaProof, new File(fileFolder, mediaHash + PROOF_FILE_TAG + OPENPGP_FILE_TAG), mPassphrase, usePgpArmor);
             }
 
             if (fileMediaProofJson.exists()) {
                 //sign the proof file again
-                PgpUtils.getInstance(context).createDetachedSignature(fileMediaProofJson, new File(fileFolder, mediaHash + PROOF_FILE_JSON_TAG + OPENPGP_FILE_TAG), PgpUtils.DEFAULT_PASSWORD, usePgpArmor);
+               pu.createDetachedSignature(fileMediaProofJson, new File(fileFolder, mediaHash + PROOF_FILE_JSON_TAG + OPENPGP_FILE_TAG), mPassphrase, usePgpArmor);
             }
 
             //sign the media file
             File fileMediaSig = new File(fileFolder, mediaHash + OPENPGP_FILE_TAG);
            if ((!fileMediaSig.exists()) || fileMediaSig.length() == 0)
-              PgpUtils.getInstance(context).createDetachedSignature(is, new FileOutputStream(fileMediaSig), PgpUtils.DEFAULT_PASSWORD, usePgpArmor);
+              pu.createDetachedSignature(is, new FileOutputStream(fileMediaSig), mPassphrase, usePgpArmor);
 
             Timber.d("Proof written/updated for uri %s and hash %s", uriMedia, mediaHash);
 

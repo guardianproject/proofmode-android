@@ -22,6 +22,7 @@ import org.witness.proofmode.service.CameraEventReceiver;
 import org.witness.proofmode.service.MediaWatcher;
 import org.witness.proofmode.service.PhotosContentJob;
 import org.witness.proofmode.service.VideosContentJob;
+import org.witness.proofmode.util.GPSTracker;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -95,7 +96,16 @@ public class ProofMode {
             addCameraEventListeners(context, mReceiver);
         }
 
+        startLocationListener (context);
+
         mInit = true;
+    }
+
+    private static GPSTracker mLocationTracker;
+
+    private static void startLocationListener (Context context) {
+        mLocationTracker = new GPSTracker(context);
+        mLocationTracker.updateLocation();
     }
 
     private static void addCameraEventListeners (Context context, CameraEventReceiver receiver) {
@@ -130,6 +140,8 @@ public class ProofMode {
 
         MediaWatcher.getInstance(context).stop();
 
+        if (mLocationTracker != null)
+            mLocationTracker.stopUpdateLocation();
     }
 
     public static BouncyCastleProvider getProvider ()
@@ -194,17 +206,15 @@ public class ProofMode {
         MediaWatcher.getInstance(context).addNotarizationProvider(provider);
     }
 
-    public static PGPPublicKey getPublicKey (Context context) throws PGPException, IOException {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        PgpUtils pu = PgpUtils.getInstance(context,prefs.getString("password",PgpUtils.DEFAULT_PASSWORD));
+    public static PGPPublicKey getPublicKey (Context context, String passphrase) throws PGPException, IOException {
+        PgpUtils pu = PgpUtils.getInstance(context,passphrase);
         PGPPublicKey pubKey = null;
         return pubKey = pu.getPublicKey();
 
     }
 
-    public static String getPublicKeyString (Context context) throws IOException, PGPException {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        PgpUtils pu = PgpUtils.getInstance(context,prefs.getString("password",PgpUtils.DEFAULT_PASSWORD));
+    public static String getPublicKeyString (Context context, String passphrase) throws IOException, PGPException {
+        PgpUtils pu = PgpUtils.getInstance(context,passphrase);
         String pubKey = pu.getPublicKeyString();
 
         return pubKey;
@@ -398,14 +408,13 @@ public class ProofMode {
 
 
     public static boolean verifySignature (Context context, InputStream fileStream, InputStream sigStream, PGPPublicKey publicKey) throws Exception {
-
         //PgpUtils.getInstance(context).
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        PgpUtils pu = PgpUtils.getInstance(context,prefs.getString("password",PgpUtils.DEFAULT_PASSWORD));
+        PgpUtils pu = PgpUtils.getInstance(context, null);
         return pu.verifyDetachedSignature(fileStream, sigStream, publicKey);
     }
 
-    public static void generateProofZip(Context context, String proofHash) throws IOException, PGPException {
+    public static void generateProofZip(Context context, String proofHash, String passphrase) throws IOException, PGPException {
 
         File fileDirProof = ProofMode.getProofDir(context, proofHash);
         File[] files = fileDirProof.listFiles();
@@ -442,7 +451,7 @@ public class ProofMode {
         //add public key
         ZipEntry entry = new ZipEntry(PUBKEY_FILE);
         out.putNextEntry(entry);
-        out.write(getPublicKeyString(context).getBytes());
+        out.write(getPublicKeyString(context, passphrase).getBytes());
 
         Timber.d("Zip complete");
 
@@ -450,14 +459,14 @@ public class ProofMode {
 
     }
 
-    public static void checkAndGeneratePublicKeyAsync (Context context)
+    public static void checkAndGeneratePublicKeyAsync (Context context, String passphrase)
     {
         Executors.newSingleThreadExecutor().execute(() -> {
             //Background work here
             String pubKey = null;
 
             try {
-                pubKey = PgpUtils.getInstance(context).getPublicKeyFingerprint();
+                pubKey = PgpUtils.getInstance(context, passphrase).getPublicKeyFingerprint();
             } catch (PGPException e) {
                 Timber.e(e,"error getting public key");
             } catch (IOException e) {

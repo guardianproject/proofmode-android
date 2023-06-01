@@ -16,6 +16,7 @@ import org.junit.Test;
 import org.junit.runners.MethodSorters;
 import org.witness.proofmode.ProofMode;
 import org.witness.proofmode.crypto.HashUtils;
+import org.witness.proofmode.crypto.pgp.PgpUtils;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -114,7 +115,7 @@ public class ProofmodeGenerationTests {
             assertNotNull(files);
 
             File fileZip = new File (fileDirProof.getParent(),fileDirProof.getName() + ".zip");
-            zipProof(files, fileZip,ProofMode.getPublicKeyString(context));
+            zipProof(files, fileZip,ProofMode.getPublicKeyString(context, PgpUtils.DEFAULT_PASSWORD));
             assertTrue(fileZip.exists());
 
             //verify specific file and hash
