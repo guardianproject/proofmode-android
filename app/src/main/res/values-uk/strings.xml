@@ -42,7 +42,7 @@
     <string name="settings_title">Посильте верифікованість ваших медіа, додавши дані до ваших доказів.</string>
     <string name="settings_description">Торкніться іконок, щоб додати або видалити.</string>
     <string name="onboarding_step1">Крок 1</string>
-    <string name="onboarding_learn_more">Дізнатися більше</string>
+    <string name="onboarding_learn_more">Докладніше</string>
     <string name="onboarding_get_started">Почати роботу</string>
     <string name="onboarding_intro_title">Картина може бути варта тисячі слів, але доказ того, що вона справжня, безцінний.</string>
     <string name="onboarding_intro_content">ProofMode збирає інформацію, яка робить ваші медіа більш достовірними.</string>
