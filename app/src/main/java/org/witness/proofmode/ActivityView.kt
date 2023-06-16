@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -263,13 +265,49 @@ fun layoutRows(items: SnapshotStateList<CameraItem>): MutableList<CapturedAssetR
     return rows
 }
 
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun MediaSharedActivityView(items: SnapshotStateList<CameraItem>, fileName: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(ASSETS_GUTTER_SIZE.dp)) {
+
+        Text(
+            text = pluralStringResource(id = R.plurals.you_shared_n_items, count = items.size, items.size),
+            style = MaterialTheme.typography.bodyLarge,
+            color = Color.DarkGray,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
+        val deletedItemsString = items.deletedItemsString()
+        if (deletedItemsString != null) {
+            Text(
+                text = deletedItemsString,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.DarkGray,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
+
+        val validItems = items.withDeletedItemsRemoved().toList()
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(8.dp)) {
+            validItems.forEach { asset ->
+                AssetView(
+                    asset = asset,
+                    corners = RectF(30f,30f,30f,30f),
+                    modifier = Modifier.width(60.dp).height(60.dp))
+            }
+        }
+    }
+}
+
 @Composable
 fun ActivityView(activity: Activity) {
     Row {
         when (activity.type) {
-            is ActivityType.MediaCaptured -> MediaCapturedOrImportedActivityView(activity.type.items, false)
+            is ActivityType.MediaCaptured -> MediaCapturedOrImportedActivityView(activity.type.items, true)
             is ActivityType.MediaImported -> Text("Media Imported")
-            is ActivityType.MediaShared -> Text("Media Shared")
+            is ActivityType.MediaShared -> MediaSharedActivityView(activity.type.items, fileName = activity.type.fileName)
             is ActivityType.PublicKeyShared -> Text("Public Key Shared")
         }
     }

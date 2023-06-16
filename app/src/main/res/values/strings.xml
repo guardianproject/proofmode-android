@@ -140,6 +140,11 @@
         <item quantity="one">You captured one item</item>
         <item quantity="other">You captured %d items</item>
     </plurals>
+    <plurals name="you_shared_n_items">
+        <item quantity="zero">You shared nothing</item>
+        <item quantity="one">You shared one item</item>
+        <item quantity="other">You shared %d items</item>
+    </plurals>
     <plurals name="n_items_have_been_deleted_or_are_not_accessible">
         <item quantity="zero">no items have been deleted or are not accessible</item>
         <item quantity="one">one item has been deleted or is not accessible</item>
