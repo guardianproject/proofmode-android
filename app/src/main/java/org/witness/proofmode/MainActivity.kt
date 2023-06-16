@@ -19,6 +19,7 @@ import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.platform.ComposeView
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
@@ -106,29 +107,46 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         // Setup activity view
         val activityView = findViewById<ComposeView>(R.id.activityView)
         activityView.setContent {
-            ActivitiesView(onShowCamera = {
-                this.startCamera(activityView)
-            })
+            ActivitiesView()
         }
         val intentFilter = IntentFilter("org.witness.proofmode.NEW_MEDIA")
         intentFilter.addDataType("image/jpeg")
         LocalBroadcastManager.getInstance(applicationContext).registerReceiver(cameraReceiver, intentFilter)
+
+        registerReceiver(cameraReceiver, IntentFilter("org.witness.proofmode.ITEMS_SHARED"))
 
         Activities.load(this)
     }
 
     private class CameraReceiver: BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            val uri = intent?.data
-            if (uri != null && context != null) {
-                Timber.tag("CAMERA").d("URI is" + uri.toString())
-                Activities.addActivity(Activity(
-                    UUID.randomUUID().toString(), ActivityType.MediaCaptured(items = mutableStateListOf(
-                    CameraItem(UUID.randomUUID().toString(), uri)
-                )), Date()
-                ), context)
-            }
+            when (intent?.action) {
+                "org.witness.proofmode.NEW_MEDIA" -> {
+                    val uri = intent?.data
+                    if (uri != null && context != null) {
+                        Timber.tag("CAMERA").d("URI is" + uri.toString())
+                        Activities.addActivity(
+                            Activity(
+                                UUID.randomUUID().toString(), ActivityType.MediaCaptured(
+                                    items = mutableStateListOf(
+                                        CameraItem(UUID.randomUUID().toString(), uri)
+                                    )
+                                ), Date()
+                            ), context
+                        )
+                    }
+                }
 
+                "org.witness.proofmode.ITEMS_SHARED" -> {
+                    val items = intent.getParcelableArrayListExtra<CameraItem>(Intent.EXTRA_STREAM) ?: ArrayList()
+                    if (items.size > 0 && context != null) {
+                        val activity = Activity(UUID.randomUUID().toString(), ActivityType.MediaShared(items = items.toMutableStateList(), ""), Date())
+                        Activities.addActivity(activity, context)
+                    }
+                }
+
+                else -> {}
+            }
         }
     }
     private val cameraReceiver = CameraReceiver()
@@ -501,5 +519,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     override fun openCamera() {
         this.startCamera(findViewById<ComposeView>(R.id.activityView))
+    }
+
+    override fun shareItems(media: List<Uri>) {
+        this.showShareProof(mediaList = media)
     }
 }

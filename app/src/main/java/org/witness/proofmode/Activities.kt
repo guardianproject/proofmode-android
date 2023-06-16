@@ -2,6 +2,8 @@ package org.witness.proofmode
 
 import android.content.Context
 import android.net.Uri
+import android.os.Parcel
+import android.os.Parcelable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
@@ -36,6 +38,32 @@ import java.io.InputStream
 
 @Serializable
 data class CameraItem(val id: String, @Serializable(with = UriSerializer::class) val uri: Uri? = null) // TODO move this
+    : Parcelable {
+    constructor(parcel: Parcel) : this(
+        parcel.readString() ?: "",
+        parcel.readParcelable(Uri::class.java.classLoader)
+    ) {
+    }
+
+    override fun writeToParcel(parcel: Parcel, flags: Int) {
+        parcel.writeString(id)
+        parcel.writeParcelable(uri, flags)
+    }
+
+    override fun describeContents(): Int {
+        return 0
+    }
+
+    companion object CREATOR : Parcelable.Creator<CameraItem> {
+        override fun createFromParcel(parcel: Parcel): CameraItem {
+            return CameraItem(parcel)
+        }
+
+        override fun newArray(size: Int): Array<CameraItem?> {
+            return arrayOfNulls(size)
+        }
+    }
+}
 
 object SnapshotStateListOfCameraItemsSerializer :
     KSerializer<SnapshotStateList<CameraItem>> by SnapshotStateListSerializer(CameraItem.serializer())
@@ -75,13 +103,18 @@ sealed class ActivityType {
     class MediaCaptured(
         @Serializable(with = SnapshotStateListOfCameraItemsSerializer::class) var items: SnapshotStateList<CameraItem>) : ActivityType()
     class MediaImported(val items: SnapshotStateList<CameraItem>) : ActivityType()
-    class MediaShared(val items: SnapshotStateList<CameraItem>, val fileName: String) : ActivityType()
+
+    @SerialName("mediaShare")
+    @Serializable
+    class MediaShared(
+        @Serializable(with = SnapshotStateListOfCameraItemsSerializer::class) var items: SnapshotStateList<CameraItem>,
+        val fileName: String) : ActivityType()
     class PublicKeyShared(val key: String) : ActivityType()
 }
 
 @Dao
 interface ActivitiesDao {
-    @Query("SELECT * FROM activities ORDER BY startTime DESC")
+    @Query("SELECT * FROM activities ORDER BY startTime ASC")
     fun getAll(): List<Activity>
 
     @Update

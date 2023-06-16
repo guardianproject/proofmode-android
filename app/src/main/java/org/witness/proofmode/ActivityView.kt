@@ -2,6 +2,7 @@ package org.witness.proofmode
 
 import android.annotation.SuppressLint
 import android.graphics.RectF
+import android.net.Uri
 import android.text.format.DateUtils
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -61,6 +62,7 @@ val ASSETS_BACKGROUND = Color.Black.copy(0.1F)
 
 interface ActivitiesViewDelegate {
     abstract fun openCamera()
+    abstract fun shareItems(media: List<Uri>)
 }
 
 sealed class CapturedAssetRow {
@@ -288,6 +290,7 @@ fun ActivityDateView(date: Date, menu: (@Composable() (BoxScope.() -> Unit))? = 
         if (menu != null) {
             Box(
                 modifier = Modifier
+                    .padding(top = 24.dp)
                     .fillMaxSize()
                     .wrapContentSize(Alignment.TopEnd),
                 content = menu
@@ -298,7 +301,7 @@ fun ActivityDateView(date: Date, menu: (@Composable() (BoxScope.() -> Unit))? = 
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ActivitiesView(onShowCamera: (() -> Unit)? = null) {
+fun ActivitiesView() {
     MaterialTheme() {
     Surface(modifier = Modifier.fillMaxSize()) {
         LazyColumn(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(ASSETS_GUTTER_SIZE.dp)) {
@@ -314,16 +317,13 @@ fun ActivitiesView(onShowCamera: (() -> Unit)? = null) {
                             .width(32.dp)
                             .height(32.dp),
                         onClick = {
-                            if (context is ActivitiesViewDelegate) {
-                                (context as ActivitiesViewDelegate).openCamera()
-                                //onShowCamera()
-                            }
+                            (context as? ActivitiesViewDelegate)?.openCamera()
                         }) {
                         Icon(painter = painterResource(id = R.drawable.ic_camera), contentDescription = "Open camera")
                     }
                 }
             }
-            Activities.activities.forEach { activity ->
+            Activities.activities.reversed().forEach { activity ->
                 stickyHeader {
                     ActivityDateView(date = activity.startTime, menu = activityMenu(activity))
                 }
@@ -339,6 +339,7 @@ fun ActivitiesView(onShowCamera: (() -> Unit)? = null) {
 @Composable
 fun activityMenu(activity: Activity):  (@Composable() (BoxScope.() -> Unit))? {
     var expanded by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     return {
         IconButton(onClick = { expanded = true }) {
@@ -367,6 +368,7 @@ fun activityMenu(activity: Activity):  (@Composable() (BoxScope.() -> Unit))? {
                         },
                         onClick = {
                             expanded = false
+                            (context as? ActivitiesViewDelegate)?.shareItems(activity.type.items.map { it.uri }.filterNotNull())
                         }
                     )
                 }
