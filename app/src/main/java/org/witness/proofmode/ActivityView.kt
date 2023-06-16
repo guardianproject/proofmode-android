@@ -1,9 +1,13 @@
 package org.witness.proofmode
 
+import android.annotation.SuppressLint
 import android.graphics.RectF
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
+import android.text.format.DateUtils
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
@@ -13,65 +17,81 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.magnifier
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.modifier.modifierLocalConsumer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import java.text.SimpleDateFormat
 import java.util.Date
 
 const val ASSETS_GUTTER_SIZE = 10F
 const val ASSETS_CORNER_RADIUS = 20F
 val ASSETS_BACKGROUND = Color.Black.copy(0.1F)
 
+interface ActivitiesViewDelegate {
+    abstract fun openCamera()
+}
+
 sealed class CapturedAssetRow {
     class OneItem(val item: CameraItem) : CapturedAssetRow()
-    class TwoItems(val items: Array<CameraItem>) : CapturedAssetRow()
-    class ThreeItems(val items: Array<CameraItem>) : CapturedAssetRow()
-    class FourItems(val items: Array<CameraItem>) : CapturedAssetRow()
+    class TwoItems(val items: List<CameraItem>) : CapturedAssetRow()
+    class ThreeItems(val items: List<CameraItem>) : CapturedAssetRow()
+    class FourItems(val items: List<CameraItem>) : CapturedAssetRow()
 }
 
 @Composable
 fun AssetView(asset: CameraItem, modifier: Modifier = Modifier, contain: Boolean = false, corners: RectF = RectF(
     ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS)
 ) {
-    Image(
-        painter = painterResource(id = R.drawable.ic_img_home_off),
-        contentDescription = "Asset view",
-        alignment = Alignment.Center,
-        contentScale = if (contain) ContentScale.Fit else ContentScale.Crop,
-        modifier = modifier
-            .clip(
-                RoundedCornerShape(
-                    corners.left.dp,
-                    corners.top.dp,
-                    corners.right.dp,
-                    corners.bottom.dp
+
+        AsyncImage(
+            model = if (asset.uri != null) asset.uri.toString() else "",
+            contentDescription = "Asset view",
+            alignment = Alignment.Center,
+            contentScale = if (contain) ContentScale.Fit else ContentScale.Crop,
+            modifier = modifier
+                .clip(
+                    RoundedCornerShape(
+                        corners.left.dp,
+                        corners.top.dp,
+                        corners.right.dp,
+                        corners.bottom.dp
+                    )
+
                 )
-            )
-    )
+                .background(ASSETS_BACKGROUND)
+        )
 }
 
 // Custom extension
@@ -85,13 +105,14 @@ fun OneItemAssetRowView(asset: CameraItem) {
 }
 
 @Composable
-fun TwoItemsAssetRowView(assets: Array<CameraItem>) {
+fun TwoItemsAssetRowView(assets: List<CameraItem>) {
     Row(
         Modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.SpaceBetween) {
-        AssetView(asset = assets[0],
+        AssetView(
+            asset = assets[0],
             modifier = Modifier
                 .weight(0.5F)
                 .aspectRatio(ratio = 1f),
@@ -99,7 +120,8 @@ fun TwoItemsAssetRowView(assets: Array<CameraItem>) {
         Spacer(modifier = Modifier
             .width(ASSETS_GUTTER_SIZE.dp)
             .fillMaxHeight())
-        AssetView(asset = assets[1],
+        AssetView(
+            asset = assets[1],
             modifier = Modifier
                 .weight(0.5F)
                 .aspectRatio(ratio = 1f),
@@ -108,7 +130,7 @@ fun TwoItemsAssetRowView(assets: Array<CameraItem>) {
 }
 
 @Composable
-fun ThreeItemsAssetRowView(assets: Array<CameraItem>) {
+fun ThreeItemsAssetRowView(assets: List<CameraItem>) {
     Layout(
         modifier = Modifier.fillMaxWidth(),
         content = {
@@ -135,7 +157,7 @@ fun ThreeItemsAssetRowView(assets: Array<CameraItem>) {
 }
 
 @Composable
-fun FourItemsAssetRowView(assets: Array<CameraItem>) {
+fun FourItemsAssetRowView(assets: List<CameraItem>) {
     Layout(
         modifier = Modifier.fillMaxWidth(),
         content = {
@@ -167,8 +189,26 @@ fun FourItemsAssetRowView(assets: Array<CameraItem>) {
 }
 
 @Composable
-fun MediaCapturedOrImportedActivityView(items: Array<CameraItem>, capturedItems: Boolean) {
+fun MediaCapturedOrImportedActivityView(items: SnapshotStateList<CameraItem>, capturedItems: Boolean) {
     Column(verticalArrangement = Arrangement.spacedBy(ASSETS_GUTTER_SIZE.dp)) {
+
+        Text(
+            text = pluralStringResource(id = R.plurals.you_captured_n_items, count = items.size, items.size),
+            style = MaterialTheme.typography.bodyLarge,
+            color = Color.DarkGray,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
+        val deletedItemsString = items.deletedItemsString()
+        if (deletedItemsString != null) {
+            Text(
+                text = deletedItemsString,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.DarkGray,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
+
         val rows = layoutRows(items)
         rows.forEach { row ->
             when (row) {
@@ -183,99 +223,39 @@ fun MediaCapturedOrImportedActivityView(items: Array<CameraItem>, capturedItems:
             }
         }
     }
-//    @Environment(\.isPreview) var isPreview
-//
-//    @State var proxy:GeometryProxy
-//    @State var items: [CameraItem]
-//    @State var capturedItems: Bool = true
-//
-//    var body: some View {
-//        VStack(spacing: 0) {
-//        Text(capturedItems ? "You captured \(items.count) items" : "You imported \(items.count) items")
-//        .font(.custom(Font.bodyFont, size: 15))
-//        .fontWeight(.regular)
-//        .foregroundColor(Color("colorDarkGray"))
-//        .multilineTextAlignment(.leading)
-//        .frame(maxWidth: .infinity, alignment: .leading)
-//        .padding(EdgeInsets(top: 0, leading: 0, bottom: 8, trailing: 0))
-//
-//        if let deletedItemsString = items.deletedItemsString() {
-//            Text(deletedItemsString)
-//                .font(.custom(Font.bodyFont, size: 12))
-//            .fontWeight(.regular)
-//            .foregroundColor(Color("colorDarkGray"))
-//            .multilineTextAlignment(.leading)
-//            .frame(maxWidth: .infinity, alignment: .leading)
-//            .padding(EdgeInsets(top: 0, leading: 0, bottom: 8, trailing: 0))
-//        }
-//
-//        VStack(spacing: assetsGutterSize) {
-//            let rows = layoutRows()
-//            ForEach((0..<rows.count), id: \.self) { index in
-//                switch rows[index] {
-//            case .oneItem(let asset):
-//            OneItemAssetRowView(asset: asset, proxy: proxy)
-//            case .twoItems(let assets):
-//            TwoItemsAssetRowView(assets: assets, proxy: proxy)
-//            case .threeItems(let assets):
-//            ThreeItemsAssetRowView(assets: assets, proxy: proxy)
-//            case .fourItems(let assets):
-//            FourItemsAssetRowView(assets: assets, proxy: proxy)
-//        }
-//        }
-//        }
-//    }
-//        .onDisappear {
-//            print("RELEASE ALL IMAGES!!!")
-//        }
-//
-//    }
-//
-//    func layoutRows() -> [CapturedAssetRow] {
-//        var array = Array(self.items).withDeletedItemsRemoved()
-//
-//        var rows: [CapturedAssetRow] = []
-//        while (array.count > 0) {
-//            if array.count >= 7 {
-//                rows.append(.threeItems(assets: [] + array[0...2]))
-//                rows.append(.fourItems(assets: [] + array[3...6]))
-//                array = [] + array.dropFirst(7)
-//            } else if array.count >= 3 {
-//                rows.append(.threeItems(assets: [] + array[0...2]))
-//                array = [] + array.dropFirst(3)
-//            } else if array.count >= 2 {
-//                rows.append(.twoItems(assets: [] + array[0...1]))
-//                array = [] + array.dropFirst(2)
-//            } else {
-//                rows.append(.oneItem(asset: array[0]))
-//                array = [] + array.dropFirst(1)
-//            }
-//        }
-//        return rows
-//    }
 }
 
-fun Array<CameraItem>.withDeletedItemsRemoved(): Array<CameraItem> {
-    return this // TODO
+@Composable
+fun SnapshotStateList<CameraItem>.deletedItemsString(): String? {
+    val countDeleted = this.filter { it.isDeleted(LocalContext.current)} .size
+    if (countDeleted > 0) {
+        return pluralStringResource(
+            id = R.plurals.n_items_have_been_deleted_or_are_not_accessible,
+            count = countDeleted,
+            countDeleted
+        )
+    }
+    return null
 }
 
-fun layoutRows(items: Array<CameraItem>): MutableList<CapturedAssetRow> {
-    var array = items.withDeletedItemsRemoved()
+@Composable
+fun layoutRows(items: SnapshotStateList<CameraItem>): MutableList<CapturedAssetRow> {
+    var array = items.withDeletedItemsRemoved().toList()
     val rows: MutableList<CapturedAssetRow> = mutableListOf()
     while (array.isNotEmpty()) {
-        if (array.size >= 7) {
-            rows.add(CapturedAssetRow.ThreeItems(array.sliceArray(IntRange(0, 2))))
-            rows.add(CapturedAssetRow.FourItems(array.sliceArray(IntRange(3,6))))
-            array = array.drop(7).toTypedArray()
+        array = if (array.size >= 7) {
+            rows.add(CapturedAssetRow.ThreeItems(array.slice(IntRange(0, 2))))
+            rows.add(CapturedAssetRow.FourItems(array.slice(IntRange(3,6))))
+            array.drop(7)
         } else if (array.size >= 3) {
-            rows.add(CapturedAssetRow.ThreeItems(array.sliceArray(IntRange(0, 2))))
-            array = array.drop(3).toTypedArray()
+            rows.add(CapturedAssetRow.ThreeItems(array.slice(IntRange(0, 2))))
+            array.drop(3)
         } else if (array.size >= 2) {
-            rows.add(CapturedAssetRow.TwoItems(array.sliceArray(IntRange(0, 1))))
-            array = array.drop(2).toTypedArray()
+            rows.add(CapturedAssetRow.TwoItems(array.slice(IntRange(0, 1))))
+            array.drop(2)
         } else {
             rows.add(CapturedAssetRow.OneItem(array.get(0)))
-            array = array.drop(1).toTypedArray()
+            array.drop(1)
         }
     }
     return rows
@@ -291,17 +271,42 @@ fun ActivityView(activity: Activity) {
             is ActivityType.PublicKeyShared -> Text("Public Key Shared")
         }
     }
-//Text(text = "Size ${activity.items.size}")
+}
+@Composable
+fun ActivityDateView(date: Date, menu: (@Composable() (BoxScope.() -> Unit))? = null) {
+    Row(modifier = Modifier
+        .background(Color.White.copy(alpha = 0.6f)),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = date.displayFormatted(),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(top = 24.dp)
+        )
+        Spacer(modifier = Modifier.weight(1f))
+        if (menu != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .wrapContentSize(Alignment.TopEnd),
+                content = menu
+            )
+        }
+    }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ActivitiesView(onShowCamera: (() -> Unit)? = null) {
     MaterialTheme() {
     Surface(modifier = Modifier.fillMaxSize()) {
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(ASSETS_GUTTER_SIZE.dp)) {
+        LazyColumn(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(ASSETS_GUTTER_SIZE.dp)) {
             item {
+                val context = LocalContext.current
+
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = "Activities", style = MaterialTheme.typography.headlineLarge)
+                    Text(text = "Activities", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.weight(1.0f))
                     IconButton(
                         modifier =
@@ -309,19 +314,66 @@ fun ActivitiesView(onShowCamera: (() -> Unit)? = null) {
                             .width(32.dp)
                             .height(32.dp),
                         onClick = {
-                            if (onShowCamera != null) {
-                                onShowCamera()
+                            if (context is ActivitiesViewDelegate) {
+                                (context as ActivitiesViewDelegate).openCamera()
+                                //onShowCamera()
                             }
                         }) {
-                        Icon(painter = painterResource(id = R.drawable.ic_camera), contentDescription = "hej")
+                        Icon(painter = painterResource(id = R.drawable.ic_camera), contentDescription = "Open camera")
                     }
                 }
             }
-            items(Activities.activities) { activity ->
-                ActivityView(activity = activity)
+            Activities.activities.forEach { activity ->
+                stickyHeader {
+                    ActivityDateView(date = activity.startTime, menu = activityMenu(activity))
+                }
+                item(key = activity.id) {
+                    ActivityView(activity = activity)
+                }
             }
         }
     }
+    }
+}
+
+@Composable
+fun activityMenu(activity: Activity):  (@Composable() (BoxScope.() -> Unit))? {
+    var expanded by remember { mutableStateOf(false) }
+
+    return {
+        IconButton(onClick = { expanded = true }) {
+            Icon(
+                Icons.Default.MoreVert,
+                contentDescription = "Activity action menu",
+                tint = Color.Gray
+            )
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            when (activity.type) {
+                is ActivityType.MediaCaptured -> {
+                    val count = activity.type.items.withDeletedItemsRemoved().size
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = pluralStringResource(
+                                    id = R.plurals.share_these_n_items,
+                                    count = count,
+                                    count
+                                )
+                            )
+                        },
+                        onClick = {
+                            expanded = false
+                        }
+                    )
+                }
+
+                else -> {}
+            }
+        }
     }
 }
 
@@ -329,4 +381,18 @@ fun ActivitiesView(onShowCamera: (() -> Unit)? = null) {
 @Composable
 fun ActivityViewPreview() {
     ActivitiesView()
+}
+
+@SuppressLint("SimpleDateFormat")
+@Composable
+fun Date.displayFormatted(): String {
+    val formatter =
+    if (DateUtils.isToday(this.time)) {
+        SimpleDateFormat(stringResource(id = R.string.date_display_days_since_today))
+    } else if (DateUtils.isToday(this.time + 24 * 60 * 60000)) {
+        SimpleDateFormat(stringResource(id = R.string.date_display_days_since_yesterday))
+    } else {
+        SimpleDateFormat(stringResource(id = R.string.date_display_days_since_other))
+    }
+    return formatter.format(this)
 }

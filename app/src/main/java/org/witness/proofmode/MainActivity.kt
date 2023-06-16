@@ -2,7 +2,10 @@ package org.witness.proofmode
 
 import android.Manifest
 import android.animation.Animator
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Build
@@ -15,8 +18,11 @@ import android.widget.Toast
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.ui.platform.ComposeView
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.preference.PreferenceManager
 import com.google.android.material.navigation.NavigationView
 import gun0912.tedimagepicker.builder.TedImagePicker
@@ -27,9 +33,12 @@ import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.databinding.ActivityMainBinding
 import org.witness.proofmode.onboarding.OnboardingActivity
 import org.witness.proofmode.util.GPSTracker
+import timber.log.Timber
 import java.io.IOException
+import java.util.Date
+import java.util.UUID
 
-class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
+class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener, ActivitiesViewDelegate {
     private lateinit var mPrefs: SharedPreferences
     private  var mPgpUtils: PgpUtils? = null
     private lateinit var layoutOn: View
@@ -94,8 +103,35 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         if (isOn)
         (application as ProofModeApp).init(this, true)
 
+        // Setup activity view
+        val activityView = findViewById<ComposeView>(R.id.activityView)
+        activityView.setContent {
+            ActivitiesView(onShowCamera = {
+                this.startCamera(activityView)
+            })
+        }
+        val intentFilter = IntentFilter("org.witness.proofmode.NEW_MEDIA")
+        intentFilter.addDataType("image/jpeg")
+        LocalBroadcastManager.getInstance(applicationContext).registerReceiver(cameraReceiver, intentFilter)
 
+        Activities.load(this)
     }
+
+    private class CameraReceiver: BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val uri = intent?.data
+            if (uri != null && context != null) {
+                Timber.tag("CAMERA").d("URI is" + uri.toString())
+                Activities.addActivity(Activity(
+                    UUID.randomUUID().toString(), ActivityType.MediaCaptured(items = mutableStateListOf(
+                    CameraItem(UUID.randomUUID().toString(), uri)
+                )), Date()
+                ), context)
+            }
+
+        }
+    }
+    private val cameraReceiver = CameraReceiver()
 
     private fun startService () {
         val intentService = Intent(this, ProofService::class.java)
@@ -461,5 +497,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         private val optionalPermissions = arrayOf(
             Manifest.permission.ACCESS_NETWORK_STATE,
         )
+    }
+
+    override fun openCamera() {
+        this.startCamera(findViewById<ComposeView>(R.id.activityView))
     }
 }

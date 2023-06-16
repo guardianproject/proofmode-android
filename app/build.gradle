@@ -2,6 +2,8 @@ plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
     id 'kotlin-kapt'
+    id 'com.google.devtools.ksp' version '1.8.10-1.0.9'
+    id 'org.jetbrains.kotlin.plugin.serialization'
 }
 
 
@@ -93,6 +95,16 @@ dependencies {
     implementation 'androidx.compose.ui:ui-tooling:1.4.3'
     implementation "androidx.constraintlayout:constraintlayout-compose:1.0.1"
     implementation "androidx.activity:activity-compose:1.7.2"
+    implementation "io.coil-kt:coil-compose:2.4.0"
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0'
+
+    // Room database support (for activity view)
+    def room_version = "2.5.1"
+
+    implementation "androidx.room:room-runtime:$room_version"
+    annotationProcessor "androidx.room:room-compiler:$room_version"
+    // To use Kotlin Symbol Processing (KSP)
+    ksp "androidx.room:room-compiler:$room_version"
 
    // implementation project(":camera")
     implementation project(":android-libproofcam")
