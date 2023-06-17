@@ -119,4 +119,5 @@
     <string name="proof_integrity_verified_failed">A prova de verificação da integridade falhou!</string>
     <string name="pub_key_id">A identidade da chave pública foi gerada:</string>
     <string name="pub_key_gen_error">Houve um erro ao gerar a chave de identidade. Reinstale.</string>
+    <string name="proof_generated_success">Prova gerada!</string>
 </resources>
