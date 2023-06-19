@@ -9,6 +9,8 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Database
@@ -21,6 +23,8 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
 import androidx.room.Update
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import java.util.Date
@@ -124,13 +128,13 @@ sealed class ActivityType {
 @Dao
 interface ActivitiesDao {
     @Query("SELECT * FROM activities ORDER BY startTime ASC")
-    fun getAll(): List<Activity>
+    suspend fun getAll(): List<Activity>
 
     @Update
-    fun update(activity: Activity?)
+    suspend fun update(activity: Activity?)
 
     @Insert
-    fun insert(activity: Activity?)
+    suspend fun insert(activity: Activity?)
 }
 
 class Converters {
@@ -167,7 +171,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun activitiesDao(): ActivitiesDao
 }
 
-object Activities
+object Activities: ViewModel()
 {
     var activities: SnapshotStateList<Activity> = SnapshotStateList()
 
@@ -181,16 +185,20 @@ object Activities
             this.db = Room.databaseBuilder(
                 context.applicationContext,
                 AppDatabase::class.java, "activities-db"
-            ).allowMainThreadQueries().build() // FIXME - NOT ON MAIN THREAD!
+            ).build()
         }
         return this.db
     }
 
     fun load(context: Context) {
         val db = getDB(context)
-        //db.clearAllTables()
-        val allFromDb = db.activitiesDao().getAll()
-        this.activities.addAll(allFromDb)
+        viewModelScope.launch {
+            //db.clearAllTables()
+            val allFromDb = db.activitiesDao().getAll()
+            MainScope().launch {
+                activities.addAll(allFromDb)
+            }
+        }
     }
 
     fun addActivity(activity: Activity, context: Context) {
@@ -199,10 +207,14 @@ object Activities
         if (activity.type is ActivityType.MediaCaptured && lastActivity != null && lastActivity.type is ActivityType.MediaCaptured && (lastActivity.startTime.time + 60000) >= activity.startTime.time ) {
             // If within the same minute, add it to the same "batch" as the previous one.
             lastActivity.type.items += activity.type.items
-            db.activitiesDao().update(lastActivity)
+            viewModelScope.launch {
+                db.activitiesDao().update(lastActivity)
+            }
         } else {
             this.activities.add(activity)
-            db.activitiesDao().insert(activity)
+            viewModelScope.launch {
+                db.activitiesDao().insert(activity)
+            }
         }
     }
 }
