@@ -33,6 +33,9 @@ import androidx.documentfile.provider.DocumentFile
 import androidx.preference.PreferenceManager
 import org.bouncycastle.crypto.params.Blake3Parameters.context
 import org.bouncycastle.openpgp.PGPException
+import org.witness.proofmode.ActivityConstants.EXTRA_FILE_NAME
+import org.witness.proofmode.ActivityConstants.EXTRA_SHARE_TEXT
+import org.witness.proofmode.ActivityConstants.INTENT_ACTIVITY_ITEMS_SHARED
 import org.witness.proofmode.PermissionActivity.Companion.hasPermissions
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
@@ -565,6 +568,7 @@ class ShareProofActivity : AppCompatActivity() {
                         fileZip
                     )
                     shareFiltered(
+                        this,
                         getString(R.string.select_app),
                         shareText.toString(),
                         shareUris,
@@ -1175,43 +1179,6 @@ class ShareProofActivity : AppCompatActivity() {
         startActivity(openInChooser)
     }
 
-    private fun shareFiltered(
-        shareMessage: String,
-        shareText: String,
-        shareUris: ArrayList<Uri?>?,
-        shareItems: ArrayList<CameraItem>?,
-        shareZipUri: Uri?
-    ) {
-        val modeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION
-        val shareIntent = Intent()
-        shareIntent.action = Intent.ACTION_SEND
-        shareIntent.setDataAndType(shareZipUri, "application/zip")
-        shareIntent.putExtra(Intent.EXTRA_TEXT, shareText)
-        shareIntent.putExtra(Intent.EXTRA_STREAM, shareZipUri)
-        shareIntent.addFlags(modeFlags)
-
-        val sharedIntent = Intent("org.witness.proofmode.ITEMS_SHARED")
-        if (shareItems != null) {
-            sharedIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, shareItems)
-        }
-        val pendingIntent =
-            PendingIntent.getBroadcast(this, 0, sharedIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-
-        val openInChooser = Intent.createChooser(shareIntent, shareMessage, pendingIntent.intentSender)
-        openInChooser.addFlags(modeFlags)
-        val resInfoList = this.packageManager.queryIntentActivities(openInChooser, 0)
-        for (resolveInfo in resInfoList) {
-            val packageName = resolveInfo.activityInfo.packageName
-            if (shareUris != null) for (uri in shareUris) grantUriPermission(
-                packageName,
-                uri,
-                modeFlags
-            )
-            shareZipUri?.let { grantUriPermission(packageName, it, modeFlags) }
-        }
-        startActivity(openInChooser)
-    }
-
     private fun askForPermission(permission: String, requestCode: Int) {
         if (ContextCompat.checkSelfPermission(
                 this,
@@ -1378,6 +1345,52 @@ class ShareProofActivity : AppCompatActivity() {
                 null
             )
             return Uri.parse(path)
+        }
+
+        fun shareFiltered(
+            context: Context,
+            shareMessage: String,
+            shareText: String,
+            shareUris: ArrayList<Uri?>?,
+            shareItems: ArrayList<CameraItem>?,
+            shareZipUri: Uri?
+        ) {
+            val modeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+            val shareIntent = Intent()
+            shareIntent.action = Intent.ACTION_SEND
+            shareIntent.setDataAndType(shareZipUri, "application/zip")
+            shareIntent.putExtra(Intent.EXTRA_TEXT, shareText)
+            shareIntent.putExtra(Intent.EXTRA_STREAM, shareZipUri)
+            shareIntent.addFlags(modeFlags)
+
+            val sharedIntent = Intent(INTENT_ACTIVITY_ITEMS_SHARED)
+            if (shareItems != null) {
+                sharedIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, shareItems)
+                sharedIntent.putExtra(EXTRA_SHARE_TEXT, shareText)
+                sharedIntent.putExtra(EXTRA_FILE_NAME, shareZipUri?.toString())
+            }
+            val pendingIntent =
+                PendingIntent.getBroadcast(
+                    context,
+                    0,
+                    sharedIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+
+            val openInChooser =
+                Intent.createChooser(shareIntent, shareMessage, pendingIntent.intentSender)
+            openInChooser.addFlags(modeFlags)
+            val resInfoList = context.packageManager.queryIntentActivities(openInChooser, 0)
+            for (resolveInfo in resInfoList) {
+                val packageName = resolveInfo.activityInfo.packageName
+                if (shareUris != null) for (uri in shareUris) context.grantUriPermission(
+                    packageName,
+                    uri,
+                    modeFlags
+                )
+                shareZipUri?.let { context.grantUriPermission(packageName, it, modeFlags) }
+            }
+            context.startActivity(openInChooser)
         }
     }
 }

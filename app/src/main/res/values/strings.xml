@@ -157,4 +157,6 @@
         <item quantity="one">Share this item</item>
         <item quantity="other">Share these %d items</item>
     </plurals>
+    <string name="you_shared_your_public_key">You shared your public key</string>
+    <string name="re_share">Re-share</string>
 </resources>

@@ -36,6 +36,14 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
 import java.io.InputStream
 
+object ActivityConstants
+{
+    const val INTENT_ACTIVITY_ITEMS_SHARED: String = "org.witness.proofmode.ITEMS_SHARED"
+
+    const val EXTRA_FILE_NAME = "fileName"
+    const val EXTRA_SHARE_TEXT = "shareText"
+}
+
 @Serializable
 data class CameraItem(val id: String, @Serializable(with = UriSerializer::class) val uri: Uri? = null) // TODO move this
     : Parcelable {
@@ -102,13 +110,17 @@ sealed class ActivityType {
     @Serializable
     class MediaCaptured(
         @Serializable(with = SnapshotStateListOfCameraItemsSerializer::class) var items: SnapshotStateList<CameraItem>) : ActivityType()
+
     class MediaImported(val items: SnapshotStateList<CameraItem>) : ActivityType()
 
     @SerialName("mediaShare")
     @Serializable
     class MediaShared(
         @Serializable(with = SnapshotStateListOfCameraItemsSerializer::class) var items: SnapshotStateList<CameraItem>,
-        val fileName: String) : ActivityType()
+        val fileName: String? = null, val shareText: String? = null) : ActivityType()
+
+    @SerialName("publicKeyShare")
+    @Serializable
     class PublicKeyShared(val key: String) : ActivityType()
 }
 
@@ -206,7 +218,7 @@ object Activities
             ),
             Activity(
                 id = "3",
-                type = ActivityType.MediaShared(items = mutableStateListOf(), fileName = "Filename.zip"),
+                type = ActivityType.MediaShared(items = mutableStateListOf(), fileName = "Filename.zip", shareText = "Share text"),
                 Date(Date().time - 2000)
 
             ),

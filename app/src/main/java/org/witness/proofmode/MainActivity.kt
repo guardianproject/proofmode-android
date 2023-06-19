@@ -21,12 +21,16 @@ import androidx.appcompat.widget.PopupMenu
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.platform.ComposeView
+import androidx.core.net.toFile
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.preference.PreferenceManager
 import com.google.android.material.navigation.NavigationView
 import gun0912.tedimagepicker.builder.TedImagePicker
+import org.witness.proofmode.ActivityConstants.EXTRA_FILE_NAME
+import org.witness.proofmode.ActivityConstants.EXTRA_SHARE_TEXT
+import org.witness.proofmode.ActivityConstants.INTENT_ACTIVITY_ITEMS_SHARED
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
 import org.witness.proofmode.camera.CameraActivity
@@ -35,6 +39,7 @@ import org.witness.proofmode.databinding.ActivityMainBinding
 import org.witness.proofmode.onboarding.OnboardingActivity
 import org.witness.proofmode.util.GPSTracker
 import timber.log.Timber
+import java.io.File
 import java.io.IOException
 import java.util.Date
 import java.util.UUID
@@ -113,7 +118,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         intentFilter.addDataType("image/jpeg")
         LocalBroadcastManager.getInstance(applicationContext).registerReceiver(cameraReceiver, intentFilter)
 
-        registerReceiver(cameraReceiver, IntentFilter("org.witness.proofmode.ITEMS_SHARED"))
+        registerReceiver(cameraReceiver, IntentFilter(INTENT_ACTIVITY_ITEMS_SHARED))
 
         Activities.load(this)
     }
@@ -122,9 +127,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
                 "org.witness.proofmode.NEW_MEDIA" -> {
-                    val uri = intent?.data
+                    val uri = intent.data
                     if (uri != null && context != null) {
-                        Timber.tag("CAMERA").d("URI is" + uri.toString())
                         Activities.addActivity(
                             Activity(
                                 UUID.randomUUID().toString(), ActivityType.MediaCaptured(
@@ -137,10 +141,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     }
                 }
 
-                "org.witness.proofmode.ITEMS_SHARED" -> {
+                INTENT_ACTIVITY_ITEMS_SHARED -> {
                     val items = intent.getParcelableArrayListExtra<CameraItem>(Intent.EXTRA_STREAM) ?: ArrayList()
                     if (items.size > 0 && context != null) {
-                        val activity = Activity(UUID.randomUUID().toString(), ActivityType.MediaShared(items = items.toMutableStateList(), ""), Date())
+                        val fileName = intent.getStringExtra(EXTRA_FILE_NAME) ?: ""
+                        val shareText = intent.getStringExtra(EXTRA_SHARE_TEXT) ?: ""
+                        val activity = Activity(UUID.randomUUID().toString(), ActivityType.MediaShared(items = items.toMutableStateList(), fileName, shareText = shareText), Date())
                         Activities.addActivity(activity, context)
                     }
                 }
@@ -289,7 +295,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             publishKey()
             return true
         } else if (id == R.id.action_share_key) {
-            shareKey()
+            shareCurrentPublicKey()
             return true
         }
         return super.onOptionsItemSelected(item)
@@ -360,7 +366,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
     }
 
-    private fun shareKey() {
+    private fun shareCurrentPublicKey() {
         try {
             if (mPgpUtils == null) mPgpUtils = PgpUtils.getInstance(
                 this,
@@ -368,10 +374,28 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             )
             mPgpUtils?.publishPublicKey()
             val pubKey = mPgpUtils?.publicKeyString
+            if (pubKey != null) {
+                sharePublicKey(pubKey)
+            }
+        } catch (ioe: IOException) {
+            Log.e("Proofmode", "error publishing key", ioe)
+        }
+    }
+
+    override fun sharePublicKey(pubKey: String) {
+        try {
             val intent = Intent(Intent.ACTION_SEND)
             intent.type = "text/plain"
             intent.putExtra(Intent.EXTRA_TEXT, pubKey)
             startActivity(intent)
+
+            // ACTION_SEND does not return a result, so just assume we shared ok
+            val activity = Activity(
+                UUID.randomUUID().toString(),
+                ActivityType.PublicKeyShared(key = pubKey),
+                Date()
+            )
+            Activities.addActivity(activity, this)
         } catch (ioe: IOException) {
             Log.e("Proofmode", "error publishing key", ioe)
         }
@@ -521,7 +545,27 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         this.startCamera(findViewById<ComposeView>(R.id.activityView))
     }
 
-    override fun shareItems(media: List<Uri>) {
-        this.showShareProof(mediaList = media)
+    override fun shareItems(media: List<CameraItem>, fileName: String?, shareText: String?) {
+        // Check if we still have the original to share.
+        if (fileName != null) {
+            val uri = Uri.parse(fileName)
+            if (uri != null && contentResolver.getType(uri) != null) {
+                // Use existing .zip
+                val aList = ArrayList<CameraItem>()
+                for (item in media) aList.add(item)
+                ShareProofActivity.shareFiltered(
+                    this,
+                    getString(R.string.select_app),
+                    shareText ?: "",
+                    null,
+                    aList,
+                    uri
+                )
+
+
+                return
+            }
+        }
+        this.showShareProof(mediaList = media.map { it.uri }.filterNotNull())
     }
 }

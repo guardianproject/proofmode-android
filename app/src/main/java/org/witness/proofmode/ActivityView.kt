@@ -64,7 +64,8 @@ val ASSETS_BACKGROUND = Color.Black.copy(0.1F)
 
 interface ActivitiesViewDelegate {
     abstract fun openCamera()
-    abstract fun shareItems(media: List<Uri>)
+    abstract fun shareItems(media: List<CameraItem>, fileName: String?, shareText: String?)
+    abstract fun sharePublicKey(key: String)
 }
 
 sealed class CapturedAssetRow {
@@ -267,7 +268,7 @@ fun layoutRows(items: SnapshotStateList<CameraItem>): MutableList<CapturedAssetR
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun MediaSharedActivityView(items: SnapshotStateList<CameraItem>, fileName: String) {
+fun MediaSharedActivityView(items: SnapshotStateList<CameraItem>, fileName: String?) {
     Column(verticalArrangement = Arrangement.spacedBy(ASSETS_GUTTER_SIZE.dp)) {
 
         Text(
@@ -295,10 +296,21 @@ fun MediaSharedActivityView(items: SnapshotStateList<CameraItem>, fileName: Stri
                 AssetView(
                     asset = asset,
                     corners = RectF(30f,30f,30f,30f),
-                    modifier = Modifier.width(60.dp).height(60.dp))
+                    modifier = Modifier
+                        .width(60.dp)
+                        .height(60.dp))
             }
         }
     }
+}
+
+@Composable
+fun PublicKeySharedActivityView(key: String) {
+    Text(
+        text = stringResource(id = R.string.you_shared_your_public_key),
+        style = MaterialTheme.typography.bodyLarge,
+        color = Color.DarkGray
+    )
 }
 
 @Composable
@@ -308,7 +320,7 @@ fun ActivityView(activity: Activity) {
             is ActivityType.MediaCaptured -> MediaCapturedOrImportedActivityView(activity.type.items, true)
             is ActivityType.MediaImported -> Text("Media Imported")
             is ActivityType.MediaShared -> MediaSharedActivityView(activity.type.items, fileName = activity.type.fileName)
-            is ActivityType.PublicKeyShared -> Text("Public Key Shared")
+            is ActivityType.PublicKeyShared -> PublicKeySharedActivityView(key = activity.type.key)
         }
     }
 }
@@ -406,10 +418,40 @@ fun activityMenu(activity: Activity):  (@Composable() (BoxScope.() -> Unit))? {
                         },
                         onClick = {
                             expanded = false
-                            (context as? ActivitiesViewDelegate)?.shareItems(activity.type.items.map { it.uri }.filterNotNull())
+                            (context as? ActivitiesViewDelegate)?.shareItems(activity.type.items, fileName = null, shareText = null)
                         }
                     )
                 }
+
+                is ActivityType.MediaShared -> {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = stringResource(id = R.string.re_share)
+                            )
+                        },
+                        onClick = {
+                            expanded = false
+                            (context as? ActivitiesViewDelegate)?.shareItems(activity.type.items, activity.type.fileName, activity.type.shareText)
+                        }
+                    )
+                }
+
+                is ActivityType.PublicKeyShared -> {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = stringResource(id = R.string.re_share)
+                            )
+                        },
+                        onClick = {
+                            expanded = false
+                            (context as? ActivitiesViewDelegate)?.sharePublicKey(activity.type.key)
+                        }
+                    )
+
+                }
+
 
                 else -> {}
             }
