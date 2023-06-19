@@ -5,6 +5,8 @@ import android.graphics.RectF
 import android.text.format.DateUtils
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -25,7 +27,9 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -34,7 +38,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -74,28 +81,53 @@ sealed class CapturedAssetRow {
     class FourItems(val items: List<ProofableItem>) : CapturedAssetRow()
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AssetView(asset: ProofableItem, modifier: Modifier = Modifier, contain: Boolean = false, corners: RectF = RectF(
     ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS)
 ) {
+    val uriString = asset.uri.toString()
+    val selectedAssets = LocalSelection.current
 
-        AsyncImage(
-            model = if (asset.uri != null) asset.uri.toString() else "",
-            contentDescription = "Asset view",
-            alignment = Alignment.Center,
-            contentScale = if (contain) ContentScale.Fit else ContentScale.Crop,
-            modifier = modifier
-                .clip(
-                    RoundedCornerShape(
-                        corners.left.dp,
-                        corners.top.dp,
-                        corners.right.dp,
-                        corners.bottom.dp
-                    )
-
+    AsyncImage(
+        model = asset.uri.toString(),
+        contentDescription = "Asset view",
+        alignment = Alignment.Center,
+        contentScale = if (contain) ContentScale.Fit else ContentScale.Crop,
+        modifier = modifier
+            .combinedClickable(
+                onClick = {
+                    if (selectedAssets.size > 0 && !selectedAssets.contains(uriString)) {
+                        selectedAssets.add(uriString)
+                    }
+                },
+                onLongClick = {
+                    if (!selectedAssets.contains(uriString)) {
+                        selectedAssets.add(uriString)
+                    }
+                }
+            )
+            .clip(
+                RoundedCornerShape(
+                    corners.left.dp,
+                    corners.top.dp,
+                    corners.right.dp,
+                    corners.bottom.dp
                 )
-                .background(ASSETS_BACKGROUND)
-        )
+
+            )
+            .background(ASSETS_BACKGROUND)
+            .border(
+                width = 4.dp,
+                color = if (LocalSelection.current.contains(uriString)) Color.Blue else Color.Transparent,
+                shape = RoundedCornerShape(
+                    corners.left.dp,
+                    corners.top.dp,
+                    corners.right.dp,
+                    corners.bottom.dp
+                )
+            )
+    )
 }
 
 // Custom extension
@@ -348,40 +380,115 @@ fun ActivityDateView(date: Date, menu: (@Composable() (BoxScope.() -> Unit))? = 
     }
 }
 
+val LocalSelection = compositionLocalOf<SnapshotStateList<String>> { error("Not set") }
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ActivitiesView() {
-    MaterialTheme() {
-    Surface(modifier = Modifier.fillMaxSize()) {
-        LazyColumn(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(ASSETS_GUTTER_SIZE.dp)) {
-            item {
-                val context = LocalContext.current
+    val selectedAssets = remember {
+        mutableStateListOf<String>()
+    }
+    CompositionLocalProvider(LocalSelection provides selectedAssets) {
+        MaterialTheme() {
+            Surface(modifier = Modifier.fillMaxSize()) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        modifier = Modifier
+                            .padding(10.dp)
+                            .weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(ASSETS_GUTTER_SIZE.dp)
+                    ) {
+                        item {
+                            val context = LocalContext.current
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = "Activities", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.weight(1.0f))
-                    IconButton(
-                        modifier =
-                        Modifier
-                            .width(32.dp)
-                            .height(32.dp),
-                        onClick = {
-                            (context as? ActivitiesViewDelegate)?.openCamera()
-                        }) {
-                        Icon(painter = painterResource(id = R.drawable.ic_camera), contentDescription = "Open camera")
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Activities",
+                                    style = MaterialTheme.typography.headlineLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.weight(1.0f))
+                                IconButton(
+                                    modifier =
+                                    Modifier
+                                        .width(32.dp)
+                                        .height(32.dp),
+                                    onClick = {
+                                        (context as? ActivitiesViewDelegate)?.openCamera()
+                                    }) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_camera),
+                                        contentDescription = "Open camera"
+                                    )
+                                }
+                            }
+                        }
+                        Activities.activities.reversed().forEach { activity ->
+                            stickyHeader {
+                                ActivityDateView(
+                                    date = activity.startTime,
+                                    menu = activityMenu(activity)
+                                )
+                            }
+                            item(key = activity.id) {
+                                ActivityView(activity = activity)
+                            }
+                        }
+                    }
+
+                    if (selectedAssets.size > 0) {
+                        // Selection footer
+                        //
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .padding(10.dp)
+                        ) {
+                            Text(
+                                text = pluralStringResource(
+                                    id = R.plurals.n_items_selected,
+                                    count = selectedAssets.size,
+                                    selectedAssets.size
+                                ),
+                                color = Color.DarkGray,
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.weight(1.0f))
+
+                            val context = LocalContext.current
+                            IconButton(
+                                modifier =
+                                Modifier
+                                    .width(32.dp)
+                                    .height(32.dp),
+                                onClick = {
+                                    (context as? ActivitiesViewDelegate)?.shareItems(Activities.selectedItems(selectedAssets), fileName = null, shareText = null)
+                                    selectedAssets.clear()
+                                }) {
+                                Icon(
+                                    imageVector = Icons.Default.Share,
+                                    contentDescription = "Share"
+                                )
+                            }
+                            IconButton(
+                                modifier =
+                                Modifier
+                                    .width(32.dp)
+                                    .height(32.dp),
+                                onClick = {
+                                    selectedAssets.clear()
+                                }) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Cancel"
+                                )
+                            }
+                        }
                     }
                 }
             }
-            Activities.activities.reversed().forEach { activity ->
-                stickyHeader {
-                    ActivityDateView(date = activity.startTime, menu = activityMenu(activity))
-                }
-                item(key = activity.id) {
-                    ActivityView(activity = activity)
-                }
-            }
         }
-    }
     }
 }
 

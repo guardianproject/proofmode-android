@@ -217,6 +217,24 @@ object Activities: ViewModel()
             }
         }
     }
+
+    private fun getActivityProofableItems(activity: Activity): SnapshotStateList<ProofableItem> {
+        when (activity.type) {
+            is ActivityType.MediaCaptured -> return activity.type.items
+            else -> {}
+        }
+        return mutableStateListOf<ProofableItem>()
+    }
+
+    fun getAllCapturedAndImportedItems(): List<ProofableItem> {
+        return activities.flatMap { getActivityProofableItems( it ) }
+    }
+
+    fun selectedItems(selection: List<String>): List<ProofableItem> {
+        // TODO - We don't really care about the ids here, so we match on the uri and just select
+        // the first id one, if more than one mapping from id -> uri.
+        return getAllCapturedAndImportedItems().filter { selection.contains(it.uri.toString()) }.toList().distinctBy { it.uri }
+    }
 }
 
 @Composable

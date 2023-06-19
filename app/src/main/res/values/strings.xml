@@ -135,6 +135,11 @@
 
     <string name="proof_generated_success">Proof generated!</string>
 
+    <plurals name="n_items_selected">
+        <item quantity="zero">No items selected</item>
+        <item quantity="one">One item selected</item>
+        <item quantity="other">%d items selected</item>
+    </plurals>
     <plurals name="you_captured_n_items">
         <item quantity="zero">You captured no items</item>
         <item quantity="one">You captured one item</item>
