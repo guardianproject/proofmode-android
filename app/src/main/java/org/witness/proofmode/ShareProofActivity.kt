@@ -6,7 +6,6 @@ import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.IntentSender
 import android.content.pm.LabeledIntent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -31,7 +30,6 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.documentfile.provider.DocumentFile
 import androidx.preference.PreferenceManager
-import org.bouncycastle.crypto.params.Blake3Parameters.context
 import org.bouncycastle.openpgp.PGPException
 import org.witness.proofmode.ActivityConstants.EXTRA_FILE_NAME
 import org.witness.proofmode.ActivityConstants.EXTRA_SHARE_TEXT
@@ -300,7 +298,7 @@ class ShareProofActivity : AppCompatActivity() {
         val intent = intent
         val action = intent.action
         val shareUris = ArrayList<Uri?>()
-        val shareItems = ArrayList<CameraItem>()
+        val shareItems = ArrayList<ProofableItem>()
         val shareText = StringBuffer()
         var fileProofDownloads: File? = null
         if (Intent.ACTION_SEND_MULTIPLE == action) {
@@ -472,7 +470,7 @@ class ShareProofActivity : AppCompatActivity() {
         val intent = intent
         val action = intent.action
         val shareUris = ArrayList<Uri?>()
-        val shareItems = ArrayList<CameraItem>()
+        val shareItems = ArrayList<ProofableItem>()
 
         val shareText = StringBuffer()
         if (Intent.ACTION_SEND_MULTIPLE == action) {
@@ -754,7 +752,7 @@ class ShareProofActivity : AppCompatActivity() {
         mediaHash: String?,
         mediaUri: Uri?,
         shareUris: ArrayList<Uri?>,
-        shareItems: ArrayList<CameraItem>,
+        shareItems: ArrayList<ProofableItem>,
         sb: StringBuffer,
         fBatchProofOut: PrintWriter?,
         shareMedia: Boolean,
@@ -817,7 +815,7 @@ class ShareProofActivity : AppCompatActivity() {
 
         // Successful?
         if (result != null) {
-            shareItems.add(CameraItem(result, mediaUri))
+            shareItems.add(ProofableItem(result, mediaUri))
         }
 
         return result != null
@@ -1352,7 +1350,7 @@ class ShareProofActivity : AppCompatActivity() {
             shareMessage: String,
             shareText: String,
             shareUris: ArrayList<Uri?>?,
-            shareItems: ArrayList<CameraItem>?,
+            shareItems: ArrayList<ProofableItem>?,
             shareZipUri: Uri?
         ) {
             val modeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION

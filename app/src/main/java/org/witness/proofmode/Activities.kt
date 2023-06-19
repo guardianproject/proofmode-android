@@ -45,11 +45,11 @@ object ActivityConstants
 }
 
 @Serializable
-data class CameraItem(val id: String, @Serializable(with = UriSerializer::class) val uri: Uri? = null) // TODO move this
+data class ProofableItem(val id: String, @Serializable(with = UriSerializer::class) val uri: Uri)
     : Parcelable {
     constructor(parcel: Parcel) : this(
-        parcel.readString() ?: "",
-        parcel.readParcelable(Uri::class.java.classLoader)
+        id = parcel.readString() ?: "",
+        uri = checkNotNull(parcel.readParcelable(Uri::class.java.classLoader))
     ) {
     }
 
@@ -62,19 +62,19 @@ data class CameraItem(val id: String, @Serializable(with = UriSerializer::class)
         return 0
     }
 
-    companion object CREATOR : Parcelable.Creator<CameraItem> {
-        override fun createFromParcel(parcel: Parcel): CameraItem {
-            return CameraItem(parcel)
+    companion object CREATOR : Parcelable.Creator<ProofableItem> {
+        override fun createFromParcel(parcel: Parcel): ProofableItem {
+            return ProofableItem(parcel)
         }
 
-        override fun newArray(size: Int): Array<CameraItem?> {
+        override fun newArray(size: Int): Array<ProofableItem?> {
             return arrayOfNulls(size)
         }
     }
 }
 
 object SnapshotStateListOfCameraItemsSerializer :
-    KSerializer<SnapshotStateList<CameraItem>> by SnapshotStateListSerializer(CameraItem.serializer())
+    KSerializer<SnapshotStateList<ProofableItem>> by SnapshotStateListSerializer(ProofableItem.serializer())
 
 class SnapshotStateListSerializer<T>(private val dataSerializer: KSerializer<T>) : KSerializer<SnapshotStateList<T>> {
     override val descriptor: SerialDescriptor = dataSerializer.descriptor
@@ -98,10 +98,7 @@ object UriSerializer : KSerializer<Uri> {
 }
 
 @Entity(tableName = "activities")
-class Activity(id: String, type: ActivityType, startTime: Date) {
-    @PrimaryKey val id = id
-    @ColumnInfo(name = "data") val type = type
-    @ColumnInfo(name = "startTime") val startTime = startTime
+class Activity(@PrimaryKey val id: String, @ColumnInfo(name = "data") val type: ActivityType, @ColumnInfo(name = "startTime") val startTime: Date) {
 }
 
 @Serializable
@@ -109,14 +106,14 @@ sealed class ActivityType {
     @SerialName("capture")
     @Serializable
     class MediaCaptured(
-        @Serializable(with = SnapshotStateListOfCameraItemsSerializer::class) var items: SnapshotStateList<CameraItem>) : ActivityType()
+        @Serializable(with = SnapshotStateListOfCameraItemsSerializer::class) var items: SnapshotStateList<ProofableItem>) : ActivityType()
 
-    class MediaImported(val items: SnapshotStateList<CameraItem>) : ActivityType()
+    class MediaImported(val items: SnapshotStateList<ProofableItem>) : ActivityType()
 
     @SerialName("mediaShare")
     @Serializable
     class MediaShared(
-        @Serializable(with = SnapshotStateListOfCameraItemsSerializer::class) var items: SnapshotStateList<CameraItem>,
+        @Serializable(with = SnapshotStateListOfCameraItemsSerializer::class) var items: SnapshotStateList<ProofableItem>,
         val fileName: String? = null, val shareText: String? = null) : ActivityType()
 
     @SerialName("publicKeyShare")
@@ -138,7 +135,7 @@ interface ActivitiesDao {
 
 class Converters {
     @TypeConverter
-    fun fromActivityType(value: ActivityType): String? {
+    fun fromActivityType(value: ActivityType): String {
         return Json.encodeToString(value)
     }
 
@@ -174,63 +171,9 @@ object Activities
 {
     var activities: SnapshotStateList<Activity> = SnapshotStateList()
 
-    lateinit var db: AppDatabase
+    private lateinit var db: AppDatabase
 
     init {
-        println("Singleton class invoked.")
-        val demoActivities = listOf(
-            Activity(
-                id = "6", type = ActivityType.MediaCaptured(
-                    items = mutableStateListOf(
-                        CameraItem(id = "7"),
-                        CameraItem(id = "8"),
-                        CameraItem(id = "9"),
-                        CameraItem(id = "10"),
-                        CameraItem(id = "11"),
-                        CameraItem(id = "12"),
-                        CameraItem(id = "13"),
-                        CameraItem(id = "14"),
-                    )
-                ), Date()
-            ),
-            Activity(
-                id = "1", type = ActivityType.MediaCaptured(
-                    items = mutableStateListOf(
-                        CameraItem(id = "1"),
-                        CameraItem(id = "2")
-                    )
-                ), Date()
-            ),
-            Activity(
-                id = "5", type = ActivityType.MediaCaptured(
-                    items = mutableStateListOf(
-                        CameraItem(id = "4"),
-                        CameraItem(id = "5"),
-                        CameraItem(id = "6")
-                    )
-                ), Date()
-            ),
-            Activity(
-                id = "2",
-                type = ActivityType.MediaImported(items = mutableStateListOf()),
-                Date(Date().time - 1000)
-
-            ),
-            Activity(
-                id = "3",
-                type = ActivityType.MediaShared(items = mutableStateListOf(), fileName = "Filename.zip", shareText = "Share text"),
-                Date(Date().time - 2000)
-
-            ),
-            Activity(
-                id = "1", type = ActivityType.MediaCaptured(
-                    items = mutableStateListOf(
-                        CameraItem(id = "3")
-                    )
-                ), Date()
-            ),
-        )
-        //this.activities.addAll(demoActivities)
     }
 
     fun getDB(context: Context): AppDatabase {
@@ -265,20 +208,18 @@ object Activities
 }
 
 @Composable
-fun SnapshotStateList<CameraItem>.withDeletedItemsRemoved(): SnapshotStateList<CameraItem> {
+fun SnapshotStateList<ProofableItem>.withDeletedItemsRemoved(): SnapshotStateList<ProofableItem> {
     return this.filter { !it.isDeleted(LocalContext.current)}.toMutableStateList()
 }
 
-fun CameraItem.isDeleted(context: Context): Boolean {
-    if (null != this.uri) {
-        try {
-            val inputStream: InputStream? = context.getContentResolver().openInputStream(this.uri)
-            if (inputStream != null) {
-                inputStream.close()
-                return false
-            }
-        } catch (_: Exception) {
+fun ProofableItem.isDeleted(context: Context): Boolean {
+    try {
+        val inputStream: InputStream? = context.getContentResolver().openInputStream(this.uri)
+        if (inputStream != null) {
+            inputStream.close()
+            return false
         }
+    } catch (_: Exception) {
     }
     return true
 }

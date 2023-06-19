@@ -2,7 +2,6 @@ package org.witness.proofmode
 
 import android.annotation.SuppressLint
 import android.graphics.RectF
-import android.net.Uri
 import android.text.format.DateUtils
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -64,19 +63,19 @@ val ASSETS_BACKGROUND = Color.Black.copy(0.1F)
 
 interface ActivitiesViewDelegate {
     abstract fun openCamera()
-    abstract fun shareItems(media: List<CameraItem>, fileName: String?, shareText: String?)
+    abstract fun shareItems(media: List<ProofableItem>, fileName: String?, shareText: String?)
     abstract fun sharePublicKey(key: String)
 }
 
 sealed class CapturedAssetRow {
-    class OneItem(val item: CameraItem) : CapturedAssetRow()
-    class TwoItems(val items: List<CameraItem>) : CapturedAssetRow()
-    class ThreeItems(val items: List<CameraItem>) : CapturedAssetRow()
-    class FourItems(val items: List<CameraItem>) : CapturedAssetRow()
+    class OneItem(val item: ProofableItem) : CapturedAssetRow()
+    class TwoItems(val items: List<ProofableItem>) : CapturedAssetRow()
+    class ThreeItems(val items: List<ProofableItem>) : CapturedAssetRow()
+    class FourItems(val items: List<ProofableItem>) : CapturedAssetRow()
 }
 
 @Composable
-fun AssetView(asset: CameraItem, modifier: Modifier = Modifier, contain: Boolean = false, corners: RectF = RectF(
+fun AssetView(asset: ProofableItem, modifier: Modifier = Modifier, contain: Boolean = false, corners: RectF = RectF(
     ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS)
 ) {
 
@@ -105,12 +104,12 @@ fun Constraints.exact(width: Int, height: Int): Constraints {
 }
 
 @Composable
-fun OneItemAssetRowView(asset: CameraItem) {
+fun OneItemAssetRowView(asset: ProofableItem) {
     AssetView(asset = asset, modifier = Modifier.aspectRatio(ratio = 16 / 9f))
 }
 
 @Composable
-fun TwoItemsAssetRowView(assets: List<CameraItem>) {
+fun TwoItemsAssetRowView(assets: List<ProofableItem>) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -135,7 +134,7 @@ fun TwoItemsAssetRowView(assets: List<CameraItem>) {
 }
 
 @Composable
-fun ThreeItemsAssetRowView(assets: List<CameraItem>) {
+fun ThreeItemsAssetRowView(assets: List<ProofableItem>) {
     Layout(
         modifier = Modifier.fillMaxWidth(),
         content = {
@@ -162,7 +161,7 @@ fun ThreeItemsAssetRowView(assets: List<CameraItem>) {
 }
 
 @Composable
-fun FourItemsAssetRowView(assets: List<CameraItem>) {
+fun FourItemsAssetRowView(assets: List<ProofableItem>) {
     Layout(
         modifier = Modifier.fillMaxWidth(),
         content = {
@@ -194,7 +193,7 @@ fun FourItemsAssetRowView(assets: List<CameraItem>) {
 }
 
 @Composable
-fun MediaCapturedOrImportedActivityView(items: SnapshotStateList<CameraItem>, capturedItems: Boolean) {
+fun MediaCapturedOrImportedActivityView(items: SnapshotStateList<ProofableItem>, capturedItems: Boolean) {
     Column(verticalArrangement = Arrangement.spacedBy(ASSETS_GUTTER_SIZE.dp)) {
 
         Text(
@@ -231,7 +230,7 @@ fun MediaCapturedOrImportedActivityView(items: SnapshotStateList<CameraItem>, ca
 }
 
 @Composable
-fun SnapshotStateList<CameraItem>.deletedItemsString(): String? {
+fun SnapshotStateList<ProofableItem>.deletedItemsString(): String? {
     val countDeleted = this.filter { it.isDeleted(LocalContext.current)} .size
     if (countDeleted > 0) {
         return pluralStringResource(
@@ -244,7 +243,7 @@ fun SnapshotStateList<CameraItem>.deletedItemsString(): String? {
 }
 
 @Composable
-fun layoutRows(items: SnapshotStateList<CameraItem>): MutableList<CapturedAssetRow> {
+fun layoutRows(items: SnapshotStateList<ProofableItem>): MutableList<CapturedAssetRow> {
     var array = items.withDeletedItemsRemoved().toList()
     val rows: MutableList<CapturedAssetRow> = mutableListOf()
     while (array.isNotEmpty()) {
@@ -268,7 +267,7 @@ fun layoutRows(items: SnapshotStateList<CameraItem>): MutableList<CapturedAssetR
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun MediaSharedActivityView(items: SnapshotStateList<CameraItem>, fileName: String?) {
+fun MediaSharedActivityView(items: SnapshotStateList<ProofableItem>, fileName: String?) {
     Column(verticalArrangement = Arrangement.spacedBy(ASSETS_GUTTER_SIZE.dp)) {
 
         Text(

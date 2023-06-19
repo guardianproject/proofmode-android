@@ -21,7 +21,6 @@ import androidx.appcompat.widget.PopupMenu
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.platform.ComposeView
-import androidx.core.net.toFile
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
@@ -38,8 +37,6 @@ import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.databinding.ActivityMainBinding
 import org.witness.proofmode.onboarding.OnboardingActivity
 import org.witness.proofmode.util.GPSTracker
-import timber.log.Timber
-import java.io.File
 import java.io.IOException
 import java.util.Date
 import java.util.UUID
@@ -133,7 +130,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                             Activity(
                                 UUID.randomUUID().toString(), ActivityType.MediaCaptured(
                                     items = mutableStateListOf(
-                                        CameraItem(UUID.randomUUID().toString(), uri)
+                                        ProofableItem(UUID.randomUUID().toString(), uri)
                                     )
                                 ), Date()
                             ), context
@@ -142,7 +139,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 }
 
                 INTENT_ACTIVITY_ITEMS_SHARED -> {
-                    val items = intent.getParcelableArrayListExtra<CameraItem>(Intent.EXTRA_STREAM) ?: ArrayList()
+                    val items = intent.getParcelableArrayListExtra<ProofableItem>(Intent.EXTRA_STREAM) ?: ArrayList()
                     if (items.size > 0 && context != null) {
                         val fileName = intent.getStringExtra(EXTRA_FILE_NAME) ?: ""
                         val shareText = intent.getStringExtra(EXTRA_SHARE_TEXT) ?: ""
@@ -545,13 +542,13 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         this.startCamera(findViewById<ComposeView>(R.id.activityView))
     }
 
-    override fun shareItems(media: List<CameraItem>, fileName: String?, shareText: String?) {
+    override fun shareItems(media: List<ProofableItem>, fileName: String?, shareText: String?) {
         // Check if we still have the original to share.
         if (fileName != null) {
             val uri = Uri.parse(fileName)
             if (uri != null && contentResolver.getType(uri) != null) {
                 // Use existing .zip
-                val aList = ArrayList<CameraItem>()
+                val aList = ArrayList<ProofableItem>()
                 for (item in media) aList.add(item)
                 ShareProofActivity.shareFiltered(
                     this,
