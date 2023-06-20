@@ -22,21 +22,28 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
@@ -88,6 +95,7 @@ fun AssetView(asset: ProofableItem, modifier: Modifier = Modifier, contain: Bool
 ) {
     val uriString = asset.uri.toString()
     val selectedAssets = LocalSelection.current
+    val selectionHandler = LocalSelectionHandler.current
 
     AsyncImage(
         model = asset.uri.toString(),
@@ -99,6 +107,8 @@ fun AssetView(asset: ProofableItem, modifier: Modifier = Modifier, contain: Bool
                 onClick = {
                     if (selectedAssets.size > 0 && !selectedAssets.contains(uriString)) {
                         selectedAssets.add(uriString)
+                    } else {
+                        selectionHandler.select(asset)
                     }
                 },
                 onLongClick = {
@@ -380,18 +390,33 @@ fun ActivityDateView(date: Date, menu: (@Composable() (BoxScope.() -> Unit))? = 
     }
 }
 
+interface SelectionHandler {
+    abstract fun select(item: ProofableItem)
+}
+
 val LocalSelection = compositionLocalOf<SnapshotStateList<String>> { error("Not set") }
+val LocalSelectionHandler = compositionLocalOf<SelectionHandler> { error("Selection handler not set") }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ActivitiesView() {
+    var showSingleAssetView by remember { mutableStateOf(false) }
+
     val selectedAssets = remember {
         mutableStateListOf<String>()
     }
-    CompositionLocalProvider(LocalSelection provides selectedAssets) {
+    val selectionHandler = object: SelectionHandler {
+        override fun select(item: ProofableItem) {
+            showSingleAssetView = true
+        }
+    }
+    CompositionLocalProvider(LocalSelection provides selectedAssets, LocalSelectionHandler provides selectionHandler) {
         MaterialTheme() {
             Surface(modifier = Modifier.fillMaxSize()) {
-                Column(modifier = Modifier.fillMaxSize()) {
+                Column(modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .systemBarsPadding()) {
                     LazyColumn(
                         modifier = Modifier
                             .padding(10.dp)
@@ -485,6 +510,12 @@ fun ActivitiesView() {
                                 )
                             }
                         }
+                    }
+                }
+
+                if (showSingleAssetView) {
+                    SingleAssetViewWithToolbar {
+                        showSingleAssetView = false
                     }
                 }
             }
