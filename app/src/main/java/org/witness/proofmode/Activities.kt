@@ -135,6 +135,9 @@ interface ActivitiesDao {
 
     @Insert
     suspend fun insert(activity: Activity?)
+
+    @Query("SELECT * FROM activities WHERE data LIKE '%\"' || :id || '\"%' LIMIT 1")
+    suspend fun activityFromProofableItemId(id: String): Activity?
 }
 
 class Converters {
@@ -221,25 +224,42 @@ object Activities: ViewModel()
     private fun getActivityProofableItems(activity: Activity): SnapshotStateList<ProofableItem> {
         when (activity.type) {
             is ActivityType.MediaCaptured -> return activity.type.items
+            is ActivityType.MediaShared -> return activity.type.items
             else -> {}
         }
         return mutableStateListOf<ProofableItem>()
     }
 
-    fun getAllCapturedAndImportedItems(): List<ProofableItem> {
-        return activities.flatMap { getActivityProofableItems( it ) }
+    fun getAllCapturedAndImportedItems(context: Context): List<ProofableItem> {
+        return activities.flatMap { getActivityProofableItems( it ) }.toMutableStateList().withDeletedItemsRemoved(context).distinctBy { it.uri }
     }
 
-    fun selectedItems(selection: List<String>): List<ProofableItem> {
+    fun selectedItems(context: Context, selection: List<String>): List<ProofableItem> {
         // TODO - We don't really care about the ids here, so we match on the uri and just select
         // the first id one, if more than one mapping from id -> uri.
-        return getAllCapturedAndImportedItems().filter { selection.contains(it.uri.toString()) }.toList().distinctBy { it.uri }
+        return getAllCapturedAndImportedItems(context).filter { selection.contains(it.uri.toString()) }
+    }
+
+    fun dateForItem(item: ProofableItem, context: Context, onDate: (Date) -> Unit) {
+        // Try to find the activity that contains this item and use the "startDate" of that.
+        // TODO - Fetch and/or store the correct modify date somewhere.
+        val db = getDB(context)
+        viewModelScope.launch {
+            val activity = db.activitiesDao().activityFromProofableItemId(item.id)
+            if (activity != null) {
+                onDate(activity.startTime)
+            }
+        }
     }
 }
 
 @Composable
 fun SnapshotStateList<ProofableItem>.withDeletedItemsRemoved(): SnapshotStateList<ProofableItem> {
     return this.filter { !it.isDeleted(LocalContext.current)}.toMutableStateList()
+}
+
+fun SnapshotStateList<ProofableItem>.withDeletedItemsRemoved(context: Context): SnapshotStateList<ProofableItem> {
+    return this.filter { !it.isDeleted(context)}.toMutableStateList()
 }
 
 fun ProofableItem.isDeleted(context: Context): Boolean {

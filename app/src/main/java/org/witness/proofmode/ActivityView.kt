@@ -22,28 +22,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
@@ -71,6 +63,7 @@ import coil.compose.AsyncImage
 import java.text.SimpleDateFormat
 import java.util.Date
 
+
 const val ASSETS_GUTTER_SIZE = 10F
 const val ASSETS_CORNER_RADIUS = 20F
 val ASSETS_BACKGROUND = Color.Black.copy(0.1F)
@@ -90,31 +83,24 @@ sealed class CapturedAssetRow {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun AssetView(asset: ProofableItem, modifier: Modifier = Modifier, contain: Boolean = false, corners: RectF = RectF(
-    ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS)
+fun ProofableItemView(item: ProofableItem, modifier: Modifier = Modifier, contain: Boolean = false, corners: RectF = RectF(
+    ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS),
+                      showSelectionBorder: Boolean = true
 ) {
-    val uriString = asset.uri.toString()
-    val selectedAssets = LocalSelection.current
     val selectionHandler = LocalSelectionHandler.current
 
     AsyncImage(
-        model = asset.uri.toString(),
+        model = item.uri.toString(),
         contentDescription = "Asset view",
         alignment = Alignment.Center,
         contentScale = if (contain) ContentScale.Fit else ContentScale.Crop,
         modifier = modifier
             .combinedClickable(
                 onClick = {
-                    if (selectedAssets.size > 0 && !selectedAssets.contains(uriString)) {
-                        selectedAssets.add(uriString)
-                    } else {
-                        selectionHandler.select(asset)
-                    }
+                    selectionHandler.onProofableItemClick(item)
                 },
                 onLongClick = {
-                    if (!selectedAssets.contains(uriString)) {
-                        selectedAssets.add(uriString)
-                    }
+                    selectionHandler.onProofableItemLongClick(item)
                 }
             )
             .clip(
@@ -126,10 +112,10 @@ fun AssetView(asset: ProofableItem, modifier: Modifier = Modifier, contain: Bool
                 )
 
             )
-            .background(ASSETS_BACKGROUND)
+            //.background(ASSETS_BACKGROUND)
             .border(
                 width = 4.dp,
-                color = if (LocalSelection.current.contains(uriString)) Color.Blue else Color.Transparent,
+                color = if (showSelectionBorder && selectionHandler.isSelected(item)) Color.Blue else Color.Transparent,
                 shape = RoundedCornerShape(
                     corners.left.dp,
                     corners.top.dp,
@@ -147,7 +133,7 @@ fun Constraints.exact(width: Int, height: Int): Constraints {
 
 @Composable
 fun OneItemAssetRowView(asset: ProofableItem) {
-    AssetView(asset = asset, modifier = Modifier.aspectRatio(ratio = 16 / 9f))
+    ProofableItemView(item = asset, modifier = Modifier.aspectRatio(ratio = 16 / 9f))
 }
 
 @Composable
@@ -157,8 +143,8 @@ fun TwoItemsAssetRowView(assets: List<ProofableItem>) {
             .fillMaxWidth()
             .height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.SpaceBetween) {
-        AssetView(
-            asset = assets[0],
+        ProofableItemView(
+            item = assets[0],
             modifier = Modifier
                 .weight(0.5F)
                 .aspectRatio(ratio = 1f),
@@ -166,8 +152,8 @@ fun TwoItemsAssetRowView(assets: List<ProofableItem>) {
         Spacer(modifier = Modifier
             .width(ASSETS_GUTTER_SIZE.dp)
             .fillMaxHeight())
-        AssetView(
-            asset = assets[1],
+        ProofableItemView(
+            item = assets[1],
             modifier = Modifier
                 .weight(0.5F)
                 .aspectRatio(ratio = 1f),
@@ -180,9 +166,9 @@ fun ThreeItemsAssetRowView(assets: List<ProofableItem>) {
     Layout(
         modifier = Modifier.fillMaxWidth(),
         content = {
-            AssetView(asset = assets[0])
-            AssetView(asset = assets[1])
-            AssetView(asset = assets[2])
+            ProofableItemView(item = assets[0])
+            ProofableItemView(item = assets[1])
+            ProofableItemView(item = assets[2])
         }
     ) { measurables, constraints ->
         val w = constraints.maxWidth
@@ -207,10 +193,10 @@ fun FourItemsAssetRowView(assets: List<ProofableItem>) {
     Layout(
         modifier = Modifier.fillMaxWidth(),
         content = {
-            AssetView(asset = assets[0])
-            AssetView(asset = assets[1], corners = RectF(ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS, 0f, 0f))
-            AssetView(asset = assets[2], corners = RectF(0f, 0f, ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS))
-            AssetView(asset = assets[3])
+            ProofableItemView(item = assets[0])
+            ProofableItemView(item = assets[1], corners = RectF(ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS, 0f, 0f))
+            ProofableItemView(item = assets[2], corners = RectF(0f, 0f, ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS))
+            ProofableItemView(item = assets[3])
         }
     ) { measurables, constraints ->
         val w = constraints.maxWidth
@@ -286,7 +272,7 @@ fun SnapshotStateList<ProofableItem>.deletedItemsString(): String? {
 
 @Composable
 fun layoutRows(items: SnapshotStateList<ProofableItem>): MutableList<CapturedAssetRow> {
-    var array = items.withDeletedItemsRemoved().toList()
+    var array = items.withDeletedItemsRemoved().toList().reversed()
     val rows: MutableList<CapturedAssetRow> = mutableListOf()
     while (array.isNotEmpty()) {
         array = if (array.size >= 7) {
@@ -334,8 +320,8 @@ fun MediaSharedActivityView(items: SnapshotStateList<ProofableItem>, fileName: S
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.padding(8.dp)) {
             validItems.forEach { asset ->
-                AssetView(
-                    asset = asset,
+                ProofableItemView(
+                    item = asset,
                     corners = RectF(30f,30f,30f,30f),
                     modifier = Modifier
                         .width(60.dp)
@@ -391,32 +377,61 @@ fun ActivityDateView(date: Date, menu: (@Composable() (BoxScope.() -> Unit))? = 
 }
 
 interface SelectionHandler {
-    abstract fun select(item: ProofableItem)
+    abstract fun onProofableItemClick(item: ProofableItem)
+    abstract fun onProofableItemLongClick(item: ProofableItem)
+    abstract fun isSelected(item: ProofableItem): Boolean
+    abstract fun anySelected(): Boolean
+    @Composable abstract fun selectedItems(): List<ProofableItem>
 }
 
-val LocalSelection = compositionLocalOf<SnapshotStateList<String>> { error("Not set") }
 val LocalSelectionHandler = compositionLocalOf<SelectionHandler> { error("Selection handler not set") }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ActivitiesView() {
-    var showSingleAssetView by remember { mutableStateOf(false) }
+    var showSingleAssetView: ProofableItem? by remember { mutableStateOf(null) }
 
     val selectedAssets = remember {
         mutableStateListOf<String>()
     }
     val selectionHandler = object: SelectionHandler {
-        override fun select(item: ProofableItem) {
-            showSingleAssetView = true
+        override fun onProofableItemClick(item: ProofableItem) {
+            val uriString = item.uri.toString()
+            if (selectedAssets.size > 0 && !selectedAssets.contains(uriString)) {
+                selectedAssets.add(uriString)
+            } else {
+                showSingleAssetView = item
+            }
+        }
+
+        override fun onProofableItemLongClick(item: ProofableItem) {
+            val uriString = item.uri.toString()
+            if (!selectedAssets.contains(uriString)) {
+                selectedAssets.add(uriString)
+            }
+        }
+
+        override fun isSelected(item: ProofableItem): Boolean {
+            return selectedAssets.contains(item.uri.toString())
+        }
+
+        override fun anySelected(): Boolean {
+            return selectedAssets.size > 0
+        }
+
+        @Composable override fun selectedItems(): List<ProofableItem> {
+            return Activities.selectedItems(context = LocalContext.current,selection = selectedAssets)
         }
     }
-    CompositionLocalProvider(LocalSelection provides selectedAssets, LocalSelectionHandler provides selectionHandler) {
+    CompositionLocalProvider(LocalSelectionHandler provides selectionHandler) {
         MaterialTheme() {
-            Surface(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier.fillMaxSize()) {
                 Column(modifier = Modifier
                     .fillMaxSize()
-                    .statusBarsPadding()
-                    .systemBarsPadding()) {
+                    .padding(top = 56.dp)
+                    .background(Color.White)
+                ) {
                     LazyColumn(
                         modifier = Modifier
                             .padding(10.dp)
@@ -482,13 +497,14 @@ fun ActivitiesView() {
                             Spacer(modifier = Modifier.weight(1.0f))
 
                             val context = LocalContext.current
+                            val selectedItems = Activities.selectedItems(context = context, selectedAssets)
                             IconButton(
                                 modifier =
                                 Modifier
                                     .width(32.dp)
                                     .height(32.dp),
                                 onClick = {
-                                    (context as? ActivitiesViewDelegate)?.shareItems(Activities.selectedItems(selectedAssets), fileName = null, shareText = null)
+                                    (context as? ActivitiesViewDelegate)?.shareItems(selectedItems, fileName = null, shareText = null)
                                     selectedAssets.clear()
                                 }) {
                                 Icon(
@@ -513,9 +529,10 @@ fun ActivitiesView() {
                     }
                 }
 
-                if (showSingleAssetView) {
-                    SingleAssetViewWithToolbar {
-                        showSingleAssetView = false
+                if (showSingleAssetView != null) {
+                    SingleAssetViewWithToolbar(initialItem = showSingleAssetView!!) {
+                        selectedAssets.clear()
+                        showSingleAssetView = null
                     }
                 }
             }
