@@ -204,10 +204,12 @@ object Activities: ViewModel()
         }
     }
 
+    var timeBatchWindow = 60000 * 5 //5 minutes
+
     fun addActivity(activity: Activity, context: Context) {
         val db = getDB(context)
         val lastActivity = this.activities.lastOrNull()
-        if (activity.type is ActivityType.MediaCaptured && lastActivity != null && lastActivity.type is ActivityType.MediaCaptured && (lastActivity.startTime.time + 60000) >= activity.startTime.time ) {
+        if (activity.type is ActivityType.MediaCaptured && lastActivity != null && lastActivity.type is ActivityType.MediaCaptured && (lastActivity.startTime.time + timeBatchWindow) >= activity.startTime.time ) {
             // If within the same minute, add it to the same "batch" as the previous one.
             lastActivity.type.items += activity.type.items
             viewModelScope.launch {

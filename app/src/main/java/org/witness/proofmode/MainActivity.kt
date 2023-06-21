@@ -14,6 +14,7 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.widget.CompoundButton
 import android.widget.Toast
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
@@ -22,6 +23,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.platform.ComposeView
 import androidx.core.view.GravityCompat
+import androidx.core.view.MenuItemCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.preference.PreferenceManager
@@ -30,6 +32,8 @@ import gun0912.tedimagepicker.builder.TedImagePicker
 import org.witness.proofmode.ActivityConstants.EXTRA_FILE_NAME
 import org.witness.proofmode.ActivityConstants.EXTRA_SHARE_TEXT
 import org.witness.proofmode.ActivityConstants.INTENT_ACTIVITY_ITEMS_SHARED
+import org.witness.proofmode.ProofMode.EVENT_PROOF_EXTRA_HASH
+import org.witness.proofmode.ProofMode.EVENT_PROOF_GENERATED
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
 import org.witness.proofmode.camera.CameraActivity
@@ -82,6 +86,17 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         drawerToggle.syncState()
         val navigationView = mainBinding.navView
         navigationView.setNavigationItemSelectedListener(this)
+
+        var switchItem = navigationView.menu.findItem(R.id.menu_background_service);
+        var switchView = MenuItemCompat.getActionView(switchItem) as CompoundButton
+        val isOn = mPrefs.getBoolean("doProof", false)
+
+        switchView.isChecked = isOn
+
+        switchView.setOnCheckedChangeListener{ buttonView, isChecked ->
+            setProofModeOn(isChecked)
+        }
+
         val btnSettings = mainBinding.contentMain.btnSettings
         btnSettings.setOnClickListener { openSettings() }
         val btnShareProof = mainBinding.contentMain.btnShareProof
@@ -99,9 +114,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             // Showing the popup menu
             popupMenu.show()
         }
-        updateOnOffState(false)
-
-        val isOn = mPrefs.getBoolean("doProof", false)
+        //updateOnOffState(false)
 
         if (isOn)
         (application as ProofModeApp).init(this, true)
@@ -114,6 +127,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         val intentFilter = IntentFilter("org.witness.proofmode.NEW_MEDIA")
         intentFilter.addDataType("image/jpeg")
         LocalBroadcastManager.getInstance(applicationContext).registerReceiver(cameraReceiver, intentFilter)
+        LocalBroadcastManager.getInstance(applicationContext).registerReceiver(cameraReceiver, IntentFilter(EVENT_PROOF_GENERATED))
 
         registerReceiver(cameraReceiver, IntentFilter(INTENT_ACTIVITY_ITEMS_SHARED))
 
@@ -135,6 +149,13 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                                 ), Date()
                             ), context
                         )
+                    }
+                }
+
+                EVENT_PROOF_GENERATED -> {
+                    val uri = intent.data
+                    if (uri != null && context != null) {
+                      //proof generated update?
                     }
                 }
 
@@ -182,6 +203,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 showShareProof(
                     it
                 )
+                addProofActivity (it)
             }
             
     }
@@ -192,7 +214,24 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 showShareProof(
                     it
                 )
+                addProofActivity (it)
             }
+    }
+
+    private fun addProofActivity (items: List<Uri>) {
+
+
+        val proofItems = ArrayList<ProofableItem>()
+        for (item in items)
+        {
+            proofItems.add(ProofableItem(UUID.randomUUID().toString(), item))
+        }
+
+
+        val fileName = intent.getStringExtra(EXTRA_FILE_NAME) ?: ""
+        val shareText = intent.getStringExtra(EXTRA_SHARE_TEXT) ?: ""
+        val activity = Activity(UUID.randomUUID().toString(), ActivityType.MediaShared(items = proofItems.toMutableStateList(), fileName, shareText = shareText), Date())
+        Activities.addActivity(activity, this)
     }
 
     private fun showShareProof(mediaList: List<Uri>) {
@@ -216,16 +255,17 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         if (isOn) {
             if (!askForPermissions(requiredPermissions, REQUEST_CODE_REQUIRED_PERMISSIONS)) {
                 mPrefs.edit().putBoolean(ProofMode.PREFS_DOPROOF, true).apply()
-                updateOnOffState(true)
+             //   updateOnOffState(true)
                 (application as ProofModeApp).init(this, true)
             }
         } else {
             mPrefs.edit().putBoolean(ProofMode.PREFS_DOPROOF, false).apply()
-            updateOnOffState(true)
+          //  updateOnOffState(true)
             (application as ProofModeApp).cancel(this)
         }
     }
 
+    /**
     private fun updateOnOffState(animate: Boolean) {
         val isOn = mPrefs.getBoolean("doProof", false)
         if (animate) {
@@ -270,11 +310,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             layoutOff.visibility = if (isOn) View.GONE else View.VISIBLE
         }
 
-    }
+    }**/
 
     override fun onResume() {
         super.onResume()
-        updateOnOffState(false)
+     //   updateOnOffState(false)
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -294,6 +334,15 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         } else if (id == R.id.action_share_key) {
             shareCurrentPublicKey()
             return true
+        }
+        else if (id == R.id.action_share_photos) {
+            showImagePicker();
+        }
+        else if (id == R.id.action_share_videos) {
+            showVideoPicker();
+        }
+        else if (id == R.id.action_share_documents) {
+            showDocumentPicker();
         }
         return super.onOptionsItemSelected(item)
     }
@@ -451,12 +500,24 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             if (data?.data != null) {
                 intentShare.action = Intent.ACTION_SEND
                 intentShare.data = data.data
+
+                Activities.addActivity(
+                    Activity(
+                        UUID.randomUUID().toString(), ActivityType.MediaCaptured(
+                            items = mutableStateListOf(
+                                ProofableItem(UUID.randomUUID().toString(), data.data as Uri)
+                            )
+                        ), Date()
+                    ), this
+                )
             }
             if (data?.clipData != null) {
                 intentShare.action = Intent.ACTION_SEND_MULTIPLE
                 intentShare.clipData = data.clipData
             }
             startActivity(intentShare)
+
+
         }
     }
 
@@ -513,6 +574,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 openDigitalSignatures()
                 return true
             }
+
         }
         return false
     }
