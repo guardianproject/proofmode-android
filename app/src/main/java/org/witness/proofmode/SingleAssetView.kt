@@ -7,6 +7,8 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -23,6 +25,9 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
@@ -41,6 +46,7 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,6 +59,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import java.lang.Float.max
 import java.lang.Float.min
 import java.text.SimpleDateFormat
@@ -112,11 +119,16 @@ fun SingleAssetView(initialItem: ProofableItem, modifier: Modifier = Modifier, s
     var topPartHeight by remember {
         mutableStateOf(0f)
     }
+    var topPartWidth by remember {
+        mutableStateOf(0f)
+    }
     val allAssets by remember {
         mutableStateOf(
-            Activities.getAllCapturedAndImportedItems(context).reversed()
+            Activities.getAllCapturedAndImportedItems(context)
         )
     }
+    var selectedIndex by remember { mutableStateOf(allAssets.indexOfFirst { it.uri.toString() == initialItem.uri.toString() } .coerceAtLeast(0)) }
+
     val showMetadata = LocalShowMetadata.current
     val metadataOpacity: Float by animateFloatAsState(
         targetValue =
@@ -139,13 +151,18 @@ fun SingleAssetView(initialItem: ProofableItem, modifier: Modifier = Modifier, s
                 .times(1 - metadataOpacity)
         )
     }
-
+    val coroutineScope = rememberCoroutineScope()
+    val previewItemCenterOffset = with(localDensity) {
+        -((topPartWidth / 2).toInt() - 28.dp.roundToPx())
+    }
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = selectedIndex, initialFirstVisibleItemScrollOffset = previewItemCenterOffset)
 
     Column(modifier = Modifier.fillMaxSize()) {
         Box(modifier = Modifier
             .weight(1f, true)
             .onGloballyPositioned { coordinates ->
                 topPartHeight = coordinates.size.height.toFloat()
+                topPartWidth = coordinates.size.width.toFloat()
             }
         ) {
             BoxWithConstraints(modifier = Modifier
@@ -170,7 +187,13 @@ fun SingleAssetView(initialItem: ProofableItem, modifier: Modifier = Modifier, s
                     width = maxWidth,
                     height = itemViewHeight,
                     allAssets = allAssets,
-                    selectedAsset = initialItem,
+                    selectedIndex = selectedIndex,
+                    selectIndex = { idx ->
+                        selectedIndex = idx
+                        coroutineScope.launch {
+                            listState.scrollToItem(selectedIndex, previewItemCenterOffset)
+                        }
+                    },
                     setTitle = setTitle
                 )
             }
@@ -182,6 +205,12 @@ fun SingleAssetView(initialItem: ProofableItem, modifier: Modifier = Modifier, s
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
             ) {
+                PreviewsView(allAssets = allAssets, listState = listState, selectedIndex = selectedIndex, selectIndex = { index ->
+                    selectedIndex = index
+                    coroutineScope.launch {
+                        listState.scrollToItem(selectedIndex, previewItemCenterOffset)
+                    }
+                })
             }
             Box(
                 modifier = Modifier
@@ -225,7 +254,7 @@ fun SingleAssetView(initialItem: ProofableItem, modifier: Modifier = Modifier, s
 }
 
 @Composable
-fun SingleAssetItemView(width: Dp, height: Dp, allAssets: List<ProofableItem>, selectedAsset: ProofableItem, setTitle: (String) -> Unit) {
+fun SingleAssetItemView(width: Dp, height: Dp, allAssets: List<ProofableItem>, selectedIndex: Int, selectIndex: (Int) -> Unit, setTitle: (String) -> Unit) {
     var dragOffset by remember {
         mutableStateOf(0f)
     }
@@ -241,8 +270,6 @@ fun SingleAssetItemView(width: Dp, height: Dp, allAssets: List<ProofableItem>, s
     )
 
     val itemSizeMultiplier by animateFloatAsState(targetValue = if (LocalSelectionHandler.current.anySelected()) 0.7f else 1f)
-
-    var selectedIndex by remember { mutableStateOf(allAssets.indexOfFirst { it.uri.toString() == selectedAsset.uri.toString() } .coerceAtLeast(0)) }
     val itemWidth = width.times(itemSizeMultiplier)
 
     val localDensity = LocalDensity.current
@@ -266,10 +293,10 @@ fun SingleAssetItemView(width: Dp, height: Dp, allAssets: List<ProofableItem>, s
         modifier = Modifier
             .height(height)
             .requiredWidth(
-                4.dp
+                10.dp
                     .plus(itemWidth)
                     .times(numItems)
-                    .minus(4.dp)
+                    .minus(10.dp)
             )
             .offset(x = with(localDensity) { if (dragging) dragOffset.toDp() else -animatedDragOffset.toDp() })
             .draggable(
@@ -279,19 +306,20 @@ fun SingleAssetItemView(width: Dp, height: Dp, allAssets: List<ProofableItem>, s
                 },
                 onDragStarted = {
                     dragging = true
-                    dragOffset = 0f } ,
+                    dragOffset = 0f
+                },
                 onDragStopped = { _ ->
                     if (dragOffset > 50 && selectedIndex > 0) {
-                        selectedIndex -= 1
+                        selectIndex(selectedIndex - 1)
                         dragOffset -= itemWidthPixels
                     } else if (dragOffset < -50 && selectedIndex < (allAssets.size + 1)) {
-                        selectedIndex += 1
+                        selectIndex(selectedIndex + 1)
                         dragOffset += itemWidthPixels
                     }
                     dragging = false
                 }
             )
-    , horizontalArrangement = Arrangement.spacedBy(4.dp)
+    , horizontalArrangement = Arrangement.spacedBy(10.dp)
     , verticalAlignment = Alignment.CenterVertically
     ) {
         items.forEach { tuple ->
@@ -312,7 +340,9 @@ fun SingleAssetItemView(width: Dp, height: Dp, allAssets: List<ProofableItem>, s
                         Icon(imageVector = Icons.Default.CheckCircle,
                             contentDescription = "Selected",
                             tint = Color.Blue,
-                            modifier = Modifier.align(Alignment.BottomEnd).padding(10.dp)
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(10.dp)
                         )
                     }
                 }
@@ -320,6 +350,43 @@ fun SingleAssetItemView(width: Dp, height: Dp, allAssets: List<ProofableItem>, s
                 Box(modifier = Modifier
                     .width(itemWidth)
                     .height(if (width < height) width else height)
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun PreviewsView(allAssets: List<ProofableItem>, listState: LazyListState, selectedIndex: Int, selectIndex: (Int) -> Unit) {
+    LazyRow (
+        state = listState,
+        modifier = Modifier
+        .fillMaxSize()
+        .padding(4.dp))
+        //.horizontalScroll(scrollState))
+    {
+        allAssets.forEachIndexed { index, item ->
+            item {
+                val isSelected = selectedIndex == index
+                ProofableItemView(
+                    item = item,
+                    contain = false,
+                    corners = RectF(0f, 0f, 0f, 0f),
+                    modifier = Modifier
+                        .width(if (isSelected) 56.dp else 40.dp)
+                        .combinedClickable(
+                            onClick = {
+                                selectIndex(index)
+                            },
+                            onLongClick = {
+                                // Ignore, but override default handling in ProofableItemView
+                            }
+                        )
+                        .padding(
+                            start = if (isSelected) 8.dp else 0.dp,
+                            end = if (isSelected) 8.dp else 0.dp
+                        )
                 )
             }
         }

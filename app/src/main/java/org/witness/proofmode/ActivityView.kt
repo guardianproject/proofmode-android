@@ -94,7 +94,7 @@ fun ProofableItemView(item: ProofableItem, modifier: Modifier = Modifier, contai
         contentDescription = "Asset view",
         alignment = Alignment.Center,
         contentScale = if (contain) ContentScale.Fit else ContentScale.Crop,
-        modifier = modifier
+        modifier = Modifier
             .combinedClickable(
                 onClick = {
                     selectionHandler.onProofableItemClick(item)
@@ -123,6 +123,7 @@ fun ProofableItemView(item: ProofableItem, modifier: Modifier = Modifier, contai
                     corners.bottom.dp
                 )
             )
+            .then(modifier)
     )
 }
 
