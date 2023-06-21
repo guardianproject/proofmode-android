@@ -2,12 +2,13 @@ package org.witness.proofmode
 
 import android.graphics.RectF
 import android.net.Uri
-import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
@@ -28,6 +29,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
@@ -48,9 +50,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
@@ -259,13 +263,17 @@ fun SingleAssetItemView(width: Dp, height: Dp, allAssets: List<ProofableItem>, s
         mutableStateOf(0f)
     }
     var dragging by remember { mutableStateOf(false) }
+    var draggingAnimationOffset by remember { mutableStateOf(0f) }
     val animatedDragOffset: Float by animateFloatAsState(targetValue =
-        if (dragging)
-            dragOffset
+        if (dragging) dragOffset
+        else if (draggingAnimationOffset != 0f) draggingAnimationOffset
         else 0f
+        , finishedListener = {
+            if (draggingAnimationOffset != 0f) draggingAnimationOffset = 0f
+        }
     , animationSpec = tween(
-            durationMillis = if (dragging) 0 else 500,
-            easing = FastOutLinearInEasing
+            durationMillis = if (dragging || draggingAnimationOffset != 0f) 0 else 300,
+            easing = FastOutSlowInEasing
         )
     )
 
@@ -288,7 +296,6 @@ fun SingleAssetItemView(width: Dp, height: Dp, allAssets: List<ProofableItem>, s
             setTitle(dateFormatted)
         }
     }
-    //val selectedItemOffset = (20.dp.plus(itemWidth).times(idxSelected)).minus( (width.minus(itemWidth).div(2)))
     Row(
         modifier = Modifier
             .height(height)
@@ -298,7 +305,7 @@ fun SingleAssetItemView(width: Dp, height: Dp, allAssets: List<ProofableItem>, s
                     .times(numItems)
                     .minus(10.dp)
             )
-            .offset(x = with(localDensity) { if (dragging) dragOffset.toDp() else -animatedDragOffset.toDp() })
+            .offset(x = with(localDensity) {  animatedDragOffset.toDp() })
             .draggable(
                 orientation = Orientation.Horizontal,
                 state = rememberDraggableState { delta ->
@@ -307,14 +314,15 @@ fun SingleAssetItemView(width: Dp, height: Dp, allAssets: List<ProofableItem>, s
                 onDragStarted = {
                     dragging = true
                     dragOffset = 0f
+                    draggingAnimationOffset = 0f
                 },
                 onDragStopped = { _ ->
                     if (dragOffset > 50 && selectedIndex > 0) {
+                        draggingAnimationOffset = dragOffset - itemWidthPixels
                         selectIndex(selectedIndex - 1)
-                        dragOffset -= itemWidthPixels
                     } else if (dragOffset < -50 && selectedIndex < (allAssets.size + 1)) {
+                        draggingAnimationOffset = dragOffset + itemWidthPixels
                         selectIndex(selectedIndex + 1)
-                        dragOffset += itemWidthPixels
                     }
                     dragging = false
                 }
@@ -337,13 +345,19 @@ fun SingleAssetItemView(width: Dp, height: Dp, allAssets: List<ProofableItem>, s
                         showSelectionBorder = false
                     )
                     if (LocalSelectionHandler.current.isSelected(item)) {
-                        Icon(imageVector = Icons.Default.CheckCircle,
-                            contentDescription = "Selected",
-                            tint = Color.Blue,
-                            modifier = Modifier
-                                .align(Alignment.BottomEnd)
-                                .padding(10.dp)
-                        )
+                        Box(modifier = Modifier.align(Alignment.BottomEnd).padding(10.dp)) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "Selected",
+                                tint = Color(0.3f, 0.6f, 1.0f),
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .width(16.dp)
+                                    .height(16.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White)
+                            )
+                        }
                     }
                 }
             } else {
@@ -362,8 +376,8 @@ fun PreviewsView(allAssets: List<ProofableItem>, listState: LazyListState, selec
     LazyRow (
         state = listState,
         modifier = Modifier
-        .fillMaxSize()
-        .padding(4.dp))
+            .fillMaxSize()
+            .padding(4.dp))
         //.horizontalScroll(scrollState))
     {
         allAssets.forEachIndexed { index, item ->
@@ -372,6 +386,7 @@ fun PreviewsView(allAssets: List<ProofableItem>, listState: LazyListState, selec
                 ProofableItemView(
                     item = item,
                     contain = false,
+                    showSelectionBorder = false,
                     corners = RectF(0f, 0f, 0f, 0f),
                     modifier = Modifier
                         .width(if (isSelected) 56.dp else 40.dp)

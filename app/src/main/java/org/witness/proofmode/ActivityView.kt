@@ -398,8 +398,12 @@ fun ActivitiesView() {
     val selectionHandler = object: SelectionHandler {
         override fun onProofableItemClick(item: ProofableItem) {
             val uriString = item.uri.toString()
-            if (selectedAssets.size > 0 && !selectedAssets.contains(uriString)) {
-                selectedAssets.add(uriString)
+            if (selectedAssets.size > 0) {
+                if (selectedAssets.contains(uriString)) {
+                    selectedAssets.remove(uriString)
+                } else {
+                    selectedAssets.add(uriString)
+                }
             } else {
                 showSingleAssetView = item
             }
