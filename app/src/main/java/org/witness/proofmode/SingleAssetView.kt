@@ -258,36 +258,65 @@ fun SingleAssetView(initialItem: ProofableItem, modifier: Modifier = Modifier, s
 }
 
 @Composable
+fun SingleItemView(itemWidth: Dp, allAssets: List<ProofableItem>, index: Int, selectedIndex: Int) {
+    if (index >= 0 && index < allAssets.size) {
+        val item = allAssets[index]
+        Box(
+            modifier = Modifier
+                .requiredWidth(itemWidth)
+                .fillMaxHeight()
+        ) {
+            ProofableItemView(
+                item = item,
+                modifier = Modifier.fillMaxSize(),
+                contain = !LocalSelectionHandler.current.anySelected(),
+                corners = RectF(0f, 0f, 0f, 0f),
+                showSelectionBorder = false
+            )
+            if (LocalSelectionHandler.current.isSelected(item)) {
+                Box(modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(10.dp)) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = "Selected",
+                        tint = Color(0.3f, 0.6f, 1.0f),
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .width(16.dp)
+                            .height(16.dp)
+                            .clip(CircleShape)
+                            .background(Color.White)
+                    )
+                }
+            }
+        }
+    } else {
+        Box(
+            modifier = Modifier
+                .width(itemWidth)
+        )
+    }
+}
+
+@Composable
 fun SingleAssetItemView(width: Dp, height: Dp, allAssets: List<ProofableItem>, selectedIndex: Int, selectIndex: (Int) -> Unit, setTitle: (String) -> Unit) {
     var dragOffset by remember {
         mutableStateOf(0f)
     }
     var dragging by remember { mutableStateOf(false) }
-    var draggingAnimationOffset by remember { mutableStateOf(0f) }
-    val animatedDragOffset: Float by animateFloatAsState(targetValue =
-        if (dragging) dragOffset
-        else if (draggingAnimationOffset != 0f) draggingAnimationOffset
-        else 0f
-        , finishedListener = {
-            if (draggingAnimationOffset != 0f) draggingAnimationOffset = 0f
-        }
+    var animateFromItem by remember { mutableStateOf(selectedIndex.toFloat()) }
+    val animatedOffset: Float by animateFloatAsState(targetValue =
+        if (!dragging && animateFromItem != selectedIndex.toFloat()) selectedIndex.toFloat()
+        else animateFromItem
     , animationSpec = tween(
-            durationMillis = if (dragging || draggingAnimationOffset != 0f) 0 else 300,
+            durationMillis = if (!dragging && animateFromItem != selectedIndex.toFloat()) 300 else 0,
             easing = FastOutSlowInEasing
         )
     )
-
+    val localDensity = LocalDensity.current
     val itemSizeMultiplier by animateFloatAsState(targetValue = if (LocalSelectionHandler.current.anySelected()) 0.7f else 1f)
     val itemWidth = width.times(itemSizeMultiplier)
-
-    val localDensity = LocalDensity.current
-    val itemWidthPixels = with(localDensity) {
-        itemWidth.toPx()
-    }
-
-    val numItems = 5
-    val idxSelected: Int = ((numItems - 1) / 2).toInt()
-    val items = (0 until numItems).map { Pair(it, it + selectedIndex - idxSelected) }
 
     if (selectedIndex >= 0 && selectedIndex < allAssets.size) {
         val formatter = SimpleDateFormat(stringResource(id = R.string.date_display_single_item))
@@ -302,71 +331,40 @@ fun SingleAssetItemView(width: Dp, height: Dp, allAssets: List<ProofableItem>, s
             .requiredWidth(
                 10.dp
                     .plus(itemWidth)
-                    .times(numItems)
+                    .times(5)
                     .minus(10.dp)
             )
-            .offset(x = with(localDensity) {  animatedDragOffset.toDp() })
+            .offset(x = itemWidth.plus(10.dp).times(selectedIndex.toFloat() - animatedOffset))
             .draggable(
                 orientation = Orientation.Horizontal,
                 state = rememberDraggableState { delta ->
                     dragOffset += delta
+                    animateFromItem = selectedIndex.toFloat() - dragOffset / with(localDensity) { itemWidth.plus(10.dp).toPx()}
                 },
                 onDragStarted = {
-                    dragging = true
                     dragOffset = 0f
-                    draggingAnimationOffset = 0f
+                    dragging = true
                 },
                 onDragStopped = { _ ->
                     if (dragOffset > 50 && selectedIndex > 0) {
-                        draggingAnimationOffset = dragOffset - itemWidthPixels
+                        animateFromItem = selectedIndex.toFloat() - dragOffset / with(localDensity) { itemWidth.plus(10.dp).toPx()}
                         selectIndex(selectedIndex - 1)
-                    } else if (dragOffset < -50 && selectedIndex < (allAssets.size + 1)) {
-                        draggingAnimationOffset = dragOffset + itemWidthPixels
+                    } else if (dragOffset < -50 && selectedIndex < (allAssets.size - 1)) {
+                        animateFromItem = selectedIndex.toFloat() - dragOffset / with(localDensity) { itemWidth.plus(10.dp).toPx()}
                         selectIndex(selectedIndex + 1)
                     }
+                    dragOffset = 0f
                     dragging = false
                 }
             )
     , horizontalArrangement = Arrangement.spacedBy(10.dp)
     , verticalAlignment = Alignment.CenterVertically
     ) {
-        items.forEach { tuple ->
-            val delta = idxSelected - tuple.first
-            val idxThis = selectedIndex - delta
-            if (idxThis >= 0 && idxThis < allAssets.size) {
-                val item = allAssets[idxThis]
-                Box(modifier = Modifier
-                    .requiredWidth(itemWidth)
-                    .fillMaxHeight()) {
-                    ProofableItemView(item = item,
-                        modifier = Modifier.fillMaxSize(),
-                        contain = !LocalSelectionHandler.current.anySelected(),
-                        corners = RectF(0f,0f,0f,0f),
-                        showSelectionBorder = false
-                    )
-                    if (LocalSelectionHandler.current.isSelected(item)) {
-                        Box(modifier = Modifier.align(Alignment.BottomEnd).padding(10.dp)) {
-                            Icon(
-                                imageVector = Icons.Default.CheckCircle,
-                                contentDescription = "Selected",
-                                tint = Color(0.3f, 0.6f, 1.0f),
-                                modifier = Modifier
-                                    .align(Alignment.BottomEnd)
-                                    .width(16.dp)
-                                    .height(16.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.White)
-                            )
-                        }
-                    }
-                }
-            } else {
-                Box(modifier = Modifier
-                    .width(itemWidth)
-                    .height(if (width < height) width else height)
-                )
-            }
-        }
+        SingleItemView(itemWidth = itemWidth, allAssets = allAssets, index = selectedIndex - 2, selectedIndex = selectedIndex)
+        SingleItemView(itemWidth = itemWidth, allAssets = allAssets, index = selectedIndex - 1, selectedIndex = selectedIndex)
+        SingleItemView(itemWidth = itemWidth, allAssets = allAssets, index = selectedIndex, selectedIndex = selectedIndex)
+        SingleItemView(itemWidth = itemWidth, allAssets = allAssets, index = selectedIndex + 1, selectedIndex = selectedIndex)
+        SingleItemView(itemWidth = itemWidth, allAssets = allAssets, index = selectedIndex + 2, selectedIndex = selectedIndex)
     }
 }
 
