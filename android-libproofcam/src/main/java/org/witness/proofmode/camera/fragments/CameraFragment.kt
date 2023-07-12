@@ -574,55 +574,6 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
 
         }
     }
-
-    /**
-     * @SuppressLint("ClickableViewAccessibility")
-     *     private fun onTapToFocus(camera: Camera, previewView: PreviewView) {
-     *         previewView.setOnTouchListener { _, event ->
-     *             when (event.action) {
-     *                 MotionEvent.ACTION_DOWN -> return@setOnTouchListener true
-     *                 MotionEvent.ACTION_UP -> {
-     *                     val factory = previewView.meteringPointFactory
-     *                     val point = factory.createPoint(event.x, event.y)
-     *                     val meteringAction =
-     *                         FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF)
-     *                             .disableAutoCancel()
-     *                             .build()
-     *                     lifecycleScope.launch {
-     *
-     *                         val focusMeteringResult =
-     *                             camera.cameraControl.startFocusAndMetering(meteringAction).await()
-     *                         if (focusMeteringResult.isFocusSuccessful) {
-     *                             withContext(Dispatchers.Main) {
-     *                                 Toast.makeText(
-     *                                     requireContext(),
-     *                                     "Focus metering was successful",
-     *                                     Toast.LENGTH_SHORT
-     *                                 ).show()
-     *                             }
-     *                         } else {
-     *                             withContext(Dispatchers.Main) {
-     *                                 Toast.makeText(
-     *                                     requireContext(),
-     *                                     "Focus metering failed",
-     *                                     Toast.LENGTH_SHORT
-     *                                 ).show()
-     *                             }
-     *                         }
-     *                     }
-     *                     return@setOnTouchListener true
-     *                 }
-     *
-     *                 else -> false
-     *             }
-     *
-     *         }
-     *     }
-     */
-
-
-
-
     /**
      *  Detecting the most suitable aspect ratio for current dimensions
      *
