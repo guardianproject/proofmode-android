@@ -16,6 +16,7 @@ import android.util.DisplayMetrics
 import android.util.Log
 import android.view.GestureDetector
 import android.view.OrientationEventListener
+import android.view.ScaleGestureDetector
 import android.view.Surface
 import android.view.View
 import android.widget.Toast
@@ -53,6 +54,10 @@ import kotlin.math.min
 import kotlin.properties.Delegates
 
 class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_camera) {
+    private lateinit var pinchToZoomScaleDetector: ScaleGestureDetector
+    private lateinit var proofModeCamera:Camera
+    private lateinit var proofModeViewFinder:PreviewView
+
     // An instance for display manager to get display change callbacks
     private val displayManager by lazy { requireContext().getSystemService(Context.DISPLAY_SERVICE) as DisplayManager }
 
@@ -123,6 +128,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
         displayManager.registerDisplayListener(displayListener, null)
 
         binding.run {
+            proofModeViewFinder = viewFinder
             viewFinder.addOnAttachStateChangeListener(object :
                 View.OnAttachStateChangeListener {
                 override fun onViewDetachedFromWindow(v: View) =
@@ -446,13 +452,13 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
 
     private fun bindToLifecycle(localCameraProvider: ProcessCameraProvider, viewFinder: PreviewView) {
         try {
-            localCameraProvider.bindToLifecycle(
+            proofModeCamera = localCameraProvider.bindToLifecycle(
                 viewLifecycleOwner, // current lifecycle owner
                 hdrCameraSelector ?: lensFacing, // either front or back facing
                 preview, // camera preview use case
                 imageCapture, // image capture use case
                 imageAnalyzer, // image analyzer use case
-            ).run {
+            ).apply {
                 // Init camera exposure control
                 cameraInfo.exposureState.run {
                     val lower = exposureCompensationRange.lower
@@ -473,8 +479,41 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
 
             // Attach the viewfinder's surface provider to preview use case
             preview?.setSurfaceProvider(viewFinder.surfaceProvider)
+            onPinchToZoomCamera(proofModeCamera,proofModeViewFinder)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to bind use cases", e)
+        }
+    }
+
+    private fun onPinchToZoomCamera(camera: Camera, viewFinder: PreviewView) {
+        // Pinch to zoom detector to change zoom ratio of camera
+        pinchToZoomScaleDetector = ScaleGestureDetector(requireContext(),
+            object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+                override fun onScale(detector: ScaleGestureDetector): Boolean {
+                    // Retrieve the camera's current zoom state value
+                    val zoomState = camera.cameraInfo.zoomState.value
+                    //Retrieve the device camera's max zoom ratio
+                    val maxZoomRatio = zoomState?.maxZoomRatio ?: 1f
+
+                    val minZoomRatio = zoomState?.minZoomRatio ?: 1f
+                    val currentZoomRatio = zoomState?.zoomRatio ?: 1f
+                    // calculate new ratio using the detector's scale factor
+                    val newZoomRatio = currentZoomRatio * detector.scaleFactor
+
+                    // Update the zoom ratio
+                    camera.cameraControl.setZoomRatio(
+                        newZoomRatio.coerceIn(
+                            minZoomRatio, maxZoomRatio
+                        )
+                    )
+                    return true
+                }
+
+            })
+
+        viewFinder.setOnTouchListener { _, event ->
+            pinchToZoomScaleDetector.onTouchEvent(event)
+            return@setOnTouchListener true
         }
     }
 
