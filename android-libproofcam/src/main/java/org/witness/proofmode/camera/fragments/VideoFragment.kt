@@ -142,6 +142,7 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
 
             val gestureDetectorCompat = GestureDetector(requireContext(), swipeGestures)
             viewFinder.setOnTouchListener { _, motionEvent ->
+
                 if (gestureDetectorCompat.onTouchEvent(motionEvent)) return@setOnTouchListener false
                 return@setOnTouchListener true
             }

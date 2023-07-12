@@ -5,6 +5,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.graphics.PointF
 import android.hardware.display.DisplayManager
 import android.net.Uri
 import android.os.Build
@@ -15,6 +16,7 @@ import android.provider.MediaStore
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.GestureDetector
+import android.view.MotionEvent
 import android.view.OrientationEventListener
 import android.view.ScaleGestureDetector
 import android.view.Surface
@@ -28,6 +30,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.core.net.toFile
+import androidx.core.view.GestureDetectorCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
@@ -38,7 +41,9 @@ import coil.request.ImageRequest
 import coil.transform.CircleCropTransformation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.guava.await
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.witness.proofmode.camera.R
 import org.witness.proofmode.camera.analyzer.LuminosityAnalyzer
 import org.witness.proofmode.camera.databinding.FragmentCameraBinding
@@ -57,6 +62,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
     private lateinit var pinchToZoomScaleDetector: ScaleGestureDetector
     private lateinit var proofModeCamera:Camera
     private lateinit var proofModeViewFinder:PreviewView
+
 
     // An instance for display manager to get display change callbacks
     private val displayManager by lazy { requireContext().getSystemService(Context.DISPLAY_SERVICE) as DisplayManager }
@@ -479,12 +485,16 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
 
             // Attach the viewfinder's surface provider to preview use case
             preview?.setSurfaceProvider(viewFinder.surfaceProvider)
-            onPinchToZoomCamera(proofModeCamera,proofModeViewFinder)
+
+            onTapToFocus(proofModeCamera,proofModeViewFinder)
+            //onPinchToZoomCamera(proofModeCamera,proofModeViewFinder)
+
         } catch (e: Exception) {
             Log.e(TAG, "Failed to bind use cases", e)
         }
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     private fun onPinchToZoomCamera(camera: Camera, viewFinder: PreviewView) {
         // Pinch to zoom detector to change zoom ratio of camera
         pinchToZoomScaleDetector = ScaleGestureDetector(requireContext(),
@@ -516,6 +526,102 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
             return@setOnTouchListener true
         }
     }
+
+    /**
+     * Tap listener to recognize when a user taps a location on the preview vieww
+     * @param camera - camera device associated with the preview view
+     * @param previewView - preview view on which the tap event is invoked
+     */
+    @SuppressLint("ClickableViewAccessibility")
+    private fun onTapToFocus(camera: Camera, previewView: PreviewView) {
+        val tapDetector = GestureDetectorCompat(requireContext(), object:
+            GestureDetector.SimpleOnGestureListener() {
+            override fun onSingleTapUp(event: MotionEvent): Boolean {
+                val focusView = FocusIndicatorView(previewView.context)
+                previewView.addView(focusView)
+                val factory = previewView.meteringPointFactory
+                val point = factory.createPoint(event.x, event.y)
+
+                val meteringAction =
+                    FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF)
+                        .disableAutoCancel()
+                        .build()
+                lifecycleScope.launch {
+                    val focusMeteringResult =
+                        camera.cameraControl.startFocusAndMetering(meteringAction).await()
+                    if (focusMeteringResult.isFocusSuccessful) {
+                        withContext(Dispatchers.Main) {
+                            focusView.showFocusIndicator(PointF(event.x,event.y))
+                            previewView.postDelayed({
+                                                   focusView.hideFocusIndicator()
+                            },1200)
+                        }
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            previewView.postDelayed({
+                                focusView.hideFocusIndicator()
+                            },700)
+                        }
+                    }
+                }
+                return true
+            }
+
+        })
+        previewView.setOnTouchListener { _, event ->
+            tapDetector.onTouchEvent(event)
+            return@setOnTouchListener true
+
+        }
+    }
+
+    /**
+     * @SuppressLint("ClickableViewAccessibility")
+     *     private fun onTapToFocus(camera: Camera, previewView: PreviewView) {
+     *         previewView.setOnTouchListener { _, event ->
+     *             when (event.action) {
+     *                 MotionEvent.ACTION_DOWN -> return@setOnTouchListener true
+     *                 MotionEvent.ACTION_UP -> {
+     *                     val factory = previewView.meteringPointFactory
+     *                     val point = factory.createPoint(event.x, event.y)
+     *                     val meteringAction =
+     *                         FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF)
+     *                             .disableAutoCancel()
+     *                             .build()
+     *                     lifecycleScope.launch {
+     *
+     *                         val focusMeteringResult =
+     *                             camera.cameraControl.startFocusAndMetering(meteringAction).await()
+     *                         if (focusMeteringResult.isFocusSuccessful) {
+     *                             withContext(Dispatchers.Main) {
+     *                                 Toast.makeText(
+     *                                     requireContext(),
+     *                                     "Focus metering was successful",
+     *                                     Toast.LENGTH_SHORT
+     *                                 ).show()
+     *                             }
+     *                         } else {
+     *                             withContext(Dispatchers.Main) {
+     *                                 Toast.makeText(
+     *                                     requireContext(),
+     *                                     "Focus metering failed",
+     *                                     Toast.LENGTH_SHORT
+     *                                 ).show()
+     *                             }
+     *                         }
+     *                     }
+     *                     return@setOnTouchListener true
+     *                 }
+     *
+     *                 else -> false
+     *             }
+     *
+     *         }
+     *     }
+     */
+
+
+
 
     /**
      *  Detecting the most suitable aspect ratio for current dimensions
