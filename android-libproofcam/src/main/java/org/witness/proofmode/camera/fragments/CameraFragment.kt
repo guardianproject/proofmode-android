@@ -497,6 +497,12 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
         }
     }
 
+    /**
+     * Creates a tap gesture to be used for tap to focus
+     * @param camera - The camera device used
+     * @param viewFinder - The preview view to which the camera is attached
+     * @returns [GestureDetector]
+     */
     private fun createTapGestureDetector(camera: Camera,viewFinder: PreviewView):GestureDetector {
         val tapGestureDetector = GestureDetector(requireContext(), object:
             GestureDetector.SimpleOnGestureListener() {
@@ -539,6 +545,13 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
         })
         return tapGestureDetector
     }
+
+    /**
+     * Create a scale detector which is a pinch to zoom gesture
+     * @param camera - The camera device used to be used for zooming
+     * in and out
+     * @return [ScaleGestureDetector]
+     */
     private fun createPinchDetector(camera: Camera):ScaleGestureDetector{
         // Pinch to zoom detector to change zoom ratio of camera
         val pinchToZoomScaleDetector = ScaleGestureDetector(requireContext(),
