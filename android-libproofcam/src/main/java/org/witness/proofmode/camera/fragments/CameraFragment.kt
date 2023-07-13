@@ -30,7 +30,6 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.core.net.toFile
-import androidx.core.view.GestureDetectorCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
@@ -59,7 +58,6 @@ import kotlin.math.min
 import kotlin.properties.Delegates
 
 class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_camera) {
-    private lateinit var pinchToZoomScaleDetector: ScaleGestureDetector
     private lateinit var proofModeCamera:Camera
     private lateinit var proofModeViewFinder:PreviewView
 
@@ -167,6 +165,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
                 })
             }
             val gestureDetectorCompat = GestureDetector(requireContext(), swipeGestures)
+
             viewFinder.setOnTouchListener { _, motionEvent ->
                 if (gestureDetectorCompat.onTouchEvent(motionEvent)) return@setOnTouchListener false
                 return@setOnTouchListener true
@@ -456,6 +455,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
         )
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     private fun bindToLifecycle(localCameraProvider: ProcessCameraProvider, viewFinder: PreviewView) {
         try {
             proofModeCamera = localCameraProvider.bindToLifecycle(
@@ -485,19 +485,65 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
 
             // Attach the viewfinder's surface provider to preview use case
             preview?.setSurfaceProvider(viewFinder.surfaceProvider)
-
-            onTapToFocus(proofModeCamera,proofModeViewFinder)
-            //onPinchToZoomCamera(proofModeCamera,proofModeViewFinder)
+            val tapDetector = createTapGestureDetector(proofModeCamera,viewFinder)
+            val pinchDetector = createPinchDetector(proofModeCamera)
+            viewFinder.setOnTouchListener {_, event ->
+                pinchDetector.onTouchEvent(event)
+                tapDetector.onTouchEvent(event)
+                return@setOnTouchListener true
+            }
 
         } catch (e: Exception) {
             Log.e(TAG, "Failed to bind use cases", e)
         }
     }
 
+    private fun createTapGestureDetector(camera: Camera,viewFinder: PreviewView):GestureDetector {
+        val tapGestureDetector = GestureDetector(requireContext(), object:
+            GestureDetector.SimpleOnGestureListener() {
+            override fun onSingleTapUp(event: MotionEvent): Boolean {
+                val focusView = FocusIndicatorView(viewFinder.context)
+                viewFinder.addView(focusView)
+                val factory = viewFinder.meteringPointFactory
+                val point = factory.createPoint(event.x, event.y)
+
+                val meteringAction =
+                    FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF)
+                        .disableAutoCancel()
+                        .build()
+                // Some cameras, such as some front Cameras will not support FocusMeteringAction.FLAG_AF
+                // so we check if the action is supported
+                if (camera.cameraInfo.isFocusMeteringSupported(meteringAction)) {
+                    lifecycleScope.launch {
+                        val focusMeteringResult =
+                            camera.cameraControl.startFocusAndMetering(meteringAction).await()
+                        if (focusMeteringResult.isFocusSuccessful) {
+                            withContext(Dispatchers.Main) {
+                                focusView.showFocusIndicator(PointF(event.x,event.y))
+                                viewFinder.postDelayed({
+                                    focusView.hideFocusIndicator()
+                                },1300)
+                            }
+                        } else {
+                            withContext(Dispatchers.Main) {
+                                viewFinder.postDelayed({
+                                    focusView.hideFocusIndicator()
+                                },700)
+                            }
+                        }
+                    }
+                }
+
+                return true
+            }
+
+        })
+        return tapGestureDetector
+    }
     @SuppressLint("ClickableViewAccessibility")
-    private fun onPinchToZoomCamera(camera: Camera, viewFinder: PreviewView) {
+    private fun createPinchDetector(camera: Camera):ScaleGestureDetector{
         // Pinch to zoom detector to change zoom ratio of camera
-        pinchToZoomScaleDetector = ScaleGestureDetector(requireContext(),
+        val pinchToZoomScaleDetector = ScaleGestureDetector(requireContext(),
             object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
                 override fun onScale(detector: ScaleGestureDetector): Boolean {
                     // Retrieve the camera's current zoom state value
@@ -521,59 +567,9 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
 
             })
 
-        viewFinder.setOnTouchListener { _, event ->
-            pinchToZoomScaleDetector.onTouchEvent(event)
-            return@setOnTouchListener true
-        }
+        return pinchToZoomScaleDetector
     }
 
-    /**
-     * Tap listener to recognize when a user taps a location on the preview vieww
-     * @param camera - camera device associated with the preview view
-     * @param previewView - preview view on which the tap event is invoked
-     */
-    @SuppressLint("ClickableViewAccessibility")
-    private fun onTapToFocus(camera: Camera, previewView: PreviewView) {
-        val tapDetector = GestureDetectorCompat(requireContext(), object:
-            GestureDetector.SimpleOnGestureListener() {
-            override fun onSingleTapUp(event: MotionEvent): Boolean {
-                val focusView = FocusIndicatorView(previewView.context)
-                previewView.addView(focusView)
-                val factory = previewView.meteringPointFactory
-                val point = factory.createPoint(event.x, event.y)
-
-                val meteringAction =
-                    FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF)
-                        .disableAutoCancel()
-                        .build()
-                lifecycleScope.launch {
-                    val focusMeteringResult =
-                        camera.cameraControl.startFocusAndMetering(meteringAction).await()
-                    if (focusMeteringResult.isFocusSuccessful) {
-                        withContext(Dispatchers.Main) {
-                            focusView.showFocusIndicator(PointF(event.x,event.y))
-                            previewView.postDelayed({
-                                                   focusView.hideFocusIndicator()
-                            },1200)
-                        }
-                    } else {
-                        withContext(Dispatchers.Main) {
-                            previewView.postDelayed({
-                                focusView.hideFocusIndicator()
-                            },700)
-                        }
-                    }
-                }
-                return true
-            }
-
-        })
-        previewView.setOnTouchListener { _, event ->
-            tapDetector.onTouchEvent(event)
-            return@setOnTouchListener true
-
-        }
-    }
     /**
      *  Detecting the most suitable aspect ratio for current dimensions
      *
