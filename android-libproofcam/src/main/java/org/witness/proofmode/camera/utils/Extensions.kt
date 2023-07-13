@@ -5,12 +5,16 @@ import android.animation.AnimatorListenerAdapter
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.graphics.PointF
 import android.os.Build
 import android.view.*
 import android.view.View.GONE
 import android.view.View.VISIBLE
 import android.widget.ImageButton
 import androidx.annotation.DrawableRes
+import androidx.camera.core.Camera
+import androidx.camera.core.FocusMeteringAction
+import androidx.camera.view.PreviewView
 import androidx.core.animation.doOnEnd
 import androidx.core.animation.doOnStart
 import androidx.core.view.ViewCompat
@@ -18,12 +22,16 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
+import kotlinx.coroutines.CoroutineScope
 import org.witness.proofmode.camera.adapter.Media
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.guava.await
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.concurrent.Executor
 
 fun ImageButton.toggleButton(
@@ -169,3 +177,88 @@ var View.startPadding: Int
     set(value) {
         updateLayoutParams { setPaddingRelative(value, paddingTop, paddingEnd, paddingBottom) }
     }
+
+/**
+ * Create a scale detector which is a pinch to zoom gesture
+ * @param camera - The camera device used to be used for zooming associated with this [PreviewView]
+ * in and out
+ * @return [ScaleGestureDetector]
+ */
+fun PreviewView.createPinchDetector(camera: Camera): ScaleGestureDetector {
+    // Pinch to zoom detector to change zoom ratio of camera
+    val pinchToZoomScaleDetector = ScaleGestureDetector(context,
+        object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            override fun onScale(detector: ScaleGestureDetector): Boolean {
+                // Retrieve the camera's current zoom state value
+                val zoomState = camera.cameraInfo.zoomState.value
+                //Retrieve the device camera's max zoom ratio
+                val maxZoomRatio = zoomState?.maxZoomRatio ?: 1f
+
+                val minZoomRatio = zoomState?.minZoomRatio ?: 1f
+                val currentZoomRatio = zoomState?.zoomRatio ?: 1f
+                // calculate new ratio using the detector's scale factor
+                val newZoomRatio = currentZoomRatio * detector.scaleFactor
+
+                // Update the zoom ratio
+                camera.cameraControl.setZoomRatio(
+                    newZoomRatio.coerceIn(
+                        minZoomRatio, maxZoomRatio
+                    )
+                )
+                return true
+            }
+
+        })
+
+    return pinchToZoomScaleDetector
+}
+
+
+/**
+ * Creates a tap gesture to be used for tap to focus
+ * @param camera - The camera device used by the [PreviewView]
+ * @returns [GestureDetector]
+ */
+fun PreviewView.createTapGestureDetector(camera: Camera,lifecycleScope:CoroutineScope):GestureDetector {
+    val viewFinder = this
+    val tapGestureDetector = GestureDetector(context, object:
+        GestureDetector.SimpleOnGestureListener() {
+        override fun onSingleTapUp(event: MotionEvent): Boolean {
+            val focusView = FocusIndicatorView(context)
+            viewFinder.addView(focusView)
+            val factory = viewFinder.meteringPointFactory
+            val point = factory.createPoint(event.x, event.y)
+
+            val meteringAction =
+                FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF)
+                    .disableAutoCancel()
+                    .build()
+            // Some cameras, such as some front Cameras will not support FocusMeteringAction.FLAG_AF
+            // so we check if the action is supported
+            if (camera.cameraInfo.isFocusMeteringSupported(meteringAction)) {
+                lifecycleScope.launch {
+                    val focusMeteringResult =
+                        camera.cameraControl.startFocusAndMetering(meteringAction).await()
+                    if (focusMeteringResult.isFocusSuccessful) {
+                        withContext(Dispatchers.Main) {
+                            focusView.showFocusIndicator(PointF(event.x,event.y))
+                            viewFinder.postDelayed({
+                                focusView.hideFocusIndicator()
+                            },1300)
+                        }
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            viewFinder.postDelayed({
+                                focusView.hideFocusIndicator()
+                            },700)
+                        }
+                    }
+                }
+            }
+
+            return true
+        }
+
+    })
+    return tapGestureDetector
+}

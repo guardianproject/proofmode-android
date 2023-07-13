@@ -15,11 +15,13 @@ import android.util.DisplayMetrics
 import android.util.Log
 import android.view.GestureDetector
 import android.view.OrientationEventListener
+import android.view.ScaleGestureDetector
 import android.view.Surface
 import android.view.View
 import android.widget.Toast
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
 import androidx.core.animation.doOnCancel
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowInsetsCompat
@@ -46,6 +48,9 @@ import org.witness.proofmode.camera.fragments.VideoFragment.CameraConstants.NEW_
 
 @SuppressLint("RestrictedApi")
 class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video) {
+    private lateinit var tapDetector: GestureDetector
+    private lateinit var pinchToZoomDetector: ScaleGestureDetector
+    private lateinit var viewFinder:PreviewView
     // An instance for display manager to get display change callbacks
     private val displayManager by lazy { requireContext().getSystemService(Context.DISPLAY_SERVICE) as DisplayManager }
 
@@ -142,8 +147,9 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
 
             val gestureDetectorCompat = GestureDetector(requireContext(), swipeGestures)
             viewFinder.setOnTouchListener { _, motionEvent ->
-
-                if (gestureDetectorCompat.onTouchEvent(motionEvent)) return@setOnTouchListener false
+                gestureDetectorCompat.onTouchEvent(motionEvent)
+                pinchToZoomDetector.onTouchEvent(motionEvent)
+                tapDetector.onTouchEvent(motionEvent)
                 return@setOnTouchListener true
             }
         }
@@ -200,7 +206,7 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
      * */
     private fun startCamera() {
         // This is the Texture View where the camera will be rendered
-        val viewFinder = binding.viewFinder
+        viewFinder = binding.viewFinder
 
         val cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext())
         cameraProviderFuture.addListener({
@@ -241,6 +247,13 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
 
                 // Attach the viewfinder's surface provider to preview use case
                 preview?.setSurfaceProvider(viewFinder.surfaceProvider)
+
+                // If the camera is available, create the gestures
+                camera?.let {
+                    pinchToZoomDetector = viewFinder.createPinchDetector(it)
+                    tapDetector = viewFinder.createTapGestureDetector(it,lifecycleScope)
+                }
+
 
 
                 //listen for rotation

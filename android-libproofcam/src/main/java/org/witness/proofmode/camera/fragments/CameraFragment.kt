@@ -64,6 +64,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
     private lateinit var pinchToZoomDetector:ScaleGestureDetector
 
 
+
     // An instance for display manager to get display change callbacks
     private val displayManager by lazy { requireContext().getSystemService(Context.DISPLAY_SERVICE) as DisplayManager }
 
@@ -169,6 +170,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
             val gestureDetectorCompat = GestureDetector(requireContext(), swipeGestures)
 
             viewFinder.setOnTouchListener { _, motionEvent ->
+                // Make sure to let the touch listener handle each event here
                 gestureDetectorCompat.onTouchEvent(motionEvent)
                 pinchToZoomDetector.onTouchEvent(motionEvent)
                 tapDetector.onTouchEvent(motionEvent)
@@ -489,96 +491,12 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
 
             // Attach the viewfinder's surface provider to preview use case
             preview?.setSurfaceProvider(viewFinder.surfaceProvider)
-            tapDetector = createTapGestureDetector(proofModeCamera,viewFinder)
-            pinchToZoomDetector = createPinchDetector(proofModeCamera)
+            tapDetector = viewFinder.createTapGestureDetector(proofModeCamera,lifecycleScope)
+            pinchToZoomDetector = viewFinder.createPinchDetector(proofModeCamera)
 
         } catch (e: Exception) {
             Log.e(TAG, "Failed to bind use cases", e)
         }
-    }
-
-    /**
-     * Creates a tap gesture to be used for tap to focus
-     * @param camera - The camera device used
-     * @param viewFinder - The preview view to which the camera is attached
-     * @returns [GestureDetector]
-     */
-    private fun createTapGestureDetector(camera: Camera,viewFinder: PreviewView):GestureDetector {
-        val tapGestureDetector = GestureDetector(requireContext(), object:
-            GestureDetector.SimpleOnGestureListener() {
-            override fun onSingleTapUp(event: MotionEvent): Boolean {
-                val focusView = FocusIndicatorView(viewFinder.context)
-                viewFinder.addView(focusView)
-                val factory = viewFinder.meteringPointFactory
-                val point = factory.createPoint(event.x, event.y)
-
-                val meteringAction =
-                    FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF)
-                        .disableAutoCancel()
-                        .build()
-                // Some cameras, such as some front Cameras will not support FocusMeteringAction.FLAG_AF
-                // so we check if the action is supported
-                if (camera.cameraInfo.isFocusMeteringSupported(meteringAction)) {
-                    lifecycleScope.launch {
-                        val focusMeteringResult =
-                            camera.cameraControl.startFocusAndMetering(meteringAction).await()
-                        if (focusMeteringResult.isFocusSuccessful) {
-                            withContext(Dispatchers.Main) {
-                                focusView.showFocusIndicator(PointF(event.x,event.y))
-                                viewFinder.postDelayed({
-                                    focusView.hideFocusIndicator()
-                                },1300)
-                            }
-                        } else {
-                            withContext(Dispatchers.Main) {
-                                viewFinder.postDelayed({
-                                    focusView.hideFocusIndicator()
-                                },700)
-                            }
-                        }
-                    }
-                }
-
-                return true
-            }
-
-        })
-        return tapGestureDetector
-    }
-
-    /**
-     * Create a scale detector which is a pinch to zoom gesture
-     * @param camera - The camera device used to be used for zooming
-     * in and out
-     * @return [ScaleGestureDetector]
-     */
-    private fun createPinchDetector(camera: Camera):ScaleGestureDetector{
-        // Pinch to zoom detector to change zoom ratio of camera
-        val pinchToZoomScaleDetector = ScaleGestureDetector(requireContext(),
-            object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
-                override fun onScale(detector: ScaleGestureDetector): Boolean {
-                    // Retrieve the camera's current zoom state value
-                    val zoomState = camera.cameraInfo.zoomState.value
-                    //Retrieve the device camera's max zoom ratio
-                    val maxZoomRatio = zoomState?.maxZoomRatio ?: 1f
-
-                    val minZoomRatio = zoomState?.minZoomRatio ?: 1f
-                    val currentZoomRatio = zoomState?.zoomRatio ?: 1f
-                    // calculate new ratio using the detector's scale factor
-                    val newZoomRatio = currentZoomRatio * detector.scaleFactor
-
-                    // Update the zoom ratio
-                    camera.cameraControl.setZoomRatio(
-                        newZoomRatio.coerceIn(
-                            minZoomRatio, maxZoomRatio
-                        )
-                    )
-                    return true
-                }
-
-            })
-
-        return pinchToZoomScaleDetector
     }
 
     /**
