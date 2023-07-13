@@ -60,6 +60,8 @@ import kotlin.properties.Delegates
 class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_camera) {
     private lateinit var proofModeCamera:Camera
     private lateinit var proofModeViewFinder:PreviewView
+    private lateinit var tapDetector: GestureDetector
+    private lateinit var pinchToZoomDetector:ScaleGestureDetector
 
 
     // An instance for display manager to get display change callbacks
@@ -167,7 +169,9 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
             val gestureDetectorCompat = GestureDetector(requireContext(), swipeGestures)
 
             viewFinder.setOnTouchListener { _, motionEvent ->
-                if (gestureDetectorCompat.onTouchEvent(motionEvent)) return@setOnTouchListener false
+                gestureDetectorCompat.onTouchEvent(motionEvent)
+                pinchToZoomDetector.onTouchEvent(motionEvent)
+                tapDetector.onTouchEvent(motionEvent)
                 return@setOnTouchListener true
             }
         }
@@ -485,13 +489,8 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
 
             // Attach the viewfinder's surface provider to preview use case
             preview?.setSurfaceProvider(viewFinder.surfaceProvider)
-            val tapDetector = createTapGestureDetector(proofModeCamera,viewFinder)
-            val pinchDetector = createPinchDetector(proofModeCamera)
-            viewFinder.setOnTouchListener {_, event ->
-                pinchDetector.onTouchEvent(event)
-                tapDetector.onTouchEvent(event)
-                return@setOnTouchListener true
-            }
+            tapDetector = createTapGestureDetector(proofModeCamera,viewFinder)
+            pinchToZoomDetector = createPinchDetector(proofModeCamera)
 
         } catch (e: Exception) {
             Log.e(TAG, "Failed to bind use cases", e)
@@ -540,7 +539,6 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
         })
         return tapGestureDetector
     }
-    @SuppressLint("ClickableViewAccessibility")
     private fun createPinchDetector(camera: Camera):ScaleGestureDetector{
         // Pinch to zoom detector to change zoom ratio of camera
         val pinchToZoomScaleDetector = ScaleGestureDetector(requireContext(),
