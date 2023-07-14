@@ -32,25 +32,25 @@ import coil.decode.VideoFrameDecoder
 import coil.load
 import coil.request.ErrorResult
 import coil.request.ImageRequest
-import coil.request.videoFrameMillis
 import coil.transform.CircleCropTransformation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.witness.proofmode.camera.R
 import org.witness.proofmode.camera.databinding.FragmentVideoBinding
+import org.witness.proofmode.camera.fragments.VideoFragment.CameraConstants.NEW_MEDIA_EVENT
 import org.witness.proofmode.camera.utils.*
 import java.io.File
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.properties.Delegates
-import org.witness.proofmode.camera.R
-import org.witness.proofmode.camera.fragments.VideoFragment.CameraConstants.NEW_MEDIA_EVENT
 
 @SuppressLint("RestrictedApi")
 class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video) {
     private lateinit var tapDetector: GestureDetector
     private lateinit var pinchToZoomDetector: ScaleGestureDetector
-    private lateinit var viewFinder:PreviewView
+    private lateinit var viewFinder: PreviewView
+
     // An instance for display manager to get display change callbacks
     private val displayManager by lazy { requireContext().getSystemService(Context.DISPLAY_SERVICE) as DisplayManager }
 
@@ -172,7 +172,8 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
         activity?.window?.fitSystemWindows()
         binding.btnRecordVideo.onWindowInsets { view, windowInsets ->
             if (resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT) {
-                view.bottomMargin = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom
+                view.bottomMargin =
+                    windowInsets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom
             } else {
                 view.endMargin = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars()).right
             }
@@ -192,6 +193,14 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
         firstIcon = R.drawable.ic_outline_camera_rear,
         secondIcon = R.drawable.ic_outline_camera_front,
     ) {
+        if (isRecording) {
+            Toast.makeText(
+                requireContext(),
+                "Cannot switch camera while recording.Please stop recording first",
+                Toast.LENGTH_SHORT
+            ).show()
+            return@toggleButton
+        }
         lensFacing = if (it) {
             CameraSelector.DEFAULT_BACK_CAMERA
         } else {
@@ -228,7 +237,8 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
                 .setTargetRotation(rotation) // set the camera rotation
                 .build()
 
-            val videoCaptureConfig = VideoCapture.DEFAULT_CONFIG.config // default config for video capture
+            val videoCaptureConfig =
+                VideoCapture.DEFAULT_CONFIG.config // default config for video capture
             // The Configuration of video capture
             videoCapture = VideoCapture.Builder
                 .fromConfig(videoCaptureConfig)
@@ -251,9 +261,8 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
                 // If the camera is available, create the gestures
                 camera?.let {
                     pinchToZoomDetector = viewFinder.createPinchDetector(it)
-                    tapDetector = viewFinder.createTapGestureDetector(it,lifecycleScope)
+                    tapDetector = viewFinder.createTapGestureDetector(it, lifecycleScope)
                 }
-
 
 
                 //listen for rotation
@@ -289,7 +298,8 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
 
     @SuppressLint("MissingPermission")
     private fun recordVideo() {
-        val localVideoCapture = videoCapture ?: throw IllegalStateException("Camera initialization failed.")
+        val localVideoCapture =
+            videoCapture ?: throw IllegalStateException("Camera initialization failed.")
 
         // Options fot the output video file
         val outputOptions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -328,7 +338,11 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
                             ?: setLastPictureThumbnail()
                     }
 
-                    override fun onError(videoCaptureError: Int, message: String, cause: Throwable?) {
+                    override fun onError(
+                        videoCaptureError: Int,
+                        message: String,
+                        cause: Throwable?
+                    ) {
                         // This function is called if there is an error during recording process
                         animateRecord.cancel()
                         val msg = "Video capture failed: $message"
@@ -440,7 +454,7 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
         const val NEW_MEDIA_EVENT = "org.witness.proofmode.NEW_MEDIA"
     }
 
-    fun sendLocalCameraEvent(newMediaFile : Uri) {
+    fun sendLocalCameraEvent(newMediaFile: Uri) {
 
         var intent = Intent(NEW_MEDIA_EVENT)
         intent.data = newMediaFile
