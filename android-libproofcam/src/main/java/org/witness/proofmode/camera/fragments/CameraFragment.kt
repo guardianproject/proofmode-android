@@ -32,6 +32,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.Navigation
+import androidx.navigation.fragment.findNavController
 import coil.load
 import coil.request.ErrorResult
 import coil.request.ImageRequest
@@ -159,11 +160,14 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
             btnFlashAuto.setOnClickListener { closeFlashAndSelect(FLASH_MODE_AUTO) }
             btnExposure.setOnClickListener { flExposure.visibility = View.VISIBLE }
             flExposure.setOnClickListener { flExposure.visibility = View.GONE }
+            cameraVideoText?.setOnClickListener {
+                navigateToVideoFragment()
+            }
 
             // This swipe gesture adds a fun gesture to switch between video and photo
             val swipeGestures = SwipeGestureDetector().apply {
                 setSwipeCallback(right = {
-                    Navigation.findNavController(view).navigate(R.id.action_camera_to_video)
+                    navigateToVideoFragment()
                 })
             }
             val gestureDetectorCompat = GestureDetector(requireContext(), swipeGestures)
@@ -176,6 +180,10 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
                 return@setOnTouchListener true
             }
         }
+    }
+
+    private fun navigateToVideoFragment() {
+        findNavController().navigate(R.id.action_camera_to_video)
     }
 
     /**

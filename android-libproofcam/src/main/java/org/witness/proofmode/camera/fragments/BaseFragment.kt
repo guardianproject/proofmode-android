@@ -53,22 +53,28 @@ abstract class BaseFragment<B : ViewBinding>(private val fragmentLayout: Int) : 
         }
     }
 
-    private val permissionRequest = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
-        if (permissions.all { it.value }) {
-            onPermissionGranted()
-        } else {
-            view?.let { v ->
-                Snackbar.make(v, R.string.message_no_permissions, Snackbar.LENGTH_INDEFINITE)
-                    .setAction(R.string.label_ok) { ActivityCompat.finishAffinity(requireActivity()) }
-                    .show()
+    private val permissionRequest =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            if (permissions.all { it.value }) {
+                onPermissionGranted()
+            } else {
+                view?.let { v ->
+                    Snackbar.make(v, R.string.message_no_permissions, Snackbar.LENGTH_INDEFINITE)
+                        .setAction(R.string.label_ok) {
+                            ActivityCompat.finishAffinity(
+                                requireActivity()
+                            )
+                        }
+                        .show()
+                }
             }
         }
-    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
         // Adding an option to handle the back press in fragment
+        // This exists the hosting fragment
         requireActivity().onBackPressedDispatcher.addCallback(
             viewLifecycleOwner,
             object : OnBackPressedCallback(true) {
@@ -119,7 +125,8 @@ abstract class BaseFragment<B : ViewBinding>(private val fragmentLayout: Int) : 
                 val path = cursor.getString(pathColumn)
                 val date = cursor.getLong(dateColumn)
 
-                val contentUri: Uri = ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, id)
+                val contentUri: Uri =
+                    ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, id)
 
                 if (path == outputDirectory) {
                     items.add(Media(contentUri, true, date))
@@ -147,7 +154,8 @@ abstract class BaseFragment<B : ViewBinding>(private val fragmentLayout: Int) : 
                 val path = cursor.getString(pathColumn)
                 val date = cursor.getLong(dateColumn)
 
-                val contentUri: Uri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
+                val contentUri: Uri =
+                    ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
 
                 if (path == outputDirectory) {
                     items.add(Media(contentUri, false, date))

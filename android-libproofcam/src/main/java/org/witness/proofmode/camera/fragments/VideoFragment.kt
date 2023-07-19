@@ -28,6 +28,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.Navigation
+import androidx.navigation.fragment.findNavController
 import coil.decode.VideoFrameDecoder
 import coil.load
 import coil.request.ErrorResult
@@ -141,7 +142,7 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
             // This swipe gesture adds a fun gesture to switch between video and photo
             val swipeGestures = SwipeGestureDetector().apply {
                 setSwipeCallback(left = {
-                    Navigation.findNavController(view).navigate(R.id.action_video_to_camera)
+                    navigateToCameraFragment()
                 })
             }
 
@@ -153,6 +154,10 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
                 return@setOnTouchListener true
             }
         }
+    }
+
+    private fun navigateToCameraFragment() {
+        findNavController().navigate(R.id.action_video_to_camera)
     }
 
     /**
@@ -432,7 +437,11 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
         }
     }
 
-    override fun onBackPressed() = requireActivity().finish()
+
+    /**
+     * Navigate back to the Camera fragment when the back button is pressed
+     */
+    override fun onBackPressed() = navigateToCameraFragment()
 
     override fun onStop() {
         super.onStop()
