@@ -8,15 +8,6 @@
     <string name="switch_include_device">Incluir la identidad del dispositivo</string>
     <string name="switch_include_location">Ubicacion GPS incluida</string>
     <string name="switch_enable_proofmode">Habilitar ProofMode</string>
-    <string name="switch_auto_notarize">Habilitar Notarización Automatica</string>
-    <string name="intro1_title">Capturar la Prueba</string>
-    <string name="intro1_desc">Has tomado el primer paso para transformar tus fotos y video en una prueba digital.</string>
-    <string name="intro2_title">Registrando tu Mundo</string>
-    <string name="intro2_desc">ProofMode registra todos los sensores disponibles en tu dispositivo. Asegurate de habilitar los permisos cuando son requeridos.</string>
-    <string name="intro3_title">Fácil y automático</string>
-    <string name="intro3_desc">ProofMode esta siempre activado en tu dispositivo, agregando evidencias a todas las fotos y videos que tu tomas.</string>
-    <string name="intro4_title">Comparte la evidencia</string>
-    <string name="intro4_desc">Cuando necesitas compartir un archivo con evidencia, abre la foto o el video, y selecciona COMPARTIR EVIDENCIA de el menu  SHARE. </string>
     <string name="share_notarization">COMPARTIR LA NOTARIZACIÓN A...</string>
     <string name="share_proof">COMPARTIR LA PRUEBA A...</string>
     <string name="proof_error_message">La prueba no existe</string>
@@ -35,7 +26,6 @@
     <string name="select_app">SEleccionar la aplicacion para compartir la evidencia con ...</string>
     <string name="independent_notary">Notarizacion independiente por Enigio TimeBeat :</string>
     <string name="packaging_proof">Colectando evidencia para compartir...</string>
-    <string name="view_public_key">Ver la llave publica en:  http://pgp.mit.edu/pks/lookup?search=0x</string>
     <string name="include_mobile_network">Red Movil Incluida</string>
     <string name="settings_location">Ubicación</string>
     <string name="settings_network">Red</string>
@@ -123,4 +113,5 @@
     <string name="progress_building_proof">Construir un paquete de pruebas...</string>
     <string name="progress_generating_proof">Generar pruebas...</string>
     <string name="share_save_downloads">Prueba guardada en la carpeta de descargas</string>
+    <string name="proof_generated_success">¡Prueba generada!</string>
 </resources>
