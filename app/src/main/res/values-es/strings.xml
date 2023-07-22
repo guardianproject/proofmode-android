@@ -114,4 +114,5 @@
     <string name="progress_generating_proof">Generar pruebas...</string>
     <string name="share_save_downloads">Prueba guardada en la carpeta de descargas</string>
     <string name="proof_generated_success">¡Prueba generada!</string>
+    <string name="start_camera">Iniciar cámara</string>
 </resources>
