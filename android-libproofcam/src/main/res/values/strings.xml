@@ -12,4 +12,6 @@
     <string name="cb_timer">Select a timer</string>
     <string name="camera">Camera</string>
     <string name="video">Video</string>
+    <string name="video_fragment">video_fragment</string>
+    <string name="camera_fragment">camera_fragment</string>
 </resources>

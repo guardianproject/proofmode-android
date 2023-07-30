@@ -87,12 +87,26 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
 
     // Selector showing is recording currently active
     private var isRecording = false
+
     private val animateRecord by lazy {
         ObjectAnimator.ofFloat(binding.btnRecordVideo, View.ALPHA, 1f, 0.5f).apply {
             repeatMode = ObjectAnimator.REVERSE
             repeatCount = ObjectAnimator.INFINITE
             doOnCancel { binding.btnRecordVideo.alpha = 1f }
         }
+    }
+
+    private fun showHideGalleryButton() {
+        if (isRecording) {
+            binding.btnGallery.visibility = View.INVISIBLE
+        } else {
+            binding.btnGallery.visibility = View.VISIBLE
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        showHideGalleryButton()
     }
 
     // A lazy instance of the current fragment's view binding
@@ -133,7 +147,13 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
                 override fun onViewAttachedToWindow(v: View) =
                     displayManager.unregisterDisplayListener(displayListener)
             })
-            binding.btnRecordVideo.setOnClickListener { recordVideo() }
+            btnRecordVideo.setOnClickListener {
+                recordVideo()
+                showHideGalleryButton()
+            }
+            cameraTextButton?.setOnClickListener {
+                navigateToCameraFragment()
+            }
             btnGallery.setOnClickListener { openPreview() }
             btnSwitchCamera.setOnClickListener { toggleCamera() }
             btnGrid.setOnClickListener { toggleGrid() }

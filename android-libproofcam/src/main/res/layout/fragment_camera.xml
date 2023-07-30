@@ -3,6 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
+    android:tag="@string/camera_fragment"
     android:layout_height="match_parent"
     android:animateLayoutChanges="true"
     android:background="@android:color/black"
@@ -37,7 +38,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@+id/view"
-        app:layout_constraintVertical_bias="0.4"
+        app:layout_constraintVertical_bias="0.3"
         tools:ignore="ContentDescription" />
 
     <com.google.android.material.button.MaterialButton
@@ -45,6 +46,7 @@
         style="@style/Widget.MaterialComponents.Button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
         android:alpha="0.6"
         android:text="@string/camera"
         android:textAllCaps="false"
@@ -64,7 +66,7 @@
         android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="@+id/cameraTextButton"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.29"
+        app:layout_constraintHorizontal_bias="0.3"
         app:layout_constraintStart_toEndOf="@+id/cameraTextButton"
         app:layout_constraintTop_toTopOf="@+id/cameraTextButton" />
 
