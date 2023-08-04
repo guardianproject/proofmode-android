@@ -79,7 +79,7 @@
     <string name="permission_location_info">Caso não queira capturar estes dados para fins de segurança ou de privacidade, não conceda a permissão.</string>
     <string name="menu_home">Casa</string>
     <string name="menu_how_it_works">Como funciona</string>
-    <string name="menu_settings">Definições</string>
+    <string name="menu_settings">Configurações</string>
     <string name="menu_datalegend">Legenda dos dados</string>
     <string name="menu_digital_signatures">Assinaturas digitais</string>
     <string name="permissions_needed_title">Permissões necessárias</string>
@@ -119,4 +119,5 @@
     <string name="proof_integrity_verified_failed">A prova de verificação da integridade falhou!</string>
     <string name="pub_key_id">A identidade da chave pública foi gerada:</string>
     <string name="pub_key_gen_error">Houve um erro ao gerar a chave de identidade. Reinstale.</string>
+    <string name="proof_generated_success">Prova gerada!</string>
 </resources>
