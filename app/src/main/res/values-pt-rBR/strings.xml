@@ -79,7 +79,7 @@
     <string name="permission_location_info">Caso não queira capturar estes dados para fins de segurança ou de privacidade, não conceda a permissão.</string>
     <string name="menu_home">Casa</string>
     <string name="menu_how_it_works">Como funciona</string>
-    <string name="menu_settings">Definições</string>
+    <string name="menu_settings">Configurações</string>
     <string name="menu_datalegend">Legenda dos dados</string>
     <string name="menu_digital_signatures">Assinaturas digitais</string>
     <string name="permissions_needed_title">Permissões necessárias</string>

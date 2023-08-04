@@ -134,4 +134,35 @@
     <string name="pub_key_gen_error">Error generating identity key. Please reinstall.</string>
 
     <string name="proof_generated_success">Proof generated!</string>
+
+    <plurals name="n_items_selected">
+        <item quantity="zero">No items selected</item>
+        <item quantity="one">One item selected</item>
+        <item quantity="other">%d items selected</item>
+    </plurals>
+    <plurals name="you_captured_n_items">
+        <item quantity="zero">You captured no items</item>
+        <item quantity="one">You captured one item</item>
+        <item quantity="other">You captured %d items</item>
+    </plurals>
+    <plurals name="you_shared_n_items">
+        <item quantity="zero">You shared nothing</item>
+        <item quantity="one">You shared one item</item>
+        <item quantity="other">You shared %d items</item>
+    </plurals>
+    <plurals name="n_items_have_been_deleted_or_are_not_accessible">
+        <item quantity="zero">no items have been deleted or are not accessible</item>
+        <item quantity="one">one item has been deleted or is not accessible</item>
+        <item quantity="other">%d items have been deleted or are not accessible</item>
+    </plurals>
+    <string name="date_display_days_since_today">\'Today \'HH:mm</string>
+    <string name="date_display_days_since_yesterday">\'Yesterday \'HH:MM</string>
+    <string name="date_display_days_since_other">d MMM YYYY</string>
+    <string name="date_display_single_item">d MMM YYYY</string>
+    <plurals name="share_these_n_items">
+        <item quantity="one">Share this item</item>
+        <item quantity="other">Share these %d items</item>
+    </plurals>
+    <string name="you_shared_your_public_key">You shared your public key</string>
+    <string name="re_share">Re-share</string>
 </resources>

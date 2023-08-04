@@ -2,6 +2,7 @@ package org.witness.proofmode
 
 import android.Manifest
 import android.app.Dialog
+import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -12,7 +13,6 @@ import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.*
-import androidx.preference.PreferenceManager
 import android.provider.MediaStore
 import android.text.TextUtils
 import android.view.Menu
@@ -29,7 +29,11 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.documentfile.provider.DocumentFile
+import androidx.preference.PreferenceManager
 import org.bouncycastle.openpgp.PGPException
+import org.witness.proofmode.ActivityConstants.EXTRA_FILE_NAME
+import org.witness.proofmode.ActivityConstants.EXTRA_SHARE_TEXT
+import org.witness.proofmode.ActivityConstants.INTENT_ACTIVITY_ITEMS_SHARED
 import org.witness.proofmode.PermissionActivity.Companion.hasPermissions
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
@@ -44,6 +48,8 @@ import java.text.SimpleDateFormat
 import java.util.*
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import kotlin.collections.ArrayList
+
 
 class ShareProofActivity : AppCompatActivity() {
     private lateinit var binding: ActivityShareBinding
@@ -292,6 +298,7 @@ class ShareProofActivity : AppCompatActivity() {
         val intent = intent
         val action = intent.action
         val shareUris = ArrayList<Uri?>()
+        val shareItems = ArrayList<ProofableItem>()
         val shareText = StringBuffer()
         var fileProofDownloads: File? = null
         if (Intent.ACTION_SEND_MULTIPLE == action) {
@@ -312,6 +319,7 @@ class ShareProofActivity : AppCompatActivity() {
                         null,
                         mediaUri,
                         shareUris,
+                        shareItems,
                         shareText,
                         fBatchProofOut,
                         shareMedia,
@@ -337,6 +345,7 @@ class ShareProofActivity : AppCompatActivity() {
                         mediaHash,
                         mediaUri,
                         shareUris,
+                        shareItems,
                         shareText,
                         null,
                         shareMedia,
@@ -461,6 +470,8 @@ class ShareProofActivity : AppCompatActivity() {
         val intent = intent
         val action = intent.action
         val shareUris = ArrayList<Uri?>()
+        val shareItems = ArrayList<ProofableItem>()
+
         val shareText = StringBuffer()
         if (Intent.ACTION_SEND_MULTIPLE == action) {
             val mediaUris = intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM) ?: emptyList()
@@ -480,6 +491,7 @@ class ShareProofActivity : AppCompatActivity() {
                         null,
                         mediaUri,
                         shareUris,
+                        shareItems,
                         shareText,
                         fBatchProofOut,
                         shareMedia,
@@ -505,6 +517,7 @@ class ShareProofActivity : AppCompatActivity() {
                         mediaHash,
                         mediaUri,
                         shareUris,
+                        shareItems,
                         shareText,
                         null,
                         shareMedia,
@@ -553,9 +566,11 @@ class ShareProofActivity : AppCompatActivity() {
                         fileZip
                     )
                     shareFiltered(
+                        this,
                         getString(R.string.select_app),
                         shareText.toString(),
                         shareUris,
+                        shareItems,
                         uriZip
                     )
                 } else {
@@ -737,6 +752,7 @@ class ShareProofActivity : AppCompatActivity() {
         mediaHash: String?,
         mediaUri: Uri?,
         shareUris: ArrayList<Uri?>,
+        shareItems: ArrayList<ProofableItem>,
         sb: StringBuffer,
         fBatchProofOut: PrintWriter?,
         shareMedia: Boolean,
@@ -751,7 +767,7 @@ class ShareProofActivity : AppCompatActivity() {
                 MediaStore.Audio.Media.DATA
         } else projection[0] = MediaStore.Images.Media.DATA
         val cursor = contentResolver.query(getRealUri(mediaUri)!!, projection, null, null, null)
-        var result = false
+        var result: String? = null
         var mediaPath: String? = null
         if (cursor != null) {
             if (cursor.count > 0) {
@@ -782,7 +798,7 @@ class ShareProofActivity : AppCompatActivity() {
                 shareMedia,
                 isFirstProof
             )
-            if (!result) result =
+            if (result == null) result =
                 shareProofClassic(mediaUri, mediaPath, shareUris, sb, fBatchProofOut, shareMedia)
         } else {
             result = shareProof(
@@ -796,7 +812,13 @@ class ShareProofActivity : AppCompatActivity() {
                 isFirstProof
             )
         }
-        return result
+
+        // Successful?
+        if (result != null) {
+            shareItems.add(ProofableItem(result, mediaUri))
+        }
+
+        return result != null
     }
 
     @Throws(IOException::class, PGPException::class)
@@ -809,7 +831,7 @@ class ShareProofActivity : AppCompatActivity() {
         fBatchProofOut: PrintWriter?,
         shareMedia: Boolean,
         isFirstProof: Boolean
-    ): Boolean {
+    ): String? {
         var hash = hash
         if (hash == null) hash = HashUtils.getSHA256FromFileContent(
             contentResolver.openInputStream(
@@ -817,7 +839,7 @@ class ShareProofActivity : AppCompatActivity() {
             )
         )
         if (hash != null) {
-            val fileFolder = MediaWatcher.getHashStorageDir(this, hash) ?: return false
+            val fileFolder = MediaWatcher.getHashStorageDir(this, hash) ?: return null
             val fileMediaSig = File(fileFolder, hash + ProofMode.OPENPGP_FILE_TAG)
             val fileMediaProof = File(fileFolder, hash + ProofMode.PROOF_FILE_TAG)
             val fileMediaProofSig =
@@ -849,10 +871,10 @@ class ShareProofActivity : AppCompatActivity() {
                     sb,
                     isFirstProof
                 )
-                return true
+                return hash
             }
         }
-        return false
+        return null
     }
 
     @Throws(IOException::class, PGPException::class)
@@ -863,7 +885,7 @@ class ShareProofActivity : AppCompatActivity() {
         sb: StringBuffer,
         fBatchProofOut: PrintWriter?,
         shareMedia: Boolean
-    ): Boolean {
+    ): String? {
         val baseFolder = "proofmode"
         val hash = HashUtils.getSHA256FromFileContent(
             contentResolver.openInputStream(
@@ -910,7 +932,7 @@ class ShareProofActivity : AppCompatActivity() {
             sb,
             true
         )
-        return true
+        return hash
     }
 
     @Throws(IOException::class, PGPException::class)
@@ -1155,34 +1177,6 @@ class ShareProofActivity : AppCompatActivity() {
         startActivity(openInChooser)
     }
 
-    private fun shareFiltered(
-        shareMessage: String,
-        shareText: String,
-        shareUris: ArrayList<Uri?>?,
-        shareZipUri: Uri?
-    ) {
-        val modeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION
-        val shareIntent = Intent()
-        shareIntent.action = Intent.ACTION_SEND
-        shareIntent.setDataAndType(shareZipUri, "application/zip")
-        shareIntent.putExtra(Intent.EXTRA_TEXT, shareText)
-        shareIntent.putExtra(Intent.EXTRA_STREAM, shareZipUri)
-        shareIntent.addFlags(modeFlags)
-        val openInChooser = Intent.createChooser(shareIntent, shareMessage)
-        openInChooser.addFlags(modeFlags)
-        val resInfoList = this.packageManager.queryIntentActivities(openInChooser, 0)
-        for (resolveInfo in resInfoList) {
-            val packageName = resolveInfo.activityInfo.packageName
-            if (shareUris != null) for (uri in shareUris) grantUriPermission(
-                packageName,
-                uri,
-                modeFlags
-            )
-            shareZipUri?.let { grantUriPermission(packageName, it, modeFlags) }
-        }
-        startActivity(openInChooser)
-    }
-
     private fun askForPermission(permission: String, requestCode: Int) {
         if (ContextCompat.checkSelfPermission(
                 this,
@@ -1349,6 +1343,52 @@ class ShareProofActivity : AppCompatActivity() {
                 null
             )
             return Uri.parse(path)
+        }
+
+        fun shareFiltered(
+            context: Context,
+            shareMessage: String,
+            shareText: String,
+            shareUris: ArrayList<Uri?>?,
+            shareItems: ArrayList<ProofableItem>?,
+            shareZipUri: Uri?
+        ) {
+            val modeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+            val shareIntent = Intent()
+            shareIntent.action = Intent.ACTION_SEND
+            shareIntent.setDataAndType(shareZipUri, "application/zip")
+            shareIntent.putExtra(Intent.EXTRA_TEXT, shareText)
+            shareIntent.putExtra(Intent.EXTRA_STREAM, shareZipUri)
+            shareIntent.addFlags(modeFlags)
+
+            val sharedIntent = Intent(INTENT_ACTIVITY_ITEMS_SHARED)
+            if (shareItems != null) {
+                sharedIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, shareItems)
+                sharedIntent.putExtra(EXTRA_SHARE_TEXT, shareText)
+                sharedIntent.putExtra(EXTRA_FILE_NAME, shareZipUri?.toString())
+            }
+            val pendingIntent =
+                PendingIntent.getBroadcast(
+                    context,
+                    0,
+                    sharedIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+
+            val openInChooser =
+                Intent.createChooser(shareIntent, shareMessage, pendingIntent.intentSender)
+            openInChooser.addFlags(modeFlags)
+            val resInfoList = context.packageManager.queryIntentActivities(openInChooser, 0)
+            for (resolveInfo in resInfoList) {
+                val packageName = resolveInfo.activityInfo.packageName
+                if (shareUris != null) for (uri in shareUris) context.grantUriPermission(
+                    packageName,
+                    uri,
+                    modeFlags
+                )
+                shareZipUri?.let { context.grantUriPermission(packageName, it, modeFlags) }
+            }
+            context.startActivity(openInChooser)
         }
     }
 }

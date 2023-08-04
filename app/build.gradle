@@ -2,6 +2,8 @@ plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
     id 'kotlin-kapt'
+    id 'com.google.devtools.ksp' version '1.8.10-1.0.9'
+    id 'org.jetbrains.kotlin.plugin.serialization'
 }
 
 
@@ -25,8 +27,8 @@ android {
         applicationId "org.witness.proofmode"
         minSdkVersion 24
         targetSdkVersion 33
-        versionCode 200201
-        versionName "0.0.20-BETA-1"
+        versionCode 210101
+        versionName "2.1.0-ALPHA-1"
         multiDexEnabled true
         archivesBaseName = "ProofMode-$versionName"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -60,8 +62,11 @@ android {
     }
     buildFeatures {
         viewBinding = true
+        compose = true
     }
-
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.4.4"
+    }
     configurations {
         all {
             resolutionStrategy {
@@ -83,6 +88,24 @@ dependencies {
     implementation 'androidx.core:core-ktx:1.10.1'
     implementation "androidx.preference:preference-ktx:1.2.0"
 
+    // Activity view
+    implementation 'androidx.compose.ui:ui:1.4.3'
+    implementation 'androidx.compose.runtime:runtime:1.4.3'
+    implementation 'androidx.compose.material3:material3:1.1.0'
+    implementation 'androidx.compose.ui:ui-tooling:1.4.3'
+    implementation "androidx.constraintlayout:constraintlayout-compose:1.0.1"
+    implementation "androidx.activity:activity-compose:1.7.2"
+    implementation "io.coil-kt:coil-compose:2.4.0"
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0'
+
+    // Room database support (for activity view)
+    def room_version = "2.5.1"
+
+    implementation "androidx.room:room-runtime:$room_version"
+    implementation "androidx.room:room-ktx:$room_version"
+    annotationProcessor "androidx.room:room-compiler:$room_version"
+    // To use Kotlin Symbol Processing (KSP)
+    ksp "androidx.room:room-compiler:$room_version"
 
    // implementation project(":camera")
     implementation project(":android-libproofcam")

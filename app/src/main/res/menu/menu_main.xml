@@ -26,5 +26,24 @@
         android:title="@string/action_share_key"
         app:showAsAction="never" />
 
+    <item  android:title="@string/share_proof_action">
+        <menu>
+        <item
+            android:id="@+id/action_share_photos"
+            android:orderInCategory="100"
+            android:title="Import photos..."
+            app:showAsAction="never" />
+        <item
+            android:id="@+id/action_share_videos"
+            android:orderInCategory="100"
+            android:title="Import videos..."
+            app:showAsAction="never" />
+        <item
+            android:id="@+id/action_share_documents"
+            android:orderInCategory="100"
+            android:title="Import documents..."
+            app:showAsAction="never" />
+        </menu>
+    </item>
 
 </menu>

@@ -1,22 +1,30 @@
 package org.witness.proofmode;
 
+import static org.witness.proofmode.ProofMode.EVENT_PROOF_GENERATED;
+
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.IBinder;
+import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import org.witness.proofmode.notaries.GoogleSafetyNetNotarizationProvider;
 import org.witness.proofmode.notaries.OpenTimestampsNotarizationProvider;
 import org.witness.proofmode.notaries.SafetyNetCheck;
 import org.witness.proofmode.notarization.NotarizationProvider;
+
+import java.util.UUID;
 
 public class ProofService extends Service {
 
@@ -66,6 +74,8 @@ public class ProofService extends Service {
         super.onDestroy();
 
         ProofMode.stopBackgroundService(this);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mReceiver);
+
     }
 
     @Override
@@ -87,9 +97,30 @@ public class ProofService extends Service {
             }
         }
 
+        startEventListeners();
+
         return START_REDELIVER_INTENT;
     }
 
+    private BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+
+            //got event
+
+            Toast.makeText(ProofService.this,"Got proof event: " + intent.getData(), Toast.LENGTH_SHORT).show();
+            /**
+             Activities.INSTANCE.addActivity(new Activity(UUID.randomUUID().toString(), ActivityType.MediaCaptured(
+             items = mutableStateListOf(
+             ProofableItem(UUID.randomUUID().toString(), intent.getData())
+             )
+             ), Date()),this);**/
+        }
+    };
+
+    private void startEventListeners () {
+        LocalBroadcastManager.getInstance(getApplicationContext()).registerReceiver(mReceiver, new IntentFilter(EVENT_PROOF_GENERATED));
+    }
 
 
     @Override

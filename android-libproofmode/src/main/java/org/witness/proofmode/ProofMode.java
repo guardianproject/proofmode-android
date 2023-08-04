@@ -72,6 +72,14 @@ public class ProofMode {
 
     public final static String PREFS_DOPROOF = "doProof";
 
+    public final static String EVENT_PROOF_START = "org.witness.proofmode.PROOF_START";
+    public final static String EVENT_PROOF_GENERATED = "org.witness.proofmode.PROOF_GENERATED";
+
+    public final static String EVENT_PROOF_EXISTS = "org.witness.proofmode.PROOF_EXISTS";
+
+    public final static String EVENT_PROOF_FAILED = "org.witness.proofmode.PROOF_FAILED";
+    public final static String EVENT_PROOF_EXTRA_HASH = "org.witness.proofmode.PROOF_HASH";
+
     public final static BouncyCastleProvider sProvider = new BouncyCastleProvider();
     static {
         Security.addProvider(sProvider);
