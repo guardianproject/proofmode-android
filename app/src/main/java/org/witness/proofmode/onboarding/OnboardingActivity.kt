@@ -14,7 +14,7 @@ import org.witness.proofmode.SettingsActivity
 import org.witness.proofmode.databinding.ActivityOnboardingBinding
 
 class OnboardingActivity : AppCompatActivity(), OnboardingStepListener {
-    private lateinit var binding:ActivityOnboardingBinding
+    private lateinit var binding: ActivityOnboardingBinding
     private lateinit var pager: NoSwipeViewPager
     private lateinit var indicator: DottedProgressView
     private lateinit var btnNext: ImageButton
@@ -103,7 +103,7 @@ class OnboardingActivity : AppCompatActivity(), OnboardingStepListener {
         if (onlyTutorial) {
             indicator.visibility = View.VISIBLE
             btnNext.visibility = View.VISIBLE
-            pager.setAllowedSwipeDirection(NoSwipeViewPager.SwipeDirection.all)
+            pager.setAllowedSwipeDirection(NoSwipeViewPager.SwipeDirection.ALL)
             return
         }
         val lastItem = fragmentList.size - 1
@@ -114,13 +114,15 @@ class OnboardingActivity : AppCompatActivity(), OnboardingStepListener {
             if (currentItem == 0 || currentItem == lastItem) View.GONE else View.VISIBLE
         when (currentItem) {
             0 -> {
-                pager.setAllowedSwipeDirection(NoSwipeViewPager.SwipeDirection.none)
+                pager.setAllowedSwipeDirection(NoSwipeViewPager.SwipeDirection.NONE)
             }
+
             1 -> {
-                pager.setAllowedSwipeDirection(NoSwipeViewPager.SwipeDirection.right)
+                pager.setAllowedSwipeDirection(NoSwipeViewPager.SwipeDirection.RIGHT)
             }
+
             else -> {
-                pager.setAllowedSwipeDirection(NoSwipeViewPager.SwipeDirection.all)
+                pager.setAllowedSwipeDirection(NoSwipeViewPager.SwipeDirection.ALL)
             }
         }
     }
