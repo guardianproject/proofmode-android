@@ -30,6 +30,11 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.documentfile.provider.DocumentFile
 import androidx.preference.PreferenceManager
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.asRequestBody
 import org.bouncycastle.openpgp.PGPException
 import org.witness.proofmode.ActivityConstants.EXTRA_FILE_NAME
 import org.witness.proofmode.ActivityConstants.EXTRA_SHARE_TEXT
@@ -43,12 +48,13 @@ import org.witness.proofmode.databinding.ActivityShareBinding
 import org.witness.proofmode.service.MediaWatcher
 import timber.log.Timber
 import java.io.*
+import java.net.URL
 import java.net.URLDecoder
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.concurrent.TimeUnit
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
-import kotlin.collections.ArrayList
 
 
 class ShareProofActivity : AppCompatActivity() {
@@ -209,6 +215,10 @@ class ShareProofActivity : AppCompatActivity() {
 
     fun saveAll(button: View?) {
         saveProof(sendMedia, true)
+    }
+
+    fun signAll(button: View?) {
+        signProof(sendMedia, true)
     }
 
     private fun displayProgress(text: String) {
@@ -462,6 +472,162 @@ class ShareProofActivity : AppCompatActivity() {
         ShareProofTask(this).execute(shareMedia, shareProof)
     }
 
+    private fun signProof(shareMedia: Boolean, shareProof: Boolean) {
+        displayProgress(getString(R.string.progress_building_proof))
+        SignProofTask(this).execute(shareMedia, shareProof)
+    }
+
+    @Synchronized
+    @Throws(IOException::class, PGPException::class)
+    private fun signProofAsync(shareMedia: Boolean, shareProof: Boolean): File? {
+
+        // Get intent, action and MIME type
+        val intent = intent
+        val action = intent.action
+        val shareUris = ArrayList<Uri?>()
+        val shareItems = ArrayList<ProofableItem>()
+
+        val shareText = StringBuffer()
+        if (Intent.ACTION_SEND_MULTIPLE == action) {
+            val mediaUris = intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM) ?: emptyList()
+            val fileBatchProof: File
+            val fBatchProofOut: PrintWriter
+            try {
+                val fileFolder = MediaWatcher.getHashStorageDir(this, "batch") ?: return null
+                fileBatchProof = File(fileFolder, Date().time.toString() + "batchproof.csv")
+                fBatchProofOut = PrintWriter(FileWriter(fileBatchProof, true))
+            } catch (ioe: IOException) {
+                return null //unable to open batch proof
+            }
+            var successProof = 0
+            var isFirstProof = true
+            for (mediaUri in mediaUris) {
+                if (processUri(
+                        null,
+                        mediaUri,
+                        shareUris,
+                        shareItems,
+                        shareText,
+                        fBatchProofOut,
+                        shareMedia,
+                        isFirstProof
+                    )
+                ) {
+                    successProof++
+                    isFirstProof = false
+                } else {
+                    Timber.d("share proof failed for: $mediaUri")
+                }
+            }
+            fBatchProofOut.flush()
+            fBatchProofOut.close()
+            shareUris.add(Uri.fromFile(fileBatchProof)) // Add your image URIs here
+        } else if (Intent.ACTION_SEND == action || action!!.endsWith("SHARE_PROOF")) {
+            var mediaUri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+            if (mediaUri == null) mediaUri = intent.data
+            if (mediaUri != null) {
+                mediaUri = cleanUri(mediaUri)
+                val mediaHash = hashCache[mediaUri.toString()]
+                if (!processUri(
+                        mediaHash,
+                        mediaUri,
+                        shareUris,
+                        shareItems,
+                        shareText,
+                        null,
+                        shareMedia,
+                        true
+                    )
+                ) return null
+            }
+        }
+        if (shareUris.size > 0) {
+            if (!shareProof) shareNotarization(shareText.toString()) else {
+                val fileCacheFolder = File(cacheDir, "zips")
+                fileCacheFolder.mkdir()
+                val sdf = SimpleDateFormat(ZIP_FILE_DATETIME_FORMAT)
+                val dateString = sdf.format(Date())
+                val userId = pgpUtils.publicKeyFingerprint
+                val fileZip = File(fileCacheFolder, "proofmode-$userId-$dateString.zip")
+                Timber.d("Preparing proof bundle zip: " + fileZip.absolutePath)
+                try {
+                    zipProof(shareUris, fileZip)
+                } catch (e: IOException) {
+                    Timber.e(e, "Error generating proof Zip")
+                    return null
+                }
+                if (fileZip.length() > 0) {
+                    Timber.d("Proof zip completed. Size:" + fileZip.length())
+                    val encryptZip = false
+                    if (encryptZip) {
+                        val fileZipEnc =
+                            File(fileCacheFolder, "proofmode-$userId-$dateString.zip.gpg")
+                        try {
+                            pgpUtils.encrypt(
+                                FileInputStream(fileZip),
+                                fileZip.length(),
+                                FileOutputStream(fileZipEnc)
+                            )
+                        } catch (e: IOException) {
+                            e.printStackTrace()
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+
+                    var proofSignEndpoint = URL("https://proofsign.gpfs.link/upload")
+
+                    val fileRequestBody = fileZip.asRequestBody("application/zip".toMediaType())
+                    val requestBody = MultipartBody.Builder()
+                        .setType(MultipartBody.FORM)
+                        .addFormDataPart("file", fileZip.name, fileRequestBody)
+                        .build()
+
+                    val request = Request.Builder().url(proofSignEndpoint)
+                        .post(requestBody)
+                        .build()
+
+                    var cBuilder = OkHttpClient.Builder();
+                    cBuilder.connectTimeout(120, TimeUnit.SECONDS)
+                    cBuilder.readTimeout(120, TimeUnit.SECONDS)
+                    cBuilder.writeTimeout(120, TimeUnit.SECONDS)
+
+                    val client = cBuilder.build()
+                    client.newCall(request).execute().use { response ->
+
+                        Timber.d("proofsign response: " + response.code)
+
+                        if (response.code == 200) {
+                            var rs = response.body?.byteStream()
+
+                            Timber.d("success uploading to proofsign: " + fileZip.absolutePath)
+
+                            var fileZipSigned = File(fileZip.absolutePath + "-c2pa.zip")
+                            response.use { input ->
+                                fileZipSigned.outputStream().use { output ->
+                                    rs?.copyTo(output)
+                                }
+                            }
+
+                            Timber.d("saved proofsigned zip to: " + fileZipSigned.absolutePath)
+                            return fileZipSigned
+                        }
+                        else{
+                            Timber.d("proofsign err: " + response.body?.string())
+                            return null
+                        }
+                    }
+
+
+                } else {
+                    Timber.d("Proof zip failed due to empty size:" + fileZip.length())
+                    return null
+                }
+            }
+        }
+        return null
+    }
+
     @Synchronized
     @Throws(IOException::class, PGPException::class)
     private fun shareProofAsync(shareMedia: Boolean, shareProof: Boolean): Boolean {
@@ -707,6 +873,52 @@ class ShareProofActivity : AppCompatActivity() {
         }
     }
 
+    private class SignProofTask  // only retain a weak reference to the activity
+        (private val activity: ShareProofActivity) :
+        AsyncTask<Boolean?, Void?, File?>() {
+        override fun doInBackground(vararg params: Boolean?): File? {
+            var result: File? = null
+            return try {
+
+                params.let {
+                    result = activity.signProofAsync(params[0]!!, params[1]!!)
+                }
+                return result
+            } catch (e: IOException) {
+                Timber.e(e, "error uploading proof")
+                null
+            } catch (e: PGPException) {
+                Timber.e(e, "error uploading proof")
+                null
+            }
+        }
+
+        override fun onPostExecute(result: File?) {
+            if (result?.exists() == true) {
+                val uriZip = FileProvider.getUriForFile(
+                    activity,
+                    BuildConfig.APPLICATION_ID + ".provider",
+                    result
+                )
+                shareFiltered(
+                    activity,
+                    activity.getString(R.string.select_app),
+                    result.name,
+                    null,
+                    null,
+                    uriZip
+                )
+
+
+            } else {
+                //show link?
+                //do something
+                Timber.d("unable to uploadProofAsync")
+                activity.showProofError()
+            }
+        }
+    }
+
     private fun generateProof(mediaUri: Uri?, proofHash: String?) {
         displayProgress(getString(R.string.progress_generating_proof))
         GenerateProofTask(this, proofHash).execute(mediaUri)
@@ -732,6 +944,15 @@ class ShareProofActivity : AppCompatActivity() {
             
             ${fileProof.absolutePath}
             """.trimIndent()
+    }
+
+    private fun showProofUploaded(fileProof: String) {
+        findViewById<View>(R.id.view_proof).visibility = View.GONE
+        findViewById<View>(R.id.view_no_proof).visibility = View.GONE
+        findViewById<View>(R.id.view_proof_progress).visibility = View.GONE
+        findViewById<View>(R.id.view_proof_failed).visibility = View.GONE
+        findViewById<View>(R.id.view_proof_saved).visibility = View.VISIBLE
+
     }
 
     private fun getRealUri(contentUri: Uri?): Uri? {
@@ -1391,4 +1612,6 @@ class ShareProofActivity : AppCompatActivity() {
             context.startActivity(openInChooser)
         }
     }
+
+
 }
