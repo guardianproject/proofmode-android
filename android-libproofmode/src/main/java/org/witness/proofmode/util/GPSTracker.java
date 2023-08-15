@@ -136,7 +136,8 @@ public final class GPSTracker implements LocationListener {
                 }
                 else {
                     //if network location accuracy is a bigger distance range than GPS, then use GPS instead
-                    if (location.getAccuracy() > locationGps.getAccuracy())
+                    boolean gpsLocationNotNull = locationGps != null;
+                    if ( gpsLocationNotNull && location.getAccuracy() > locationGps.getAccuracy())
                     {
                         location = locationGps;
                         latitude = location.getLatitude();

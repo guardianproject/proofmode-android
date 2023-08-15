@@ -53,6 +53,7 @@ dependencies {
     implementation("androidx.navigation:navigation-ui-ktx:2.5.3")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.1")
     implementation("androidx.viewpager2:viewpager2:1.0.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.6.0")
 
     implementation("io.coil-kt:coil:2.2.2"){
     }

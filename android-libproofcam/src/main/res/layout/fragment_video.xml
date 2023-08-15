@@ -3,6 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
+    android:tag="@string/video_fragment"
     android:layout_height="match_parent"
     android:background="@android:color/black"
     tools:context="org.witness.proofmode.camera.fragments.VideoFragment">
@@ -17,26 +18,56 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <View
+        android:id="@+id/view"
         android:layout_width="0dp"
-        android:layout_height="0dp"
+        android:layout_height="@dimen/transparent_view_height"
         android:alpha="0.4"
         android:background="@android:color/black"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@id/btnRecordVideo" />
+        app:layout_constraintStart_toStartOf="parent" />
 
     <ImageButton
         android:id="@+id/btnRecordVideo"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:background="@android:color/transparent"
-        android:padding="@dimen/double_margin"
         android:src="@drawable/ic_take_video"
         app:backgroundTint="@android:color/transparent"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toBottomOf="@+id/view"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/view"
+        app:layout_constraintVertical_bias="0.3" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/videoTextButton"
+        style="@style/Widget.MaterialComponents.Button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:alpha="0.6"
+        android:text="@string/video"
+        android:textAllCaps="false"
+        android:textColor="@android:color/black"
+        app:backgroundTint="@android:color/holo_orange_light"
+        app:cornerRadius="@dimen/active_button_corners"
+        app:layout_constraintEnd_toEndOf="@+id/btnRecordVideo"
+        app:layout_constraintStart_toStartOf="@+id/btnRecordVideo"
+        app:layout_constraintTop_toBottomOf="@+id/btnRecordVideo" />
+
+    <TextView
+        android:id="@+id/cameraTextButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/camera"
+        android:textColor="@android:color/white"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toBottomOf="@id/videoTextButton"
+        app:layout_constraintEnd_toStartOf="@id/videoTextButton"
+        app:layout_constraintHorizontal_bias="0.6"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/videoTextButton" />
 
     <ImageButton
         android:id="@+id/btnGallery"

@@ -16,6 +16,7 @@ import android.util.DisplayMetrics
 import android.util.Log
 import android.view.GestureDetector
 import android.view.OrientationEventListener
+import android.view.ScaleGestureDetector
 import android.view.Surface
 import android.view.View
 import android.widget.Toast
@@ -31,6 +32,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.Navigation
+import androidx.navigation.fragment.findNavController
 import coil.load
 import coil.request.ErrorResult
 import coil.request.ImageRequest
@@ -53,6 +55,12 @@ import kotlin.math.min
 import kotlin.properties.Delegates
 
 class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_camera) {
+    private lateinit var proofModeCamera: Camera
+    private lateinit var proofModeViewFinder: PreviewView
+    private lateinit var tapDetector: GestureDetector
+    private lateinit var pinchToZoomDetector: ScaleGestureDetector
+
+
     // An instance for display manager to get display change callbacks
     private val displayManager by lazy { requireContext().getSystemService(Context.DISPLAY_SERVICE) as DisplayManager }
 
@@ -65,7 +73,11 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
     private var imageAnalyzer: ImageAnalysis? = null
 
     // A lazy instance of the current fragment's view binding
-    override val binding: FragmentCameraBinding by lazy { FragmentCameraBinding.inflate(layoutInflater) }
+    override val binding: FragmentCameraBinding by lazy {
+        FragmentCameraBinding.inflate(
+            layoutInflater
+        )
+    }
 
     private var displayId = -1
 
@@ -123,6 +135,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
         displayManager.registerDisplayListener(displayListener, null)
 
         binding.run {
+            proofModeViewFinder = viewFinder
             viewFinder.addOnAttachStateChangeListener(object :
                 View.OnAttachStateChangeListener {
                 override fun onViewDetachedFromWindow(v: View) =
@@ -147,19 +160,30 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
             btnFlashAuto.setOnClickListener { closeFlashAndSelect(FLASH_MODE_AUTO) }
             btnExposure.setOnClickListener { flExposure.visibility = View.VISIBLE }
             flExposure.setOnClickListener { flExposure.visibility = View.GONE }
+            cameraVideoText?.setOnClickListener {
+                navigateToVideoFragment()
+            }
 
             // This swipe gesture adds a fun gesture to switch between video and photo
             val swipeGestures = SwipeGestureDetector().apply {
                 setSwipeCallback(right = {
-                    Navigation.findNavController(view).navigate(R.id.action_camera_to_video)
+                    navigateToVideoFragment()
                 })
             }
             val gestureDetectorCompat = GestureDetector(requireContext(), swipeGestures)
+
             viewFinder.setOnTouchListener { _, motionEvent ->
-                if (gestureDetectorCompat.onTouchEvent(motionEvent)) return@setOnTouchListener false
+                // Make sure to let the touch listener handle each event here
+                gestureDetectorCompat.onTouchEvent(motionEvent)
+                pinchToZoomDetector.onTouchEvent(motionEvent)
+                tapDetector.onTouchEvent(motionEvent)
                 return@setOnTouchListener true
             }
         }
+    }
+
+    private fun navigateToVideoFragment() {
+        findNavController().navigate(R.id.action_camera_to_video)
     }
 
     /**
@@ -410,15 +434,46 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
                 val extensionsManager = extensionsManagerFuture.get() ?: return@addListener
                 val cameraProvider = cameraProvider ?: return@addListener
 
-                val isAvailable = extensionsManager.isExtensionAvailable(lensFacing, ExtensionMode.HDR)
+                val isAvailable =
+                    extensionsManager.isExtensionAvailable(lensFacing, ExtensionMode.HDR)
 
                 // check for any extension availability
-                println("AUTO " + extensionsManager.isExtensionAvailable(lensFacing, ExtensionMode.AUTO))
-                println("HDR " + extensionsManager.isExtensionAvailable(lensFacing, ExtensionMode.HDR))
-                println("FACE RETOUCH " + extensionsManager.isExtensionAvailable(lensFacing, ExtensionMode.FACE_RETOUCH))
-                println("BOKEH " + extensionsManager.isExtensionAvailable(lensFacing, ExtensionMode.BOKEH))
-                println("NIGHT " + extensionsManager.isExtensionAvailable(lensFacing, ExtensionMode.NIGHT))
-                println("NONE " + extensionsManager.isExtensionAvailable(lensFacing, ExtensionMode.NONE))
+                println(
+                    "AUTO " + extensionsManager.isExtensionAvailable(
+                        lensFacing,
+                        ExtensionMode.AUTO
+                    )
+                )
+                println(
+                    "HDR " + extensionsManager.isExtensionAvailable(
+                        lensFacing,
+                        ExtensionMode.HDR
+                    )
+                )
+                println(
+                    "FACE RETOUCH " + extensionsManager.isExtensionAvailable(
+                        lensFacing,
+                        ExtensionMode.FACE_RETOUCH
+                    )
+                )
+                println(
+                    "BOKEH " + extensionsManager.isExtensionAvailable(
+                        lensFacing,
+                        ExtensionMode.BOKEH
+                    )
+                )
+                println(
+                    "NIGHT " + extensionsManager.isExtensionAvailable(
+                        lensFacing,
+                        ExtensionMode.NIGHT
+                    )
+                )
+                println(
+                    "NONE " + extensionsManager.isExtensionAvailable(
+                        lensFacing,
+                        ExtensionMode.NONE
+                    )
+                )
 
                 // Check if the extension is available on the device
                 if (!isAvailable) {
@@ -428,7 +483,10 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
                     // If yes, turn on if the HDR is turned on by the user
                     binding.btnHdr.visibility = View.VISIBLE
                     hdrCameraSelector =
-                        extensionsManager.getExtensionEnabledCameraSelector(lensFacing, ExtensionMode.HDR)
+                        extensionsManager.getExtensionEnabledCameraSelector(
+                            lensFacing,
+                            ExtensionMode.HDR
+                        )
                 }
             },
             ContextCompat.getMainExecutor(requireContext())
@@ -444,15 +502,19 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
         )
     }
 
-    private fun bindToLifecycle(localCameraProvider: ProcessCameraProvider, viewFinder: PreviewView) {
+    @SuppressLint("ClickableViewAccessibility")
+    private fun bindToLifecycle(
+        localCameraProvider: ProcessCameraProvider,
+        viewFinder: PreviewView
+    ) {
         try {
-            localCameraProvider.bindToLifecycle(
+            proofModeCamera = localCameraProvider.bindToLifecycle(
                 viewLifecycleOwner, // current lifecycle owner
                 hdrCameraSelector ?: lensFacing, // either front or back facing
                 preview, // camera preview use case
                 imageCapture, // image capture use case
                 imageAnalyzer, // image analyzer use case
-            ).run {
+            ).apply {
                 // Init camera exposure control
                 cameraInfo.exposureState.run {
                     val lower = exposureCompensationRange.lower
@@ -473,6 +535,9 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
 
             // Attach the viewfinder's surface provider to preview use case
             preview?.setSurfaceProvider(viewFinder.surfaceProvider)
+            tapDetector = viewFinder.createTapGestureDetector(proofModeCamera, lifecycleScope)
+            pinchToZoomDetector = viewFinder.createPinchDetector(proofModeCamera)
+
         } catch (e: Exception) {
             Log.e(TAG, "Failed to bind use cases", e)
         }
@@ -501,10 +566,12 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
                 binding.tvCountDown.text = i.toString()
                 delay(1000)
             }
+
             CameraTimer.S10 -> for (i in 10 downTo 1) {
                 binding.tvCountDown.text = i.toString()
                 delay(1000)
             }
+
             else -> {
             }
 
@@ -514,7 +581,8 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
     }
 
     private fun captureImage() {
-        val localImageCapture = imageCapture ?: throw IllegalStateException("Camera initialization failed.")
+        val localImageCapture =
+            imageCapture ?: throw IllegalStateException("Camera initialization failed.")
 
         // Setup image capture metadata
         val metadata = Metadata().apply {
@@ -533,7 +601,8 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
             val contentResolver = requireContext().contentResolver
 
             // Create the output uri
-            val contentUri = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+            val contentUri =
+                MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
 
             OutputFileOptions.Builder(contentResolver, contentUri, contentValues)
         } else {
@@ -592,8 +661,14 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
     }
 
     override fun onBackPressed() = when {
-        binding.llTimerOptions.visibility == View.VISIBLE -> binding.llTimerOptions.circularClose(binding.btnTimer)
-        binding.llFlashOptions.visibility == View.VISIBLE -> binding.llFlashOptions.circularClose(binding.btnFlash)
+        binding.llTimerOptions.visibility == View.VISIBLE -> binding.llTimerOptions.circularClose(
+            binding.btnTimer
+        )
+
+        binding.llFlashOptions.visibility == View.VISIBLE -> binding.llFlashOptions.circularClose(
+            binding.btnFlash
+        )
+
         else -> requireActivity().finish()
     }
 
@@ -612,7 +687,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
         const val NEW_MEDIA_EVENT = "org.witness.proofmode.NEW_MEDIA"
     }
 
-    fun sendLocalCameraEvent(newMediaFile : Uri) {
+    fun sendLocalCameraEvent(newMediaFile: Uri) {
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             var f = newMediaFile.toFile()

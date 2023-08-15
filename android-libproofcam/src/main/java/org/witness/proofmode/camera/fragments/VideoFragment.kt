@@ -15,37 +15,43 @@ import android.util.DisplayMetrics
 import android.util.Log
 import android.view.GestureDetector
 import android.view.OrientationEventListener
+import android.view.ScaleGestureDetector
 import android.view.Surface
 import android.view.View
 import android.widget.Toast
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
 import androidx.core.animation.doOnCancel
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.Navigation
+import androidx.navigation.fragment.findNavController
 import coil.decode.VideoFrameDecoder
 import coil.load
 import coil.request.ErrorResult
 import coil.request.ImageRequest
-import coil.request.videoFrameMillis
 import coil.transform.CircleCropTransformation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.witness.proofmode.camera.R
 import org.witness.proofmode.camera.databinding.FragmentVideoBinding
+import org.witness.proofmode.camera.fragments.VideoFragment.CameraConstants.NEW_MEDIA_EVENT
 import org.witness.proofmode.camera.utils.*
 import java.io.File
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.properties.Delegates
-import org.witness.proofmode.camera.R
-import org.witness.proofmode.camera.fragments.VideoFragment.CameraConstants.NEW_MEDIA_EVENT
 
 @SuppressLint("RestrictedApi")
 class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video) {
+    private lateinit var tapDetector: GestureDetector
+    private lateinit var pinchToZoomDetector: ScaleGestureDetector
+    private lateinit var viewFinder: PreviewView
+
     // An instance for display manager to get display change callbacks
     private val displayManager by lazy { requireContext().getSystemService(Context.DISPLAY_SERVICE) as DisplayManager }
 
@@ -81,12 +87,26 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
 
     // Selector showing is recording currently active
     private var isRecording = false
+
     private val animateRecord by lazy {
         ObjectAnimator.ofFloat(binding.btnRecordVideo, View.ALPHA, 1f, 0.5f).apply {
             repeatMode = ObjectAnimator.REVERSE
             repeatCount = ObjectAnimator.INFINITE
             doOnCancel { binding.btnRecordVideo.alpha = 1f }
         }
+    }
+
+    private fun showHideGalleryButton() {
+        if (isRecording) {
+            binding.btnGallery.visibility = View.INVISIBLE
+        } else {
+            binding.btnGallery.visibility = View.VISIBLE
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        showHideGalleryButton()
     }
 
     // A lazy instance of the current fragment's view binding
@@ -127,7 +147,13 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
                 override fun onViewAttachedToWindow(v: View) =
                     displayManager.unregisterDisplayListener(displayListener)
             })
-            binding.btnRecordVideo.setOnClickListener { recordVideo() }
+            btnRecordVideo.setOnClickListener {
+                recordVideo()
+                showHideGalleryButton()
+            }
+            cameraTextButton?.setOnClickListener {
+                navigateToCameraFragment()
+            }
             btnGallery.setOnClickListener { openPreview() }
             btnSwitchCamera.setOnClickListener { toggleCamera() }
             btnGrid.setOnClickListener { toggleGrid() }
@@ -136,16 +162,22 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
             // This swipe gesture adds a fun gesture to switch between video and photo
             val swipeGestures = SwipeGestureDetector().apply {
                 setSwipeCallback(left = {
-                    Navigation.findNavController(view).navigate(R.id.action_video_to_camera)
+                    navigateToCameraFragment()
                 })
             }
 
             val gestureDetectorCompat = GestureDetector(requireContext(), swipeGestures)
             viewFinder.setOnTouchListener { _, motionEvent ->
-                if (gestureDetectorCompat.onTouchEvent(motionEvent)) return@setOnTouchListener false
+                gestureDetectorCompat.onTouchEvent(motionEvent)
+                pinchToZoomDetector.onTouchEvent(motionEvent)
+                tapDetector.onTouchEvent(motionEvent)
                 return@setOnTouchListener true
             }
         }
+    }
+
+    private fun navigateToCameraFragment() {
+        findNavController().navigate(R.id.action_video_to_camera)
     }
 
     /**
@@ -165,7 +197,8 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
         activity?.window?.fitSystemWindows()
         binding.btnRecordVideo.onWindowInsets { view, windowInsets ->
             if (resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT) {
-                view.bottomMargin = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom
+                view.bottomMargin =
+                    windowInsets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom
             } else {
                 view.endMargin = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars()).right
             }
@@ -185,6 +218,14 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
         firstIcon = R.drawable.ic_outline_camera_rear,
         secondIcon = R.drawable.ic_outline_camera_front,
     ) {
+        if (isRecording) {
+            Toast.makeText(
+                requireContext(),
+                "Cannot switch camera while recording.Please stop recording first",
+                Toast.LENGTH_SHORT
+            ).show()
+            return@toggleButton
+        }
         lensFacing = if (it) {
             CameraSelector.DEFAULT_BACK_CAMERA
         } else {
@@ -199,7 +240,7 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
      * */
     private fun startCamera() {
         // This is the Texture View where the camera will be rendered
-        val viewFinder = binding.viewFinder
+        viewFinder = binding.viewFinder
 
         val cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext())
         cameraProviderFuture.addListener({
@@ -221,7 +262,8 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
                 .setTargetRotation(rotation) // set the camera rotation
                 .build()
 
-            val videoCaptureConfig = VideoCapture.DEFAULT_CONFIG.config // default config for video capture
+            val videoCaptureConfig =
+                VideoCapture.DEFAULT_CONFIG.config // default config for video capture
             // The Configuration of video capture
             videoCapture = VideoCapture.Builder
                 .fromConfig(videoCaptureConfig)
@@ -240,6 +282,12 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
 
                 // Attach the viewfinder's surface provider to preview use case
                 preview?.setSurfaceProvider(viewFinder.surfaceProvider)
+
+                // If the camera is available, create the gestures
+                camera?.let {
+                    pinchToZoomDetector = viewFinder.createPinchDetector(it)
+                    tapDetector = viewFinder.createTapGestureDetector(it, lifecycleScope)
+                }
 
 
                 //listen for rotation
@@ -275,7 +323,8 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
 
     @SuppressLint("MissingPermission")
     private fun recordVideo() {
-        val localVideoCapture = videoCapture ?: throw IllegalStateException("Camera initialization failed.")
+        val localVideoCapture =
+            videoCapture ?: throw IllegalStateException("Camera initialization failed.")
 
         // Options fot the output video file
         val outputOptions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -314,7 +363,11 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
                             ?: setLastPictureThumbnail()
                     }
 
-                    override fun onError(videoCaptureError: Int, message: String, cause: Throwable?) {
+                    override fun onError(
+                        videoCaptureError: Int,
+                        message: String,
+                        cause: Throwable?
+                    ) {
                         // This function is called if there is an error during recording process
                         animateRecord.cancel()
                         val msg = "Video capture failed: $message"
@@ -404,7 +457,11 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
         }
     }
 
-    override fun onBackPressed() = requireActivity().finish()
+
+    /**
+     * Navigate back to the Camera fragment when the back button is pressed
+     */
+    override fun onBackPressed() = navigateToCameraFragment()
 
     override fun onStop() {
         super.onStop()
@@ -426,7 +483,7 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
         const val NEW_MEDIA_EVENT = "org.witness.proofmode.NEW_MEDIA"
     }
 
-    fun sendLocalCameraEvent(newMediaFile : Uri) {
+    fun sendLocalCameraEvent(newMediaFile: Uri) {
 
         var intent = Intent(NEW_MEDIA_EVENT)
         intent.data = newMediaFile

@@ -3,6 +3,10 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="org.witness.proofmode">
 
+    <!-- A device that has any camera be it front, back or external will work. -->
+    <uses-feature
+        android:name="android.hardware.camera.any"
+        android:required="false" />
     <!-- Required only if your app needs to access images or photos
      that other apps created. -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />

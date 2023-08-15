@@ -8,16 +8,23 @@ import androidx.navigation.Navigation
 import org.witness.proofmode.camera.R
 import org.witness.proofmode.camera.adapter.MediaAdapter
 import org.witness.proofmode.camera.databinding.FragmentPreviewBinding
-import org.witness.proofmode.camera.utils.*
+import org.witness.proofmode.camera.utils.bottomMargin
+import org.witness.proofmode.camera.utils.fitSystemWindows
+import org.witness.proofmode.camera.utils.onPageSelected
+import org.witness.proofmode.camera.utils.onWindowInsets
+import org.witness.proofmode.camera.utils.share
+import org.witness.proofmode.camera.utils.topMargin
 
 class PreviewFragment : BaseFragment<FragmentPreviewBinding>(R.layout.fragment_preview) {
     private val mediaAdapter = MediaAdapter(
         onItemClick = { isVideo, uri ->
             if (!isVideo) {
-                val visibility = if (binding.groupPreviewActions.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+                val visibility =
+                    if (binding.groupPreviewActions.visibility == View.VISIBLE) View.GONE else View.VISIBLE
                 binding.groupPreviewActions.visibility = visibility
             } else {
-                val play = Intent(Intent.ACTION_VIEW, uri).apply { setDataAndType(uri, "video/mp4") }
+                val play =
+                    Intent(Intent.ACTION_VIEW, uri).apply { setDataAndType(uri, "video/mp4") }
                 startActivity(play)
             }
         },
@@ -29,7 +36,11 @@ class PreviewFragment : BaseFragment<FragmentPreviewBinding>(R.layout.fragment_p
         },
     )
     private var currentPage = 0
-    override val binding: FragmentPreviewBinding by lazy { FragmentPreviewBinding.inflate(layoutInflater) }
+    override val binding: FragmentPreviewBinding by lazy {
+        FragmentPreviewBinding.inflate(
+            layoutInflater
+        )
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)

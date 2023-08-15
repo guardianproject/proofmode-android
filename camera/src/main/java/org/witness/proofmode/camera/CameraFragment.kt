@@ -62,6 +62,7 @@ class CameraFragment : Fragment() {
  //   private lateinit var recordVideoButton: ImageButton
  //   private lateinit var stopRecordingVideoButton: ImageButton
   //  private lateinit var pauseRecordingVideoButton: ImageButton
+    private lateinit var textVideo:TextView
     private lateinit var flipCameraButton: ImageButton
     private lateinit var dot: ImageButton
     private lateinit var videoTimer: Chip
@@ -125,13 +126,13 @@ class CameraFragment : Fragment() {
     }
 
     private fun playSound(@RawRes soundFile: Int) {
-        /**
+        *
         var mediaPlayer: MediaPlayer? = MediaPlayer.create(requireActivity(), soundFile)
         mediaPlayer?.start()
         mediaPlayer?.setOnCompletionListener {
             it.release()
             mediaPlayer = null
-        }**/
+        }*
 
     }
 
@@ -179,6 +180,7 @@ class CameraFragment : Fragment() {
            // flashSettingsButton = buttonFlashSettings
             capturedPreview = capturedImagePreview
             imageViewContainer = imagePreviewContainer
+            textVideo =
         }
     }
 
@@ -520,13 +522,13 @@ class CameraFragment : Fragment() {
                 }
 
                 override fun onError(exception: ImageCaptureException) {
-                    /**
+                    *
                     Toast.makeText(
                         requireContext(),
                         "Error saving image ${exception.message}",
                         Toast.LENGTH_LONG
                     )
-                        .show()**/
+                        .show()*
                 }
 
             })

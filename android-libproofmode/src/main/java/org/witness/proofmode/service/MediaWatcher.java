@@ -1,5 +1,10 @@
 package org.witness.proofmode.service;
 
+import static org.witness.proofmode.ProofMode.EVENT_PROOF_EXISTS;
+import static org.witness.proofmode.ProofMode.EVENT_PROOF_EXTRA_HASH;
+import static org.witness.proofmode.ProofMode.EVENT_PROOF_FAILED;
+import static org.witness.proofmode.ProofMode.EVENT_PROOF_GENERATED;
+import static org.witness.proofmode.ProofMode.EVENT_PROOF_START;
 import static org.witness.proofmode.ProofMode.OPENPGP_FILE_TAG;
 import static org.witness.proofmode.ProofMode.PREFS_DOPROOF;
 import static org.witness.proofmode.ProofMode.PROOF_FILE_JSON_TAG;
@@ -25,6 +30,8 @@ import android.preference.PreferenceManager;
 import android.provider.MediaStore;
 import android.text.TextUtils;
 import android.util.Base64;
+
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import org.bouncycastle.openpgp.PGPException;
 import org.json.JSONObject;
@@ -130,38 +137,88 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
 
 
     public String processUri (Uri uriMedia, boolean autogen, Date createdAt) {
+
+        LocalBroadcastManager lbm = LocalBroadcastManager.getInstance(mContext.getApplicationContext());
+
         try {
+
             try {
+
+
                 String mediaHash = HashUtils.getSHA256FromFileContent(mContext.getContentResolver().openInputStream(uriMedia));
-                return processUri(mContext, uriMedia, mediaHash, autogen, createdAt);
+
+                //send gstart event
+                Intent intent = new Intent(EVENT_PROOF_START);
+                intent.setData(uriMedia);
+                intent.putExtra(EVENT_PROOF_EXTRA_HASH, mediaHash);
+                lbm.sendBroadcast(intent);
+
+                String resultHash = processUri(mContext, uriMedia, mediaHash, autogen, createdAt);
+
+                if (resultHash == null)
+                {
+                    intent = new Intent(EVENT_PROOF_EXISTS);
+                    intent.setData(uriMedia);
+                    intent.putExtra(EVENT_PROOF_EXTRA_HASH, mediaHash);
+                    lbm.sendBroadcast(intent);
+                }
+                else {
+                    //send generated event
+                    intent = new Intent(EVENT_PROOF_GENERATED);
+                    intent.setData(uriMedia);
+                    intent.putExtra(EVENT_PROOF_EXTRA_HASH, resultHash);
+                    lbm.sendBroadcast(intent);
+                }
+
+                return resultHash;
 
             } catch (FileNotFoundException e) {
                 Timber.d( "FileNotFoundException: unable to open inputstream for hashing: %s", uriMedia);
+                Intent intent = new Intent(EVENT_PROOF_FAILED);
+                intent.setData(uriMedia);
+                lbm.sendBroadcast(intent);
                 return null;
             } catch (IllegalStateException ise) {
                 Timber.d( "IllegalStateException: unable to open inputstream for hashing: %s", uriMedia);
+                Intent intent = new Intent(EVENT_PROOF_FAILED);
+                intent.setData(uriMedia);
+                lbm.sendBroadcast(intent);
                 return null;
             } catch (SecurityException e) {
                 Timber.d( "SecurityException: security exception accessing URI: %s", uriMedia);
+                Intent intent = new Intent(EVENT_PROOF_FAILED);
+                intent.setData(uriMedia);
+                lbm.sendBroadcast(intent);
                 return null;
 
             } catch (PGPException e) {
                 Timber.d( "SecurityException: security exception accessing URI: %s", uriMedia);
+                Intent intent = new Intent(EVENT_PROOF_FAILED);
+                intent.setData(uriMedia);
+                lbm.sendBroadcast(intent);
                 return null;
             } catch (IOException e) {
                 Timber.d( "SecurityException: security exception accessing URI: %s", uriMedia);
+                Intent intent = new Intent(EVENT_PROOF_FAILED);
+                intent.setData(uriMedia);
+                lbm.sendBroadcast(intent);
                 return null;
             }
         }
         catch (RuntimeException re)
         {
             Timber.e(re,"RUNTIME EXCEPTION processing media file: " + re);
+            Intent intent = new Intent(EVENT_PROOF_FAILED);
+            intent.setData(uriMedia);
+            lbm.sendBroadcast(intent);
             return null;
         }
         catch (Error err)
         {
             Timber.e(err,"FATAL ERROR processing media file: " + err);
-
+            Intent intent = new Intent(EVENT_PROOF_FAILED);
+            intent.setData(uriMedia);
+            lbm.sendBroadcast(intent);
             return null;
         }
     }

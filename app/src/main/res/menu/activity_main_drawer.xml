@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
     <group android:checkableBehavior="none">
         <!--
         <item
@@ -22,5 +23,13 @@
             android:id="@+id/menu_settings"
             android:icon="@drawable/ic_settings"
             android:title="@string/menu_settings" />
+
+        <item
+            android:id="@+id/menu_background_service"
+            android:icon="@drawable/ic_digital_signatures"
+            android:title="Background Mode"
+            android:checkable="true"
+            app:actionLayout="@layout/widget_check"
+            />
     </group>
 </menu>

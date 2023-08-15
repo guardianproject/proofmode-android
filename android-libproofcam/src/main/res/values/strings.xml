@@ -10,4 +10,8 @@
     <string name="cb_open_gallery">Navigate to Gallery</string>
     <string name="cb_switch">Switch between front and back cameras</string>
     <string name="cb_timer">Select a timer</string>
+    <string name="camera">Camera</string>
+    <string name="video">Video</string>
+    <string name="video_fragment">video_fragment</string>
+    <string name="camera_fragment">camera_fragment</string>
 </resources>

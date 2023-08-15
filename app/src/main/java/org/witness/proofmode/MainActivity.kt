@@ -2,7 +2,10 @@ package org.witness.proofmode
 
 import android.Manifest
 import android.animation.Animator
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Build
@@ -11,15 +14,26 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.widget.CompoundButton
 import android.widget.Toast
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.toMutableStateList
+import androidx.compose.ui.platform.ComposeView
 import androidx.core.view.GravityCompat
+import androidx.core.view.MenuItemCompat
 import androidx.drawerlayout.widget.DrawerLayout
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.preference.PreferenceManager
 import com.google.android.material.navigation.NavigationView
 import gun0912.tedimagepicker.builder.TedImagePicker
+import org.witness.proofmode.ActivityConstants.EXTRA_FILE_NAME
+import org.witness.proofmode.ActivityConstants.EXTRA_SHARE_TEXT
+import org.witness.proofmode.ActivityConstants.INTENT_ACTIVITY_ITEMS_SHARED
+import org.witness.proofmode.ProofMode.EVENT_PROOF_EXTRA_HASH
+import org.witness.proofmode.ProofMode.EVENT_PROOF_GENERATED
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
 import org.witness.proofmode.camera.CameraActivity
@@ -28,8 +42,10 @@ import org.witness.proofmode.databinding.ActivityMainBinding
 import org.witness.proofmode.onboarding.OnboardingActivity
 import org.witness.proofmode.util.GPSTracker
 import java.io.IOException
+import java.util.Date
+import java.util.UUID
 
-class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
+class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener, ActivitiesViewDelegate {
     private lateinit var mPrefs: SharedPreferences
     private  var mPgpUtils: PgpUtils? = null
     private lateinit var layoutOn: View
@@ -70,6 +86,17 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         drawerToggle.syncState()
         val navigationView = mainBinding.navView
         navigationView.setNavigationItemSelectedListener(this)
+
+        var switchItem = navigationView.menu.findItem(R.id.menu_background_service);
+        var switchView = MenuItemCompat.getActionView(switchItem) as CompoundButton
+        val isOn = mPrefs.getBoolean("doProof", false)
+
+        switchView.isChecked = isOn
+
+        switchView.setOnCheckedChangeListener{ buttonView, isChecked ->
+            setProofModeOn(isChecked)
+        }
+
         val btnSettings = mainBinding.contentMain.btnSettings
         btnSettings.setOnClickListener { openSettings() }
         val btnShareProof = mainBinding.contentMain.btnShareProof
@@ -87,15 +114,66 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             // Showing the popup menu
             popupMenu.show()
         }
-        updateOnOffState(false)
-
-        val isOn = mPrefs.getBoolean("doProof", false)
+        //updateOnOffState(false)
 
         if (isOn)
         (application as ProofModeApp).init(this, true)
 
+        // Setup activity view
+        val activityView = findViewById<ComposeView>(R.id.activityView)
+        activityView.setContent {
+            ActivitiesView()
+        }
+        val intentFilter = IntentFilter("org.witness.proofmode.NEW_MEDIA")
+        intentFilter.addDataType("image/jpeg")
+        LocalBroadcastManager.getInstance(applicationContext).registerReceiver(cameraReceiver, intentFilter)
+        LocalBroadcastManager.getInstance(applicationContext).registerReceiver(cameraReceiver, IntentFilter(EVENT_PROOF_GENERATED))
 
+        registerReceiver(cameraReceiver, IntentFilter(INTENT_ACTIVITY_ITEMS_SHARED))
+
+        Activities.load(this)
     }
+
+    private class CameraReceiver: BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                "org.witness.proofmode.NEW_MEDIA" -> {
+                    val uri = intent.data
+                    if (uri != null && context != null) {
+                        Activities.addActivity(
+                            Activity(
+                                UUID.randomUUID().toString(), ActivityType.MediaCaptured(
+                                    items = mutableStateListOf(
+                                        ProofableItem(UUID.randomUUID().toString(), uri)
+                                    )
+                                ), Date()
+                            ), context
+                        )
+                    }
+                }
+
+                EVENT_PROOF_GENERATED -> {
+                    val uri = intent.data
+                    if (uri != null && context != null) {
+                      //proof generated update?
+                    }
+                }
+
+                INTENT_ACTIVITY_ITEMS_SHARED -> {
+                    val items = intent.getParcelableArrayListExtra<ProofableItem>(Intent.EXTRA_STREAM) ?: ArrayList()
+                    if (items.size > 0 && context != null) {
+                        val fileName = intent.getStringExtra(EXTRA_FILE_NAME) ?: ""
+                        val shareText = intent.getStringExtra(EXTRA_SHARE_TEXT) ?: ""
+                        val activity = Activity(UUID.randomUUID().toString(), ActivityType.MediaShared(items = items.toMutableStateList(), fileName, shareText = shareText), Date())
+                        Activities.addActivity(activity, context)
+                    }
+                }
+
+                else -> {}
+            }
+        }
+    }
+    private val cameraReceiver = CameraReceiver()
 
     private fun startService () {
         val intentService = Intent(this, ProofService::class.java)
@@ -125,6 +203,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 showShareProof(
                     it
                 )
+                addProofActivity (it)
             }
             
     }
@@ -135,7 +214,24 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 showShareProof(
                     it
                 )
+                addProofActivity (it)
             }
+    }
+
+    private fun addProofActivity (items: List<Uri>) {
+
+
+        val proofItems = ArrayList<ProofableItem>()
+        for (item in items)
+        {
+            proofItems.add(ProofableItem(UUID.randomUUID().toString(), item))
+        }
+
+
+        val fileName = intent.getStringExtra(EXTRA_FILE_NAME) ?: ""
+        val shareText = intent.getStringExtra(EXTRA_SHARE_TEXT) ?: ""
+        val activity = Activity(UUID.randomUUID().toString(), ActivityType.MediaShared(items = proofItems.toMutableStateList(), fileName, shareText = shareText), Date())
+        Activities.addActivity(activity, this)
     }
 
     private fun showShareProof(mediaList: List<Uri>) {
@@ -159,16 +255,17 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         if (isOn) {
             if (!askForPermissions(requiredPermissions, REQUEST_CODE_REQUIRED_PERMISSIONS)) {
                 mPrefs.edit().putBoolean(ProofMode.PREFS_DOPROOF, true).apply()
-                updateOnOffState(true)
+             //   updateOnOffState(true)
                 (application as ProofModeApp).init(this, true)
             }
         } else {
             mPrefs.edit().putBoolean(ProofMode.PREFS_DOPROOF, false).apply()
-            updateOnOffState(true)
+          //  updateOnOffState(true)
             (application as ProofModeApp).cancel(this)
         }
     }
 
+    /**
     private fun updateOnOffState(animate: Boolean) {
         val isOn = mPrefs.getBoolean("doProof", false)
         if (animate) {
@@ -213,11 +310,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             layoutOff.visibility = if (isOn) View.GONE else View.VISIBLE
         }
 
-    }
+    }**/
 
     override fun onResume() {
         super.onResume()
-        updateOnOffState(false)
+     //   updateOnOffState(false)
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -235,8 +332,17 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             publishKey()
             return true
         } else if (id == R.id.action_share_key) {
-            shareKey()
+            shareCurrentPublicKey()
             return true
+        }
+        else if (id == R.id.action_share_photos) {
+            showImagePicker();
+        }
+        else if (id == R.id.action_share_videos) {
+            showVideoPicker();
+        }
+        else if (id == R.id.action_share_documents) {
+            showDocumentPicker();
         }
         return super.onOptionsItemSelected(item)
     }
@@ -306,7 +412,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
     }
 
-    private fun shareKey() {
+    private fun shareCurrentPublicKey() {
         try {
             if (mPgpUtils == null) mPgpUtils = PgpUtils.getInstance(
                 this,
@@ -314,10 +420,28 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             )
             mPgpUtils?.publishPublicKey()
             val pubKey = mPgpUtils?.publicKeyString
+            if (pubKey != null) {
+                sharePublicKey(pubKey)
+            }
+        } catch (ioe: IOException) {
+            Log.e("Proofmode", "error publishing key", ioe)
+        }
+    }
+
+    override fun sharePublicKey(pubKey: String) {
+        try {
             val intent = Intent(Intent.ACTION_SEND)
             intent.type = "text/plain"
             intent.putExtra(Intent.EXTRA_TEXT, pubKey)
             startActivity(intent)
+
+            // ACTION_SEND does not return a result, so just assume we shared ok
+            val activity = Activity(
+                UUID.randomUUID().toString(),
+                ActivityType.PublicKeyShared(key = pubKey),
+                Date()
+            )
+            Activities.addActivity(activity, this)
         } catch (ioe: IOException) {
             Log.e("Proofmode", "error publishing key", ioe)
         }
@@ -376,12 +500,24 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             if (data?.data != null) {
                 intentShare.action = Intent.ACTION_SEND
                 intentShare.data = data.data
+
+                Activities.addActivity(
+                    Activity(
+                        UUID.randomUUID().toString(), ActivityType.MediaCaptured(
+                            items = mutableStateListOf(
+                                ProofableItem(UUID.randomUUID().toString(), data.data as Uri)
+                            )
+                        ), Date()
+                    ), this
+                )
             }
             if (data?.clipData != null) {
                 intentShare.action = Intent.ACTION_SEND_MULTIPLE
                 intentShare.clipData = data.clipData
             }
             startActivity(intentShare)
+
+
         }
     }
 
@@ -438,6 +574,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 openDigitalSignatures()
                 return true
             }
+
         }
         return false
     }
@@ -461,5 +598,33 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         private val optionalPermissions = arrayOf(
             Manifest.permission.ACCESS_NETWORK_STATE,
         )
+    }
+
+    override fun openCamera() {
+        this.startCamera(findViewById<ComposeView>(R.id.activityView))
+    }
+
+    override fun shareItems(media: List<ProofableItem>, fileName: String?, shareText: String?) {
+        // Check if we still have the original to share.
+        if (fileName != null) {
+            val uri = Uri.parse(fileName)
+            if (uri != null && contentResolver.getType(uri) != null) {
+                // Use existing .zip
+                val aList = ArrayList<ProofableItem>()
+                for (item in media) aList.add(item)
+                ShareProofActivity.shareFiltered(
+                    this,
+                    getString(R.string.select_app),
+                    shareText ?: "",
+                    null,
+                    aList,
+                    uri
+                )
+
+
+                return
+            }
+        }
+        this.showShareProof(mediaList = media.map { it.uri }.filterNotNull())
     }
 }

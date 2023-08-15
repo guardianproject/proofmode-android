@@ -25,6 +25,11 @@
             android:background="@android:color/transparent"
             app:theme="@style/MainToolBarStyle"
             app:popupTheme="@style/AppTheme.PopupOverlay" />
+
+        <androidx.compose.ui.platform.ComposeView
+            android:id="@+id/activityView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
     </FrameLayout>
 
     <com.google.android.material.navigation.NavigationView

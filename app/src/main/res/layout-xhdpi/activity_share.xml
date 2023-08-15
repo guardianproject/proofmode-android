@@ -156,18 +156,26 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal">
         <Button
-            android:layout_width="160dp"
+            android:layout_width="100dp"
             android:layout_height="wrap_content"
             android:layout_margin="10dp"
             android:text="@string/share_share_robust"
             android:onClick="clickAll"
             />
             <Button
-                android:layout_width="160dp"
+                android:layout_width="100dp"
                 android:layout_height="wrap_content"
                 android:layout_margin="10dp"
                 android:text="@string/share_save_robust"
                 android:onClick="saveAll"
+                />
+            <Button
+                android:layout_width="100dp"
+                android:layout_height="wrap_content"
+                android:layout_margin="10dp"
+                android:text="@string/share_sign_robust"
+                android:onClick="signAll"
+                android:visibility="visible"
                 />
         </LinearLayout>
 
