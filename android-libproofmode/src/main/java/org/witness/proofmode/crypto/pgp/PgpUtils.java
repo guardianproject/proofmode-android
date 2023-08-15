@@ -68,6 +68,7 @@ import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.security.InvalidKeyException;
+import java.security.Key;
 import java.security.NoSuchProviderException;
 import java.security.PublicKey;
 import java.security.SecureRandom;
@@ -75,6 +76,8 @@ import java.security.SignatureException;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.Map;
+
+import javax.crypto.Cipher;
 
 
 public class PgpUtils {
@@ -459,4 +462,6 @@ public class PgpUtils {
         }
         return key;
     }
+
+
 }
