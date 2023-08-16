@@ -126,6 +126,8 @@
     <string name="publish_key_to">\"Publishing key to: \"</string>
     <string name="progress_checking_proof">Checking for proof...</string>
     <string name="progress_building_proof">Building proof bundle...</string>
+
+
     <string name="progress_generating_proof">Generating proof...</string>
     <string name="share_save_downloads">Proof saved to Downloads folder</string>
 
@@ -168,4 +170,8 @@
     </plurals>
     <string name="you_shared_your_public_key">You shared your public key</string>
     <string name="re_share">Re-share</string>
+
+    <string name="share_with_proofsign">Share with ProofSign cloud service to add Content Credentials (C2PA)?</string>
+    <string name="progress_signing_proof">Sharing and verifying with ProofSign...</string>
+
 </resources>

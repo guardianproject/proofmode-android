@@ -473,8 +473,22 @@ class ShareProofActivity : AppCompatActivity() {
     }
 
     private fun signProof(shareMedia: Boolean, shareProof: Boolean) {
-        displayProgress(getString(R.string.progress_building_proof))
-        SignProofTask(this).execute(shareMedia, shareProof)
+
+        val builder = AlertDialog.Builder(this)
+        builder.setMessage(R.string.share_with_proofsign)
+            .setCancelable(false)
+            .setPositiveButton(android.R.string.yes) { dialog, id ->
+
+                displayProgress(getString(R.string.progress_signing_proof))
+                SignProofTask(this).execute(shareMedia, shareProof)
+            }
+            .setNegativeButton(android.R.string.no) { dialog, id ->
+                // Dismiss the dialog
+                dialog.dismiss()
+            }
+        val alert = builder.create()
+        alert.show()
+
     }
 
     @Synchronized
@@ -556,6 +570,7 @@ class ShareProofActivity : AppCompatActivity() {
                     Timber.e(e, "Error generating proof Zip")
                     return null
                 }
+
                 if (fileZip.length() > 0) {
                     Timber.d("Proof zip completed. Size:" + fileZip.length())
                     val encryptZip = false
