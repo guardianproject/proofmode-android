@@ -84,46 +84,53 @@ sealed class CapturedAssetRow {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ProofableItemView(item: ProofableItem, modifier: Modifier = Modifier, contain: Boolean = false, corners: RectF = RectF(
-    ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS),
+        ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS),
                       showSelectionBorder: Boolean = true
 ) {
     val selectionHandler = LocalSelectionHandler.current
+    val context = LocalContext.current
+    // Verify if Uri MIME type is image or video and if it is a video,get the thumbnail
+    val isVideo = remember(item) {
+        item.uri.let { uri ->
+            context.contentResolver.getType(uri)?.contains("video") ?: false
+        }
+    }
 
     AsyncImage(
-        model = item.uri.toString(),
-        contentDescription = "Asset view",
-        alignment = Alignment.Center,
-        contentScale = if (contain) ContentScale.Fit else ContentScale.Crop,
-        modifier = Modifier
-            .combinedClickable(
-                onClick = {
-                    selectionHandler.onProofableItemClick(item)
-                },
-                onLongClick = {
-                    selectionHandler.onProofableItemLongClick(item)
-                }
-            )
-            .clip(
-                RoundedCornerShape(
-                    corners.left.dp,
-                    corners.top.dp,
-                    corners.right.dp,
-                    corners.bottom.dp
-                )
+            model = if (!isVideo) item.uri.toString() else getVideoThumbnail(context, item.uri),
+            contentDescription = "Asset view",
+            alignment = Alignment.Center,
+            contentScale = if (contain) ContentScale.Fit else ContentScale.Crop,
+            modifier = Modifier
+                    .combinedClickable(
+                            onClick = {
+                                selectionHandler.onProofableItemClick(item)
+                            },
+                            onLongClick = {
+                                selectionHandler.onProofableItemLongClick(item)
+                            }
+                    )
+                    .clip(
+                            RoundedCornerShape(
+                                    corners.left.dp,
+                                    corners.top.dp,
+                                    corners.right.dp,
+                                    corners.bottom.dp
+                            )
 
-            )
-            //.background(ASSETS_BACKGROUND)
-            .border(
-                width = 4.dp,
-                color = if (showSelectionBorder && selectionHandler.isSelected(item)) Color.Blue else Color.Transparent,
-                shape = RoundedCornerShape(
-                    corners.left.dp,
-                    corners.top.dp,
-                    corners.right.dp,
-                    corners.bottom.dp
-                )
-            )
-            .then(modifier)
+                    )
+                    //.background(ASSETS_BACKGROUND)
+                    .border(
+                            width = 4.dp,
+                            color = if (showSelectionBorder && selectionHandler.isSelected(item)) Color.Blue else Color.Transparent,
+                            shape = RoundedCornerShape(
+                                    corners.left.dp,
+                                    corners.top.dp,
+                                    corners.right.dp,
+                                    corners.bottom.dp
+                            )
+                    )
+                    .then(modifier)
     )
 }
 
@@ -140,24 +147,24 @@ fun OneItemAssetRowView(asset: ProofableItem) {
 @Composable
 fun TwoItemsAssetRowView(assets: List<ProofableItem>) {
     Row(
-        Modifier
-            .fillMaxWidth()
-            .height(IntrinsicSize.Min),
-        horizontalArrangement = Arrangement.SpaceBetween) {
+            Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Min),
+            horizontalArrangement = Arrangement.SpaceBetween) {
         ProofableItemView(
-            item = assets[0],
-            modifier = Modifier
-                .weight(0.5F)
-                .aspectRatio(ratio = 1f),
+                item = assets[0],
+                modifier = Modifier
+                        .weight(0.5F)
+                        .aspectRatio(ratio = 1f),
         )
         Spacer(modifier = Modifier
-            .width(ASSETS_GUTTER_SIZE.dp)
-            .fillMaxHeight())
+                .width(ASSETS_GUTTER_SIZE.dp)
+                .fillMaxHeight())
         ProofableItemView(
-            item = assets[1],
-            modifier = Modifier
-                .weight(0.5F)
-                .aspectRatio(ratio = 1f),
+                item = assets[1],
+                modifier = Modifier
+                        .weight(0.5F)
+                        .aspectRatio(ratio = 1f),
         )
     }
 }
@@ -165,12 +172,12 @@ fun TwoItemsAssetRowView(assets: List<ProofableItem>) {
 @Composable
 fun ThreeItemsAssetRowView(assets: List<ProofableItem>) {
     Layout(
-        modifier = Modifier.fillMaxWidth(),
-        content = {
-            ProofableItemView(item = assets[0])
-            ProofableItemView(item = assets[1])
-            ProofableItemView(item = assets[2])
-        }
+            modifier = Modifier.fillMaxWidth(),
+            content = {
+                ProofableItemView(item = assets[0])
+                ProofableItemView(item = assets[1])
+                ProofableItemView(item = assets[2])
+            }
     ) { measurables, constraints ->
         val w = constraints.maxWidth
         val column2Width = (w - 2 * ASSETS_GUTTER_SIZE.dp.roundToPx()) / 3
@@ -192,13 +199,13 @@ fun ThreeItemsAssetRowView(assets: List<ProofableItem>) {
 @Composable
 fun FourItemsAssetRowView(assets: List<ProofableItem>) {
     Layout(
-        modifier = Modifier.fillMaxWidth(),
-        content = {
-            ProofableItemView(item = assets[0])
-            ProofableItemView(item = assets[1], corners = RectF(ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS, 0f, 0f))
-            ProofableItemView(item = assets[2], corners = RectF(0f, 0f, ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS))
-            ProofableItemView(item = assets[3])
-        }
+            modifier = Modifier.fillMaxWidth(),
+            content = {
+                ProofableItemView(item = assets[0])
+                ProofableItemView(item = assets[1], corners = RectF(ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS, 0f, 0f))
+                ProofableItemView(item = assets[2], corners = RectF(0f, 0f, ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS))
+                ProofableItemView(item = assets[3])
+            }
     ) { measurables, constraints ->
         val w = constraints.maxWidth
         val columnWidth = (w - 2 * ASSETS_GUTTER_SIZE.dp.roundToPx()) / 3
@@ -226,19 +233,19 @@ fun MediaCapturedOrImportedActivityView(items: SnapshotStateList<ProofableItem>,
     Column(verticalArrangement = Arrangement.spacedBy(ASSETS_GUTTER_SIZE.dp)) {
 
         Text(
-            text = pluralStringResource(id = R.plurals.you_captured_n_items, count = items.size, items.size),
-            style = MaterialTheme.typography.bodyLarge,
-            color = Color.DarkGray,
-            modifier = Modifier.padding(bottom = 8.dp)
+                text = pluralStringResource(id = R.plurals.you_captured_n_items, count = items.size, items.size),
+                style = MaterialTheme.typography.bodyLarge,
+                color = Color.DarkGray,
+                modifier = Modifier.padding(bottom = 8.dp)
         )
 
         val deletedItemsString = items.deletedItemsString()
         if (deletedItemsString != null) {
             Text(
-                text = deletedItemsString,
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.DarkGray,
-                modifier = Modifier.padding(bottom = 8.dp)
+                    text = deletedItemsString,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.DarkGray,
+                    modifier = Modifier.padding(bottom = 8.dp)
             )
         }
 
@@ -247,10 +254,13 @@ fun MediaCapturedOrImportedActivityView(items: SnapshotStateList<ProofableItem>,
             when (row) {
                 is CapturedAssetRow.OneItem ->
                     OneItemAssetRowView(row.item)
+
                 is CapturedAssetRow.TwoItems ->
                     TwoItemsAssetRowView(row.items)
+
                 is CapturedAssetRow.ThreeItems ->
                     ThreeItemsAssetRowView(row.items)
+
                 is CapturedAssetRow.FourItems ->
                     FourItemsAssetRowView(row.items)
             }
@@ -260,12 +270,12 @@ fun MediaCapturedOrImportedActivityView(items: SnapshotStateList<ProofableItem>,
 
 @Composable
 fun SnapshotStateList<ProofableItem>.deletedItemsString(): String? {
-    val countDeleted = this.filter { it.isDeleted(LocalContext.current)} .size
+    val countDeleted = this.filter { it.isDeleted(LocalContext.current) }.size
     if (countDeleted > 0) {
         return pluralStringResource(
-            id = R.plurals.n_items_have_been_deleted_or_are_not_accessible,
-            count = countDeleted,
-            countDeleted
+                id = R.plurals.n_items_have_been_deleted_or_are_not_accessible,
+                count = countDeleted,
+                countDeleted
         )
     }
     return null
@@ -278,7 +288,7 @@ fun layoutRows(items: SnapshotStateList<ProofableItem>): MutableList<CapturedAss
     while (array.isNotEmpty()) {
         array = if (array.size >= 7) {
             rows.add(CapturedAssetRow.ThreeItems(array.slice(IntRange(0, 2))))
-            rows.add(CapturedAssetRow.FourItems(array.slice(IntRange(3,6))))
+            rows.add(CapturedAssetRow.FourItems(array.slice(IntRange(3, 6))))
             array.drop(7)
         } else if (array.size >= 3) {
             rows.add(CapturedAssetRow.ThreeItems(array.slice(IntRange(0, 2))))
@@ -300,33 +310,33 @@ fun MediaSharedActivityView(items: SnapshotStateList<ProofableItem>, fileName: S
     Column(verticalArrangement = Arrangement.spacedBy(ASSETS_GUTTER_SIZE.dp)) {
 
         Text(
-            text = pluralStringResource(id = R.plurals.you_shared_n_items, count = items.size, items.size),
-            style = MaterialTheme.typography.bodyLarge,
-            color = Color.DarkGray,
-            modifier = Modifier.padding(bottom = 8.dp)
+                text = pluralStringResource(id = R.plurals.you_shared_n_items, count = items.size, items.size),
+                style = MaterialTheme.typography.bodyLarge,
+                color = Color.DarkGray,
+                modifier = Modifier.padding(bottom = 8.dp)
         )
 
         val deletedItemsString = items.deletedItemsString()
         if (deletedItemsString != null) {
             Text(
-                text = deletedItemsString,
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.DarkGray,
-                modifier = Modifier.padding(bottom = 8.dp)
+                    text = deletedItemsString,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.DarkGray,
+                    modifier = Modifier.padding(bottom = 8.dp)
             )
         }
 
         val validItems = items.withDeletedItemsRemoved().toList()
         FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(8.dp)) {
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(8.dp)) {
             validItems.forEach { asset ->
                 ProofableItemView(
-                    item = asset,
-                    corners = RectF(30f,30f,30f,30f),
-                    modifier = Modifier
-                        .width(60.dp)
-                        .height(60.dp))
+                        item = asset,
+                        corners = RectF(30f, 30f, 30f, 30f),
+                        modifier = Modifier
+                                .width(60.dp)
+                                .height(60.dp))
             }
         }
     }
@@ -335,9 +345,9 @@ fun MediaSharedActivityView(items: SnapshotStateList<ProofableItem>, fileName: S
 @Composable
 fun PublicKeySharedActivityView(key: String) {
     Text(
-        text = stringResource(id = R.string.you_shared_your_public_key),
-        style = MaterialTheme.typography.bodyLarge,
-        color = Color.DarkGray
+            text = stringResource(id = R.string.you_shared_your_public_key),
+            style = MaterialTheme.typography.bodyLarge,
+            color = Color.DarkGray
     )
 }
 
@@ -352,26 +362,27 @@ fun ActivityView(activity: Activity) {
         }
     }
 }
+
 @Composable
 fun ActivityDateView(date: Date, menu: (@Composable() (BoxScope.() -> Unit))? = null) {
     Row(modifier = Modifier
-        .background(Color.White.copy(alpha = 0.6f)),
-        verticalAlignment = Alignment.CenterVertically
+            .background(Color.White.copy(alpha = 0.6f)),
+            verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = date.displayFormatted(),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(top = 24.dp)
+                text = date.displayFormatted(),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 24.dp)
         )
         Spacer(modifier = Modifier.weight(1f))
         if (menu != null) {
             Box(
-                modifier = Modifier
-                    .padding(top = 24.dp)
-                    .fillMaxSize()
-                    .wrapContentSize(Alignment.TopEnd),
-                content = menu
+                    modifier = Modifier
+                            .padding(top = 24.dp)
+                            .fillMaxSize()
+                            .wrapContentSize(Alignment.TopEnd),
+                    content = menu
             )
         }
     }
@@ -382,7 +393,8 @@ interface SelectionHandler {
     abstract fun onProofableItemLongClick(item: ProofableItem)
     abstract fun isSelected(item: ProofableItem): Boolean
     abstract fun anySelected(): Boolean
-    @Composable abstract fun selectedItems(): List<ProofableItem>
+    @Composable
+    abstract fun selectedItems(): List<ProofableItem>
 }
 
 val LocalSelectionHandler = compositionLocalOf<SelectionHandler> { error("Selection handler not set") }
@@ -395,7 +407,7 @@ fun ActivitiesView() {
     val selectedAssets = remember {
         mutableStateListOf<String>()
     }
-    val selectionHandler = object: SelectionHandler {
+    val selectionHandler = object : SelectionHandler {
         override fun onProofableItemClick(item: ProofableItem) {
             val uriString = item.uri.toString()
             if (selectedAssets.size > 0) {
@@ -424,46 +436,47 @@ fun ActivitiesView() {
             return selectedAssets.size > 0
         }
 
-        @Composable override fun selectedItems(): List<ProofableItem> {
-            return Activities.selectedItems(context = LocalContext.current,selection = selectedAssets)
+        @Composable
+        override fun selectedItems(): List<ProofableItem> {
+            return Activities.selectedItems(context = LocalContext.current, selection = selectedAssets)
         }
     }
     CompositionLocalProvider(LocalSelectionHandler provides selectionHandler) {
         MaterialTheme() {
             Box(
-                modifier = Modifier.fillMaxSize()) {
+                    modifier = Modifier.fillMaxSize()) {
                 Column(modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = 56.dp)
-                    .background(Color.White)
+                        .fillMaxSize()
+                        .padding(top = 56.dp)
+                        .background(Color.White)
                 ) {
                     LazyColumn(
-                        modifier = Modifier
-                            .padding(10.dp)
-                            .weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(ASSETS_GUTTER_SIZE.dp)
+                            modifier = Modifier
+                                    .padding(10.dp)
+                                    .weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(ASSETS_GUTTER_SIZE.dp)
                     ) {
                         item {
                             val context = LocalContext.current
 
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "Activities",
-                                    style = MaterialTheme.typography.headlineLarge,
-                                    fontWeight = FontWeight.Bold
+                                        text = "Activities",
+                                        style = MaterialTheme.typography.headlineLarge,
+                                        fontWeight = FontWeight.Bold
                                 )
                                 Spacer(modifier = Modifier.weight(1.0f))
                                 IconButton(
-                                    modifier =
-                                    Modifier
-                                        .width(32.dp)
-                                        .height(32.dp),
-                                    onClick = {
-                                        (context as? ActivitiesViewDelegate)?.openCamera()
-                                    }) {
+                                        modifier =
+                                        Modifier
+                                                .width(32.dp)
+                                                .height(32.dp),
+                                        onClick = {
+                                            (context as? ActivitiesViewDelegate)?.openCamera()
+                                        }) {
                                     Icon(
-                                        painter = painterResource(id = R.drawable.ic_camera),
-                                        contentDescription = "Open camera"
+                                            painter = painterResource(id = R.drawable.ic_camera),
+                                            contentDescription = "Open camera"
                                     )
                                 }
                             }
@@ -471,8 +484,8 @@ fun ActivitiesView() {
                         Activities.activities.reversed().forEach { activity ->
                             stickyHeader {
                                 ActivityDateView(
-                                    date = activity.startTime,
-                                    menu = activityMenu(activity)
+                                        date = activity.startTime,
+                                        menu = activityMenu(activity)
                                 )
                             }
                             item(key = activity.id) {
@@ -485,49 +498,49 @@ fun ActivitiesView() {
                         // Selection footer
                         //
                         Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .padding(10.dp)
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                        .padding(10.dp)
                         ) {
                             Text(
-                                text = pluralStringResource(
-                                    id = R.plurals.n_items_selected,
-                                    count = selectedAssets.size,
-                                    selectedAssets.size
-                                ),
-                                color = Color.DarkGray,
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold
+                                    text = pluralStringResource(
+                                            id = R.plurals.n_items_selected,
+                                            count = selectedAssets.size,
+                                            selectedAssets.size
+                                    ),
+                                    color = Color.DarkGray,
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    fontWeight = FontWeight.Bold
                             )
                             Spacer(modifier = Modifier.weight(1.0f))
 
                             val context = LocalContext.current
                             val selectedItems = Activities.selectedItems(context = context, selectedAssets)
                             IconButton(
-                                modifier =
-                                Modifier
-                                    .width(32.dp)
-                                    .height(32.dp),
-                                onClick = {
-                                    (context as? ActivitiesViewDelegate)?.shareItems(selectedItems, fileName = null, shareText = null)
-                                    selectedAssets.clear()
-                                }) {
+                                    modifier =
+                                    Modifier
+                                            .width(32.dp)
+                                            .height(32.dp),
+                                    onClick = {
+                                        (context as? ActivitiesViewDelegate)?.shareItems(selectedItems, fileName = null, shareText = null)
+                                        selectedAssets.clear()
+                                    }) {
                                 Icon(
-                                    imageVector = Icons.Default.Share,
-                                    contentDescription = "Share"
+                                        imageVector = Icons.Default.Share,
+                                        contentDescription = "Share"
                                 )
                             }
                             IconButton(
-                                modifier =
-                                Modifier
-                                    .width(32.dp)
-                                    .height(32.dp),
-                                onClick = {
-                                    selectedAssets.clear()
-                                }) {
+                                    modifier =
+                                    Modifier
+                                            .width(32.dp)
+                                            .height(32.dp),
+                                    onClick = {
+                                        selectedAssets.clear()
+                                    }) {
                                 Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "Cancel"
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Cancel"
                                 )
                             }
                         }
@@ -546,67 +559,67 @@ fun ActivitiesView() {
 }
 
 @Composable
-fun activityMenu(activity: Activity):  (@Composable() (BoxScope.() -> Unit))? {
+fun activityMenu(activity: Activity): (@Composable() (BoxScope.() -> Unit))? {
     var expanded by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     return {
         IconButton(onClick = { expanded = true }) {
             Icon(
-                Icons.Default.MoreVert,
-                contentDescription = "Activity action menu",
-                tint = Color.Gray
+                    Icons.Default.MoreVert,
+                    contentDescription = "Activity action menu",
+                    tint = Color.Gray
             )
         }
         DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
         ) {
             when (activity.type) {
                 is ActivityType.MediaCaptured -> {
                     val count = activity.type.items.withDeletedItemsRemoved().size
                     DropdownMenuItem(
-                        text = {
-                            Text(
-                                text = pluralStringResource(
-                                    id = R.plurals.share_these_n_items,
-                                    count = count,
-                                    count
+                            text = {
+                                Text(
+                                        text = pluralStringResource(
+                                                id = R.plurals.share_these_n_items,
+                                                count = count,
+                                                count
+                                        )
                                 )
-                            )
-                        },
-                        onClick = {
-                            expanded = false
-                            (context as? ActivitiesViewDelegate)?.shareItems(activity.type.items, fileName = null, shareText = null)
-                        }
+                            },
+                            onClick = {
+                                expanded = false
+                                (context as? ActivitiesViewDelegate)?.shareItems(activity.type.items, fileName = null, shareText = null)
+                            }
                     )
                 }
 
                 is ActivityType.MediaShared -> {
                     DropdownMenuItem(
-                        text = {
-                            Text(
-                                text = stringResource(id = R.string.re_share)
-                            )
-                        },
-                        onClick = {
-                            expanded = false
-                            (context as? ActivitiesViewDelegate)?.shareItems(activity.type.items, activity.type.fileName, activity.type.shareText)
-                        }
+                            text = {
+                                Text(
+                                        text = stringResource(id = R.string.re_share)
+                                )
+                            },
+                            onClick = {
+                                expanded = false
+                                (context as? ActivitiesViewDelegate)?.shareItems(activity.type.items, activity.type.fileName, activity.type.shareText)
+                            }
                     )
                 }
 
                 is ActivityType.PublicKeyShared -> {
                     DropdownMenuItem(
-                        text = {
-                            Text(
-                                text = stringResource(id = R.string.re_share)
-                            )
-                        },
-                        onClick = {
-                            expanded = false
-                            (context as? ActivitiesViewDelegate)?.sharePublicKey(activity.type.key)
-                        }
+                            text = {
+                                Text(
+                                        text = stringResource(id = R.string.re_share)
+                                )
+                            },
+                            onClick = {
+                                expanded = false
+                                (context as? ActivitiesViewDelegate)?.sharePublicKey(activity.type.key)
+                            }
                     )
 
                 }
@@ -628,12 +641,12 @@ fun ActivityViewPreview() {
 @Composable
 fun Date.displayFormatted(): String {
     val formatter =
-    if (DateUtils.isToday(this.time)) {
-        SimpleDateFormat(stringResource(id = R.string.date_display_days_since_today))
-    } else if (DateUtils.isToday(this.time + 24 * 60 * 60000)) {
-        SimpleDateFormat(stringResource(id = R.string.date_display_days_since_yesterday))
-    } else {
-        SimpleDateFormat(stringResource(id = R.string.date_display_days_since_other))
-    }
+            if (DateUtils.isToday(this.time)) {
+                SimpleDateFormat(stringResource(id = R.string.date_display_days_since_today))
+            } else if (DateUtils.isToday(this.time + 24 * 60 * 60000)) {
+                SimpleDateFormat(stringResource(id = R.string.date_display_days_since_yesterday))
+            } else {
+                SimpleDateFormat(stringResource(id = R.string.date_display_days_since_other))
+            }
     return formatter.format(this)
 }

@@ -125,7 +125,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             ActivitiesView()
         }
         val intentFilter = IntentFilter("org.witness.proofmode.NEW_MEDIA")
-        intentFilter.addDataType("image/jpeg")
+        intentFilter.apply {
+            addDataType("image/*")
+            addDataType("video/*")
+        }
+
         LocalBroadcastManager.getInstance(applicationContext).registerReceiver(cameraReceiver, intentFilter)
         LocalBroadcastManager.getInstance(applicationContext).registerReceiver(cameraReceiver, IntentFilter(EVENT_PROOF_GENERATED))
 
