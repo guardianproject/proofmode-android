@@ -169,14 +169,6 @@
                 android:text="@string/share_save_robust"
                 android:onClick="saveAll"
                 />
-            <Button
-                android:layout_width="100dp"
-                android:layout_height="wrap_content"
-                android:layout_margin="10dp"
-                android:text="@string/share_sign_robust"
-                android:onClick="signAll"
-                android:visibility="visible"
-                />
         </LinearLayout>
 
 
