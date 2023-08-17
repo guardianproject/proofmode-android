@@ -466,6 +466,7 @@ fun ActivitiesView() {
                                         fontWeight = FontWeight.Bold
                                 )
                                 Spacer(modifier = Modifier.weight(1.0f))
+                                /**
                                 IconButton(
                                         modifier =
                                         Modifier
@@ -478,7 +479,7 @@ fun ActivitiesView() {
                                             painter = painterResource(id = R.drawable.ic_camera),
                                             contentDescription = "Open camera"
                                     )
-                                }
+                                }**/
                             }
                         }
                         Activities.activities.reversed().forEach { activity ->

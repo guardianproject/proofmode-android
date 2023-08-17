@@ -117,7 +117,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         //updateOnOffState(false)
 
         if (isOn)
-        (application as ProofModeApp).init(this, true)
+            (application as ProofModeApp).init(this, true)
 
         // Setup activity view
         val activityView = findViewById<ComposeView>(R.id.activityView)
@@ -136,6 +136,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         registerReceiver(cameraReceiver, IntentFilter(INTENT_ACTIVITY_ITEMS_SHARED))
 
         Activities.load(this)
+
+        val fab: View = findViewById(R.id.fab)
+        fab.setOnClickListener { view ->
+            openCamera()
+        }
     }
 
     private class CameraReceiver: BroadcastReceiver() {
