@@ -165,7 +165,7 @@
             android:layout_margin="10dp"
             android:text="@string/share_share_robust"
             android:onClick="clickAll"
-            />wrap_content
+            />
             <Button
                 android:layout_width="100dp"
                 android:layout_height="wrap_content"

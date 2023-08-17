@@ -5,6 +5,7 @@ import android.app.Dialog
 import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.Context
+import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.LabeledIntent
 import android.content.pm.PackageManager
@@ -54,6 +55,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.zip.ZipEntry
+import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
 
 
@@ -64,6 +66,7 @@ class ShareProofActivity : AppCompatActivity() {
     private val hashCache = HashMap<String, String?>()
 
     private lateinit var pgpUtils : PgpUtils
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityShareBinding.inflate(layoutInflater)
@@ -210,7 +213,30 @@ class ShareProofActivity : AppCompatActivity() {
     }
 
     fun clickAll(button: View?) {
-        shareProof(sendMedia, true)
+
+        val options = arrayOf(getString(R.string.action_share_proof_zip),getString(R.string.action_add_content_credentials_c2pa))
+
+        val builder = AlertDialog.Builder(this)
+        builder.setItems(options, DialogInterface.OnClickListener { dialog, which ->
+            // The 'which' argument contains the index position
+            // of the selected item
+
+            if (which == 0)
+            {
+                shareProof(sendMedia, true)
+            }
+            else if (which == 1)
+            {
+                signProof(sendMedia, true)
+            }
+
+        })
+            .setCancelable(true)
+
+        val alert = builder.create()
+        alert.show()
+
+
     }
 
     fun saveAll(button: View?) {
@@ -221,6 +247,23 @@ class ShareProofActivity : AppCompatActivity() {
         signProof(sendMedia, true)
     }
 
+
+    private val mHandler = object : Handler() {
+
+        override fun handleMessage(msg: Message) {
+            // Your logic code here.
+
+            msg.data.getString("progress")?.let { displayProgress(it) }
+        }
+    }
+
+    private fun displayProgressAsync (progressText: String) {
+        var msg = Message()
+        msg.data.putString("progress", progressText)
+        mHandler.post {
+            mHandler.dispatchMessage(msg)
+        }
+    }
     private fun displayProgress(text: String) {
         binding.apply {
             viewProofProgress.visibility = View.VISIBLE
@@ -573,22 +616,6 @@ class ShareProofActivity : AppCompatActivity() {
 
                 if (fileZip.length() > 0) {
                     Timber.d("Proof zip completed. Size:" + fileZip.length())
-                    val encryptZip = false
-                    if (encryptZip) {
-                        val fileZipEnc =
-                            File(fileCacheFolder, "proofmode-$userId-$dateString.zip.gpg")
-                        try {
-                            pgpUtils.encrypt(
-                                FileInputStream(fileZip),
-                                fileZip.length(),
-                                FileOutputStream(fileZipEnc)
-                            )
-                        } catch (e: IOException) {
-                            e.printStackTrace()
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
-                    }
 
                     var proofSignEndpoint = URL("https://proofsign.gpfs.link/upload")
 
@@ -617,18 +644,50 @@ class ShareProofActivity : AppCompatActivity() {
 
                             Timber.d("success uploading to proofsign: " + fileZip.absolutePath)
 
-                            var fileZipSigned = File(fileZip.absolutePath + "-c2pa.zip")
+                            displayProgressAsync(getString(R.string.status_download_content_credentials))
+
+                            var fileZipC2PA = File(fileZip.absolutePath + "-c2pa.zip")
                             response.use { input ->
-                                fileZipSigned.outputStream().use { output ->
+                                fileZipC2PA.outputStream().use { output ->
                                     rs?.copyTo(output)
                                 }
                             }
 
-                            Timber.d("saved proofsigned zip to: " + fileZipSigned.absolutePath)
-                            return fileZipSigned
+                            Timber.d("saved proofsigned zip to: " + fileZipC2PA.absolutePath)
+
+                            //unzip C2PA download zip and add to the proper local hash directory
+                            val zipFile = ZipFile(fileZipC2PA)
+                            val entries = zipFile.entries()
+
+                            while (entries.hasMoreElements()) {
+                                val zipEntry = entries.nextElement()
+                                println(zipEntry.name)
+                                var mediaHash = zipEntry.name.split(".")[0]
+                                val fileFolder = MediaWatcher.getHashStorageDir(this, mediaHash)
+                                fileFolder?.let {
+                                    var fileImageC2PA = File(fileFolder,zipEntry.name+"-c2pa.jpg")
+                                    shareUris.add(Uri.fromFile(fileImageC2PA))
+                                    zipFile.getInputStream(zipEntry).copyTo(FileOutputStream(fileImageC2PA))
+                                }
+                            }
+                            zipFile.close()
+
+                            /**
+                            Timber.d("Preparing proof bundle zip: " + fileZip.absolutePath)
+                            try {
+                                zipProof(shareUris, fileZip)
+                            } catch (e: IOException) {
+                                Timber.e(e, "Error generating proof Zip")
+                                return null
+                            }**/
+
+                            return fileZipC2PA
                         }
                         else{
                             Timber.d("proofsign err: " + response.body?.string())
+
+                            displayProgressAsync(getString(R.string.err_content_credentials))
+
                             return null
                         }
                     }
@@ -1472,6 +1531,7 @@ class ShareProofActivity : AppCompatActivity() {
         Timber.d("Zip complete")
         out.close()
     }
+
 
     private fun getFileNameFromUri(uri: Uri?): String? {
         val projection = arrayOfNulls<String>(2)
