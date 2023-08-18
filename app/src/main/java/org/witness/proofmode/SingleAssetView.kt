@@ -69,6 +69,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.launch
+import org.witness.proofmode.crypto.HashUtils
+import org.witness.proofmode.service.MediaWatcher
+import org.witness.proofmode.util.ProofModeUtil
+import timber.log.Timber
+import java.io.File
+import java.io.FileNotFoundException
 import java.lang.Float.max
 import java.lang.Float.min
 import java.text.SimpleDateFormat
@@ -228,7 +234,9 @@ fun SingleAssetView(initialItem: ProofableItem, modifier: Modifier = Modifier, s
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
             ) {
-                Text("Metadata here")
+//                ProofModeUtil.getProofHash(initialItem.uri,context)?.let { Text(it) }
+
+
             }
         }
         Row(
@@ -261,6 +269,7 @@ fun SingleAssetView(initialItem: ProofableItem, modifier: Modifier = Modifier, s
         }
     }
 }
+
 
 @Composable
 fun SingleItemView(itemWidth: Dp, allAssets: List<ProofableItem>, index: Int, selectedIndex: Int) {
