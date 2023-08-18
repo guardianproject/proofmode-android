@@ -503,7 +503,7 @@ fun ActivitiesView() {
                                 modifier = Modifier
                                         .padding(10.dp)
                         ) {
-                            Text(
+                            /**Text(
                                     text = pluralStringResource(
                                             id = R.plurals.n_items_selected,
                                             count = selectedAssets.size,
@@ -514,14 +514,14 @@ fun ActivitiesView() {
                                     fontWeight = FontWeight.Bold
                             )
                             Spacer(modifier = Modifier.weight(1.0f))
-
+                             **/
                             val context = LocalContext.current
                             val selectedItems = Activities.selectedItems(context = context, selectedAssets)
                             IconButton(
                                     modifier =
                                     Modifier
-                                            .width(32.dp)
-                                            .height(32.dp),
+                                            .width(48.dp)
+                                            .height(48.dp),
                                     onClick = {
                                         (context as? ActivitiesViewDelegate)?.shareItems(selectedItems, fileName = null, shareText = null)
                                         selectedAssets.clear()
@@ -531,11 +531,12 @@ fun ActivitiesView() {
                                         contentDescription = "Share"
                                 )
                             }
+                            Spacer(modifier = Modifier.width(6.dp))
                             IconButton(
                                     modifier =
                                     Modifier
-                                            .width(32.dp)
-                                            .height(32.dp),
+                                            .width(48.dp)
+                                            .height(48.dp),
                                     onClick = {
                                         selectedAssets.clear()
                                     }) {
