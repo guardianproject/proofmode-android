@@ -247,7 +247,10 @@ fun PreviewView.createTapGestureDetector(
             if (camera.cameraInfo.isFocusMeteringSupported(meteringAction)) {
                 lifecycleScope.launch {
                     val focusMeteringResult =
-                        camera.cameraControl.startFocusAndMetering(meteringAction).await()
+                        camera.cameraControl.startFocusAndMetering(meteringAction)
+
+                                /**
+                            .await()
                     if (focusMeteringResult.isFocusSuccessful) {
                         withContext(Dispatchers.Main) {
                             focusView.showFocusIndicator(PointF(event.x, event.y))
@@ -261,7 +264,7 @@ fun PreviewView.createTapGestureDetector(
                                 focusView.hideFocusIndicator()
                             }, 700)
                         }
-                    }
+                    }**/
                 }
             }
 

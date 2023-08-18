@@ -165,16 +165,18 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
             }
 
             // This swipe gesture adds a fun gesture to switch between video and photo
+            /*
             val swipeGestures = SwipeGestureDetector().apply {
                 setSwipeCallback(right = {
                     navigateToVideoFragment()
                 })
             }
             val gestureDetectorCompat = GestureDetector(requireContext(), swipeGestures)
+            */
 
             viewFinder.setOnTouchListener { _, motionEvent ->
                 // Make sure to let the touch listener handle each event here
-                gestureDetectorCompat.onTouchEvent(motionEvent)
+            //    gestureDetectorCompat.onTouchEvent(motionEvent)
                 pinchToZoomDetector.onTouchEvent(motionEvent)
                 tapDetector.onTouchEvent(motionEvent)
                 return@setOnTouchListener true
