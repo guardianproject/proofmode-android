@@ -461,7 +461,7 @@ fun ActivitiesView() {
 
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                        text = "Activities",
+                                        text = stringResource(id = R.string.title_activity),
                                         style = MaterialTheme.typography.headlineLarge,
                                         fontWeight = FontWeight.Bold
                                 )

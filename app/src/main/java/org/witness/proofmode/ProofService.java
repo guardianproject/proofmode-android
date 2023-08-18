@@ -108,7 +108,7 @@ public class ProofService extends Service {
 
             //got event
 
-            Toast.makeText(ProofService.this,"Got proof event: " + intent.getData(), Toast.LENGTH_SHORT).show();
+          //  Toast.makeText(ProofService.this,"Got proof event: " + intent.getData(), Toast.LENGTH_SHORT).show();
             /**
              Activities.INSTANCE.addActivity(new Activity(UUID.randomUUID().toString(), ActivityType.MediaCaptured(
              items = mutableStateListOf(
