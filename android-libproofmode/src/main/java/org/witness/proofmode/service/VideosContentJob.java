@@ -127,7 +127,7 @@ public class VideosContentJob extends JobService {
                             String resultProofHash = MediaWatcher.getInstance(VideosContentJob.this).processUri(uri, true, null);
 
                             if (!TextUtils.isEmpty(resultProofHash)) {
-                                mHandler.post(() -> Toast.makeText(getApplicationContext(), R.string.proof_generated_success, Toast.LENGTH_SHORT).show());
+                               // mHandler.post(() -> Toast.makeText(getApplicationContext(), R.string.proof_generated_success, Toast.LENGTH_SHORT).show());
 
                             }
 

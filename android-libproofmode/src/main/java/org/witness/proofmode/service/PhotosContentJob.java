@@ -134,7 +134,7 @@ public class PhotosContentJob extends JobService {
                                     String resultProofHash = mw.processUri(uri,  true, null);
 
                                     if (!TextUtils.isEmpty(resultProofHash)) {
-                                        mHandler.post(() -> Toast.makeText(getApplicationContext(), R.string.proof_generated_success, Toast.LENGTH_SHORT).show());
+                                //        mHandler.post(() -> Toast.makeText(getApplicationContext(), R.string.proof_generated_success, Toast.LENGTH_SHORT).show());
 
                                     }
                                 //}
