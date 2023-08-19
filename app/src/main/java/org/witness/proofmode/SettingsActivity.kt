@@ -49,15 +49,19 @@ class SettingsActivity : AppCompatActivity() {
                         R.layout.permission_location
                     )
                 ) {
+                    /**
                     if (!askForPermission(
                             Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+                            0,
                             REQUEST_CODE_LOCATION_BACKGROUND,
                             0
                         )
                     ) {
                         mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_LOCATION, true).commit()
                         refreshLocation()
-                    }
+                    }*/
+                    mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_LOCATION, true).commit()
+                    refreshLocation()
                 }
             } else {
                 mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_LOCATION, false).commit()
@@ -126,7 +130,7 @@ class SettingsActivity : AppCompatActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         when (requestCode) {
-            REQUEST_CODE_LOCATION -> {
+            REQUEST_CODE_LOCATION -> {/**
                 if (hasPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                         askForPermission(
@@ -138,7 +142,7 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 updateUI()
             }
-            REQUEST_CODE_LOCATION_BACKGROUND -> {
+            REQUEST_CODE_LOCATION_BACKGROUND -> {**/
                 if (hasPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))) {
                     mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_LOCATION, true).commit()
                     refreshLocation()
@@ -201,6 +205,6 @@ class SettingsActivity : AppCompatActivity() {
         private const val REQUEST_CODE_LOCATION = 1
         private const val REQUEST_CODE_NETWORK_STATE = 2
         private const val REQUEST_CODE_READ_PHONE_STATE = 3
-        private const val REQUEST_CODE_LOCATION_BACKGROUND = 4
+       // private const val REQUEST_CODE_LOCATION_BACKGROUND = 4
     }
 }

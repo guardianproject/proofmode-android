@@ -25,7 +25,8 @@
         android:maxSdkVersion="32" />
 
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        tools:remove="android:maxSdkVersion"  />
+        tools:remove="android:maxSdkVersion"
+        />
 
     <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION"
        />
@@ -46,9 +47,12 @@
     <uses-permission
         android:name="android.permission.ACCESS_FINE_LOCATION"
         tools:remove="android:maxSdkVersion" />
+
+    <!--
     <uses-permission
         android:name="android.permission.ACCESS_BACKGROUND_LOCATION"
-        tools:remove="android:maxSdkVersion" />
+        tools:remove="android:maxSdkVersion" />-->
+
     <uses-permission
         android:name="android.permission.ACCESS_NETWORK_STATE"
         tools:remove="android:maxSdkVersion" />
@@ -75,7 +79,9 @@
         <service
             android:name=".ProofService"
             android:enabled="true"
-            android:exported="true" />
+            android:exported="true"
+            android:foregroundServiceType="dataSync|location"
+            />
 
         <activity android:name=".PermissionActivity" />
         <activity

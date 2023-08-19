@@ -12,9 +12,6 @@ xmlns:tools="http://schemas.android.com/tools"
         android:name="android.permission.ACCESS_FINE_LOCATION"
         tools:remove="android:maxSdkVersion" />
     <uses-permission
-        android:name="android.permission.ACCESS_BACKGROUND_LOCATION"
-        tools:remove="android:maxSdkVersion"/>
-    <uses-permission
         android:name="android.permission.ACCESS_NETWORK_STATE"
         tools:remove="android:maxSdkVersion" />
     <uses-permission
@@ -35,7 +32,6 @@ xmlns:tools="http://schemas.android.com/tools"
     <!-- Required only if your app needs to access audio files
          that other apps created. -->
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
-
 
     <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION"
         />
