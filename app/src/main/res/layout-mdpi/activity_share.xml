@@ -23,19 +23,20 @@
         android:orientation="vertical"
         android:gravity="center_horizontal|center_vertical"
         android:visibility="visible"
-        tools:visibility="gone"
-        >
+        tools:visibility="gone">
 
         <ProgressBar
             android:id="@+id/progressBar2"
             style="?android:attr/progressBarStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
+
         <TextView
             android:id="@+id/progressText"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
+            android:layout_height="wrap_content" />
     </LinearLayout>
+
     <LinearLayout
         android:id="@+id/view_no_proof"
         android:layout_width="match_parent"
@@ -43,23 +44,21 @@
         android:orientation="vertical"
         android:gravity="center_horizontal|center_vertical"
         android:visibility="gone"
-        tools:visibility="gone"
-        >
+        tools:visibility="gone">
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/share_no_proof"
             android:layout_margin="10dp"
-            style="@style/OnboardingStepTitleStyle"
-            />
+            style="@style/OnboardingStepTitleStyle" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/share_no_proof_info"
             android:layout_margin="10dp"
-            style="@style/OnboardingStepContentStyle"
-            />
+            style="@style/OnboardingStepContentStyle" />
 
         <Button
             android:layout_width="wrap_content"
@@ -67,8 +66,7 @@
             android:layout_marginTop="10dp"
             android:layout_marginBottom="20dp"
             android:text="@string/action_generate"
-            android:onClick="generateProof"
-            />
+            android:onClick="generateProof" />
 
     </LinearLayout>
 
@@ -83,22 +81,21 @@
         android:paddingStart="10dp"
         android:paddingLeft="10dp"
         android:paddingEnd="10dp"
-        android:paddingRight="10dp"
-        >
+        android:paddingRight="10dp">
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/share_proof_found"
             android:layout_margin="10dp"
-            style="@style/OnboardingStepTitleStyle"
-            />
+            style="@style/OnboardingStepTitleStyle" />
 
         <com.caverock.androidsvg.SVGImageView
             android:layout_width="50dp"
             android:layout_height="50dp"
             app:svg="ic_basic.svg"
-            android:visibility="gone"
-            />
+            android:visibility="gone" />
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -106,8 +103,7 @@
             android:layout_margin="10dp"
             android:textAllCaps="true"
             style="@style/OnboardingStepContentStyle"
-            android:visibility="gone"
-            />
+            android:visibility="gone" />
 
         <TextView
             android:id="@+id/tvInfoBasic"
@@ -116,8 +112,7 @@
             android:drawableEnd="@drawable/ic_info"
             android:drawableRight="@drawable/ic_info"
             android:text="@string/share_mode_basic_info"
-            style="@style/OnboardingStepContentStyle"
-            />
+            style="@style/OnboardingStepContentStyle" />
 
         <Button
             android:layout_width="wrap_content"
@@ -125,15 +120,14 @@
             android:layout_marginTop="10dp"
             android:layout_marginBottom="20dp"
             android:text="@string/share_share_basic"
-            android:onClick="clickNotarize"
-            />
+            android:onClick="clickNotarize" />
 
         <com.caverock.androidsvg.SVGImageView
             android:layout_width="50dp"
             android:layout_height="50dp"
             app:svg="ic_robust.svg"
-            android:visibility="gone"
-            />
+            android:visibility="gone" />
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -141,8 +135,7 @@
             android:layout_margin="10dp"
             android:textAllCaps="true"
             style="@style/OnboardingStepContentStyle"
-            android:visibility="gone"
-            />
+            android:visibility="gone" />
 
         <TextView
             android:id="@+id/tvInfoRobust"
@@ -151,29 +144,51 @@
             android:drawableEnd="@drawable/ic_info"
             android:drawableRight="@drawable/ic_info"
             android:text="@string/share_mode_robust_info"
-            style="@style/OnboardingStepContentStyle"
-            />
+            style="@style/OnboardingStepContentStyle" />
 
 
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-        <Button
-            android:layout_width="100dp"
-            android:layout_height="wrap_content"
-            android:layout_margin="10dp"
-            android:text="@string/share_share_robust"
-            android:onClick="clickAll"
-            />
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
             <Button
-                android:layout_width="100dp"
+                android:id="@+id/button1"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_margin="10dp"
+                android:minWidth="160dp"
+                android:text="@string/share_share_robust"
+                android:onClick="clickAll"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent" />
+
+            <Button
+                android:id="@+id/button2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="160dp"
                 android:layout_margin="10dp"
                 android:text="@string/share_save_robust"
                 android:onClick="saveAll"
-                />
-        </LinearLayout>
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toEndOf="@id/button1" />
+
+            <androidx.constraintlayout.helper.widget.Flow
+                android:id="@+id/flow"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                app:flow_wrapMode="chain"
+                app:flow_horizontalBias="0.5"
+                app:flow_horizontalStyle="packed"
+                app:flow_verticalStyle="packed"
+                app:constraint_referenced_ids="button1,button2"
+                app:layout_constraintStart_toStartOf="parent"
+                app:flow_horizontalGap="16dp"
+                app:flow_verticalGap="16dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
         <!--       <Button
                    android:layout_width="wrap_content"
@@ -198,15 +213,14 @@
         android:orientation="vertical"
         android:gravity="center_horizontal|center_vertical"
         android:visibility="gone"
-        tools:visibility="visible"
-        >
+        tools:visibility="visible">
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/proof_error_message_final"
             android:layout_margin="10dp"
-            style="@style/OnboardingStepTitleStyle"
-            />
+            style="@style/OnboardingStepTitleStyle" />
 
 
     </LinearLayout>
@@ -219,16 +233,15 @@
         android:gravity="center_horizontal|center_vertical"
         android:visibility="gone"
         tools:visibility="visible"
-        android:padding="12dp"
-        >
+        android:padding="12dp">
+
         <TextView
             android:id="@+id/view_proof_saved_message"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/share_save_downloads"
             android:layout_margin="12dp"
-            style="@style/OnboardingStepContentStyle"
-            />
+            style="@style/OnboardingStepContentStyle" />
 
 
     </LinearLayout>
