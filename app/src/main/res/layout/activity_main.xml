@@ -40,7 +40,7 @@
             android:backgroundTint="@color/button_purple"
             app:tint="@color/white"
             app:borderWidth="0dp"
-            android:layout_marginBottom="65dp"
+            android:layout_marginBottom="16dp"
             android:layout_marginEnd="16dp"
             app:elevation="6dp"
             android:contentDescription="@string/camera" />

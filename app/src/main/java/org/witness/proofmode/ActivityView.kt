@@ -401,7 +401,7 @@ val LocalSelectionHandler = compositionLocalOf<SelectionHandler> { error("Select
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ActivitiesView() {
+fun ActivitiesView(main : MainActivity) {
     var showSingleAssetView: ProofableItem? by remember { mutableStateOf(null) }
 
     val selectedAssets = remember {
@@ -419,6 +419,9 @@ fun ActivitiesView() {
             } else {
                 showSingleAssetView = item
             }
+
+
+            main.itemsSelected(anySelected())
         }
 
         override fun onProofableItemLongClick(item: ProofableItem) {
@@ -426,6 +429,8 @@ fun ActivitiesView() {
             if (!selectedAssets.contains(uriString)) {
                 selectedAssets.add(uriString)
             }
+
+            main.itemsSelected(anySelected())
         }
 
         override fun isSelected(item: ProofableItem): Boolean {
@@ -525,6 +530,8 @@ fun ActivitiesView() {
                                     onClick = {
                                         (context as? ActivitiesViewDelegate)?.shareItems(selectedItems, fileName = null, shareText = null)
                                         selectedAssets.clear()
+
+                                        main.itemsSelected(false)
                                     }) {
                                 Icon(
                                         imageVector = Icons.Default.Share,
@@ -538,6 +545,8 @@ fun ActivitiesView() {
                                             .height(32.dp),
                                     onClick = {
                                         selectedAssets.clear()
+
+                                        main.itemsSelected(false)
                                     }) {
                                 Icon(
                                         imageVector = Icons.Default.Close,
@@ -634,8 +643,8 @@ fun activityMenu(activity: Activity): (@Composable() (BoxScope.() -> Unit))? {
 
 @Preview
 @Composable
-fun ActivityViewPreview() {
-    ActivitiesView()
+fun ActivityViewPreview(main : MainActivity) {
+    ActivitiesView(main)
 }
 
 @SuppressLint("SimpleDateFormat")

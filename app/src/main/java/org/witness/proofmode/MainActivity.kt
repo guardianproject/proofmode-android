@@ -27,6 +27,7 @@ import androidx.core.view.MenuItemCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.preference.PreferenceManager
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.navigation.NavigationView
 import gun0912.tedimagepicker.builder.TedImagePicker
 import org.witness.proofmode.ActivityConstants.EXTRA_FILE_NAME
@@ -53,6 +54,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private lateinit var drawer: DrawerLayout
     private lateinit var drawerToggle: ActionBarDrawerToggle
     private lateinit var mainBinding:ActivityMainBinding
+    private lateinit var fab: FloatingActionButton
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -122,8 +125,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         // Setup activity view
         val activityView = findViewById<ComposeView>(R.id.activityView)
         activityView.setContent {
-            ActivitiesView()
+            ActivitiesView(this)
         }
+
         val intentFilter = IntentFilter("org.witness.proofmode.NEW_MEDIA")
         intentFilter.apply {
             addDataType("image/*")
@@ -137,10 +141,17 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         Activities.load(this)
 
-        val fab: View = findViewById(R.id.fab)
+        fab = findViewById<FloatingActionButton>(R.id.fab)
         fab.setOnClickListener { view ->
             openCamera()
         }
+    }
+
+    public fun itemsSelected (selected : Boolean) {
+        if (selected)
+            fab.visibility = View.GONE
+        else
+            fab.visibility = View.VISIBLE
     }
 
     private class CameraReceiver: BroadcastReceiver() {
