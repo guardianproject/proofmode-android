@@ -709,6 +709,11 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             var f = newMediaFile.toFile()
+
+            //TODO add c2pa capture here
+
+            C2paUtils
+
             try {
                 MediaStore.Images.Media.insertImage(
                     context?.contentResolver,

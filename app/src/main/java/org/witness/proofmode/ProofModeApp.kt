@@ -142,8 +142,12 @@ class ProofModeApp : MultiDexApplication() {
         } catch (e: ClassNotFoundException) {
             //class not available
         }
+
+        /**
+         * // original idea for adding C2PA through notarization... moving now to use in camera capture directly
         val nProvider: NotarizationProvider = C2paNotarizationProvider(this)
         ProofMode.addNotarizationProvider(this, nProvider)
+        **/
 
     }
 

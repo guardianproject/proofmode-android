@@ -59,4 +59,7 @@ dependencies {
     }
     implementation("io.coil-kt:coil-video:2.2.2") {
     }
+
+    //new C2PA content authenticity support
+    implementation("org.proofmode:proofmode-c2pa:0.2")
 }
