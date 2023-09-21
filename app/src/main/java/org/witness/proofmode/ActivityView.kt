@@ -622,7 +622,14 @@ fun ActivitiesView(onAnyItemSelected: ((Boolean) -> Unit)? = null) {
             showSingleAssetView = null
         } else {
             // If there is no single asset view, then let the back press go through
-            backPressedDispatcher?.onBackPressed()
+            // When you hit back button and some items were selected, then clear the selection
+            if (selectedAssets.size > 0) {
+                selectedAssets.clear()
+                onAnyItemSelected?.invoke(false)
+            } else {
+                backPressedDispatcher?.onBackPressed()
+            }
+
         }
     }
 }
