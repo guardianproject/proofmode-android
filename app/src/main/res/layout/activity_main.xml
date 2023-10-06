@@ -29,7 +29,7 @@
         <androidx.compose.ui.platform.ComposeView
             android:id="@+id/activityView"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"/>
+            android:layout_height="match_parent" />
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/fab"
@@ -40,9 +40,10 @@
             android:backgroundTint="@color/button_purple"
             app:tint="@color/white"
             app:borderWidth="0dp"
+            android:layout_marginBottom="16dp"
+            android:layout_marginEnd="16dp"
             app:elevation="6dp"
-            android:contentDescription="@string/camera"
-            android:layout_margin="16dp" />
+            android:contentDescription="@string/camera" />
     </FrameLayout>
 
     <com.google.android.material.navigation.NavigationView
