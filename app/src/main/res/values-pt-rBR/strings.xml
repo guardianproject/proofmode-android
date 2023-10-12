@@ -88,7 +88,7 @@
     <string name="share_no_proof_info">Caso ainda não haja provas, você pode gerar uma prova agora. Pode não refletir a hora e o local de quando e onde a mídia foi criada.</string>
     <string name="share_mode_robust">Robusto</string>
     <string name="share_mode_robust_info">Compartilha tudo o que você ativou no ProofMode para capturar num arquivo assinado criptograficamente.</string>
-    <string name="share_share_robust">Compartilhamento robusto</string>
+    <string name="share_share_robust">Compartilhar</string>
     <string name="share_info_basic_title">Compartilhe uma impressão digital da sua mídia para estabelecer que ela existe.</string>
     <string name="share_info_basic_message">• Não inclui informações pessoais
 \n• Nenhuma confiança é necessária
@@ -100,7 +100,7 @@
     <string name="waiting_proof_notify">Pronto para adicionar as provas</string>
     <string name="independent_notary">Autenticação independente por Enigio TimeBeat em:</string>
     <string name="packaging_proof">Empacotando a prova compartilhar...</string>
-    <string name="share_save_robust">Salva o robusto</string>
+    <string name="share_save_robust">Salvar</string>
     <string name="share_info_robust_message">• Revela as informações de identificação pessoal
 \n• Compartilhe com alguém que você confia
 \n• Requer acesso à internet
@@ -163,4 +163,10 @@
         <item quantity="other">Você compartilhou %d itens</item>
     </plurals>
     <string name="err_content_credentials">Houve um problema ao verificar ou ao gerar as credenciais de conteúdo.</string>
+    <string name="share_sign_robust">Assinar</string>
+    <string name="share_upload_robust">Enviar</string>
+    <string name="title_activity">Atividade</string>
+    <string name="video">Vídeo</string>
+    <string name="camera">Câmera</string>
+    <string name="cd_take_picture">Tirar uma foto</string>
 </resources>
