@@ -3,6 +3,8 @@ package org.witness.proofmode
 import android.annotation.SuppressLint
 import android.graphics.RectF
 import android.text.format.DateUtils
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -52,7 +54,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -83,9 +84,14 @@ sealed class CapturedAssetRow {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ProofableItemView(item: ProofableItem, modifier: Modifier = Modifier, contain: Boolean = false, corners: RectF = RectF(
-        ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS),
-                      showSelectionBorder: Boolean = true
+fun ProofableItemView(
+    item: ProofableItem,
+    modifier: Modifier = Modifier,
+    contain: Boolean = false,
+    corners: RectF = RectF(
+        ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS
+    ),
+    showSelectionBorder: Boolean = true
 ) {
     val selectionHandler = LocalSelectionHandler.current
     val context = LocalContext.current
@@ -97,40 +103,40 @@ fun ProofableItemView(item: ProofableItem, modifier: Modifier = Modifier, contai
     }
 
     AsyncImage(
-            model = if (!isVideo) item.uri.toString() else getVideoThumbnail(context, item.uri),
-            contentDescription = "Asset view",
-            alignment = Alignment.Center,
-            contentScale = if (contain) ContentScale.Fit else ContentScale.Crop,
-            modifier = Modifier
-                    .combinedClickable(
-                            onClick = {
-                                selectionHandler.onProofableItemClick(item)
-                            },
-                            onLongClick = {
-                                selectionHandler.onProofableItemLongClick(item)
-                            }
-                    )
-                    .clip(
-                            RoundedCornerShape(
-                                    corners.left.dp,
-                                    corners.top.dp,
-                                    corners.right.dp,
-                                    corners.bottom.dp
-                            )
+        model = if (!isVideo) item.uri.toString() else getVideoThumbnail(context, item.uri),
+        contentDescription = "Asset view",
+        alignment = Alignment.Center,
+        contentScale = if (contain) ContentScale.Fit else ContentScale.Crop,
+        modifier = Modifier
+            .combinedClickable(
+                onClick = {
+                    selectionHandler.onProofableItemClick(item)
+                },
+                onLongClick = {
+                    selectionHandler.onProofableItemLongClick(item)
+                }
+            )
+            .clip(
+                RoundedCornerShape(
+                    corners.left.dp,
+                    corners.top.dp,
+                    corners.right.dp,
+                    corners.bottom.dp
+                )
 
-                    )
-                    //.background(ASSETS_BACKGROUND)
-                    .border(
-                            width = 4.dp,
-                            color = if (showSelectionBorder && selectionHandler.isSelected(item)) Color.Blue else Color.Transparent,
-                            shape = RoundedCornerShape(
-                                    corners.left.dp,
-                                    corners.top.dp,
-                                    corners.right.dp,
-                                    corners.bottom.dp
-                            )
-                    )
-                    .then(modifier)
+            )
+            //.background(ASSETS_BACKGROUND)
+            .border(
+                width = 4.dp,
+                color = if (showSelectionBorder && selectionHandler.isSelected(item)) Color.Blue else Color.Transparent,
+                shape = RoundedCornerShape(
+                    corners.left.dp,
+                    corners.top.dp,
+                    corners.right.dp,
+                    corners.bottom.dp
+                )
+            )
+            .then(modifier)
     )
 }
 
@@ -147,24 +153,27 @@ fun OneItemAssetRowView(asset: ProofableItem) {
 @Composable
 fun TwoItemsAssetRowView(assets: List<ProofableItem>) {
     Row(
-            Modifier
-                    .fillMaxWidth()
-                    .height(IntrinsicSize.Min),
-            horizontalArrangement = Arrangement.SpaceBetween) {
+        Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
         ProofableItemView(
-                item = assets[0],
-                modifier = Modifier
-                        .weight(0.5F)
-                        .aspectRatio(ratio = 1f),
+            item = assets[0],
+            modifier = Modifier
+                .weight(0.5F)
+                .aspectRatio(ratio = 1f),
         )
-        Spacer(modifier = Modifier
+        Spacer(
+            modifier = Modifier
                 .width(ASSETS_GUTTER_SIZE.dp)
-                .fillMaxHeight())
+                .fillMaxHeight()
+        )
         ProofableItemView(
-                item = assets[1],
-                modifier = Modifier
-                        .weight(0.5F)
-                        .aspectRatio(ratio = 1f),
+            item = assets[1],
+            modifier = Modifier
+                .weight(0.5F)
+                .aspectRatio(ratio = 1f),
         )
     }
 }
@@ -172,12 +181,12 @@ fun TwoItemsAssetRowView(assets: List<ProofableItem>) {
 @Composable
 fun ThreeItemsAssetRowView(assets: List<ProofableItem>) {
     Layout(
-            modifier = Modifier.fillMaxWidth(),
-            content = {
-                ProofableItemView(item = assets[0])
-                ProofableItemView(item = assets[1])
-                ProofableItemView(item = assets[2])
-            }
+        modifier = Modifier.fillMaxWidth(),
+        content = {
+            ProofableItemView(item = assets[0])
+            ProofableItemView(item = assets[1])
+            ProofableItemView(item = assets[2])
+        }
     ) { measurables, constraints ->
         val w = constraints.maxWidth
         val column2Width = (w - 2 * ASSETS_GUTTER_SIZE.dp.roundToPx()) / 3
@@ -199,13 +208,19 @@ fun ThreeItemsAssetRowView(assets: List<ProofableItem>) {
 @Composable
 fun FourItemsAssetRowView(assets: List<ProofableItem>) {
     Layout(
-            modifier = Modifier.fillMaxWidth(),
-            content = {
-                ProofableItemView(item = assets[0])
-                ProofableItemView(item = assets[1], corners = RectF(ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS, 0f, 0f))
-                ProofableItemView(item = assets[2], corners = RectF(0f, 0f, ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS))
-                ProofableItemView(item = assets[3])
-            }
+        modifier = Modifier.fillMaxWidth(),
+        content = {
+            ProofableItemView(item = assets[0])
+            ProofableItemView(
+                item = assets[1],
+                corners = RectF(ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS, 0f, 0f)
+            )
+            ProofableItemView(
+                item = assets[2],
+                corners = RectF(0f, 0f, ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS)
+            )
+            ProofableItemView(item = assets[3])
+        }
     ) { measurables, constraints ->
         val w = constraints.maxWidth
         val columnWidth = (w - 2 * ASSETS_GUTTER_SIZE.dp.roundToPx()) / 3
@@ -229,23 +244,30 @@ fun FourItemsAssetRowView(assets: List<ProofableItem>) {
 }
 
 @Composable
-fun MediaCapturedOrImportedActivityView(items: SnapshotStateList<ProofableItem>, capturedItems: Boolean) {
+fun MediaCapturedOrImportedActivityView(
+    items: SnapshotStateList<ProofableItem>,
+    capturedItems: Boolean
+) {
     Column(verticalArrangement = Arrangement.spacedBy(ASSETS_GUTTER_SIZE.dp)) {
 
         Text(
-                text = pluralStringResource(id = R.plurals.you_captured_n_items, count = items.size, items.size),
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color.DarkGray,
-                modifier = Modifier.padding(bottom = 8.dp)
+            text = pluralStringResource(
+                id = R.plurals.you_captured_n_items,
+                count = items.size,
+                items.size
+            ),
+            style = MaterialTheme.typography.bodyLarge,
+            color = Color.DarkGray,
+            modifier = Modifier.padding(bottom = 8.dp)
         )
 
         val deletedItemsString = items.deletedItemsString()
         if (deletedItemsString != null) {
             Text(
-                    text = deletedItemsString,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.DarkGray,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                text = deletedItemsString,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.DarkGray,
+                modifier = Modifier.padding(bottom = 8.dp)
             )
         }
 
@@ -273,9 +295,9 @@ fun SnapshotStateList<ProofableItem>.deletedItemsString(): String? {
     val countDeleted = this.filter { it.isDeleted(LocalContext.current) }.size
     if (countDeleted > 0) {
         return pluralStringResource(
-                id = R.plurals.n_items_have_been_deleted_or_are_not_accessible,
-                count = countDeleted,
-                countDeleted
+            id = R.plurals.n_items_have_been_deleted_or_are_not_accessible,
+            count = countDeleted,
+            countDeleted
         )
     }
     return null
@@ -310,33 +332,39 @@ fun MediaSharedActivityView(items: SnapshotStateList<ProofableItem>, fileName: S
     Column(verticalArrangement = Arrangement.spacedBy(ASSETS_GUTTER_SIZE.dp)) {
 
         Text(
-                text = pluralStringResource(id = R.plurals.you_shared_n_items, count = items.size, items.size),
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color.DarkGray,
-                modifier = Modifier.padding(bottom = 8.dp)
+            text = pluralStringResource(
+                id = R.plurals.you_shared_n_items,
+                count = items.size,
+                items.size
+            ),
+            style = MaterialTheme.typography.bodyLarge,
+            color = Color.DarkGray,
+            modifier = Modifier.padding(bottom = 8.dp)
         )
 
         val deletedItemsString = items.deletedItemsString()
         if (deletedItemsString != null) {
             Text(
-                    text = deletedItemsString,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.DarkGray,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                text = deletedItemsString,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.DarkGray,
+                modifier = Modifier.padding(bottom = 8.dp)
             )
         }
 
         val validItems = items.withDeletedItemsRemoved().toList()
         FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(8.dp)) {
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(8.dp)
+        ) {
             validItems.forEach { asset ->
                 ProofableItemView(
-                        item = asset,
-                        corners = RectF(30f, 30f, 30f, 30f),
-                        modifier = Modifier
-                                .width(60.dp)
-                                .height(60.dp))
+                    item = asset,
+                    corners = RectF(30f, 30f, 30f, 30f),
+                    modifier = Modifier
+                        .width(60.dp)
+                        .height(60.dp)
+                )
             }
         }
     }
@@ -345,9 +373,9 @@ fun MediaSharedActivityView(items: SnapshotStateList<ProofableItem>, fileName: S
 @Composable
 fun PublicKeySharedActivityView(key: String) {
     Text(
-            text = stringResource(id = R.string.you_shared_your_public_key),
-            style = MaterialTheme.typography.bodyLarge,
-            color = Color.DarkGray
+        text = stringResource(id = R.string.you_shared_your_public_key),
+        style = MaterialTheme.typography.bodyLarge,
+        color = Color.DarkGray
     )
 }
 
@@ -355,9 +383,17 @@ fun PublicKeySharedActivityView(key: String) {
 fun ActivityView(activity: Activity) {
     Row {
         when (activity.type) {
-            is ActivityType.MediaCaptured -> MediaCapturedOrImportedActivityView(activity.type.items, true)
+            is ActivityType.MediaCaptured -> MediaCapturedOrImportedActivityView(
+                activity.type.items,
+                true
+            )
+
             is ActivityType.MediaImported -> Text("Media Imported")
-            is ActivityType.MediaShared -> MediaSharedActivityView(activity.type.items, fileName = activity.type.fileName)
+            is ActivityType.MediaShared -> MediaSharedActivityView(
+                activity.type.items,
+                fileName = activity.type.fileName
+            )
+
             is ActivityType.PublicKeyShared -> PublicKeySharedActivityView(key = activity.type.key)
         }
     }
@@ -365,24 +401,25 @@ fun ActivityView(activity: Activity) {
 
 @Composable
 fun ActivityDateView(date: Date, menu: (@Composable() (BoxScope.() -> Unit))? = null) {
-    Row(modifier = Modifier
+    Row(
+        modifier = Modifier
             .background(Color.White.copy(alpha = 0.6f)),
-            verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-                text = date.displayFormatted(),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = 24.dp)
+            text = date.displayFormatted(),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(top = 24.dp)
         )
         Spacer(modifier = Modifier.weight(1f))
         if (menu != null) {
             Box(
-                    modifier = Modifier
-                            .padding(top = 24.dp)
-                            .fillMaxSize()
-                            .wrapContentSize(Alignment.TopEnd),
-                    content = menu
+                modifier = Modifier
+                    .padding(top = 24.dp)
+                    .fillMaxSize()
+                    .wrapContentSize(Alignment.TopEnd),
+                content = menu
             )
         }
     }
@@ -393,20 +430,23 @@ interface SelectionHandler {
     abstract fun onProofableItemLongClick(item: ProofableItem)
     abstract fun isSelected(item: ProofableItem): Boolean
     abstract fun anySelected(): Boolean
+
     @Composable
     abstract fun selectedItems(): List<ProofableItem>
 }
 
-val LocalSelectionHandler = compositionLocalOf<SelectionHandler> { error("Selection handler not set") }
+val LocalSelectionHandler =
+    compositionLocalOf<SelectionHandler> { error("Selection handler not set") }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ActivitiesView(main : MainActivity) {
+fun ActivitiesView(onAnyItemSelected: ((Boolean) -> Unit)? = null) {
     var showSingleAssetView: ProofableItem? by remember { mutableStateOf(null) }
 
     val selectedAssets = remember {
         mutableStateListOf<String>()
     }
+    val backPressedDispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
     val selectionHandler = object : SelectionHandler {
         override fun onProofableItemClick(item: ProofableItem) {
             val uriString = item.uri.toString()
@@ -421,7 +461,7 @@ fun ActivitiesView(main : MainActivity) {
             }
 
 
-            main.itemsSelected(anySelected())
+            onAnyItemSelected?.invoke(anySelected())
         }
 
         override fun onProofableItemLongClick(item: ProofableItem) {
@@ -430,7 +470,7 @@ fun ActivitiesView(main : MainActivity) {
                 selectedAssets.add(uriString)
             }
 
-            main.itemsSelected(anySelected())
+            onAnyItemSelected?.invoke(anySelected())
         }
 
         override fun isSelected(item: ProofableItem): Boolean {
@@ -443,55 +483,60 @@ fun ActivitiesView(main : MainActivity) {
 
         @Composable
         override fun selectedItems(): List<ProofableItem> {
-            return Activities.selectedItems(context = LocalContext.current, selection = selectedAssets)
+            return Activities.selectedItems(
+                context = LocalContext.current,
+                selection = selectedAssets
+            )
         }
     }
     CompositionLocalProvider(LocalSelectionHandler provides selectionHandler) {
         MaterialTheme() {
             Box(
-                    modifier = Modifier.fillMaxSize()) {
-                Column(modifier = Modifier
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Column(
+                    modifier = Modifier
                         .fillMaxSize()
                         .padding(top = 56.dp)
                         .background(Color.White)
                 ) {
                     LazyColumn(
-                            modifier = Modifier
-                                    .padding(10.dp)
-                                    .weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(ASSETS_GUTTER_SIZE.dp)
+                        modifier = Modifier
+                            .padding(10.dp)
+                            .weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(ASSETS_GUTTER_SIZE.dp)
                     ) {
                         item {
                             val context = LocalContext.current
 
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                        text = stringResource(id = R.string.title_activity),
-                                        style = MaterialTheme.typography.headlineLarge,
-                                        fontWeight = FontWeight.Bold
+                                    text = stringResource(id = R.string.title_activity),
+                                    style = MaterialTheme.typography.headlineLarge,
+                                    fontWeight = FontWeight.Bold
                                 )
                                 Spacer(modifier = Modifier.weight(1.0f))
                                 /**
                                 IconButton(
-                                        modifier =
-                                        Modifier
-                                                .width(32.dp)
-                                                .height(32.dp),
-                                        onClick = {
-                                            (context as? ActivitiesViewDelegate)?.openCamera()
-                                        }) {
-                                    Icon(
-                                            painter = painterResource(id = R.drawable.ic_camera),
-                                            contentDescription = "Open camera"
-                                    )
+                                modifier =
+                                Modifier
+                                .width(32.dp)
+                                .height(32.dp),
+                                onClick = {
+                                (context as? ActivitiesViewDelegate)?.openCamera()
+                                }) {
+                                Icon(
+                                painter = painterResource(id = R.drawable.ic_camera),
+                                contentDescription = "Open camera"
+                                )
                                 }**/
                             }
                         }
                         Activities.activities.reversed().forEach { activity ->
                             stickyHeader {
                                 ActivityDateView(
-                                        date = activity.startTime,
-                                        menu = activityMenu(activity)
+                                    date = activity.startTime,
+                                    menu = activityMenu(activity)
                                 )
                             }
                             item(key = activity.id) {
@@ -504,10 +549,11 @@ fun ActivitiesView(main : MainActivity) {
                         // Selection footer
                         //
                         Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                        .padding(10.dp)
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .padding(10.dp)
                         ) {
+
                             /**Text(
                                     text = pluralStringResource(
                                             id = R.plurals.n_items_selected,
@@ -517,12 +563,15 @@ fun ActivitiesView(main : MainActivity) {
                                     color = Color.DarkGray,
                                     style = MaterialTheme.typography.headlineSmall,
                                     fontWeight = FontWeight.Bold
+
                             )
                             Spacer(modifier = Modifier.weight(1.0f))
                              **/
                             val context = LocalContext.current
-                            val selectedItems = Activities.selectedItems(context = context, selectedAssets)
+                            val selectedItems =
+                                Activities.selectedItems(context = context, selectedAssets)
                             IconButton(
+
                                     modifier =
                                     Modifier
                                             .width(48.dp)
@@ -531,15 +580,17 @@ fun ActivitiesView(main : MainActivity) {
                                         (context as? ActivitiesViewDelegate)?.shareItems(selectedItems, fileName = null, shareText = null)
                                         selectedAssets.clear()
 
-                                        main.itemsSelected(false)
-                                    }) {
+
+                                    onAnyItemSelected?.invoke(false)
+                                }) {
                                 Icon(
-                                        imageVector = Icons.Default.Share,
-                                        contentDescription = "Share"
+                                    imageVector = Icons.Default.Share,
+                                    contentDescription = "Share"
                                 )
                             }
                             Spacer(modifier = Modifier.width(6.dp))
                             IconButton(
+
                                     modifier =
                                     Modifier
                                             .width(48.dp)
@@ -547,11 +598,12 @@ fun ActivitiesView(main : MainActivity) {
                                     onClick = {
                                         selectedAssets.clear()
 
-                                        main.itemsSelected(false)
-                                    }) {
+
+                                    onAnyItemSelected?.invoke(false)
+                                }) {
                                 Icon(
-                                        imageVector = Icons.Default.Close,
-                                        contentDescription = "Cancel"
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Cancel"
                                 )
                             }
                         }
@@ -567,6 +619,22 @@ fun ActivitiesView(main : MainActivity) {
             }
         }
     }
+    BackHandler {
+        if (showSingleAssetView != null) {
+            selectedAssets.clear()
+            showSingleAssetView = null
+        } else {
+            // If there is no single asset view, then let the back press go through
+            // When you hit back button and some items were selected, then clear the selection
+            if (selectedAssets.size > 0) {
+                selectedAssets.clear()
+                onAnyItemSelected?.invoke(false)
+            } else {
+                backPressedDispatcher?.onBackPressed()
+            }
+
+        }
+    }
 }
 
 @Composable
@@ -577,60 +645,68 @@ fun activityMenu(activity: Activity): (@Composable() (BoxScope.() -> Unit))? {
     return {
         IconButton(onClick = { expanded = true }) {
             Icon(
-                    Icons.Default.MoreVert,
-                    contentDescription = "Activity action menu",
-                    tint = Color.Gray
+                Icons.Default.MoreVert,
+                contentDescription = "Activity action menu",
+                tint = Color.Gray
             )
         }
         DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
         ) {
             when (activity.type) {
                 is ActivityType.MediaCaptured -> {
                     val count = activity.type.items.withDeletedItemsRemoved().size
                     DropdownMenuItem(
-                            text = {
-                                Text(
-                                        text = pluralStringResource(
-                                                id = R.plurals.share_these_n_items,
-                                                count = count,
-                                                count
-                                        )
+                        text = {
+                            Text(
+                                text = pluralStringResource(
+                                    id = R.plurals.share_these_n_items,
+                                    count = count,
+                                    count
                                 )
-                            },
-                            onClick = {
-                                expanded = false
-                                (context as? ActivitiesViewDelegate)?.shareItems(activity.type.items, fileName = null, shareText = null)
-                            }
+                            )
+                        },
+                        onClick = {
+                            expanded = false
+                            (context as? ActivitiesViewDelegate)?.shareItems(
+                                activity.type.items,
+                                fileName = null,
+                                shareText = null
+                            )
+                        }
                     )
                 }
 
                 is ActivityType.MediaShared -> {
                     DropdownMenuItem(
-                            text = {
-                                Text(
-                                        text = stringResource(id = R.string.re_share)
-                                )
-                            },
-                            onClick = {
-                                expanded = false
-                                (context as? ActivitiesViewDelegate)?.shareItems(activity.type.items, activity.type.fileName, activity.type.shareText)
-                            }
+                        text = {
+                            Text(
+                                text = stringResource(id = R.string.re_share)
+                            )
+                        },
+                        onClick = {
+                            expanded = false
+                            (context as? ActivitiesViewDelegate)?.shareItems(
+                                activity.type.items,
+                                activity.type.fileName,
+                                activity.type.shareText
+                            )
+                        }
                     )
                 }
 
                 is ActivityType.PublicKeyShared -> {
                     DropdownMenuItem(
-                            text = {
-                                Text(
-                                        text = stringResource(id = R.string.re_share)
-                                )
-                            },
-                            onClick = {
-                                expanded = false
-                                (context as? ActivitiesViewDelegate)?.sharePublicKey(activity.type.key)
-                            }
+                        text = {
+                            Text(
+                                text = stringResource(id = R.string.re_share)
+                            )
+                        },
+                        onClick = {
+                            expanded = false
+                            (context as? ActivitiesViewDelegate)?.sharePublicKey(activity.type.key)
+                        }
                     )
 
                 }
@@ -644,20 +720,20 @@ fun activityMenu(activity: Activity): (@Composable() (BoxScope.() -> Unit))? {
 
 @Preview
 @Composable
-fun ActivityViewPreview(main : MainActivity) {
-    ActivitiesView(main)
+fun ActivityViewPreview() {
+    ActivitiesView()
 }
 
 @SuppressLint("SimpleDateFormat")
 @Composable
 fun Date.displayFormatted(): String {
     val formatter =
-            if (DateUtils.isToday(this.time)) {
-                SimpleDateFormat(stringResource(id = R.string.date_display_days_since_today))
-            } else if (DateUtils.isToday(this.time + 24 * 60 * 60000)) {
-                SimpleDateFormat(stringResource(id = R.string.date_display_days_since_yesterday))
-            } else {
-                SimpleDateFormat(stringResource(id = R.string.date_display_days_since_other))
-            }
+        if (DateUtils.isToday(this.time)) {
+            SimpleDateFormat(stringResource(id = R.string.date_display_days_since_today))
+        } else if (DateUtils.isToday(this.time + 24 * 60 * 60000)) {
+            SimpleDateFormat(stringResource(id = R.string.date_display_days_since_yesterday))
+        } else {
+            SimpleDateFormat(stringResource(id = R.string.date_display_days_since_other))
+        }
     return formatter.format(this)
 }

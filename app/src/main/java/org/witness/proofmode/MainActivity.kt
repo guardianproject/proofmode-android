@@ -1,7 +1,6 @@
 package org.witness.proofmode
 
 import android.Manifest
-import android.animation.Animator
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -33,7 +32,6 @@ import gun0912.tedimagepicker.builder.TedImagePicker
 import org.witness.proofmode.ActivityConstants.EXTRA_FILE_NAME
 import org.witness.proofmode.ActivityConstants.EXTRA_SHARE_TEXT
 import org.witness.proofmode.ActivityConstants.INTENT_ACTIVITY_ITEMS_SHARED
-import org.witness.proofmode.ProofMode.EVENT_PROOF_EXTRA_HASH
 import org.witness.proofmode.ProofMode.EVENT_PROOF_GENERATED
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
@@ -46,14 +44,15 @@ import java.io.IOException
 import java.util.Date
 import java.util.UUID
 
-class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener, ActivitiesViewDelegate {
+class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener,
+    ActivitiesViewDelegate {
     private lateinit var mPrefs: SharedPreferences
-    private  var mPgpUtils: PgpUtils? = null
+    private var mPgpUtils: PgpUtils? = null
     private lateinit var layoutOn: View
     private lateinit var layoutOff: View
     private lateinit var drawer: DrawerLayout
     private lateinit var drawerToggle: ActionBarDrawerToggle
-    private lateinit var mainBinding:ActivityMainBinding
+    private lateinit var mainBinding: ActivityMainBinding
     private lateinit var fab: FloatingActionButton
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -96,14 +95,14 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         switchView.isChecked = isOn
 
-        switchView.setOnCheckedChangeListener{ buttonView, isChecked ->
+        switchView.setOnCheckedChangeListener { buttonView, isChecked ->
             setProofModeOn(isChecked)
         }
 
         val btnSettings = mainBinding.contentMain.btnSettings
         btnSettings.setOnClickListener { openSettings() }
         val btnShareProof = mainBinding.contentMain.btnShareProof
-        btnShareProof.setOnClickListener { 
+        btnShareProof.setOnClickListener {
 
             // Initializing the popup menu and giving the reference as current context
             val popupMenu = PopupMenu(this@MainActivity, it)
@@ -125,7 +124,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         // Setup activity view
         val activityView = findViewById<ComposeView>(R.id.activityView)
         activityView.setContent {
-            ActivitiesView(this)
+            ActivitiesView {
+                itemsSelected(it)
+            }
         }
 
         val intentFilter = IntentFilter("org.witness.proofmode.NEW_MEDIA")
@@ -134,8 +135,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             addDataType("video/*")
         }
 
-        LocalBroadcastManager.getInstance(applicationContext).registerReceiver(cameraReceiver, intentFilter)
-        LocalBroadcastManager.getInstance(applicationContext).registerReceiver(cameraReceiver, IntentFilter(EVENT_PROOF_GENERATED))
+        LocalBroadcastManager.getInstance(applicationContext)
+            .registerReceiver(cameraReceiver, intentFilter)
+        LocalBroadcastManager.getInstance(applicationContext)
+            .registerReceiver(cameraReceiver, IntentFilter(EVENT_PROOF_GENERATED))
 
         registerReceiver(cameraReceiver, IntentFilter(INTENT_ACTIVITY_ITEMS_SHARED))
 
@@ -147,14 +150,14 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
     }
 
-    public fun itemsSelected (selected : Boolean) {
+    private fun itemsSelected(selected: Boolean) {
         if (selected)
             fab.visibility = View.GONE
         else
             fab.visibility = View.VISIBLE
     }
 
-    private class CameraReceiver: BroadcastReceiver() {
+    private class CameraReceiver : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
                 "org.witness.proofmode.NEW_MEDIA" -> {
@@ -175,16 +178,26 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 EVENT_PROOF_GENERATED -> {
                     val uri = intent.data
                     if (uri != null && context != null) {
-                      //proof generated update?
+                        //proof generated update?
                     }
                 }
 
                 INTENT_ACTIVITY_ITEMS_SHARED -> {
-                    val items = intent.getParcelableArrayListExtra<ProofableItem>(Intent.EXTRA_STREAM) ?: ArrayList()
+                    val items =
+                        intent.getParcelableArrayListExtra<ProofableItem>(Intent.EXTRA_STREAM)
+                            ?: ArrayList()
                     if (items.size > 0 && context != null) {
                         val fileName = intent.getStringExtra(EXTRA_FILE_NAME) ?: ""
                         val shareText = intent.getStringExtra(EXTRA_SHARE_TEXT) ?: ""
-                        val activity = Activity(UUID.randomUUID().toString(), ActivityType.MediaShared(items = items.toMutableStateList(), fileName, shareText = shareText), Date())
+                        val activity = Activity(
+                            UUID.randomUUID().toString(),
+                            ActivityType.MediaShared(
+                                items = items.toMutableStateList(),
+                                fileName,
+                                shareText = shareText
+                            ),
+                            Date()
+                        )
                         Activities.addActivity(activity, context)
                     }
                 }
@@ -193,9 +206,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             }
         }
     }
+
     private val cameraReceiver = CameraReceiver()
 
-    private fun startService () {
+    private fun startService() {
         val intentService = Intent(this, ProofService::class.java)
         intentService.action = ProofService.ACTION_START
 
@@ -223,9 +237,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 showShareProof(
                     it
                 )
-                addProofActivity (it)
+                addProofActivity(it)
             }
-            
+
     }
 
     private fun showVideoPicker() {
@@ -234,23 +248,30 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 showShareProof(
                     it
                 )
-                addProofActivity (it)
+                addProofActivity(it)
             }
     }
 
-    private fun addProofActivity (items: List<Uri>) {
+    private fun addProofActivity(items: List<Uri>) {
 
 
         val proofItems = ArrayList<ProofableItem>()
-        for (item in items)
-        {
+        for (item in items) {
             proofItems.add(ProofableItem(UUID.randomUUID().toString(), item))
         }
 
 
         val fileName = intent.getStringExtra(EXTRA_FILE_NAME) ?: ""
         val shareText = intent.getStringExtra(EXTRA_SHARE_TEXT) ?: ""
-        val activity = Activity(UUID.randomUUID().toString(), ActivityType.MediaShared(items = proofItems.toMutableStateList(), fileName, shareText = shareText), Date())
+        val activity = Activity(
+            UUID.randomUUID().toString(),
+            ActivityType.MediaShared(
+                items = proofItems.toMutableStateList(),
+                fileName,
+                shareText = shareText
+            ),
+            Date()
+        )
         Activities.addActivity(activity, this)
     }
 
@@ -275,66 +296,66 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         if (isOn) {
             if (!askForPermissions(requiredPermissions, REQUEST_CODE_REQUIRED_PERMISSIONS)) {
                 mPrefs.edit().putBoolean(ProofMode.PREFS_DOPROOF, true).apply()
-             //   updateOnOffState(true)
+                //   updateOnOffState(true)
                 (application as ProofModeApp).init(this, true)
             }
         } else {
             mPrefs.edit().putBoolean(ProofMode.PREFS_DOPROOF, false).apply()
-          //  updateOnOffState(true)
+            //  updateOnOffState(true)
             (application as ProofModeApp).cancel(this)
         }
     }
 
     /**
     private fun updateOnOffState(animate: Boolean) {
-        val isOn = mPrefs.getBoolean("doProof", false)
-        if (animate) {
-            layoutOn.animate().alpha(if (isOn) 1.0f else 0.0f).setDuration(300)
-                .setListener(object : Animator.AnimatorListener {
-                    override fun onAnimationStart(animation: Animator) {
-                        if (isOn) {
-                            layoutOn.visibility = View.VISIBLE
-                        }
-                    }
+    val isOn = mPrefs.getBoolean("doProof", false)
+    if (animate) {
+    layoutOn.animate().alpha(if (isOn) 1.0f else 0.0f).setDuration(300)
+    .setListener(object : Animator.AnimatorListener {
+    override fun onAnimationStart(animation: Animator) {
+    if (isOn) {
+    layoutOn.visibility = View.VISIBLE
+    }
+    }
 
-                    override fun onAnimationEnd(animation: Animator) {
-                        if (!isOn) {
-                            layoutOn.visibility = View.GONE
-                        }
-                    }
+    override fun onAnimationEnd(animation: Animator) {
+    if (!isOn) {
+    layoutOn.visibility = View.GONE
+    }
+    }
 
-                    override fun onAnimationCancel(animation: Animator) {}
-                    override fun onAnimationRepeat(animation: Animator) {}
-                }).start()
-            layoutOff.animate().alpha(if (isOn) 0.0f else 1.0f).setDuration(300)
-                .setListener(object : Animator.AnimatorListener {
-                    override fun onAnimationStart(animation: Animator) {
-                        if (!isOn) {
-                            layoutOff.visibility = View.VISIBLE
-                        }
-                    }
+    override fun onAnimationCancel(animation: Animator) {}
+    override fun onAnimationRepeat(animation: Animator) {}
+    }).start()
+    layoutOff.animate().alpha(if (isOn) 0.0f else 1.0f).setDuration(300)
+    .setListener(object : Animator.AnimatorListener {
+    override fun onAnimationStart(animation: Animator) {
+    if (!isOn) {
+    layoutOff.visibility = View.VISIBLE
+    }
+    }
 
-                    override fun onAnimationEnd(animation: Animator) {
-                        if (isOn) {
-                            layoutOff.visibility = View.GONE
-                        }
-                    }
+    override fun onAnimationEnd(animation: Animator) {
+    if (isOn) {
+    layoutOff.visibility = View.GONE
+    }
+    }
 
-                    override fun onAnimationCancel(animation: Animator) {}
-                    override fun onAnimationRepeat(animation: Animator) {}
-                }).start()
-        } else {
-            layoutOn.alpha = if (isOn) 1.0f else 0.0f
-            layoutOn.visibility = if (isOn) View.VISIBLE else View.GONE
-            layoutOff.alpha = if (isOn) 0.0f else 1.0f
-            layoutOff.visibility = if (isOn) View.GONE else View.VISIBLE
-        }
+    override fun onAnimationCancel(animation: Animator) {}
+    override fun onAnimationRepeat(animation: Animator) {}
+    }).start()
+    } else {
+    layoutOn.alpha = if (isOn) 1.0f else 0.0f
+    layoutOn.visibility = if (isOn) View.VISIBLE else View.GONE
+    layoutOff.alpha = if (isOn) 0.0f else 1.0f
+    layoutOff.visibility = if (isOn) View.GONE else View.VISIBLE
+    }
 
     }**/
 
     override fun onResume() {
         super.onResume()
-     //   updateOnOffState(false)
+        //   updateOnOffState(false)
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -354,14 +375,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         } else if (id == R.id.action_share_key) {
             shareCurrentPublicKey()
             return true
-        }
-        else if (id == R.id.action_share_photos) {
+        } else if (id == R.id.action_share_photos) {
             showImagePicker();
-        }
-        else if (id == R.id.action_share_videos) {
+        } else if (id == R.id.action_share_videos) {
             showVideoPicker();
-        }
-        else if (id == R.id.action_share_documents) {
+        } else if (id == R.id.action_share_documents) {
             showDocumentPicker();
         }
         return super.onOptionsItemSelected(item)
@@ -544,7 +562,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private fun askForOptionals() {
         if (!askForPermissions(optionalPermissions, REQUEST_CODE_OPTIONAL_PERMISSIONS)) {
             mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_NETWORK, true).commit()
-           // mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_PHONE, true).commit()
+            // mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_PHONE, true).commit()
         }
     }
 
@@ -579,16 +597,19 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 startActivityForResult(intent, REQUEST_CODE_INTRO)
                 return true
             }
+
             R.id.menu_settings -> {
                 drawer.closeDrawer(GravityCompat.START)
                 openSettings()
                 return true
             }
+
             R.id.menu_datalegend -> {
                 drawer.closeDrawer(GravityCompat.START)
                 openDataLegend()
                 return true
             }
+
             R.id.menu_digital_signatures -> {
                 drawer.closeDrawer(GravityCompat.START)
                 openDigitalSignatures()
@@ -614,7 +635,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
          */
         private var requiredPermissions = arrayOf(
             Manifest.permission.READ_EXTERNAL_STORAGE,
-            )
+        )
         private val optionalPermissions = arrayOf(
             Manifest.permission.ACCESS_NETWORK_STATE,
         )
