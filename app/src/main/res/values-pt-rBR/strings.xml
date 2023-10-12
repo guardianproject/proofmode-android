@@ -120,4 +120,47 @@
     <string name="pub_key_id">A identidade da chave pública foi gerada:</string>
     <string name="pub_key_gen_error">Houve um erro ao gerar a chave de identidade. Reinstale.</string>
     <string name="proof_generated_success">Prova gerada!</string>
+    <string name="action_add_content_credentials_c2pa">Adicionar as credenciais de conteúdo (C2PA)</string>
+    <string name="cb_open_gallery">Navegar até a galeria</string>
+    <string name="re_share">Recompartilhar</string>
+    <string name="menu_import_documents">Importar documentos...</string>
+    <plurals name="n_items_have_been_deleted_or_are_not_accessible">
+        <item quantity="one">um item foi excluído ou não está acessível</item>
+        <item quantity="many">%d itens foram excluídos ou não estão acessíveis</item>
+        <item quantity="other">%d itens foram excluídos ou não estão acessíveis</item>
+    </plurals>
+    <string name="date_display_days_since_today">\'Hoje \'HH:mm</string>
+    <plurals name="you_captured_n_items">
+        <item quantity="one">Você capturou um item</item>
+        <item quantity="many">Você capturou %d itens</item>
+        <item quantity="other">Você capturou %d itens</item>
+    </plurals>
+    <string name="action_share_proof_zip">Compartilhar o Proof Zip</string>
+    <string name="cb_timer">Selecionar um temporizador</string>
+    <string name="status_download_content_credentials">Baixando as imagens com credenciais de conteúdo...</string>
+    <string name="share_with_proofsign">Compartilhar com o serviço de nuvem ProofSign para adicionar Credenciais de Conteúdo (C2PA)\?</string>
+    <string name="menu_import_photos">Importar fotos...</string>
+    <string name="progress_signing_proof">Compartilhando e verificando com o ProofSign...</string>
+    <plurals name="n_items_selected">
+        <item quantity="one">Um item foi selecionado</item>
+        <item quantity="many">%d itens foram selecionados</item>
+        <item quantity="other">%d itens foram selecionados</item>
+    </plurals>
+    <string name="date_display_days_since_other">d MMM YYYY</string>
+    <string name="date_display_single_item">d MMM YYYY</string>
+    <string name="you_shared_your_public_key">Você compartilhou a sua chave pública</string>
+    <string name="menu_import_videos">Importar vídeos...</string>
+    <string name="cb_switch">Alternar entre a câmera frontal e traseira</string>
+    <plurals name="share_these_n_items">
+        <item quantity="one">Compartilhar este item</item>
+        <item quantity="many">Compartilhar estes %d itens</item>
+        <item quantity="other">Compartilhar estes %d itens</item>
+    </plurals>
+    <string name="date_display_days_since_yesterday">\'Ontem \'HH:MM</string>
+    <plurals name="you_shared_n_items">
+        <item quantity="one">Você compartilhou um item</item>
+        <item quantity="many">Você compartilhou %d itens</item>
+        <item quantity="other">Você compartilhou %d itens</item>
+    </plurals>
+    <string name="err_content_credentials">Houve um problema ao verificar ou ao gerar as credenciais de conteúdo.</string>
 </resources>
