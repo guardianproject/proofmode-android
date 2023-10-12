@@ -29,6 +29,7 @@ import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.core.net.toFile
 import androidx.core.view.WindowInsetsCompat
+import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.Navigation
@@ -60,6 +61,8 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
     private lateinit var tapDetector: GestureDetector
     private lateinit var pinchToZoomDetector: ScaleGestureDetector
 
+    private val lensViewModel: CameraLensViewModel by activityViewModels()
+
 
     // An instance for display manager to get display change callbacks
     private val displayManager by lazy { requireContext().getSystemService(Context.DISPLAY_SERVICE) as DisplayManager }
@@ -82,7 +85,8 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
     private var displayId = -1
 
     // Selector showing which camera is selected (front or back)
-    private var lensFacing = CameraSelector.DEFAULT_BACK_CAMERA
+    //private var lensFacing = CameraSelector.DEFAULT_BACK_CAMERA
+    private var defaultLensFacing = CameraSelector.LENS_FACING_BACK
     private var hdrCameraSelector: CameraSelector? = null
 
     // Selector showing which flash mode is selected (on, off or auto)
@@ -95,6 +99,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
             }
         )
     }
+
 
     // Selector showing is grid enabled or not
     private var hasGrid = false
@@ -176,7 +181,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
 
             viewFinder.setOnTouchListener { _, motionEvent ->
                 // Make sure to let the touch listener handle each event here
-            //    gestureDetectorCompat.onTouchEvent(motionEvent)
+                //    gestureDetectorCompat.onTouchEvent(motionEvent)
                 pinchToZoomDetector.onTouchEvent(motionEvent)
                 tapDetector.onTouchEvent(motionEvent)
                 return@setOnTouchListener true
@@ -239,16 +244,18 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
      * */
     @SuppressLint("RestrictedApi")
     fun toggleCamera() = binding.btnSwitchCamera.toggleButton(
-        flag = lensFacing == CameraSelector.DEFAULT_BACK_CAMERA,
+        flag = lensViewModel.lensFacing.value == CameraSelector.LENS_FACING_BACK,
         rotationAngle = 180f,
         firstIcon = R.drawable.ic_outline_camera_rear,
         secondIcon = R.drawable.ic_outline_camera_front,
     ) {
-        lensFacing = if (it) {
+        /*lensFacing = if (it) {
             CameraSelector.DEFAULT_BACK_CAMERA
         } else {
             CameraSelector.DEFAULT_FRONT_CAMERA
-        }
+        }*/
+
+        lensViewModel.toggleLensFacing()
 
         startCamera()
     }
@@ -435,44 +442,48 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
             {
                 val extensionsManager = extensionsManagerFuture.get() ?: return@addListener
                 val cameraProvider = cameraProvider ?: return@addListener
+                val selector = CameraSelector.Builder().requireLensFacing(
+                    lensViewModel.lensFacing.value ?: CameraSelector.LENS_FACING_BACK
+                ).build()
 
                 val isAvailable =
-                    extensionsManager.isExtensionAvailable(lensFacing, ExtensionMode.HDR)
+                    extensionsManager.isExtensionAvailable(selector, ExtensionMode.HDR)
+
 
                 // check for any extension availability
                 println(
                     "AUTO " + extensionsManager.isExtensionAvailable(
-                        lensFacing,
+                        selector,
                         ExtensionMode.AUTO
                     )
                 )
                 println(
                     "HDR " + extensionsManager.isExtensionAvailable(
-                        lensFacing,
+                        selector,
                         ExtensionMode.HDR
                     )
                 )
                 println(
                     "FACE RETOUCH " + extensionsManager.isExtensionAvailable(
-                        lensFacing,
+                        selector,
                         ExtensionMode.FACE_RETOUCH
                     )
                 )
                 println(
                     "BOKEH " + extensionsManager.isExtensionAvailable(
-                        lensFacing,
+                        selector,
                         ExtensionMode.BOKEH
                     )
                 )
                 println(
                     "NIGHT " + extensionsManager.isExtensionAvailable(
-                        lensFacing,
+                        selector,
                         ExtensionMode.NIGHT
                     )
                 )
                 println(
                     "NONE " + extensionsManager.isExtensionAvailable(
-                        lensFacing,
+                        selector,
                         ExtensionMode.NONE
                     )
                 )
@@ -486,7 +497,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
                     binding.btnHdr.visibility = View.VISIBLE
                     hdrCameraSelector =
                         extensionsManager.getExtensionEnabledCameraSelector(
-                            lensFacing,
+                            selector,
                             ExtensionMode.HDR
                         )
                 }
@@ -510,9 +521,12 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
         viewFinder: PreviewView
     ) {
         try {
+            val lens = lensViewModel.lensFacing.value
+            val selector = if (lens != null) CameraSelector.Builder().requireLensFacing(lens)
+                .build() else CameraSelector.DEFAULT_BACK_CAMERA
             proofModeCamera = localCameraProvider.bindToLifecycle(
                 viewLifecycleOwner, // current lifecycle owner
-                hdrCameraSelector ?: lensFacing, // either front or back facing
+                hdrCameraSelector ?: selector, // either front or back facing
                 preview, // camera preview use case
                 imageCapture, // image capture use case
                 imageAnalyzer, // image analyzer use case
@@ -589,7 +603,8 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
         // Setup image capture metadata
         val metadata = Metadata().apply {
             // Mirror image when using the front camera
-            isReversedHorizontal = lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA
+            isReversedHorizontal =
+                lensViewModel.lensFacing.value == CameraSelector.LENS_FACING_FRONT
         }
         MediaStore.Images.Media.EXTERNAL_CONTENT_URI
         // Options fot the output image file
