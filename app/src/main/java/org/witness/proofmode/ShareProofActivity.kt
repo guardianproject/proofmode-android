@@ -1149,8 +1149,11 @@ class ShareProofActivity : AppCompatActivity() {
                 var lastModified: Date? = null
                 if (fileMedia != null) lastModified = Date(fileMedia.lastModified())
 
-                //tmp c2pa addition
-                shareUris.add(Uri.fromFile(File(fileFolder, "$hash.c2pa")))
+                val fileList = fileFolder.listFiles()
+                for (file in fileList)
+                {
+                    shareUris.add(Uri.fromFile(file))
+                }
 
                 generateProofOutput(
                     uriMedia,

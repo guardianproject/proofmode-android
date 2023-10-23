@@ -142,7 +142,7 @@ class ProofModeApp : MultiDexApplication() {
         } catch (e: ClassNotFoundException) {
             //class not available
         }
-        val nProvider: NotarizationProvider = C2paNotarizationProvider()
+        val nProvider: NotarizationProvider = C2paNotarizationProvider(this)
         ProofMode.addNotarizationProvider(this, nProvider)
 
     }

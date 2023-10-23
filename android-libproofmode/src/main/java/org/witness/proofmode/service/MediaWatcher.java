@@ -14,6 +14,7 @@ import static org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFA
 
 import android.Manifest;
 import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -292,7 +293,12 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
 
                 try {
                     for (NotarizationProvider provider : mProviders) {
-                        provider.notarize(mediaHash, context.getContentResolver().openInputStream(uriMedia), new NotarizationListener() {
+
+                        ContentResolver cr = context.getContentResolver();
+                        InputStream is = cr.openInputStream(uriMedia);
+                        String mimeType = cr.getType(uriMedia);
+
+                        provider.notarize(mediaHash, mimeType, is, new NotarizationListener() {
                             @Override
                             public void notarizationSuccessful(String hash, String result) {
                                 Timber.d("Got notarization success response for %s", provider.getNotarizationFileExtension());
@@ -315,7 +321,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                             @Override
                             public void notarizationSuccessful(String hash, File fileTmp) {
                                 Timber.d("Got notarization success response for %s", fileTmp.getName());
-                                File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + provider.getNotarizationFileExtension());
+                                File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + '-' + fileTmp.getName());
                                 copyFileToFile(context, fileTmp, fileMediaNotarizeData);
                             }
 
@@ -396,7 +402,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
 
                     for (NotarizationProvider provider : mProviders)
                     {
-                        provider.notarize(mediaHash, new ByteArrayInputStream(mediaBytes), new NotarizationListener() {
+                        provider.notarize(mediaHash, mimeType, new ByteArrayInputStream(mediaBytes), new NotarizationListener() {
                             @Override
                             public void notarizationSuccessful(String hash, String result) {
                                 Timber.d("Got notarization success response timestamp: %s", result);
@@ -415,10 +421,9 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                             @Override
                             public void notarizationSuccessful(String hash, File fileTmp) {
                                 Timber.d("Got notarization success response for %s", fileTmp.getName());
-                                File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + provider.getNotarizationFileExtension());
+                                File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + '-' + fileTmp.getName());
                                 copyFileToFile(context, fileTmp, fileMediaNotarizeData);
                             }
-
 
                             @Override
                             public void notarizationSuccessful(String hash, byte[] result) {
@@ -495,7 +500,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                 for (NotarizationProvider provider : mProviders)
                 {
                     InputStream isMediaNotarize = new FileInputStream(fdMedia);
-                    provider.notarize(mediaHash, isMediaNotarize, new NotarizationListener() {
+                    provider.notarize(mediaHash, mimeType, isMediaNotarize, new NotarizationListener() {
                         @Override
                         public void notarizationSuccessful(String hash, String result) {
                             Timber.d("Got notarization success response timestamp: %s", result);
@@ -513,7 +518,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                         @Override
                         public void notarizationSuccessful(String hash, File fileTmp) {
                             Timber.d("Got notarization success response for %s", fileTmp.getName());
-                            File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + provider.getNotarizationFileExtension() );
+                            File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + '-' + fileTmp.getName());
                             copyFileToFile(context, fileTmp, fileMediaNotarizeData);
                         }
 

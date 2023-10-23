@@ -10,7 +10,7 @@ import java.io.InputStream;
 
 public interface NotarizationProvider {
 
-    public void notarize(String hash, InputStream is, NotarizationListener listener);
+    public void notarize(String hash, String mimeType, InputStream is, NotarizationListener listener);
 
     public String getProof(String hash) throws IOException;
 

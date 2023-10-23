@@ -29,7 +29,7 @@ public class GoogleSafetyNetNotarizationProvider implements NotarizationProvider
     }
 
     @Override
-    public void notarize(String mediaHash, InputStream is, NotarizationListener listener) {
+    public void notarize(String mediaHash, String mimeType, InputStream is, NotarizationListener listener) {
 
         new SafetyNetCheck().sendSafetyNetRequest(mContext, mediaHash, new OnSuccessListener<SafetyNetApi.AttestationResponse>() {
             @Override
