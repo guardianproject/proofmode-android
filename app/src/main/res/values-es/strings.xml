@@ -168,4 +168,5 @@
         <item quantity="other">Compartiste %d artículos</item>
     </plurals>
     <string name="err_content_credentials">Se ha producido un problema al verificar o generar las credenciales del contenido.</string>
+    <string name="share_sign_robust">Firmar</string>
 </resources>
