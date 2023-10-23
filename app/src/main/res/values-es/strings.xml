@@ -69,7 +69,7 @@
     <string name="share_share_basic">Compartir básica</string>
     <string name="share_mode_robust">Robusto</string>
     <string name="share_mode_robust_info">Comparte todo lo que has habilitado ProofMode para capturar en un archivo firmado criptográficamente.</string>
-    <string name="share_share_robust">Compartir prueba robusta</string>
+    <string name="share_share_robust">Compartir</string>
     <string name="share_info_basic_message">• No incluye información personal
 \n• No se necesita confianza
 \n• Lo suficientemente breve como para enviar un mensaje de texto</string>
@@ -107,7 +107,7 @@
 \n• Comparte archivos .csv con datos, PGP y huellas dactilares únicas</string>
     <string name="digital_signatures_whatis_info">Cada vez que instala ProofMode, se crea una identidad digital única, que consta de claves PGP públicas y secretas. Esto funciona con el estándar OpenPGP. Se utiliza para firmar criptográficamente tus medios y archivos de prueba de apoyo. Si las firmas PGP coinciden con la identidad digital (clave PGP) de su instancia actual de ProofMode, entonces la firma fue creada por esa instancia de ProofMode.</string>
     <string name="waiting_proof_notify">Listo para agregar prueba</string>
-    <string name="share_save_robust">Guardar robusto</string>
+    <string name="share_save_robust">Guardar</string>
     <string name="publish_key_to">\"Clave de publicación para: \"</string>
     <string name="progress_checking_proof">Buscando pruebas...</string>
     <string name="progress_building_proof">Construir un paquete de pruebas...</string>
@@ -115,4 +115,57 @@
     <string name="share_save_downloads">Prueba guardada en la carpeta de descargas</string>
     <string name="proof_generated_success">¡Prueba generada!</string>
     <string name="start_camera">Iniciar cámara</string>
+    <string name="action_add_content_credentials_c2pa">Añadir las credenciales para el contenido (C2PA)</string>
+    <string name="verify_proof">Comprobar la prueba</string>
+    <string name="cb_open_gallery">Ir a la Galería</string>
+    <string name="re_share">Volver a compartir</string>
+    <string name="menu_import_documents">Importar los documentos...</string>
+    <string name="proof_integrity_verified_failed">¡Integridad de la prueba fallida!</string>
+    <string name="share_upload_robust">Cargar</string>
+    <plurals name="n_items_have_been_deleted_or_are_not_accessible">
+        <item quantity="one">se ha eliminado un elemento o no se puede acceder a él</item>
+        <item quantity="many">%d elementos han sido borrados o no son accesibles</item>
+        <item quantity="other">%d elementos han sido borrados o no son accesibles</item>
+    </plurals>
+    <string name="date_display_days_since_today">\'Hoy \'HH:mm</string>
+    <plurals name="you_captured_n_items">
+        <item quantity="one">Has capturado un elemento</item>
+        <item quantity="many">Has capturado %d elementos</item>
+        <item quantity="other">Has capturado %d elementos</item>
+    </plurals>
+    <string name="action_share_proof_zip">Compartir Proof Zip</string>
+    <string name="cb_timer">Seleccionar un temporizador</string>
+    <string name="status_download_content_credentials">Descargando las imágenes con las credenciales de contenido...</string>
+    <string name="share_with_proofsign">¿Compartir con el servicio en la nube de ProofSign para añadir las credenciales del contenido (C2PA)\?</string>
+    <string name="menu_import_photos">Importar las fotos...</string>
+    <string name="proof_integrity_verified_success">Integridad de la prueba comprobada</string>
+    <string name="progress_signing_proof">Compartir y verificar con ProofSign...</string>
+    <plurals name="n_items_selected">
+        <item quantity="one">Un elemento seleccionado</item>
+        <item quantity="many">%d elementos seleccionados</item>
+        <item quantity="other">%d elementos seleccionados</item>
+    </plurals>
+    <string name="title_activity">Actividad</string>
+    <string name="date_display_days_since_other">dd MM aaaa</string>
+    <string name="date_display_single_item">dd-mmm-yyyy</string>
+    <string name="you_shared_your_public_key">Compartiste tu clave pública</string>
+    <string name="menu_import_videos">Importar los vídeos...</string>
+    <string name="pub_key_id">Identidad de clave pública generada:</string>
+    <string name="video">Vídeo</string>
+    <string name="cb_switch">Cambia entre las cámaras frontal y trasera</string>
+    <string name="pub_key_gen_error">Error al generar la clave de identidad. Por favor, reinstale.</string>
+    <string name="camera">Cámara</string>
+    <plurals name="share_these_n_items">
+        <item quantity="one">Compartir este artículo</item>
+        <item quantity="many">Compartir estos %d artículos</item>
+        <item quantity="other">Compartir estos %d artículos</item>
+    </plurals>
+    <string name="cd_take_picture">Haz una foto</string>
+    <string name="date_display_days_since_yesterday">\'Ayer \'HH:MM</string>
+    <plurals name="you_shared_n_items">
+        <item quantity="one">Compartiste un artículo</item>
+        <item quantity="many">Compartiste %d artículos</item>
+        <item quantity="other">Compartiste %d artículos</item>
+    </plurals>
+    <string name="err_content_credentials">Se ha producido un problema al verificar o generar las credenciales del contenido.</string>
 </resources>
