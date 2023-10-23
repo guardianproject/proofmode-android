@@ -96,7 +96,7 @@ public class ProofmodeGenerationTests {
     @Test
     public void proofModeGenerator_VerifySignature_ReturnsTrue ()
     {
-        Timber.plant(new Timber.DebugTree());
+       // Timber.plant(new Timber.DebugTree());
 
         Context context = InstrumentationRegistry.getInstrumentation().getContext();
         String testFile = "102474397-prooftestbytes";
@@ -115,7 +115,7 @@ public class ProofmodeGenerationTests {
             assertNotNull(files);
 
             File fileZip = new File (fileDirProof.getParent(),fileDirProof.getName() + ".zip");
-            zipProof(files, fileZip,ProofMode.getPublicKeyString(context, PgpUtils.DEFAULT_PASSWORD));
+            zipProof(files, fileZip,ProofMode.getPublicKeyString(context, "password"));
             assertTrue(fileZip.exists());
 
             //verify specific file and hash

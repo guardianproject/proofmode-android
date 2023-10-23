@@ -54,6 +54,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
+import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -294,7 +295,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                         provider.notarize(mediaHash, context.getContentResolver().openInputStream(uriMedia), new NotarizationListener() {
                             @Override
                             public void notarizationSuccessful(String hash, String result) {
-                                Timber.d("Got notarization success response for %s, timestamp: %s", provider.getNotarizationFileExtension(), result);
+                                Timber.d("Got notarization success response for %s", provider.getNotarizationFileExtension());
                                 File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + provider.getNotarizationFileExtension());
 
                                 try {
@@ -309,6 +310,13 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                                         ex.printStackTrace();
                                     }
                                 }
+                            }
+
+                            @Override
+                            public void notarizationSuccessful(String hash, File fileTmp) {
+                                Timber.d("Got notarization success response for %s", fileTmp.getName());
+                                File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + provider.getNotarizationFileExtension());
+                                copyFileToFile(context, fileTmp, fileMediaNotarizeData);
                             }
 
                             @Override
@@ -405,6 +413,14 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                             }
 
                             @Override
+                            public void notarizationSuccessful(String hash, File fileTmp) {
+                                Timber.d("Got notarization success response for %s", fileTmp.getName());
+                                File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + provider.getNotarizationFileExtension());
+                                copyFileToFile(context, fileTmp, fileMediaNotarizeData);
+                            }
+
+
+                            @Override
                             public void notarizationSuccessful(String hash, byte[] result) {
                                 Timber.d("Got notarization success response for %s, timestamp: %s", provider.getNotarizationFileExtension(), result);
                                 File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + provider.getNotarizationFileExtension());
@@ -492,6 +508,13 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                                 e.printStackTrace();
                             }
 
+                        }
+
+                        @Override
+                        public void notarizationSuccessful(String hash, File fileTmp) {
+                            Timber.d("Got notarization success response for %s", fileTmp.getName());
+                            File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + provider.getNotarizationFileExtension() );
+                            copyFileToFile(context, fileTmp, fileMediaNotarizeData);
                         }
 
                         @Override
@@ -828,6 +851,24 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
             os.write(data);
             os.flush();
             os.close();
+        }
+        catch (IOException ioe)
+        {
+            ioe.printStackTrace();
+        }
+
+    }
+
+    private static synchronized void copyFileToFile (Context context, File fileIn, File fileOut)
+    {
+        try {
+            FileInputStream inStream = new FileInputStream(fileIn);
+            FileOutputStream outStream = new FileOutputStream(fileOut);
+            FileChannel inChannel = inStream.getChannel();
+            FileChannel outChannel = outStream.getChannel();
+            inChannel.transferTo(0, inChannel.size(), outChannel);
+            inStream.close();
+            outStream.close();
         }
         catch (IOException ioe)
         {

@@ -1148,6 +1148,10 @@ class ShareProofActivity : AppCompatActivity() {
             if (fileMediaProof.exists()) {
                 var lastModified: Date? = null
                 if (fileMedia != null) lastModified = Date(fileMedia.lastModified())
+
+                //tmp c2pa addition
+                shareUris.add(Uri.fromFile(File(fileFolder, "$hash.c2pa")))
+
                 generateProofOutput(
                     uriMedia,
                     fileMedia,

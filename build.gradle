@@ -35,7 +35,7 @@ allprojects {
         mavenCentral()
         jcenter()
         google()
-    //    maven { url "https://raw.githubusercontent.com/guardianproject/gpmaven/master" }
+        maven { url "https://raw.githubusercontent.com/guardianproject/gpmaven/master" }
         maven { url 'https://jitpack.io' }
        // maven {url 'https://zendesk.jfrog.io/zendesk/oss-releases-local'}
     }

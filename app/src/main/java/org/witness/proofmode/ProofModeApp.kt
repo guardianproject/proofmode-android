@@ -21,6 +21,7 @@ import org.witness.proofmode.notaries.SafetyNetCheck
 import org.witness.proofmode.notaries.GoogleSafetyNetNotarizationProvider
 import org.witness.proofmode.notarization.NotarizationProvider
 import org.witness.proofmode.notaries.OpenTimestampsNotarizationProvider
+import org.witness.proofmode.org.witness.proofmode.notaries.C2paNotarizationProvider
 import timber.log.Timber
 import java.io.IOException
 import java.util.concurrent.Executors
@@ -141,6 +142,9 @@ class ProofModeApp : MultiDexApplication() {
         } catch (e: ClassNotFoundException) {
             //class not available
         }
+        val nProvider: NotarizationProvider = C2paNotarizationProvider()
+        ProofMode.addNotarizationProvider(this, nProvider)
+
     }
 
     companion object {

@@ -634,6 +634,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
             requireContext().mainExecutor(), // the executor, on which the task will run
             object : OnImageSavedCallback { // the callback, about the result of capture process
                 override fun onImageSaved(outputFileResults: OutputFileResults) {
+
                     // This function is called if capture is successfully completed
                     outputFileResults.savedUri
                         ?.let { uri ->
