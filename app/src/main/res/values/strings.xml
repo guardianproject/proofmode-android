@@ -174,7 +174,7 @@
     <string name="share_with_proofsign">Share with ProofSign cloud service to add Content Credentials (C2PA)?</string>
     <string name="progress_signing_proof">Sharing and verifying with ProofSign...</string>
     <string name="action_share_proof_zip">Share Proof Zip</string>
-    <string name="action_add_content_credentials_c2pa">Add Content Credentials (C2PA)</string>
+    <string name="action_add_content_credentials_c2pa">Send to ProofCheck</string>
     <string name="err_content_credentials">There was a problem verifying or generating content credentials.</string>
     <string name="status_download_content_credentials">Downloading Images with Content Credentials...</string>
     <string name="menu_import_photos">Import photos...</string>

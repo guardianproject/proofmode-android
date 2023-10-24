@@ -214,6 +214,10 @@ class ShareProofActivity : AppCompatActivity() {
 
     fun clickAll(button: View?) {
 
+
+        shareProof(sendMedia, true)
+
+        /**
         val options = arrayOf(getString(R.string.action_share_proof_zip),getString(R.string.action_add_content_credentials_c2pa))
 
         val builder = AlertDialog.Builder(this)
@@ -235,6 +239,7 @@ class ShareProofActivity : AppCompatActivity() {
 
         val alert = builder.create()
         alert.show()
+        **/
 
 
     }

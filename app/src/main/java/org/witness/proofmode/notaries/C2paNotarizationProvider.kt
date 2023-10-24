@@ -29,7 +29,7 @@ public class C2paNotarizationProvider (_mContext: Context) : NotarizationProvide
         val fileImage = File.createTempFile(hash, ".$defaultExt", outputDir)
         inputStream?.toFile(fileImage)
 
-        val fileImageC2pa = File.createTempFile(hash, "$C2PA_FILE_EXTENSION.$defaultExt", outputDir)
+        val fileImageC2pa = File(outputDir, "$hash$C2PA_FILE_EXTENSION.$defaultExt")
 
         C2paJNI.addAssert(fileImage.absolutePath,hash,fileImageC2pa.absolutePath)
 

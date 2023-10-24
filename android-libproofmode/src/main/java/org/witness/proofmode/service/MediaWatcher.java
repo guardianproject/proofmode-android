@@ -321,7 +321,8 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                             @Override
                             public void notarizationSuccessful(String hash, File fileTmp) {
                                 Timber.d("Got notarization success response for %s", fileTmp.getName());
-                                File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + '-' + fileTmp.getName());
+                                String ext = fileTmp.getName().split(".")[1];
+                                File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + '.' + ext);
                                 copyFileToFile(context, fileTmp, fileMediaNotarizeData);
                             }
 
@@ -421,7 +422,9 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                             @Override
                             public void notarizationSuccessful(String hash, File fileTmp) {
                                 Timber.d("Got notarization success response for %s", fileTmp.getName());
-                                File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + '-' + fileTmp.getName());
+
+                                String ext = fileTmp.getName().split(".")[1];
+                                File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + '.' + ext);
                                 copyFileToFile(context, fileTmp, fileMediaNotarizeData);
                             }
 
@@ -518,7 +521,9 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                         @Override
                         public void notarizationSuccessful(String hash, File fileTmp) {
                             Timber.d("Got notarization success response for %s", fileTmp.getName());
-                            File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + '-' + fileTmp.getName());
+
+                            String ext = fileTmp.getName().split(".")[1];
+                            File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + '.' + ext);
                             copyFileToFile(context, fileTmp, fileMediaNotarizeData);
                         }
 
