@@ -25,6 +25,7 @@ import androidx.camera.view.PreviewView
 import androidx.core.animation.doOnCancel
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.Navigation
@@ -51,6 +52,7 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
     private lateinit var tapDetector: GestureDetector
     private lateinit var pinchToZoomDetector: ScaleGestureDetector
     private lateinit var viewFinder: PreviewView
+    private val lensViewModel: CameraLensViewModel by activityViewModels()
 
     // An instance for display manager to get display change callbacks
     private val displayManager by lazy { requireContext().getSystemService(Context.DISPLAY_SERVICE) as DisplayManager }
@@ -66,7 +68,7 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
     private var displayId = -1
 
     // Selector showing which camera is selected (front or back)
-    private var lensFacing = CameraSelector.DEFAULT_BACK_CAMERA
+    //private var lensFacing = CameraSelector.DEFAULT_BACK_CAMERA
 
     // Selector showing which flash mode is selected (on, off or auto)
     private var flashMode by Delegates.observable(ImageCapture.FLASH_MODE_OFF) { _, _, new ->
@@ -213,7 +215,7 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
      *  toggleButton() function is an Extension function made to animate button rotation
      * */
     private fun toggleCamera() = binding.btnSwitchCamera.toggleButton(
-        flag = lensFacing == CameraSelector.DEFAULT_BACK_CAMERA,
+        flag = lensViewModel.lensFacing.value == CameraSelector.LENS_FACING_BACK,
         rotationAngle = 180f,
         firstIcon = R.drawable.ic_outline_camera_rear,
         secondIcon = R.drawable.ic_outline_camera_front,
@@ -225,14 +227,11 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
                 Toast.LENGTH_SHORT
             ).show()
             return@toggleButton
-        }
-        lensFacing = if (it) {
-            CameraSelector.DEFAULT_BACK_CAMERA
         } else {
-            CameraSelector.DEFAULT_FRONT_CAMERA
+            lensViewModel.toggleLensFacing()
+            startCamera()
         }
 
-        startCamera()
     }
 
     /**
@@ -273,9 +272,14 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
 
             try {
                 // Bind all use cases to the camera with lifecycle
+                val selector = CameraSelector.Builder()
+                    .requireLensFacing(
+                        lensViewModel.lensFacing.value ?: CameraSelector.LENS_FACING_BACK
+                    )
+                    .build()
                 camera = localCameraProvider.bindToLifecycle(
                     viewLifecycleOwner, // current lifecycle owner
-                    lensFacing, // either front or back facing
+                    selector, // either front or back facing
                     preview, // camera preview use case
                     videoCapture, // video capture use case
                 )
