@@ -1,6 +1,8 @@
 package org.witness.proofmode.util;
 
 
+import org.witness.proofmode.service.ProofModeV1Constants;
+
 import android.Manifest;
 import android.app.AlertDialog;
 import android.content.Context;
@@ -16,6 +18,8 @@ import android.provider.Settings;
 import android.util.Log;
 
 import androidx.core.app.ActivityCompat;
+
+import java.util.HashMap;
 
 import timber.log.Timber;
 
@@ -108,7 +112,7 @@ public final class GPSTracker implements LocationListener {
         } else if (locationManager != null) {
             this.canGetLocation = true;
 
-            //first try network based GPS
+            //first try network based location
             if (isNetworkEnabled) {
                 location = null;
                 location = locationManager
@@ -127,6 +131,7 @@ public final class GPSTracker implements LocationListener {
                         .getLastKnownLocation(LocationManager.GPS_PROVIDER);
 
                 if (location == null) {
+                    //if no network location, then def use this
                     location = locationGps;
 
                     if (location != null) {
@@ -136,8 +141,7 @@ public final class GPSTracker implements LocationListener {
                 }
                 else {
                     //if network location accuracy is a bigger distance range than GPS, then use GPS instead
-                    boolean gpsLocationNotNull = locationGps != null;
-                    if ( gpsLocationNotNull && location.getAccuracy() > locationGps.getAccuracy())
+                    if ( (locationGps != null) && location.getAccuracy() > locationGps.getAccuracy())
                     {
                         location = locationGps;
                         latitude = location.getLatitude();
