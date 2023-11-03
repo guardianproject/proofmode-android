@@ -6,6 +6,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.database.Cursor
 import android.hardware.display.DisplayManager
 import android.net.Uri
 import android.os.Build
@@ -38,6 +39,7 @@ import coil.transform.CircleCropTransformation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.witness.proofmode.camera.R
+import org.witness.proofmode.camera.c2pa.C2paUtils
 import org.witness.proofmode.camera.databinding.FragmentVideoBinding
 import org.witness.proofmode.camera.fragments.VideoFragment.CameraConstants.NEW_MEDIA_EVENT
 import org.witness.proofmode.camera.utils.*
@@ -357,6 +359,9 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
                 requireContext().mainExecutor(), // the executor, on which the task will run
                 object : VideoCapture.OnVideoSavedCallback { // the callback after recording a video
                     override fun onVideoSaved(outputFileResults: VideoCapture.OutputFileResults) {
+
+                        C2paUtils.addContentCredentials(requireContext(), outputFileResults.savedUri)
+
                         // Create small preview
                         outputFileResults.savedUri
                             ?.let { uri ->

@@ -1,10 +1,12 @@
 package org.witness.proofmode.camera.fragments
 
+import android.R.attr.data
 import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.database.Cursor
 import android.hardware.display.DisplayManager
 import android.net.Uri
 import android.os.Build
@@ -43,6 +45,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.witness.proofmode.camera.R
 import org.witness.proofmode.camera.analyzer.LuminosityAnalyzer
+import org.witness.proofmode.camera.c2pa.C2paUtils
 import org.witness.proofmode.camera.databinding.FragmentCameraBinding
 import org.witness.proofmode.camera.enums.CameraTimer
 import org.witness.proofmode.camera.fragments.CameraFragment.CameraConstants.NEW_MEDIA_EVENT
@@ -54,6 +57,7 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.properties.Delegates
+
 
 class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_camera) {
     private lateinit var proofModeCamera: Camera
@@ -606,6 +610,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
             isReversedHorizontal =
                 lensViewModel.lensFacing.value == CameraSelector.LENS_FACING_FRONT
         }
+
         MediaStore.Images.Media.EXTERNAL_CONTENT_URI
         // Options fot the output image file
         val outputOptions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -623,10 +628,10 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
 
             OutputFileOptions.Builder(contentResolver, contentUri, contentValues)
         } else {
-            File(outputDirectory).mkdirs()
-            val file = File(outputDirectory, "${System.currentTimeMillis()}.jpg")
 
-            OutputFileOptions.Builder(file)
+            File(outputDirectory).mkdirs()
+            val fileMedia = File(outputDirectory, "${System.currentTimeMillis()}.jpg")
+            OutputFileOptions.Builder(fileMedia)
         }.setMetadata(metadata).build()
 
         localImageCapture.takePicture(
@@ -634,6 +639,8 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
             requireContext().mainExecutor(), // the executor, on which the task will run
             object : OnImageSavedCallback { // the callback, about the result of capture process
                 override fun onImageSaved(outputFileResults: OutputFileResults) {
+
+                    C2paUtils.addContentCredentials(requireContext(), outputFileResults.savedUri)
 
                     // This function is called if capture is successfully completed
                     outputFileResults.savedUri
@@ -708,13 +715,10 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
     fun sendLocalCameraEvent(newMediaFile: Uri) {
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            var f = newMediaFile.toFile()
-
-            //TODO add c2pa capture here
-
-            C2paUtils
 
             try {
+                var f = newMediaFile.toFile()
+
                 MediaStore.Images.Media.insertImage(
                     context?.contentResolver,
                     f.getAbsolutePath(), f.getName(), null
