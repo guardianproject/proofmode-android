@@ -253,7 +253,7 @@ fun MediaCapturedOrImportedActivityView(
         var stringId = R.plurals.you_captured_n_items
         if (!capturedItems)
             stringId = R.plurals.you_imported_n_items
-        
+
         Text(
             text = pluralStringResource(
                 id = stringId,
