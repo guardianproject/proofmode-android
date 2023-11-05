@@ -261,15 +261,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             proofItems.add(ProofableItem(UUID.randomUUID().toString(), item))
         }
 
-
-        val fileName = intent.getStringExtra(EXTRA_FILE_NAME) ?: ""
-        val shareText = intent.getStringExtra(EXTRA_SHARE_TEXT) ?: ""
         val activity = Activity(
             UUID.randomUUID().toString(),
-            ActivityType.MediaShared(
-                items = proofItems.toMutableStateList(),
-                fileName,
-                shareText = shareText
+            ActivityType.MediaImported(
+                items = proofItems.toMutableStateList()
             ),
             Date()
         )
@@ -628,17 +623,26 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         intentCam.putExtra(C2paUtils.IDENTITY_NAME_KEY,mPgpUtils?.publicKeyString)
 
-        var pgpUri =  mPgpUtils?.publicKeyFingerprint + "@https://keys.openpgp.org/search?q=" + mPgpUtils?.publicKeyFingerprint
+        var pgpUri =  "0x" + mPgpUtils?.publicKeyFingerprint + "@https://keys.openpgp.org/search?q=" + mPgpUtils?.publicKeyFingerprint
         intentCam.putExtra(C2paUtils.IDENTITY_NAME_KEY,pgpUri)
 
         startActivity(intentCam)
     }
 
     fun initPgpKey () {
-        if (mPgpUtils == null) mPgpUtils = PgpUtils.getInstance(
-            this,
-            mPrefs.getString(PREFS_KEY_PASSPHRASE, PREFS_KEY_PASSPHRASE_DEFAULT)
-        )
+        if (mPgpUtils == null) {
+            mPgpUtils = PgpUtils.getInstance(
+                this,
+                mPrefs.getString(PREFS_KEY_PASSPHRASE, PREFS_KEY_PASSPHRASE_DEFAULT)
+            )
+
+            var identityName = "0x" + mPgpUtils?.publicKeyFingerprint
+            var identityUri =  "0x" + mPgpUtils?.publicKeyFingerprint + "@https://keys.openpgp.org/search?q=" + mPgpUtils?.publicKeyFingerprint
+
+            //set identity based on passed strings
+            C2paUtils.setC2PAIdentity(identityName,identityUri)
+
+        }
     }
 
     companion object {

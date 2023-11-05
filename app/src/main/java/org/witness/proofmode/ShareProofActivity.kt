@@ -43,6 +43,7 @@ import org.witness.proofmode.ActivityConstants.INTENT_ACTIVITY_ITEMS_SHARED
 import org.witness.proofmode.PermissionActivity.Companion.hasPermissions
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
+import org.witness.proofmode.camera.c2pa.C2paUtils
 import org.witness.proofmode.crypto.HashUtils
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.databinding.ActivityShareBinding
@@ -157,39 +158,10 @@ class ShareProofActivity : AppCompatActivity() {
         var proofHash: String? = null
         if (Intent.ACTION_SEND_MULTIPLE == action) {
             val mediaUris = intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM) ?: emptyList()
-            object : AsyncTask<Void?, Void?, String?>() {
-                override fun doInBackground(vararg voids: Void?): String? {
-                    var proofHash: String? = null
-                    for (mediaUri in mediaUris!!) {
-                        try {
-                            proofHash = HashUtils.getSHA256FromFileContent(
-                                contentResolver.openInputStream(mediaUri)
-                            )
-                            hashCache[mediaUri.toString()] = proofHash
-                            val genProofHash = ProofMode.generateProof(
-                                this@ShareProofActivity,
-                                mediaUri,
-                                proofHash
-                            )
-                            if (genProofHash != null && genProofHash == proofHash) {
-                                //all good
-                            } else {
-                                //error occured
-                            }
-                        } catch (fe: FileNotFoundException) {
-                            Timber.d("FileNotFound: %s", mediaUri)
-                        }
-                    }
-                    return proofHash
-                }
 
-                override fun onPostExecute(proofHash: String?) {
-                    super.onPostExecute(proofHash)
-                    if (proofHash != null) displaySharePrompt() else showProofError()
-                }
+            GenerateMultiProofTask (this, mediaUris).execute();
 
 
-            }.execute()
         } else if (Intent.ACTION_SEND == action || action!!.endsWith("SHARE_PROOF")) {
             var mediaUri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
             if (mediaUri == null) mediaUri = intent.data
@@ -345,7 +317,7 @@ class ShareProofActivity : AppCompatActivity() {
         val sdf = SimpleDateFormat(ZIP_FILE_DATETIME_FORMAT)
         val dateString = sdf.format(Date())
         val userId = pgpUtils.publicKeyFingerprint
-        proofZipName = "proofmode-$userId-$dateString.zip"
+        proofZipName = "proofmode-0x$userId-$dateString.zip"
     }
 
     @Synchronized
@@ -610,7 +582,7 @@ class ShareProofActivity : AppCompatActivity() {
                 val sdf = SimpleDateFormat(ZIP_FILE_DATETIME_FORMAT)
                 val dateString = sdf.format(Date())
                 val userId = pgpUtils.publicKeyFingerprint
-                val fileZip = File(fileCacheFolder, "proofmode-$userId-$dateString.zip")
+                val fileZip = File(fileCacheFolder, "proofmode-0x$userId-$dateString.zip")
                 Timber.d("Preparing proof bundle zip: " + fileZip.absolutePath)
                 try {
                     zipProof(shareUris, fileZip)
@@ -778,7 +750,7 @@ class ShareProofActivity : AppCompatActivity() {
                 val sdf = SimpleDateFormat(ZIP_FILE_DATETIME_FORMAT)
                 val dateString = sdf.format(Date())
                 val userId = pgpUtils.publicKeyFingerprint
-                val fileZip = File(fileCacheFolder, "proofmode-$userId-$dateString.zip")
+                val fileZip = File(fileCacheFolder, "proofmode-0x$userId-$dateString.zip")
                 Timber.d("Preparing proof bundle zip: " + fileZip.absolutePath)
                 try {
                     zipProof(shareUris, fileZip)
@@ -791,7 +763,7 @@ class ShareProofActivity : AppCompatActivity() {
                     val encryptZip = false
                     if (encryptZip) {
                         val fileZipEnc =
-                            File(fileCacheFolder, "proofmode-$userId-$dateString.zip.gpg")
+                            File(fileCacheFolder, "proofmode-0x$userId-$dateString.zip.gpg")
                         try {
                             pgpUtils.encrypt(
                                 FileInputStream(fileZip),
@@ -857,6 +829,11 @@ class ShareProofActivity : AppCompatActivity() {
         (private val activity: ShareProofActivity, private val proofHash: String?) :
         AsyncTask<Uri?, Void?, String?>() {
         override fun doInBackground(vararg params: Uri?): String? {
+
+            var isDirectCapture = false; //this is from an import, and we are manually generating proof
+            var allowMachineLearning = false; //by default, we flag to not allow
+            C2paUtils.addContentCredentials(activity, params[0], isDirectCapture, allowMachineLearning)
+
             return ProofMode.generateProof(activity, params[0], proofHash)
         }
 
@@ -865,6 +842,50 @@ class ShareProofActivity : AppCompatActivity() {
                 activity.showProofError()
             }
         }
+    }
+
+    private class GenerateMultiProofTask (private val activity: ShareProofActivity, private val mediaUris :List<Uri>) : AsyncTask<Void?, Void?, String?>() {
+        override fun doInBackground(vararg voids: Void?): String? {
+            var proofHash: String? = null
+            for (mediaUri in mediaUris!!) {
+                try {
+                    proofHash = HashUtils.getSHA256FromFileContent(
+                        activity.contentResolver.openInputStream(mediaUri)
+                    )
+                    activity.hashCache[mediaUri.toString()] = proofHash
+
+
+                    val genProofHash = ProofMode.generateProof(
+                        activity,
+                        mediaUri,
+                        proofHash
+                    )
+                    if (genProofHash != null && genProofHash == proofHash) {
+
+
+                        var proofDir = ProofMode.getProofDir(activity, genProofHash)
+
+                        var isDirectCapture = false; //this is from an import, and we are manually generating proof
+                        var allowMachineLearning = false; //by default, we flag to not allow
+                        C2paUtils.addContentCredentials(activity, mediaUri, isDirectCapture, allowMachineLearning, proofDir)
+
+                        //all good
+                    } else {
+                        //error occured
+                    }
+                } catch (fe: FileNotFoundException) {
+                    Timber.d("FileNotFound: %s", mediaUri)
+                }
+            }
+            return proofHash
+        }
+
+        override fun onPostExecute(proofHash: String?) {
+            super.onPostExecute(proofHash)
+            if (proofHash != null) activity.displaySharePrompt() else activity.showProofError()
+        }
+
+
     }
 
     private class CheckProofTasks(private val activity: ShareProofActivity) :

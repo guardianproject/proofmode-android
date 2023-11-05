@@ -640,7 +640,10 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
             object : OnImageSavedCallback { // the callback, about the result of capture process
                 override fun onImageSaved(outputFileResults: OutputFileResults) {
 
-                    C2paUtils.addContentCredentials(requireContext(), outputFileResults.savedUri)
+                    var isDirectCapture = true; //this is from our camera
+                    var allowMachineLearning = false; //by default, we flag to not allow
+
+                    C2paUtils.addContentCredentials(requireContext(), outputFileResults.savedUri, isDirectCapture, allowMachineLearning)
 
                     // This function is called if capture is successfully completed
                     outputFileResults.savedUri

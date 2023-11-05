@@ -112,7 +112,10 @@ sealed class ActivityType {
     class MediaCaptured(
         @Serializable(with = SnapshotStateListOfCameraItemsSerializer::class) var items: SnapshotStateList<ProofableItem>) : ActivityType()
 
-    class MediaImported(val items: SnapshotStateList<ProofableItem>) : ActivityType()
+    @SerialName("imported")
+    @Serializable
+    class MediaImported(
+        @Serializable(with = SnapshotStateListOfCameraItemsSerializer::class) var items: SnapshotStateList<ProofableItem>) : ActivityType()
 
     @SerialName("mediaShare")
     @Serializable
@@ -226,6 +229,7 @@ object Activities: ViewModel()
     private fun getActivityProofableItems(activity: Activity): SnapshotStateList<ProofableItem> {
         when (activity.type) {
             is ActivityType.MediaCaptured -> return activity.type.items
+            is ActivityType.MediaImported -> return activity.type.items
             is ActivityType.MediaShared -> return activity.type.items
             else -> {}
         }

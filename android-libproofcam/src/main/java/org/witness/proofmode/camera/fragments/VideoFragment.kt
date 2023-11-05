@@ -360,7 +360,10 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
                 object : VideoCapture.OnVideoSavedCallback { // the callback after recording a video
                     override fun onVideoSaved(outputFileResults: VideoCapture.OutputFileResults) {
 
-                        C2paUtils.addContentCredentials(requireContext(), outputFileResults.savedUri)
+                        var isDirectCapture = true; //this is from our camera
+                        var allowMachineLearning = false; //by default, we flag to not allow
+
+                        C2paUtils.addContentCredentials(requireContext(), outputFileResults.savedUri, isDirectCapture, allowMachineLearning)
 
                         // Create small preview
                         outputFileResults.savedUri

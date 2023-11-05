@@ -31,7 +31,7 @@ class C2paUtils {
             }
         }
 
-        fun addContentCredentials (_context: Context, _uri: Uri?) {
+        fun   addContentCredentials (_context: Context, _uri: Uri?, isDirectCapture: Boolean, allowMachineLearning: Boolean) {
 
             var filePath: String? = null
             if (_uri != null && "content" == _uri.scheme) {
@@ -56,17 +56,59 @@ class C2paUtils {
                 var identityId = _identityName
                 var identityUri = _identityUri
 
-                C2paUtils.addContentCredentials(
+                addContentCredentials(
                     _context,
                     identityId,
                     identityUri,
+                    isDirectCapture,
+                    allowMachineLearning,
                     fileMedia,
                     fileMedia
                 )
             }
 
         }
-        fun addContentCredentials(mContext : Context, identityId: String, identityUri: String, fileImageIn: File, fileImageOut: File) {
+
+        fun   addContentCredentials (_context: Context, _uri: Uri?, isDirectCapture: Boolean, allowMachineLearning: Boolean, fileOutDir: File) {
+
+            var filePath: String? = null
+            if (_uri != null && "content" == _uri.scheme) {
+                val cursor: Cursor? = _context?.getContentResolver()?.query(
+                    _uri,
+                    arrayOf<String>(MediaStore.Images.ImageColumns.DATA),
+                    null,
+                    null,
+                    null
+                )
+                cursor?.moveToFirst()
+                filePath = cursor?.getString(0)
+                cursor?.close()
+            } else {
+                filePath = _uri!!.path
+            }
+
+            var fileMedia = File(filePath)
+            var fileOut = File(fileOutDir, "c2pa-" + fileMedia.name);
+
+            if (fileMedia.exists()) {
+                //TODO add c2pa capture here
+                var identityId = _identityName
+                var identityUri = _identityUri
+
+                addContentCredentials(
+                    _context,
+                    identityId,
+                    identityUri,
+                    isDirectCapture,
+                    allowMachineLearning,
+                    fileMedia,
+                    fileOut
+                )
+            }
+
+        }
+
+        fun addContentCredentials(mContext : Context, identityId: String, identityUri: String, isDirectCapture: Boolean, allowMachineLearning: Boolean, fileImageIn: File, fileImageOut: File) {
 
             var certPath = File(mContext.filesDir, C2PA_CERT_PATH)
             var certKey = File(mContext.filesDir, C2PA_KEY_PATH)
@@ -84,6 +126,8 @@ class C2paUtils {
                 fileImageIn.absolutePath,
                 identityUri,
                 identityId,
+                isDirectCapture,
+                allowMachineLearning,
                 fileImageOut.absolutePath
             )
 

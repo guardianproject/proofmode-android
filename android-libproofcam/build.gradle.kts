@@ -61,5 +61,5 @@ dependencies {
     }
 
     //new C2PA content authenticity support
-    implementation("org.proofmode:proofmode-c2pa:0.2") {}
+    implementation("org.proofmode:proofmode-c2pa:0.3") {}
 }

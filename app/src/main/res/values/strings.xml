@@ -150,6 +150,11 @@
         <item quantity="one">You captured one item</item>
         <item quantity="other">You captured %d items</item>
     </plurals>
+    <plurals name="you_imported_n_items">
+        <item quantity="zero">You imported no items</item>
+        <item quantity="one">You imported one item</item>
+        <item quantity="other">You imported %d items</item>
+    </plurals>
     <plurals name="you_shared_n_items">
         <item quantity="zero">You shared nothing</item>
         <item quantity="one">You shared one item</item>
