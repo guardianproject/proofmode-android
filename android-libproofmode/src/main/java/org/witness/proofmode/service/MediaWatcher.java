@@ -14,6 +14,7 @@ import static org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFA
 
 import android.Manifest;
 import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -54,6 +55,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
+import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -291,10 +293,15 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
 
                 try {
                     for (NotarizationProvider provider : mProviders) {
-                        provider.notarize(mediaHash, context.getContentResolver().openInputStream(uriMedia), new NotarizationListener() {
+
+                        ContentResolver cr = context.getContentResolver();
+                        InputStream is = cr.openInputStream(uriMedia);
+                        String mimeType = cr.getType(uriMedia);
+
+                        provider.notarize(mediaHash, mimeType, is, new NotarizationListener() {
                             @Override
                             public void notarizationSuccessful(String hash, String result) {
-                                Timber.d("Got notarization success response for %s, timestamp: %s", provider.getNotarizationFileExtension(), result);
+                                Timber.d("Got notarization success response for %s", provider.getNotarizationFileExtension());
                                 File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + provider.getNotarizationFileExtension());
 
                                 try {
@@ -309,6 +316,14 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                                         ex.printStackTrace();
                                     }
                                 }
+                            }
+
+                            @Override
+                            public void notarizationSuccessful(String hash, File fileTmp) {
+                                Timber.d("Got notarization success response for %s", fileTmp.getName());
+                                String ext = fileTmp.getName().split(".")[1];
+                                File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + '.' + ext);
+                                copyFileToFile(context, fileTmp, fileMediaNotarizeData);
                             }
 
                             @Override
@@ -388,7 +403,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
 
                     for (NotarizationProvider provider : mProviders)
                     {
-                        provider.notarize(mediaHash, new ByteArrayInputStream(mediaBytes), new NotarizationListener() {
+                        provider.notarize(mediaHash, mimeType, new ByteArrayInputStream(mediaBytes), new NotarizationListener() {
                             @Override
                             public void notarizationSuccessful(String hash, String result) {
                                 Timber.d("Got notarization success response timestamp: %s", result);
@@ -402,6 +417,15 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                                     e.printStackTrace();
                                 }
 
+                            }
+
+                            @Override
+                            public void notarizationSuccessful(String hash, File fileTmp) {
+                                Timber.d("Got notarization success response for %s", fileTmp.getName());
+
+                                String ext = fileTmp.getName().split(".")[1];
+                                File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + '.' + ext);
+                                copyFileToFile(context, fileTmp, fileMediaNotarizeData);
                             }
 
                             @Override
@@ -479,7 +503,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                 for (NotarizationProvider provider : mProviders)
                 {
                     InputStream isMediaNotarize = new FileInputStream(fdMedia);
-                    provider.notarize(mediaHash, isMediaNotarize, new NotarizationListener() {
+                    provider.notarize(mediaHash, mimeType, isMediaNotarize, new NotarizationListener() {
                         @Override
                         public void notarizationSuccessful(String hash, String result) {
                             Timber.d("Got notarization success response timestamp: %s", result);
@@ -492,6 +516,15 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                                 e.printStackTrace();
                             }
 
+                        }
+
+                        @Override
+                        public void notarizationSuccessful(String hash, File fileTmp) {
+                            Timber.d("Got notarization success response for %s", fileTmp.getName());
+
+                            String ext = fileTmp.getName().split(".")[1];
+                            File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + '.' + ext);
+                            copyFileToFile(context, fileTmp, fileMediaNotarizeData);
                         }
 
                         @Override
@@ -828,6 +861,24 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
             os.write(data);
             os.flush();
             os.close();
+        }
+        catch (IOException ioe)
+        {
+            ioe.printStackTrace();
+        }
+
+    }
+
+    private static synchronized void copyFileToFile (Context context, File fileIn, File fileOut)
+    {
+        try {
+            FileInputStream inStream = new FileInputStream(fileIn);
+            FileOutputStream outStream = new FileOutputStream(fileOut);
+            FileChannel inChannel = inStream.getChannel();
+            FileChannel outChannel = outStream.getChannel();
+            inChannel.transferTo(0, inChannel.size(), outChannel);
+            inStream.close();
+            outStream.close();
         }
         catch (IOException ioe)
         {

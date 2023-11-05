@@ -36,6 +36,7 @@ import org.witness.proofmode.ProofMode.EVENT_PROOF_GENERATED
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
 import org.witness.proofmode.camera.CameraActivity
+import org.witness.proofmode.camera.c2pa.C2paUtils
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.databinding.ActivityMainBinding
 import org.witness.proofmode.onboarding.OnboardingActivity
@@ -260,15 +261,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             proofItems.add(ProofableItem(UUID.randomUUID().toString(), item))
         }
 
-
-        val fileName = intent.getStringExtra(EXTRA_FILE_NAME) ?: ""
-        val shareText = intent.getStringExtra(EXTRA_SHARE_TEXT) ?: ""
         val activity = Activity(
             UUID.randomUUID().toString(),
-            ActivityType.MediaShared(
-                items = proofItems.toMutableStateList(),
-                fileName,
-                shareText = shareText
+            ActivityType.MediaImported(
+                items = proofItems.toMutableStateList()
             ),
             Date()
         )
@@ -621,7 +617,32 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     fun startCamera(view: View?) {
-        startActivity(Intent(this, CameraActivity::class.java))
+        val intentCam = Intent(this, CameraActivity::class.java)
+
+        initPgpKey()
+
+        intentCam.putExtra(C2paUtils.IDENTITY_NAME_KEY,mPgpUtils?.publicKeyString)
+
+        var pgpUri =  "0x" + mPgpUtils?.publicKeyFingerprint + "@https://keys.openpgp.org/search?q=" + mPgpUtils?.publicKeyFingerprint
+        intentCam.putExtra(C2paUtils.IDENTITY_NAME_KEY,pgpUri)
+
+        startActivity(intentCam)
+    }
+
+    fun initPgpKey () {
+        if (mPgpUtils == null) {
+            mPgpUtils = PgpUtils.getInstance(
+                this,
+                mPrefs.getString(PREFS_KEY_PASSPHRASE, PREFS_KEY_PASSPHRASE_DEFAULT)
+            )
+
+            var identityName = "0x" + mPgpUtils?.publicKeyFingerprint
+            var identityUri =  "0x" + mPgpUtils?.publicKeyFingerprint + "@https://keys.openpgp.org/search?q=" + mPgpUtils?.publicKeyFingerprint
+
+            //set identity based on passed strings
+            C2paUtils.setC2PAIdentity(identityName,identityUri)
+
+        }
     }
 
     companion object {

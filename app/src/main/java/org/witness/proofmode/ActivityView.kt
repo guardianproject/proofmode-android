@@ -250,9 +250,13 @@ fun MediaCapturedOrImportedActivityView(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(ASSETS_GUTTER_SIZE.dp)) {
 
+        var stringId = R.plurals.you_captured_n_items
+        if (!capturedItems)
+            stringId = R.plurals.you_imported_n_items
+
         Text(
             text = pluralStringResource(
-                id = R.plurals.you_captured_n_items,
+                id = stringId,
                 count = items.size,
                 items.size
             ),
@@ -388,7 +392,11 @@ fun ActivityView(activity: Activity) {
                 true
             )
 
-            is ActivityType.MediaImported -> Text("Media Imported")
+            is ActivityType.MediaImported -> MediaCapturedOrImportedActivityView(
+                activity.type.items,
+                false
+            )
+
             is ActivityType.MediaShared -> MediaSharedActivityView(
                 activity.type.items,
                 fileName = activity.type.fileName
@@ -656,6 +664,29 @@ fun activityMenu(activity: Activity): (@Composable() (BoxScope.() -> Unit))? {
         ) {
             when (activity.type) {
                 is ActivityType.MediaCaptured -> {
+                    val count = activity.type.items.withDeletedItemsRemoved().size
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = pluralStringResource(
+                                    id = R.plurals.share_these_n_items,
+                                    count = count,
+                                    count
+                                )
+                            )
+                        },
+                        onClick = {
+                            expanded = false
+                            (context as? ActivitiesViewDelegate)?.shareItems(
+                                activity.type.items,
+                                fileName = null,
+                                shareText = null
+                            )
+                        }
+                    )
+                }
+
+                is ActivityType.MediaImported -> {
                     val count = activity.type.items.withDeletedItemsRemoved().size
                     DropdownMenuItem(
                         text = {

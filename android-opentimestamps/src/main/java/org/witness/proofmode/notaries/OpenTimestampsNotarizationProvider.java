@@ -26,7 +26,7 @@ public class OpenTimestampsNotarizationProvider implements NotarizationProvider 
     private final static String ALGO = "SHA256";
 
     @Override
-    public void notarize(String mediaHash, InputStream is, NotarizationListener listener) {
+    public void notarize(String mediaHash, String mimeType, InputStream is, NotarizationListener listener) {
 
         try {
             Hash hash = new Hash(Utils.hexToBytes(mediaHash), ALGO);

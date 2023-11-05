@@ -3,18 +3,13 @@ package org.witness.proofmode
 import android.content.Context
 import androidx.multidex.MultiDexApplication
 import org.witness.proofmode.crypto.pgp.PgpUtils
-import org.witness.proofmode.R
 import org.bouncycastle.openpgp.PGPException
 import android.os.Looper
 import android.widget.Toast
-import android.content.SharedPreferences
-import org.witness.proofmode.ProofMode
 import android.content.Intent
-import org.witness.proofmode.ProofService
 import android.os.Build
 import android.os.Handler
 import android.preference.PreferenceManager
-import android.util.Log
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
 import org.witness.proofmode.notaries.SafetyNetCheck
@@ -141,6 +136,13 @@ class ProofModeApp : MultiDexApplication() {
         } catch (e: ClassNotFoundException) {
             //class not available
         }
+
+        /**
+         * // original idea for adding C2PA through notarization... moving now to use in camera capture directly
+        val nProvider: NotarizationProvider = C2paNotarizationProvider(this)
+        ProofMode.addNotarizationProvider(this, nProvider)
+        **/
+
     }
 
     companion object {

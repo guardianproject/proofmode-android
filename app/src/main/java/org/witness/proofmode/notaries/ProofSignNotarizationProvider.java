@@ -8,7 +8,7 @@ import java.io.InputStream;
 
 public class ProofSignNotarizationProvider implements NotarizationProvider {
     @Override
-    public void notarize(String hash, InputStream is, NotarizationListener listener) {
+    public void notarize(String hash, String mimeType, InputStream is, NotarizationListener listener) {
 
     }
 
