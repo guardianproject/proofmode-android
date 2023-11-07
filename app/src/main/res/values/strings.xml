@@ -194,4 +194,8 @@
     <string name="cb_timer">Select a timer</string>
     <string name="camera">Camera</string>
     <string name="video">Video</string>
+    <string name="settings_credentials">Credentials</string>
+    <string name="settings_credentials_desc">Add Content Credentials (C2PA) to photos and videos</string>
+    <string name="settings_ai">Block AI</string>
+    <string name="settings_ai_desc">Flag to not be used for machine learning training</string>
 </resources>

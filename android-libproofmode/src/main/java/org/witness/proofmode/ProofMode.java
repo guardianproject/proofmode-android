@@ -55,11 +55,19 @@ public class ProofMode {
     public final static String PREF_OPTION_PHONE = "trackDeviceId";
     public final static String PREF_OPTION_NETWORK = "trackMobileNetwork";
 
+    public final static String PREF_OPTION_AI = "blockAI";
+
+    public final static String PREF_OPTION_CREDENTIALS = "addCR";
+
+
     public final static boolean PREF_OPTION_NOTARY_DEFAULT = true;
     public final static boolean PREF_OPTION_LOCATION_DEFAULT = false;
     public final static boolean PREF_OPTION_PHONE_DEFAULT = false;
     public final static boolean PREF_OPTION_NETWORK_DEFAULT = true;
 
+    public final static boolean PREF_OPTION_CREDENTIALS_DEFAULT = true;
+
+    public final static boolean PREF_OPTION_AI_DEFAULT = true;
 
     public final static String PROOF_FILE_TAG = ".proof.csv";
     public final static String PROOF_FILE_JSON_TAG = ".proof.json";

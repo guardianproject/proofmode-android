@@ -23,6 +23,8 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var switchNetwork: CheckBox
     private lateinit var switchDevice: CheckBox
     private lateinit var switchNotarize: CheckBox
+    private lateinit var switchCredentials: CheckBox
+    private lateinit var switchAI: CheckBox
     private lateinit var binding:ActivitySettingsBinding
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,6 +42,8 @@ class SettingsActivity : AppCompatActivity() {
         switchNetwork = binding.contentSettings.switchNetwork
         switchDevice = binding.contentSettings.switchDevice
         switchNotarize = binding.contentSettings.switchNotarize
+        switchCredentials = binding.contentSettings.switchCR
+        switchAI = binding.contentSettings.switchAI
         updateUI()
         switchLocation.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
             if (isChecked) {
@@ -103,6 +107,25 @@ class SettingsActivity : AppCompatActivity() {
                 .commit()
             updateUI()
         }
+
+        switchCredentials.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
+            mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_CREDENTIALS, isChecked)
+                .commit()
+
+            if (!isChecked)
+                mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_AI, false)
+                    .commit()
+
+            switchAI.isEnabled = isChecked
+
+            updateUI()
+        }
+
+        switchAI.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
+            mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_AI, isChecked)
+                .commit()
+            updateUI()
+        }
     }
 
     private fun updateUI() {
@@ -120,6 +143,13 @@ class SettingsActivity : AppCompatActivity() {
             mPrefs.getBoolean(ProofMode.PREF_OPTION_PHONE, ProofMode.PREF_OPTION_PHONE_DEFAULT)
         switchNotarize.isChecked =
             mPrefs.getBoolean(ProofMode.PREF_OPTION_NOTARY, ProofMode.PREF_OPTION_NOTARY_DEFAULT)
+
+        switchCredentials.isChecked =
+            mPrefs.getBoolean(ProofMode.PREF_OPTION_CREDENTIALS, ProofMode.PREF_OPTION_CREDENTIALS_DEFAULT)
+
+
+        switchAI.isChecked =
+            mPrefs.getBoolean(ProofMode.PREF_OPTION_AI, ProofMode.PREF_OPTION_AI_DEFAULT)
     }
 
     override fun onResume() {

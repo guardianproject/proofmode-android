@@ -326,7 +326,7 @@
                                 <PersistentState>
                                   <option name="values">
                                     <map>
-                                      <entry key="url" value="file:$USER_HOME$/Android/Sdk/icons/material/materialicons/camera/baseline_camera_24.xml" />
+                                      <entry key="url" value="file:$USER_HOME$/Library/Android/sdk/icons/material/materialicons/outlined_flag/baseline_outlined_flag_24.xml" />
                                     </map>
                                   </option>
                                 </PersistentState>
@@ -336,7 +336,7 @@
                         </option>
                         <option name="values">
                           <map>
-                            <entry key="outputName" value="ic_capture" />
+                            <entry key="outputName" value="option_ai_off" />
                           </map>
                         </option>
                       </PersistentState>

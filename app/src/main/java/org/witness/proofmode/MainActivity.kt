@@ -33,6 +33,10 @@ import org.witness.proofmode.ActivityConstants.EXTRA_FILE_NAME
 import org.witness.proofmode.ActivityConstants.EXTRA_SHARE_TEXT
 import org.witness.proofmode.ActivityConstants.INTENT_ACTIVITY_ITEMS_SHARED
 import org.witness.proofmode.ProofMode.EVENT_PROOF_GENERATED
+import org.witness.proofmode.ProofMode.PREF_OPTION_AI
+import org.witness.proofmode.ProofMode.PREF_OPTION_AI_DEFAULT
+import org.witness.proofmode.ProofMode.PREF_OPTION_CREDENTIALS
+import org.witness.proofmode.ProofMode.PREF_OPTION_CREDENTIALS_DEFAULT
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
 import org.witness.proofmode.camera.CameraActivity
@@ -59,7 +63,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requiredPermissions = arrayOf(
                 Manifest.permission.ACCESS_MEDIA_LOCATION,
                 Manifest.permission.POST_NOTIFICATIONS,
@@ -210,6 +214,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     private val cameraReceiver = CameraReceiver()
 
+    /**
     private fun startService() {
         val intentService = Intent(this, ProofService::class.java)
         intentService.action = ProofService.ACTION_START
@@ -219,7 +224,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         } else {
             startService(intentService)
         }
-    }
+    }**/
 
     private fun showDocumentPicker() {
         val intent = Intent()
@@ -621,10 +626,19 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         initPgpKey()
 
-        intentCam.putExtra(C2paUtils.IDENTITY_NAME_KEY,mPgpUtils?.publicKeyString)
+        var useCredentials = mPrefs.getBoolean(PREF_OPTION_CREDENTIALS, PREF_OPTION_CREDENTIALS_DEFAULT);
 
-        var pgpUri =  "0x" + mPgpUtils?.publicKeyFingerprint + "@https://keys.openpgp.org/search?q=" + mPgpUtils?.publicKeyFingerprint
-        intentCam.putExtra(C2paUtils.IDENTITY_NAME_KEY,pgpUri)
+        intentCam.putExtra(PREF_OPTION_CREDENTIALS, useCredentials);
+
+        if (useCredentials) {
+
+            intentCam.putExtra(C2paUtils.IDENTITY_NAME_KEY, "0x" + mPgpUtils?.publicKeyString)
+            var pgpUri =
+                "0x" + mPgpUtils?.publicKeyFingerprint + "@https://keys.openpgp.org/search?q=" + mPgpUtils?.publicKeyFingerprint
+            intentCam.putExtra(C2paUtils.IDENTITY_URI_KEY, pgpUri)
+
+            intentCam.putExtra(PREF_OPTION_AI, mPrefs.getBoolean(PREF_OPTION_CREDENTIALS, PREF_OPTION_AI_DEFAULT));
+        }
 
         startActivity(intentCam)
     }

@@ -86,7 +86,6 @@ public class ProofService extends Service {
             if (intent.getAction().equals(ACTION_START))
             {
 
-                showNotification(getString(R.string.waiting_proof_notify));
 
                 ProofMode.initBackgroundService(this);
 
@@ -97,6 +96,7 @@ public class ProofService extends Service {
             }
         }
 
+        showNotification(getString(R.string.waiting_proof_notify));
         startEventListeners();
 
         return START_REDELIVER_INTENT;
