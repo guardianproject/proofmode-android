@@ -43,6 +43,7 @@ import coil.transform.CircleCropTransformation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.witness.proofmode.camera.CameraActivity
 import org.witness.proofmode.camera.R
 import org.witness.proofmode.camera.analyzer.LuminosityAnalyzer
 import org.witness.proofmode.camera.c2pa.C2paUtils
@@ -640,10 +641,19 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
             object : OnImageSavedCallback { // the callback, about the result of capture process
                 override fun onImageSaved(outputFileResults: OutputFileResults) {
 
-                    var isDirectCapture = true; //this is from our camera
-                    var allowMachineLearning = false; //by default, we flag to not allow
 
-                    C2paUtils.addContentCredentials(requireContext(), outputFileResults.savedUri, isDirectCapture, allowMachineLearning)
+                    if ((activity as CameraActivity).useCredentials) {
+
+                        var isDirectCapture = true; //this is from our camera
+                        var allowMachineLearning = (activity as CameraActivity).useAIFlag; //by default, we flag to not allow
+
+                        C2paUtils.addContentCredentials(
+                            requireContext(),
+                            outputFileResults.savedUri,
+                            isDirectCapture,
+                            allowMachineLearning
+                        )
+                    }
 
                     // This function is called if capture is successfully completed
                     outputFileResults.savedUri

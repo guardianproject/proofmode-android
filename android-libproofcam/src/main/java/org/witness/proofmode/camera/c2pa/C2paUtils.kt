@@ -18,16 +18,16 @@ class C2paUtils {
         var _identityUri = "ProofMode@https://proofmode.org"
         var _identityName = "ProofMode"
 
-        const val IDENTITY_URI_KEY = "ProofMode@https://proofmode.org"
-        const val IDENTITY_NAME_KEY = "ProofMode"
+        const val IDENTITY_URI_KEY = "id_uri"
+        const val IDENTITY_NAME_KEY = "id_name"
 
         fun setC2PAIdentity (identityName: String?, identityUri: String?)
         {
             if (identityName != null) {
-                _identityUri = identityName
+                _identityName = identityName
             }
             if (identityUri != null) {
-                _identityName = identityUri
+                _identityUri = identityUri
             }
         }
 
@@ -50,6 +50,7 @@ class C2paUtils {
             }
 
             var fileMedia = File(filePath)
+            var fileOut = File(_context.filesDir, "c2pa-" + fileMedia.name);
 
             if (fileMedia.exists()) {
                 //TODO add c2pa capture here
@@ -63,7 +64,7 @@ class C2paUtils {
                     isDirectCapture,
                     allowMachineLearning,
                     fileMedia,
-                    fileMedia
+                    fileOut
                 )
             }
 
