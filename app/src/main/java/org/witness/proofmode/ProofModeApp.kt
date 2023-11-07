@@ -10,6 +10,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.Handler
 import android.preference.PreferenceManager
+import org.proofmode.c2pa.C2paJNI
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
 import org.witness.proofmode.notaries.SafetyNetCheck
@@ -110,6 +111,8 @@ class ProofModeApp : MultiDexApplication() {
                 context.startService(intentService)
             }
         }
+
+        C2paJNI.init(this)
     }
 
     fun cancel(context: Context) {
