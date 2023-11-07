@@ -27,8 +27,8 @@ android {
         applicationId "org.witness.proofmode"
         minSdkVersion 24
         targetSdkVersion 33
-        versionCode 210302
-        versionName "2.1.0-RC-2"
+        versionCode 220102
+        versionName "2.2.0-ALPHA-2"
         multiDexEnabled true
         archivesBaseName = "ProofMode-$versionName"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -159,9 +159,18 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:' + rootProject.espressoVersion;
 
     //new C2PA content authenticity support
-    implementation("org.proofmode:proofmode-c2pa:0.4")
+    implementation "org.proofmode:proofmode-c2pa:0.5"
 
     //for upload to proofcheck
     implementation 'com.squareup.okio:okio:2.10.0'
     implementation 'com.squareup.okhttp3:okhttp:4.11.0'
+
+    //crash reporting
+    implementation "ch.acra:acra-mail:5.11.3"
+    implementation "ch.acra:acra-dialog:5.11.3"
+
+
+
+
+
 }

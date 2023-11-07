@@ -10,6 +10,10 @@ import android.content.Intent
 import android.os.Build
 import android.os.Handler
 import android.preference.PreferenceManager
+import org.acra.config.dialog
+import org.acra.config.mailSender
+import org.acra.data.StringFormat
+import org.acra.ktx.initAcra
 import org.proofmode.c2pa.C2paJNI
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
@@ -113,6 +117,51 @@ class ProofModeApp : MultiDexApplication() {
         }
 
         C2paJNI.init(this)
+
+    }
+
+    override fun attachBaseContext(base:Context) {
+        super.attachBaseContext(base)
+
+        initAcra {
+            //core configuration:
+            buildConfigClass = BuildConfig::class.java
+            reportFormat = StringFormat.KEY_VALUE_LIST
+            //each plugin you chose above can be configured in a block like this:
+            dialog {
+                enabled = true
+                text = "Would you like to share a crash report?"
+                title = "Crash Report"
+                positiveButtonText = "Yes"
+                negativeButtonText = "No"
+            }
+
+        }
+
+        /**
+         *
+         *             class MailSenderConfiguration(
+         *                 val enabled: Boolean = true,
+         *                 val mailTo: String,
+         *                 val reportAsFile: Boolean = true,
+         *                 val reportFileName: String = EmailIntentSender.DEFAULT_REPORT_FILENAME,
+         *                 val subject: String? = null,
+         *                 val body: String? = null
+         *             ) : Configuration
+         *
+         *             class DialogConfiguration(
+         *     val enabled: Boolean = true,
+         *     val reportDialogClass: Class<out Activity> = CrashReportDialog::class.java,
+         *     val positiveButtonText: String? = null,
+         *     val negativeButtonText: String? = null,
+         *     val commentPrompt: String? = null,
+         *     val emailPrompt: String? = null,
+         *     @DrawableRes val resIcon: Int? = android.R.drawable.ic_dialog_alert,
+         *     val text: String? = null,
+         *     val title: String? = null,
+         *     @StyleRes val resTheme: Int? = null
+         * ) : Configuration
+         */
     }
 
     fun cancel(context: Context) {
