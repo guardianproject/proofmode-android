@@ -627,6 +627,8 @@ fun ActivitiesView(onAnyItemSelected: ((Boolean) -> Unit)? = null) {
             }
         }
     }
+    val activity = LocalContext.current as android.app.Activity
+
     BackHandler {
         if (showSingleAssetView != null) {
             selectedAssets.clear()
@@ -638,7 +640,9 @@ fun ActivitiesView(onAnyItemSelected: ((Boolean) -> Unit)? = null) {
                 selectedAssets.clear()
                 onAnyItemSelected?.invoke(false)
             } else {
-                backPressedDispatcher?.onBackPressed()
+              //  backPressedDispatcher?.onBackPressed()
+                activity.finish()
+
             }
 
         }
