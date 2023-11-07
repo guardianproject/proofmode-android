@@ -44,6 +44,7 @@ import org.witness.proofmode.camera.c2pa.C2paUtils
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.databinding.ActivityMainBinding
 import org.witness.proofmode.onboarding.OnboardingActivity
+import org.witness.proofmode.service.MediaWatcher
 import org.witness.proofmode.util.GPSTracker
 import java.io.IOException
 import java.util.Date
@@ -177,6 +178,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                                 ), Date()
                             ), context
                         )
+
+                        MediaWatcher.getInstance(context).processUri(intent.data, true, Date())
+
                     }
                 }
 
