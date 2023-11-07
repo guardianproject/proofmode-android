@@ -410,7 +410,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
 
             // The Configuration of image capture
             imageCapture = Builder()
-                .setCaptureMode(CAPTURE_MODE_MAXIMIZE_QUALITY) // setting to have pictures with highest quality possible (may be slow)
+                .setCaptureMode(CAPTURE_MODE_MINIMIZE_LATENCY) // setting to have pictures with highest quality possible (may be slow)
                 .setFlashMode(flashMode) // set capture flash
                 .setTargetAspectRatio(aspectRatio) // set the capture aspect ratio
                 .setTargetRotation(rotation) // set the capture rotation
