@@ -100,22 +100,24 @@ public class ProofMode {
 
     public synchronized static void initBackgroundService (Context context)
     {
-        MediaWatcher.getInstance(context);
+        if (!mInit) {
+            MediaWatcher.getInstance(context);
 
-        if (Build.VERSION.SDK_INT >= 24) {
-            PhotosContentJob.scheduleJob(context);
-            VideosContentJob.scheduleJob(context);
-            AudioContentJob.scheduleJob(context);
+            if (Build.VERSION.SDK_INT >= 24) {
+                PhotosContentJob.scheduleJob(context);
+                VideosContentJob.scheduleJob(context);
+                AudioContentJob.scheduleJob(context);
+            }
+
+            if (mReceiver == null) {
+                mReceiver = new CameraEventReceiver();
+                addCameraEventListeners(context, mReceiver);
+            }
+
+            startLocationListener(context);
+
+            mInit = true;
         }
-
-        if (mReceiver == null) {
-            mReceiver = new CameraEventReceiver();
-            addCameraEventListeners(context, mReceiver);
-        }
-
-        startLocationListener (context);
-
-        mInit = true;
     }
 
     private static GPSTracker mLocationTracker;
