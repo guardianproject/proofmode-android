@@ -4,10 +4,12 @@ import android.content.Context
 import android.database.Cursor
 import android.net.Uri
 import android.provider.MediaStore
-import android.util.Log
-import okhttp3.internal.ignoreIoExceptions
-import java.io.File
 import org.proofmode.c2pa.C2paJNI
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.io.IOException
+
 
 class C2paUtils {
 
@@ -49,25 +51,41 @@ class C2paUtils {
                 filePath = _uri!!.path
             }
 
-            var fileMedia = File(filePath)
-            var fileOut = File(_context.filesDir, "c2pa-" + fileMedia.name);
+            if (filePath?.isNotEmpty() == true) {
+                var fileMedia = File(filePath)
+                var fileOut = File(_context.cacheDir, fileMedia.name);
 
-            if (fileMedia.exists()) {
-                //TODO add c2pa capture here
-                var identityId = _identityName
-                var identityUri = _identityUri
+                if (fileMedia.exists()) {
+                    //TODO add c2pa capture here
+                    var identityId = _identityName
+                    var identityUri = _identityUri
 
-                addContentCredentials(
-                    _context,
-                    identityId,
-                    identityUri,
-                    isDirectCapture,
-                    allowMachineLearning,
-                    fileMedia,
-                    fileOut
-                )
+                    addContentCredentials(
+                        _context,
+                        identityId,
+                        identityUri,
+                        isDirectCapture,
+                        allowMachineLearning,
+                        fileMedia,
+                        fileOut
+                    )
+
+                    copy(fileOut, fileMedia)
+                    fileOut.delete()
+                }
             }
 
+        }
+
+        @Throws(IOException::class)
+        fun copy(src: File?, dst: File?) {
+            val inStream = FileInputStream(src)
+            val outStream = FileOutputStream(dst)
+            val inChannel = inStream.channel
+            val outChannel = outStream.channel
+            inChannel.transferTo(0, inChannel.size(), outChannel)
+            inStream.close()
+            outStream.close()
         }
 
         fun   addContentCredentials (_context: Context, _uri: Uri?, isDirectCapture: Boolean, allowMachineLearning: Boolean, fileOutDir: File) {

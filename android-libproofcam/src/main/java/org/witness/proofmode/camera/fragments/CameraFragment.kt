@@ -417,6 +417,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
                 .setTargetRotation(rotation) // set the capture rotation
                 .build()
 
+
             checkForHdrExtensionAvailability()
 
             // The Configuration of image analyzing
