@@ -1,20 +1,25 @@
 package org.witness.proofmode
 
 import android.Manifest
+import android.accounts.AccountManager
 import android.content.Intent
 import android.content.SharedPreferences
-import android.os.Build
 import android.os.Bundle
 import android.view.MenuItem
 import android.widget.CheckBox
 import android.widget.CompoundButton
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.PreferenceManager
+import com.google.android.gms.common.AccountPicker
+import com.google.android.gms.common.AccountPicker.AccountChooserOptions
 import org.witness.proofmode.PermissionActivity
 import org.witness.proofmode.PermissionActivity.Companion.hasPermissions
+import org.witness.proofmode.ProofMode.PREF_CREDENTIALS_PRIMARY
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.databinding.ActivitySettingsBinding
 import org.witness.proofmode.util.GPSTracker
+
 
 class SettingsActivity : AppCompatActivity() {
     private lateinit var mPrefs: SharedPreferences
@@ -118,6 +123,9 @@ class SettingsActivity : AppCompatActivity() {
 
             switchAI.isEnabled = isChecked
 
+            if (isChecked)
+                showIdentityChooser()
+
             updateUI()
         }
 
@@ -126,6 +134,18 @@ class SettingsActivity : AppCompatActivity() {
                 .commit()
             updateUI()
         }
+    }
+
+    private val REQ_ACCOUNT_CHOOSER = 9999;
+
+    private fun showIdentityChooser () {
+
+        val intent = AccountPicker.newChooseAccountIntent(
+            AccountChooserOptions.Builder()
+                .build()
+        )
+
+        startActivityForResult(intent, REQ_ACCOUNT_CHOOSER)
     }
 
     private fun updateUI() {
@@ -191,6 +211,13 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 updateUI()
             }
+            REQ_ACCOUNT_CHOOSER -> {
+                var accountName = data?.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
+
+                mPrefs.edit().putString(PREF_CREDENTIALS_PRIMARY, accountName).commit()
+
+            }
+
         }
     }
 

@@ -137,7 +137,11 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
     }
 
 
-
+    public void queueMedia (Uri uriMedia, boolean autogen, Date createdAt) {
+        mExec.submit(() -> {
+            processUri(uriMedia, autogen, createdAt);
+        });
+    }
     public String processUri (Uri uriMedia, boolean autogen, Date createdAt) {
 
         LocalBroadcastManager lbm = LocalBroadcastManager.getInstance(mContext.getApplicationContext());

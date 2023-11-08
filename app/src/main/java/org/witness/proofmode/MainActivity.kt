@@ -33,6 +33,7 @@ import org.witness.proofmode.ActivityConstants.EXTRA_FILE_NAME
 import org.witness.proofmode.ActivityConstants.EXTRA_SHARE_TEXT
 import org.witness.proofmode.ActivityConstants.INTENT_ACTIVITY_ITEMS_SHARED
 import org.witness.proofmode.ProofMode.EVENT_PROOF_GENERATED
+import org.witness.proofmode.ProofMode.PREF_CREDENTIALS_PRIMARY
 import org.witness.proofmode.ProofMode.PREF_OPTION_AI
 import org.witness.proofmode.ProofMode.PREF_OPTION_AI_DEFAULT
 import org.witness.proofmode.ProofMode.PREF_OPTION_CREDENTIALS
@@ -47,6 +48,7 @@ import org.witness.proofmode.onboarding.OnboardingActivity
 import org.witness.proofmode.service.MediaWatcher
 import org.witness.proofmode.util.GPSTracker
 import java.io.IOException
+import java.net.URLEncoder
 import java.util.Date
 import java.util.UUID
 
@@ -171,7 +173,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     if (uri != null && context != null) {
                         Activities.addActivity(
                             Activity(
-                                UUID.randomUUID().toString(), ActivityType.MediaCaptured(
+                                uri.toString(), ActivityType.MediaCaptured(
                                     items = mutableStateListOf(
                                         ProofableItem(UUID.randomUUID().toString(), uri)
                                     )
@@ -179,7 +181,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                             ), context
                         )
 
-                        MediaWatcher.getInstance(context).processUri(intent.data, true, Date())
+                        MediaWatcher.getInstance(context).queueMedia(intent.data, true, Date())
 
                     }
                 }
@@ -546,7 +548,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
                 Activities.addActivity(
                     Activity(
-                        UUID.randomUUID().toString(), ActivityType.MediaCaptured(
+                        intentShare.data.toString(), ActivityType.MediaImported(
                             items = mutableStateListOf(
                                 ProofableItem(UUID.randomUUID().toString(), data.data as Uri)
                             )
@@ -636,10 +638,26 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         if (useCredentials) {
 
-            intentCam.putExtra(C2paUtils.IDENTITY_NAME_KEY, "0x" + mPgpUtils?.publicKeyString)
-            var pgpUri =
-                "0x" + mPgpUtils?.publicKeyFingerprint + "@https://keys.openpgp.org/search?q=" + mPgpUtils?.publicKeyFingerprint
-            intentCam.putExtra(C2paUtils.IDENTITY_URI_KEY, pgpUri)
+            val credPrimary = mPrefs.getString(PREF_CREDENTIALS_PRIMARY,"");
+
+            if (credPrimary?.isNotEmpty() == true)
+            {
+                var displayName = "${credPrimary.replace("@"," at ")}"
+
+                intentCam.putExtra(C2paUtils.IDENTITY_NAME_KEY, displayName)
+
+                var credUri =
+                    "${URLEncoder.encode(displayName, "UTF-8")}@mailto:${URLEncoder.encode(credPrimary, "UTF-8")}"
+
+                intentCam.putExtra(C2paUtils.IDENTITY_URI_KEY, credUri)
+            }
+            else {
+                intentCam.putExtra(C2paUtils.IDENTITY_NAME_KEY, "0x" + mPgpUtils?.publicKeyString)
+
+                var pgpUri =
+                    "0x" + mPgpUtils?.publicKeyFingerprint + "@https://keys.openpgp.org/search?q=" + mPgpUtils?.publicKeyFingerprint
+                intentCam.putExtra(C2paUtils.IDENTITY_URI_KEY, pgpUri)
+            }
 
             intentCam.putExtra(PREF_OPTION_AI, mPrefs.getBoolean(PREF_OPTION_CREDENTIALS, PREF_OPTION_AI_DEFAULT));
         }

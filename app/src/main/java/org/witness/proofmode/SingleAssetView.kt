@@ -31,7 +31,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
@@ -227,17 +229,27 @@ fun SingleAssetView(initialItem: ProofableItem, modifier: Modifier = Modifier, s
                     }
                 })
             }
-            Box(
+            Column(
                 modifier = Modifier
                         .alpha(metadataOpacity)
                         .height(with(localDensity) { (topPartHeight / 2).toDp() })
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
             ) {
-//                ProofModeUtil.getProofHash(initialItem.uri,context)?.let { Text(it) }
+
+                var hash = ProofModeUtil.getProofHash(initialItem.uri,context)
+                if (hash != null) {
+                    var summary = ProofModeUtil.getProofSummary(hash, context)
+                    if (summary?.isNotEmpty() == true)
+                        Text(modifier = Modifier.padding(3.dp,3.dp), text = "$summary")
+                }
+
+
 
 
             }
+
         }
         Row(
             verticalAlignment = Alignment.CenterVertically,
