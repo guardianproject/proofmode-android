@@ -68,5 +68,37 @@ class ProofModeUtil {
 
             return sb.toString()
         }
+
+        fun getProofHashMap (proofHash: String, context: Context): HashMap<String,String>? {
+
+            var hmap = HashMap<String,String>()
+
+            val fileFolder = MediaWatcher.getHashStorageDir(context, proofHash)
+            if (fileFolder != null) {
+                val fileMediaProof = File(fileFolder, proofHash + ProofMode.PROOF_FILE_JSON_TAG)
+                //generate now?
+                if (fileMediaProof.exists()) {
+
+                    var jsonData = FileReader(fileMediaProof).readText()
+                    val jsonObject = JSONObject(jsonData)
+
+                    var itKeys = jsonObject.keys()
+                    while (itKeys.hasNext())
+                    {
+                        var key = itKeys.next()
+                        var value = jsonObject.getString(key)
+
+                        if (value?.isNotEmpty() == true) {
+                            hmap.put(key,value)
+                        }
+                    }
+
+
+                }
+
+            }
+
+            return hmap
+        }
     }
 }
