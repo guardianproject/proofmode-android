@@ -1,30 +1,34 @@
 package org.witness.proofmode
 
 import android.content.Context
-import androidx.multidex.MultiDexApplication
-import org.witness.proofmode.crypto.pgp.PgpUtils
-import org.bouncycastle.openpgp.PGPException
-import android.os.Looper
-import android.widget.Toast
 import android.content.Intent
 import android.os.Build
 import android.os.Handler
+import android.os.Looper
 import android.preference.PreferenceManager
+import android.widget.Toast
+import androidx.multidex.MultiDexApplication
+import org.acra.ACRA.init
+import org.acra.config.CoreConfigurationBuilder
+import org.acra.config.MailSenderConfigurationBuilder
 import org.acra.config.dialog
 import org.acra.config.mailSender
 import org.acra.data.StringFormat
 import org.acra.ktx.initAcra
+import org.bouncycastle.openpgp.PGPException
 import org.proofmode.c2pa.C2paJNI
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
-import org.witness.proofmode.notaries.SafetyNetCheck
+import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.notaries.GoogleSafetyNetNotarizationProvider
-import org.witness.proofmode.notarization.NotarizationProvider
 import org.witness.proofmode.notaries.OpenTimestampsNotarizationProvider
+import org.witness.proofmode.notaries.SafetyNetCheck
+import org.witness.proofmode.notarization.NotarizationProvider
 import timber.log.Timber
 import java.io.IOException
 import java.util.concurrent.Executors
 import kotlin.random.Random
+
 
 /**
  * Created by n8fr8 on 10/10/16.
@@ -123,6 +127,7 @@ class ProofModeApp : MultiDexApplication() {
     override fun attachBaseContext(base:Context) {
         super.attachBaseContext(base)
 
+
         initAcra {
             //core configuration:
             buildConfigClass = BuildConfig::class.java
@@ -135,7 +140,18 @@ class ProofModeApp : MultiDexApplication() {
                 positiveButtonText = "Yes"
                 negativeButtonText = "No"
             }
-
+            mailSender {
+                //required
+                mailTo = "support@guardianproject.info"
+                //defaults to true
+                reportAsFile = true
+                //defaults to ACRA-report.stacktrace
+                reportFileName = "Crash.txt"
+                //defaults to "<applicationId> Crash Report"
+                subject = "ProofMode Crash Report"
+                //defaults to empty
+                body = "Here it is!"
+            }
         }
 
         /**
