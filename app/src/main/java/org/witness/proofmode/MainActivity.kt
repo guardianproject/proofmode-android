@@ -376,18 +376,13 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         val id = item.itemId
-        if (id == R.id.action_publish_key) {
-            publishKey()
-            return true
-        } else if (id == R.id.action_share_key) {
+        if (id == R.id.action_share_key) {
             shareCurrentPublicKey()
             return true
         } else if (id == R.id.action_share_photos) {
             showImagePicker();
         } else if (id == R.id.action_share_videos) {
             showVideoPicker();
-        } else if (id == R.id.action_share_documents) {
-            showDocumentPicker();
         }
         return super.onOptionsItemSelected(item)
     }

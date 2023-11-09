@@ -326,7 +326,7 @@
                                 <PersistentState>
                                   <option name="values">
                                     <map>
-                                      <entry key="url" value="file:$USER_HOME$/Library/Android/sdk/icons/material/materialicons/outlined_flag/baseline_outlined_flag_24.xml" />
+                                      <entry key="url" value="file:$USER_HOME$/Library/Android/sdk/icons/material/materialicons/broken_image/baseline_broken_image_24.xml" />
                                     </map>
                                   </option>
                                 </PersistentState>
@@ -336,7 +336,8 @@
                         </option>
                         <option name="values">
                           <map>
-                            <entry key="outputName" value="option_ai_off" />
+                            <entry key="color" value="acacac" />
+                            <entry key="outputName" value="broken_thumbnail" />
                           </map>
                         </option>
                       </PersistentState>

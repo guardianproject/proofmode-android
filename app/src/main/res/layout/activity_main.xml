@@ -22,8 +22,9 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            android:background="@android:color/transparent"
             app:theme="@style/MainToolBarStyle"
+            android:backgroundTint="@color/colorPrimaryDark"
+
             app:popupTheme="@style/AppTheme.PopupOverlay" />
 
         <androidx.compose.ui.platform.ComposeView

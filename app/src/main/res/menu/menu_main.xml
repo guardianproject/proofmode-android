@@ -11,7 +11,7 @@
         android:title="Open Picture or Video"
         />
 -->
-
+<!--
     <item
         android:id="@+id/action_publish_key"
         android:orderInCategory="100"
@@ -19,7 +19,7 @@
         app:showAsAction="never"
         android:visible="false"
         />
-
+-->
     <item
         android:id="@+id/action_share_key"
         android:orderInCategory="100"
@@ -36,11 +36,12 @@
         android:orderInCategory="100"
         android:title="@string/menu_import_videos"
         app:showAsAction="never" />
+    <!--
     <item
         android:id="@+id/action_share_documents"
         android:orderInCategory="100"
         android:title="@string/menu_import_documents"
         app:showAsAction="never" />
-
+-->
 
 </menu>
