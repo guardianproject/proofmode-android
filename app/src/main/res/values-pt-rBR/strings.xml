@@ -169,4 +169,5 @@
     <string name="video">Vídeo</string>
     <string name="camera">Câmera</string>
     <string name="cd_take_picture">Tirar uma foto</string>
+    <string name="settings_credentials">Credenciais</string>
 </resources>
