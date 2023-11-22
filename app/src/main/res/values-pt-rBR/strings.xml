@@ -170,4 +170,12 @@
     <string name="camera">Câmera</string>
     <string name="cd_take_picture">Tirar uma foto</string>
     <string name="settings_credentials">Credenciais</string>
+    <plurals name="you_imported_n_items">
+        <item quantity="one">Você importou um item</item>
+        <item quantity="many">Você importou %d itens</item>
+        <item quantity="other">Você importou %d itens</item>
+    </plurals>
+    <string name="settings_ai">Bloquear IA</string>
+    <string name="settings_credentials_desc">Adicionar credenciais de conteúdo (C2PA) a fotos e vídeos</string>
+    <string name="settings_ai_desc">Defina para não ser usado para treinamento de aprendizado de máquina</string>
 </resources>
