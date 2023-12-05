@@ -61,5 +61,7 @@ dependencies {
     }
 
     //new C2PA content authenticity support
-    implementation("org.proofmode:proofmode-c2pa:0.5")
+    //implementation("org.proofmode:proofmode-c2pa:0.5")
+    implementation ("info.guardianproject:simple_c2pa:0.0.5")
+    implementation ("net.java.dev.jna:jna:5.13.0@aar")
 }

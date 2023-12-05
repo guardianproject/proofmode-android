@@ -16,6 +16,7 @@ import com.google.android.gms.common.AccountPicker.AccountChooserOptions
 import org.witness.proofmode.PermissionActivity
 import org.witness.proofmode.PermissionActivity.Companion.hasPermissions
 import org.witness.proofmode.ProofMode.PREF_CREDENTIALS_PRIMARY
+import org.witness.proofmode.ProofMode.PREF_OPTION_AI_DEFAULT
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.databinding.ActivitySettingsBinding
 import org.witness.proofmode.util.GPSTracker
@@ -118,7 +119,7 @@ class SettingsActivity : AppCompatActivity() {
                 .commit()
 
             if (!isChecked)
-                mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_AI, false)
+                mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_AI, PREF_OPTION_AI_DEFAULT)
                     .commit()
 
             switchAI.isEnabled = isChecked

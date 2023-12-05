@@ -46,5 +46,10 @@
       <option name="name" value="maven2" />
       <option name="url" value="https://zendesk.jfrog.io/zendesk/oss-releases-local" />
     </remote-repository>
+    <remote-repository>
+      <option name="id" value="maven3" />
+      <option name="name" value="maven3" />
+      <option name="url" value="https://gitlab.com/api/v4/projects/52243488/packages/maven" />
+    </remote-repository>
   </component>
 </project>
