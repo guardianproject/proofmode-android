@@ -867,6 +867,7 @@ class ShareProofActivity : AppCompatActivity() {
 
                         var isDirectCapture = false; //this is from an import, and we are manually generating proof
                         var allowMachineLearning = false; //by default, we flag to not allow
+                        Looper.prepare()
                         C2paUtils.addContentCredentials(activity, mediaUri, isDirectCapture, allowMachineLearning, proofDir)
 
                         //all good
