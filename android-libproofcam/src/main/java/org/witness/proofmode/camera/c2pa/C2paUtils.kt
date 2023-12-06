@@ -17,23 +17,29 @@ class C2paUtils {
 
     companion object {
 
-        const val C2PA_CERT_PATH = "cr.cert"
-        const val C2PA_KEY_PATH = "cr.key"
+        private const val C2PA_CERT_PATH = "cr.cert"
+        private const val C2PA_KEY_PATH = "cr.key"
 
-        const val C2PA_CERT_PATH_PARENT = "crp.cert"
-        const val C2PA_KEY_PATH_PARENT = "crp.key"
+        private const val C2PA_CERT_PATH_PARENT = "crp.cert"
+        private const val C2PA_KEY_PATH_PARENT = "crp.key"
 
-        const val CERT_VALIDITY_DAYS = 365U //5 years
+        private const val CERT_VALIDITY_DAYS = 365U //5 years
 
-        var _identityUri = "ProofMode@https://proofmode.org"
-        var _identityName = "ProofMode"
+        private var _identityUri = "ProofMode@https://proofmode.org"
+        private var _identityName = "ProofMode"
 
-        var userCert : Certificate? = null
+        private var userCert : Certificate? = null
 
         const val IDENTITY_URI_KEY = "id_uri"
         const val IDENTITY_NAME_KEY = "id_name"
+        const val IDENTITY_EMAIL_KEY = "id_email"
+        const val IDENTITY_PGP_KEY = "id_pgp"
 
-        const val APP_ICON_URI = "https://proofmode.org/images/avatar.jpg"
+        private const val APP_ICON_URI = "https://proofmode.org/images/avatar.jpg"
+
+        /**
+         * Set identity values for certificate and content credentials
+         */
         fun setC2PAIdentity (identityName: String?, identityUri: String?)
         {
             if (identityName != null) {
@@ -44,61 +50,19 @@ class C2paUtils {
             }
         }
 
+        /**
+         * Add content credentials to media from an external URI
+         */
         fun   addContentCredentials (_context: Context, _uri: Uri?, isDirectCapture: Boolean, allowMachineLearning: Boolean) {
 
-            var filePath: String? = null
-            if (_uri != null && "content" == _uri.scheme) {
-                val cursor: Cursor? = _context?.getContentResolver()?.query(
-                    _uri,
-                    arrayOf<String>(MediaStore.Images.ImageColumns.DATA),
-                    null,
-                    null,
-                    null
-                )
-                cursor?.moveToFirst()
-                filePath = cursor?.getString(0)
-                cursor?.close()
-            } else {
-                filePath = _uri!!.path
-            }
-
-            if (filePath?.isNotEmpty() == true) {
-                var fileMedia = File(filePath)
-                var fileOut = File(_context.cacheDir, fileMedia.name);
-
-                if (fileMedia.exists()) {
-                    //TODO add c2pa capture here
-                    var identityId = _identityName
-                    var identityUri = _identityUri
-
-                    addContentCredentials(
-                        _context,
-                        identityId,
-                        identityUri,
-                        isDirectCapture,
-                        allowMachineLearning,
-                        fileMedia,
-                        fileOut
-                    )
-
-                    copy(fileOut, fileMedia)
-                    fileOut.delete()
-                }
-            }
+            addContentCredentials(_context, _uri, isDirectCapture, allowMachineLearning, _context.cacheDir)
 
         }
 
-        @Throws(IOException::class)
-        fun copy(src: File?, dst: File?) {
-            val inStream = FileInputStream(src)
-            val outStream = FileOutputStream(dst)
-            val inChannel = inStream.channel
-            val outChannel = outStream.channel
-            inChannel.transferTo(0, inChannel.size(), outChannel)
-            inStream.close()
-            outStream.close()
-        }
 
+        /**
+         * Add content credentials to media from an external URI, and specify the output directory of where to stare the new file
+         */
         fun   addContentCredentials (_context: Context, _uri: Uri?, isDirectCapture: Boolean, allowMachineLearning: Boolean, fileOutDir: File) {
 
             var filePath: String? = null
@@ -134,6 +98,8 @@ class C2paUtils {
                     _context,
                     identityId,
                     identityUri,
+                    identityId,
+                    identityUri,
                     isDirectCapture,
                     allowMachineLearning,
                     fileMedia,
@@ -143,6 +109,9 @@ class C2paUtils {
 
         }
 
+        /**
+         * Reset all variables and delete all local credential files
+         */
         fun resetCredentials (mContext : Context) {
 
             var fileUserCert = File(mContext.filesDir, C2PA_CERT_PATH)
@@ -159,16 +128,17 @@ class C2paUtils {
 
             userCert = null
         }
-        fun initCredentials (mContext : Context, identityId: String, identityUri: String) {
+
+        /**
+         * initialize the private keys and certificates for signing C2PA data
+         */
+        fun initCredentials (mContext : Context, emailAddress: String, pgpFingerprint: String) {
 
             var fileUserCert = File(mContext.filesDir, C2PA_CERT_PATH)
             var fileUserKey = File(mContext.filesDir, C2PA_KEY_PATH)
 
             var fileParentCert = File(mContext.filesDir, C2PA_CERT_PATH_PARENT)
             var fileParentKey = File(mContext.filesDir,C2PA_KEY_PATH_PARENT)
-
-            var emailAddress = identityId
-            var pgpFingerprint = identityId
 
             var userKey : FileData
 
@@ -186,14 +156,14 @@ class C2paUtils {
                 var parentKey = createPrivateKey();
                 fileParentKey.writeBytes(parentKey.getBytes())
 
-                var organization = "ProofMode Root $identityId";
+                var organization = "ProofMode Root $pgpFingerprint";
                 var certType = CertificateType.OfflineRoot(organization, CERT_VALIDITY_DAYS)
                 var certOptions = CertificateOptions(parentKey, certType, null, null, null)
 
                 var rootCert = createCertificate(certOptions)
 
                 var userCertType =
-                    CertificateType.ContentCredentials("ProofMode User $identityId", CERT_VALIDITY_DAYS)
+                    CertificateType.ContentCredentials("ProofMode User $pgpFingerprint", CERT_VALIDITY_DAYS)
                 var userCertOptions = CertificateOptions(
                     userKey,
                     userCertType,
@@ -206,6 +176,8 @@ class C2paUtils {
 
                 userCert?.let {
 
+                    //this is where we would save the cert data once we have access to it
+
                 }
             }
             else
@@ -215,10 +187,14 @@ class C2paUtils {
                 userCert = Certificate(FileData(fileUserCert.absolutePath,fileUserCert.readBytes(),fileUserKey.name), userKey, parentCert)
             }
         }
-        fun addContentCredentials(mContext : Context, identityId: String, identityUri: String, isDirectCapture: Boolean, allowMachineLearning: Boolean, fileImageIn: File, fileImageOut: File) {
+
+        /**
+         * add new C2PA Content Credential assertions and then embed and sign them
+         */
+        fun addContentCredentials(mContext : Context, emailAddress: String, pgpFingerprint: String, emailDisplay: String?, webLink: String?, isDirectCapture: Boolean, allowMachineLearning: Boolean, fileImageIn: File, fileImageOut: File) {
 
             if (userCert == null)
-                initCredentials(mContext, identityId, identityUri)
+                initCredentials(mContext, emailAddress, pgpFingerprint)
 
             val appLabel = getAppName(mContext)
             val appVersion = getAppVersionName(mContext)
@@ -238,25 +214,23 @@ class C2paUtils {
             else
                 contentCreds?.addPermissiveAiTrainingAssertions()
 
-            contentCreds?.addEmailAssertion(identityId,identityId)
-            contentCreds?.addPgpAssertion(identityId, identityId)
-            contentCreds?.addWebsiteAssertion(identityUri)
+            emailDisplay?.let { contentCreds?.addEmailAssertion(emailAddress, it) }
+            pgpFingerprint?.let { contentCreds?.addPgpAssertion(it, it) }
+            webLink?.let { contentCreds?.addWebsiteAssertion(it) }
 
 //            contentCreds.addExifAssertion(exifData)
+            //contentCreds.addInstagramAssertion()
+            //contentCreds.addJsonAssertion()
+
 
             contentCreds?.embedManifest(fileImageOut.absolutePath)
 
 
         }
 
-        fun clearContentCredentials (_context:Context) {
-            var certPath = File(_context.filesDir, "cr.cert")
-            var certKey = File(_context.filesDir, "cr.key")
-
-            certPath.delete()
-            certKey.delete()
-        }
-
+        /**
+         * Helper functions for getting app name and version
+         */
         fun getAppVersionName(context: Context): String {
             var appVersionName = ""
             try {
@@ -277,6 +251,18 @@ class C2paUtils {
                 e.printStackTrace()
             }
             return appVersionName
+        }
+
+
+        @Throws(IOException::class)
+        fun copy(src: File?, dst: File?) {
+            val inStream = FileInputStream(src)
+            val outStream = FileOutputStream(dst)
+            val inChannel = inStream.channel
+            val outChannel = outStream.channel
+            inChannel.transferTo(0, inChannel.size(), outChannel)
+            inStream.close()
+            outStream.close()
         }
     }
 }
