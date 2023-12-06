@@ -4,14 +4,14 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.database.Cursor
 import android.net.Uri
+import android.os.Build
 import android.provider.MediaStore
-
+import info.guardianproject.simple_c2pa.*
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
-
-import info.guardianproject.simple_c2pa.*
+import java.util.Date
 
 class C2paUtils {
 
@@ -82,12 +82,13 @@ class C2paUtils {
             }
 
             var fileMedia = File(filePath)
-
+            var fileOut = fileMedia
             var fileName = fileMedia.name;
-            if (!isDirectCapture)
-                fileName = "c2pa-$fileName"
 
-            var fileOut = File(fileOutDir, fileName);
+            if (!isDirectCapture) {
+                fileName = "c2pa-$fileName"
+                fileOut = File(fileOutDir, fileName);
+            }
 
             if (fileMedia.exists()) {
                 //TODO add c2pa capture here
@@ -156,29 +157,33 @@ class C2paUtils {
                 var parentKey = createPrivateKey();
                 fileParentKey.writeBytes(parentKey.getBytes())
 
-                var organization = "ProofMode Root $pgpFingerprint";
-                var certType = CertificateType.OfflineRoot(organization, CERT_VALIDITY_DAYS)
-                var certOptions = CertificateOptions(parentKey, certType, null, null, null)
+                var organization = "ProofMode-Root";
+                var rootCert = createRootCertificate(organization, CERT_VALIDITY_DAYS)
 
-                var rootCert = createCertificate(certOptions)
+                rootCert?.let {
 
-                var userCertType =
-                    CertificateType.ContentCredentials("ProofMode User $pgpFingerprint", CERT_VALIDITY_DAYS)
-                var userCertOptions = CertificateOptions(
-                    userKey,
-                    userCertType,
-                    rootCert,
-                    emailAddress,
-                    pgpFingerprint
-                )
+                    fileParentCert.writeBytes(rootCert.getCertificateBytes())
 
-                userCert = createCertificate(userCertOptions)
+                    var userCertType =
+                        CertificateType.ContentCredentials("ProofMode-User", CERT_VALIDITY_DAYS)
+                    var userCertOptions = CertificateOptions(
+                        userKey,
+                        userCertType,
+                        rootCert,
+                        "test",
+                        "test"
+                    )
 
-                userCert?.let {
+                    userCert = createCertificate(userCertOptions)
 
-                    //this is where we would save the cert data once we have access to it
+                    userCert?.let {
 
+                        //this is where we would save the cert data once we have access to it
+                        fileUserCert.writeBytes(it.getCertificateBytes())
+
+                    }
                 }
+
             }
             else
             {
@@ -218,15 +223,58 @@ class C2paUtils {
             pgpFingerprint?.let { contentCreds?.addPgpAssertion(it, it) }
             webLink?.let { contentCreds?.addWebsiteAssertion(it) }
 
-//            contentCreds.addExifAssertion(exifData)
-            //contentCreds.addInstagramAssertion()
-            //contentCreds.addJsonAssertion()
+            /**
+             * let exif_data = ExifData {
+             *             gps_version_id: Some("2.2.0.0".to_string()),
+             *             latitude: Some("39,21.102N".to_string()),
+             *             longitude: Some("74,26.5737W".to_string()),
+             *             altitude_ref: Some(0),
+             *             altitude: Some("100963/29890".to_string()),
+             *             timestamp: Some("2019-09-22T18:22:57Z".to_string()),
+             *             speed_ref: Some("K".to_string()),
+             *             speed: Some("4009/161323".to_string()),
+             *             direction_ref: Some("T".to_string()),
+             *             direction: Some("296140/911".to_string()),
+             *             destination_bearing_ref: Some("T".to_string()),
+             *             destination_bearing: Some("296140/911".to_string()),
+             *             positioning_error: Some("13244/2207".to_string()),
+             *             exposure_time: Some("1/100".to_string()),
+             *             f_number: Some(4.0),
+             *             color_space: Some(1),
+             *             digital_zoom_ratio: Some(2.0),
+             *             make: Some("ProofMode".to_string()),
+             *             model: Some("ProofMode In-App Camera v2.0".to_string()),
+             *             lens_make: Some("CameraCompany".to_string()),
+             *             lens_model: Some("17.0-35.0 mm".to_string()),
+             *             lens_specification: Some(vec![1.55, 4.2, 1.6, 2.4]),
+             *         };
+             *
+             */
 
+            var exifMake = Build.MANUFACTURER
+            var exifModel = Build.MODEL
+            var exifTimestamp = Date().toGMTString()
+
+            var exifGpsVersion = "2.2.0.0"
+            var exifLat: String? = null
+            var exifLong: String? = null
+
+            var gpsTracker = GPSTracker(mContext)
+            gpsTracker.updateLocation()
+            var location = gpsTracker.getLocation()
+            location?.let {
+                exifLat = GPSTracker.getLatitudeAsDMS(location, 3)
+                exifLong = GPSTracker.getLongitudeAsDMS(location, 3)
+            }
+
+            var exifData = ExifData(exifGpsVersion, exifLat, exifLong, null, null, exifTimestamp, null, null, null, null, null, null, null, null, null, null, null, exifMake, exifModel, null, null, null)
+            contentCreds?.addExifAssertion(exifData)
 
             contentCreds?.embedManifest(fileImageOut.absolutePath)
 
 
         }
+
 
         /**
          * Helper functions for getting app name and version

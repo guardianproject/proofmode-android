@@ -61,6 +61,10 @@ dependencies {
     }
 
     //new C2PA content authenticity support
-    implementation ("info.guardianproject:simple_c2pa:0.0.5")
+    implementation ("info.guardianproject:simple_c2pa:0.0.6")
     implementation ("net.java.dev.jna:jna:5.13.0@aar")
+
+    //logging
+    implementation ("com.jakewharton.timber:timber:5.0.1")
+
 }
