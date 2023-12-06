@@ -19,12 +19,19 @@ class C2paUtils {
 
         const val C2PA_CERT_PATH = "cr.cert"
         const val C2PA_KEY_PATH = "cr.key"
+
+        const val C2PA_CERT_PATH_PARENT = "crp.cert"
+        const val C2PA_KEY_PATH_PARENT = "crp.key"
+
         var _identityUri = "ProofMode@https://proofmode.org"
         var _identityName = "ProofMode"
+
+        var userCert : Certificate? = null
 
         const val IDENTITY_URI_KEY = "id_uri"
         const val IDENTITY_NAME_KEY = "id_name"
 
+        const val APP_ICON_URI = "https://proofmode.org/images/avatar.jpg"
         fun setC2PAIdentity (identityName: String?, identityUri: String?)
         {
             if (identityName != null) {
@@ -129,74 +136,104 @@ class C2paUtils {
 
         }
 
-        fun addContentCredentials(mContext : Context, identityId: String, identityUri: String, isDirectCapture: Boolean, allowMachineLearning: Boolean, fileImageIn: File, fileImageOut: File) {
+        fun resetCredentials (mContext : Context) {
 
-            var certPath = File(mContext.filesDir, C2PA_CERT_PATH)
-            var certKey = File(mContext.filesDir, C2PA_KEY_PATH)
+            var fileUserCert = File(mContext.filesDir, C2PA_CERT_PATH)
+            var fileUserKey = File(mContext.filesDir, C2PA_KEY_PATH)
+
+            var fileParentCert = File(mContext.filesDir, C2PA_CERT_PATH_PARENT)
+            var fileParentKey = File(mContext.filesDir,C2PA_KEY_PATH_PARENT)
+
+            fileUserKey.delete()
+            fileUserCert.delete()
+
+            fileParentCert.delete()
+            fileParentKey.delete()
+
+            userCert = null
+        }
+        fun initCredentials (mContext : Context, identityId: String, identityUri: String) {
+
+            var fileUserCert = File(mContext.filesDir, C2PA_CERT_PATH)
+            var fileUserKey = File(mContext.filesDir, C2PA_KEY_PATH)
+
+            var fileParentCert = File(mContext.filesDir, C2PA_CERT_PATH_PARENT)
+            var fileParentKey = File(mContext.filesDir,C2PA_KEY_PATH_PARENT)
 
             var emailAddress = identityId
             var pgpFingerprint = identityId
 
-            val rootKey = createPrivateKey();
-            var certType = CertificateType.OfflineRoot("ProofMode Root $identityId", 365U)
-            var certOptions = CertificateOptions(rootKey, certType, null, null, null)
+            var userKey : FileData
 
-            var rootCert = createCertificate(certOptions)
+            if (!fileUserKey.exists()) {
+                userKey = createPrivateKey()
+                fileUserKey.writeBytes(userKey.getBytes())
+            }
+            else
+            {
+                userKey = FileData(fileUserKey.absolutePath,fileUserKey.readBytes(),fileUserKey.name)
+            }
 
-            var userKey = createPrivateKey()
-            var userCerttype = CertificateType.ContentCredentials("ProofMode User $identityId", 365U * 5U)
-            var userCertOptions = CertificateOptions(
-                userKey,
-                userCerttype,
-                rootCert,
-                emailAddress,
-                pgpFingerprint
-            )
+            if (!fileUserCert.exists()) {
 
-            var userCert = createCertificate(userCertOptions)
+                var parentKey = createPrivateKey();
+                fileParentKey.writeBytes(parentKey.getBytes())
+
+                var organization = "ProofMode Root $identityId";
+                var certType = CertificateType.OfflineRoot(organization, 365U)
+                var certOptions = CertificateOptions(parentKey, certType, null, null, null)
+
+                var rootCert = createCertificate(certOptions)
+
+                var userCerttype =
+                    CertificateType.ContentCredentials("ProofMode User $identityId", 365U * 5U)
+                var userCertOptions = CertificateOptions(
+                    userKey,
+                    userCerttype,
+                    rootCert,
+                    emailAddress,
+                    pgpFingerprint
+                )
+
+                userCert = createCertificate(userCertOptions)
+            }
+            else
+            {
+                var fileDataParentKey = FileData(fileParentKey.absolutePath,fileParentKey.readBytes(),fileParentKey.name)
+                var parentCert = Certificate(FileData(fileParentCert.absolutePath,fileParentCert.readBytes(),fileParentCert.name), fileDataParentKey, null)
+                userCert = Certificate(FileData(fileUserCert.absolutePath,fileUserCert.readBytes(),fileUserKey.name), userKey, parentCert)
+            }
+        }
+        fun addContentCredentials(mContext : Context, identityId: String, identityUri: String, isDirectCapture: Boolean, allowMachineLearning: Boolean, fileImageIn: File, fileImageOut: File) {
+
+            if (userCert == null)
+                initCredentials(mContext, identityId, identityUri)
 
             val appLabel = getAppName(mContext)
             val appVersion = getAppVersionName(mContext)
-            var appIconUri = "https://proofmode.org/images/avatar.jpg"
+            var appIconUri = APP_ICON_URI
 
             var appInfo = ApplicationInfo(appLabel,appVersion,appIconUri)
             var mediaFile = FileData(fileImageIn.absolutePath, null, fileImageIn.name)
-            var contentCreds = ContentCredentials(userCert,mediaFile, appInfo)
+            var contentCreds = userCert?.let { ContentCredentials(it,mediaFile, appInfo) }
 
             if (isDirectCapture)
-                contentCreds.addCreatedAssertion()
+                contentCreds?.addCreatedAssertion()
             else
-                contentCreds.addPlacedAssertion()
+                contentCreds?.addPlacedAssertion()
 
             if (!allowMachineLearning)
-                contentCreds.addRestrictedAiTrainingAssertions()
+                contentCreds?.addRestrictedAiTrainingAssertions()
             else
-                contentCreds.addPermissiveAiTrainingAssertions()
+                contentCreds?.addPermissiveAiTrainingAssertions()
 
-            contentCreds.addEmailAssertion(emailAddress,emailAddress)
-            contentCreds.addPgpAssertion(pgpFingerprint, emailAddress)
-            contentCreds.addWebsiteAssertion(identityUri)
+            contentCreds?.addEmailAssertion(identityId,identityId)
+            contentCreds?.addPgpAssertion(identityId, identityId)
+            contentCreds?.addWebsiteAssertion(identityUri)
 
-            contentCreds.embedManifest(fileImageOut.absolutePath)
+//            contentCreds.addExifAssertion(exifData)
 
-            /**
-            if (!certPath.exists() || !certKey.exists())
-                C2paJNI.generateCredentials(
-                    certPath.absolutePath,
-                    certKey.absolutePath,
-                    identityUri
-                )
-
-            C2paJNI.addAssert(
-                certPath.absolutePath,
-                certKey.absolutePath,
-                fileImageIn.absolutePath,
-                identityUri,
-                identityId,
-                isDirectCapture,
-                allowMachineLearning,
-                fileImageOut.absolutePath
-            )**/
+            contentCreds?.embedManifest(fileImageOut.absolutePath)
 
 
         }
