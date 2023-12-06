@@ -23,6 +23,8 @@ class C2paUtils {
         const val C2PA_CERT_PATH_PARENT = "crp.cert"
         const val C2PA_KEY_PATH_PARENT = "crp.key"
 
+        const val CERT_VALIDITY_DAYS = 365U //5 years
+
         var _identityUri = "ProofMode@https://proofmode.org"
         var _identityName = "ProofMode"
 
@@ -116,7 +118,12 @@ class C2paUtils {
             }
 
             var fileMedia = File(filePath)
-            var fileOut = File(fileOutDir, "c2pa-" + fileMedia.name);
+
+            var fileName = fileMedia.name;
+            if (!isDirectCapture)
+                fileName = "c2pa-$fileName"
+
+            var fileOut = File(fileOutDir, fileName);
 
             if (fileMedia.exists()) {
                 //TODO add c2pa capture here
@@ -180,22 +187,26 @@ class C2paUtils {
                 fileParentKey.writeBytes(parentKey.getBytes())
 
                 var organization = "ProofMode Root $identityId";
-                var certType = CertificateType.OfflineRoot(organization, 365U)
+                var certType = CertificateType.OfflineRoot(organization, CERT_VALIDITY_DAYS)
                 var certOptions = CertificateOptions(parentKey, certType, null, null, null)
 
                 var rootCert = createCertificate(certOptions)
 
-                var userCerttype =
-                    CertificateType.ContentCredentials("ProofMode User $identityId", 365U * 5U)
+                var userCertType =
+                    CertificateType.ContentCredentials("ProofMode User $identityId", CERT_VALIDITY_DAYS)
                 var userCertOptions = CertificateOptions(
                     userKey,
-                    userCerttype,
+                    userCertType,
                     rootCert,
                     emailAddress,
                     pgpFingerprint
                 )
 
                 userCert = createCertificate(userCertOptions)
+
+                userCert?.let {
+
+                }
             }
             else
             {
