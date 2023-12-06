@@ -1,16 +1,17 @@
 package org.witness.proofmode.camera.c2pa
 
 import android.content.Context
+import android.content.pm.PackageManager
 import android.database.Cursor
 import android.net.Uri
 import android.provider.MediaStore
-import org.proofmode.c2pa.C2paJNI
 
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
 
+import info.guardianproject.simple_c2pa.*
 
 class C2paUtils {
 
@@ -133,6 +134,52 @@ class C2paUtils {
             var certPath = File(mContext.filesDir, C2PA_CERT_PATH)
             var certKey = File(mContext.filesDir, C2PA_KEY_PATH)
 
+            var emailAddress = identityId
+            var pgpFingerprint = identityId
+
+            val rootKey = createPrivateKey();
+            var certType = CertificateType.OfflineRoot("ProofMode Root $identityId", 365U)
+            var certOptions = CertificateOptions(rootKey, certType, null, null, null)
+
+            var rootCert = createCertificate(certOptions)
+
+            var userKey = createPrivateKey()
+            var userCerttype = CertificateType.ContentCredentials("ProofMode User $identityId", 365U * 5U)
+            var userCertOptions = CertificateOptions(
+                userKey,
+                userCerttype,
+                rootCert,
+                emailAddress,
+                pgpFingerprint
+            )
+
+            var userCert = createCertificate(userCertOptions)
+
+            val appLabel = getAppName(mContext)
+            val appVersion = getAppVersionName(mContext)
+            var appIconUri = "https://proofmode.org/images/avatar.jpg"
+
+            var appInfo = ApplicationInfo(appLabel,appVersion,appIconUri)
+            var mediaFile = FileData(fileImageIn.absolutePath, null, fileImageIn.name)
+            var contentCreds = ContentCredentials(userCert,mediaFile, appInfo)
+
+            if (isDirectCapture)
+                contentCreds.addCreatedAssertion()
+            else
+                contentCreds.addPlacedAssertion()
+
+            if (!allowMachineLearning)
+                contentCreds.addRestrictedAiTrainingAssertions()
+            else
+                contentCreds.addPermissiveAiTrainingAssertions()
+
+            contentCreds.addEmailAssertion(emailAddress,emailAddress)
+            contentCreds.addPgpAssertion(pgpFingerprint, emailAddress)
+            contentCreds.addWebsiteAssertion(identityUri)
+
+            contentCreds.embedManifest(fileImageOut.absolutePath)
+
+            /**
             if (!certPath.exists() || !certKey.exists())
                 C2paJNI.generateCredentials(
                     certPath.absolutePath,
@@ -149,7 +196,7 @@ class C2paUtils {
                 isDirectCapture,
                 allowMachineLearning,
                 fileImageOut.absolutePath
-            )
+            )**/
 
 
         }
@@ -160,6 +207,28 @@ class C2paUtils {
 
             certPath.delete()
             certKey.delete()
+        }
+
+        fun getAppVersionName(context: Context): String {
+            var appVersionName = ""
+            try {
+                appVersionName =
+                    context.packageManager.getPackageInfo(context.packageName, 0).versionName
+            } catch (e: PackageManager.NameNotFoundException) {
+                e.printStackTrace()
+            }
+            return appVersionName
+        }
+
+        fun getAppName(context: Context): String {
+            var appVersionName = ""
+            try {
+                appVersionName =
+                    context.packageManager.getPackageInfo(context.packageName, 0).applicationInfo.name
+            } catch (e: PackageManager.NameNotFoundException) {
+                e.printStackTrace()
+            }
+            return appVersionName
         }
     }
 }

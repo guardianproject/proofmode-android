@@ -16,7 +16,6 @@ import org.acra.config.mailSender
 import org.acra.data.StringFormat
 import org.acra.ktx.initAcra
 import org.bouncycastle.openpgp.PGPException
-import org.proofmode.c2pa.C2paJNI
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
 import org.witness.proofmode.crypto.pgp.PgpUtils
@@ -120,7 +119,7 @@ class ProofModeApp : MultiDexApplication() {
             }
         }
 
-        C2paJNI.init(this)
+     //   C2paJNI.init(this)
 
     }
 

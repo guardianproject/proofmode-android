@@ -24,7 +24,7 @@
             android:layout_height="?attr/actionBarSize"
             app:theme="@style/MainToolBarStyle"
             android:backgroundTint="@color/colorPrimaryDark"
-
+            android:background="@color/colorPrimary"
             app:popupTheme="@style/AppTheme.PopupOverlay" />
 
         <androidx.compose.ui.platform.ComposeView
@@ -38,7 +38,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="end|bottom"
             android:src="@drawable/ic_camera"
-            android:backgroundTint="@color/button_purple"
+            android:backgroundTint="@color/colorPrimary"
             app:tint="@color/white"
             app:borderWidth="0dp"
             android:layout_marginBottom="16dp"
