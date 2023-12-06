@@ -62,4 +62,5 @@ dependencies {
 
     //new C2PA content authenticity support
     implementation("org.proofmode:proofmode-c2pa:0.5")
+    //implementation("info.guardianproject:simple_c2pa:0.0.2") { }
 }

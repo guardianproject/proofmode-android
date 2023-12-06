@@ -5,6 +5,7 @@ import android.database.Cursor
 import android.net.Uri
 import android.provider.MediaStore
 import org.proofmode.c2pa.C2paJNI
+
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -149,6 +150,7 @@ class C2paUtils {
                 allowMachineLearning,
                 fileImageOut.absolutePath
             )
+
 
         }
 

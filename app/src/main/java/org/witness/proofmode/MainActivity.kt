@@ -244,7 +244,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun showImagePicker() {
-        TedImagePicker.with(this).image().dropDownAlbum()
+        TedImagePicker.with(this).imageAndVideo().showVideoDuration(true).dropDownAlbum()
             .startMultiImage {
                 showShareProof(
                     it

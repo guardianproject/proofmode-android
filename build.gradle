@@ -38,6 +38,9 @@ allprojects {
         google()
         maven { url "https://raw.githubusercontent.com/guardianproject/gpmaven/master" }
         maven { url 'https://jitpack.io' }
+        maven {
+            url 'https://gitlab.com/api/v4/projects/52243488/packages/maven'
+        }
        // maven {url 'https://zendesk.jfrog.io/zendesk/oss-releases-local'}
     }
     project.ext {

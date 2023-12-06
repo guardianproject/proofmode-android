@@ -144,7 +144,7 @@ dependencies {
 
     implementation 'com.caverock:androidsvg-aar:1.3'
 
-    implementation 'io.github.ParkSangGwon:tedimagepicker:1.3.2'
+    implementation 'io.github.ParkSangGwon:tedimagepicker:1.4.2'
 
     implementation 'com.google.android.gms:play-services-safetynet:18.0.1'
     implementation 'com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava'
@@ -160,6 +160,7 @@ dependencies {
 
     //new C2PA content authenticity support
     implementation "org.proofmode:proofmode-c2pa:0.5"
+    //implementation 'info.guardianproject:simple_c2pa:0.0.2'
 
     //for upload to proofcheck
     implementation 'com.squareup.okio:okio:2.10.0'
