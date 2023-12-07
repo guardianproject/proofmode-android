@@ -25,8 +25,10 @@ class C2paUtils {
 
         private const val CERT_VALIDITY_DAYS = 365U //5 years
 
-        private var _identityUri = "ProofMode@https://proofmode.org"
+        private var _identityUri = "https://proofmode.org"
         private var _identityName = "ProofMode"
+        private var _identityEmail = "info@proofmode.org"
+        private var _identityKey = "0x00000000"
 
         private var userCert : Certificate? = null
 
@@ -40,14 +42,20 @@ class C2paUtils {
         /**
          * Set identity values for certificate and content credentials
          */
-        fun setC2PAIdentity (identityName: String?, identityUri: String?)
+        fun setC2PAIdentity (identityName: String?, identityUri: String?, identityEmail: String?, identityKey: String?)
         {
-            if (identityName != null) {
+            if (identityName?.isNotEmpty() == true)
                 _identityName = identityName
-            }
-            if (identityUri != null) {
+
+            if (identityUri?.isNotEmpty() == true)
                 _identityUri = identityUri
-            }
+
+            if (identityEmail?.isNotEmpty() == true)
+                _identityEmail = identityEmail
+
+            if (identityKey?.isNotEmpty() == true)
+                _identityKey = identityKey
+
         }
 
         /**
@@ -91,16 +99,13 @@ class C2paUtils {
             }
 
             if (fileMedia.exists()) {
-                //TODO add c2pa capture here
-                var identityId = _identityName
-                var identityUri = _identityUri
 
                 addContentCredentials(
                     _context,
-                    identityId,
-                    identityUri,
-                    identityId,
-                    identityUri,
+                    _identityEmail,
+                    _identityKey,
+                    _identityName,
+                    _identityUri,
                     isDirectCapture,
                     allowMachineLearning,
                     fileMedia,
@@ -196,7 +201,7 @@ class C2paUtils {
         /**
          * add new C2PA Content Credential assertions and then embed and sign them
          */
-        fun addContentCredentials(mContext : Context, emailAddress: String, pgpFingerprint: String, emailDisplay: String?, webLink: String?, isDirectCapture: Boolean, allowMachineLearning: Boolean, fileImageIn: File, fileImageOut: File) {
+        fun addContentCredentials(mContext : Context, emailAddress: String, pgpFingerprint: String, emailDisplay: String, webLink: String, isDirectCapture: Boolean, allowMachineLearning: Boolean, fileImageIn: File, fileImageOut: File) {
 
             if (userCert == null)
                 initCredentials(mContext, emailAddress, pgpFingerprint)
@@ -219,37 +224,9 @@ class C2paUtils {
             else
                 contentCreds?.addPermissiveAiTrainingAssertions()
 
-            emailDisplay?.let { contentCreds?.addEmailAssertion(emailAddress, it) }
-            pgpFingerprint?.let { contentCreds?.addPgpAssertion(it, it) }
-            webLink?.let { contentCreds?.addWebsiteAssertion(it) }
-
-            /**
-             * let exif_data = ExifData {
-             *             gps_version_id: Some("2.2.0.0".to_string()),
-             *             latitude: Some("39,21.102N".to_string()),
-             *             longitude: Some("74,26.5737W".to_string()),
-             *             altitude_ref: Some(0),
-             *             altitude: Some("100963/29890".to_string()),
-             *             timestamp: Some("2019-09-22T18:22:57Z".to_string()),
-             *             speed_ref: Some("K".to_string()),
-             *             speed: Some("4009/161323".to_string()),
-             *             direction_ref: Some("T".to_string()),
-             *             direction: Some("296140/911".to_string()),
-             *             destination_bearing_ref: Some("T".to_string()),
-             *             destination_bearing: Some("296140/911".to_string()),
-             *             positioning_error: Some("13244/2207".to_string()),
-             *             exposure_time: Some("1/100".to_string()),
-             *             f_number: Some(4.0),
-             *             color_space: Some(1),
-             *             digital_zoom_ratio: Some(2.0),
-             *             make: Some("ProofMode".to_string()),
-             *             model: Some("ProofMode In-App Camera v2.0".to_string()),
-             *             lens_make: Some("CameraCompany".to_string()),
-             *             lens_model: Some("17.0-35.0 mm".to_string()),
-             *             lens_specification: Some(vec![1.55, 4.2, 1.6, 2.4]),
-             *         };
-             *
-             */
+            contentCreds?.addEmailAssertion(emailAddress, emailDisplay)
+            contentCreds?.addPgpAssertion(pgpFingerprint, pgpFingerprint)
+            contentCreds?.addWebsiteAssertion(webLink)
 
             var exifMake = Build.MANUFACTURER
             var exifModel = Build.MODEL

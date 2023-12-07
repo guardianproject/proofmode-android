@@ -630,34 +630,30 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         var useCredentials = mPrefs.getBoolean(PREF_OPTION_CREDENTIALS, PREF_OPTION_CREDENTIALS_DEFAULT);
 
         intentCam.putExtra(PREF_OPTION_CREDENTIALS, useCredentials);
+        intentCam.putExtra(PREF_OPTION_AI, mPrefs.getBoolean(PREF_OPTION_CREDENTIALS, PREF_OPTION_AI_DEFAULT));
 
-        if (useCredentials) {
+        if (useCredentials)
+            initContentCredentials()
 
-            val credPrimary = mPrefs.getString(PREF_CREDENTIALS_PRIMARY,"");
-
-            if (credPrimary?.isNotEmpty() == true)
-            {
-                var displayName = "${credPrimary.replace("@"," at ")}"
-
-                intentCam.putExtra(C2paUtils.IDENTITY_NAME_KEY, displayName)
-
-                var credUri =
-                    "${URLEncoder.encode(displayName, "UTF-8")}@mailto:${URLEncoder.encode(credPrimary, "UTF-8")}"
-
-                intentCam.putExtra(C2paUtils.IDENTITY_URI_KEY, credUri)
-            }
-            else {
-                intentCam.putExtra(C2paUtils.IDENTITY_NAME_KEY, "0x" + mPgpUtils?.publicKeyString)
-
-                var pgpUri =
-                    "0x" + mPgpUtils?.publicKeyFingerprint + "@https://keys.openpgp.org/search?q=" + mPgpUtils?.publicKeyFingerprint
-                intentCam.putExtra(C2paUtils.IDENTITY_URI_KEY, pgpUri)
-            }
-
-            intentCam.putExtra(PREF_OPTION_AI, mPrefs.getBoolean(PREF_OPTION_CREDENTIALS, PREF_OPTION_AI_DEFAULT));
-        }
 
         startActivity(intentCam)
+    }
+
+    fun initContentCredentials () {
+        val email = mPrefs.getString(PREF_CREDENTIALS_PRIMARY,"");
+        var display : String? = null
+        var key : String? = "0x" + mPgpUtils?.publicKeyFingerprint
+        var uri : String? = null
+
+        if (email?.isNotEmpty() == true)
+        {
+            display = "${email.replace("@"," at ")}"
+        }
+
+        uri =
+            "https://keys.openpgp.org/search?q=" + mPgpUtils?.publicKeyFingerprint
+
+        C2paUtils.setC2PAIdentity(display, uri, email, key)
     }
 
     fun initPgpKey () {
@@ -667,11 +663,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 mPrefs.getString(PREFS_KEY_PASSPHRASE, PREFS_KEY_PASSPHRASE_DEFAULT)
             )
 
-            var identityName = "0x" + mPgpUtils?.publicKeyFingerprint
-            var identityUri =  "0x" + mPgpUtils?.publicKeyFingerprint + "@https://keys.openpgp.org/search?q=" + mPgpUtils?.publicKeyFingerprint
-
-            //set identity based on passed strings
-            C2paUtils.setC2PAIdentity(identityName,identityUri)
+            initContentCredentials()
 
         }
     }
