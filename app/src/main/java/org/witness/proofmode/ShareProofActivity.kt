@@ -7,6 +7,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.LabeledIntent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -41,6 +42,8 @@ import org.witness.proofmode.ActivityConstants.EXTRA_FILE_NAME
 import org.witness.proofmode.ActivityConstants.EXTRA_SHARE_TEXT
 import org.witness.proofmode.ActivityConstants.INTENT_ACTIVITY_ITEMS_SHARED
 import org.witness.proofmode.PermissionActivity.Companion.hasPermissions
+import org.witness.proofmode.ProofMode.PREF_OPTION_AI
+import org.witness.proofmode.ProofMode.PREF_OPTION_AI_DEFAULT
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
 import org.witness.proofmode.camera.c2pa.C2paUtils
@@ -68,11 +71,15 @@ class ShareProofActivity : AppCompatActivity() {
 
     private lateinit var pgpUtils : PgpUtils
 
+    private var mPrefs : SharedPreferences? = null
+    private var mAllowMachineLearning : Boolean? = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityShareBinding.inflate(layoutInflater)
-        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
-        pgpUtils = PgpUtils.getInstance(this, prefs.getString(PREFS_KEY_PASSPHRASE,PREFS_KEY_PASSPHRASE_DEFAULT))
+        mPrefs = PreferenceManager.getDefaultSharedPreferences(this)
+        pgpUtils = PgpUtils.getInstance(this, mPrefs?.getString(PREFS_KEY_PASSPHRASE,PREFS_KEY_PASSPHRASE_DEFAULT))
+        mAllowMachineLearning = mPrefs?.getBoolean(PREF_OPTION_AI, PREF_OPTION_AI_DEFAULT)
         setContentView(binding.root)
     }
 
@@ -159,7 +166,7 @@ class ShareProofActivity : AppCompatActivity() {
         if (Intent.ACTION_SEND_MULTIPLE == action) {
             val mediaUris = intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM) ?: emptyList()
 
-            GenerateMultiProofTask (this, mediaUris).execute();
+            GenerateMultiProofTask (this, mediaUris, mAllowMachineLearning == true).execute();
 
 
         } else if (Intent.ACTION_SEND == action || action!!.endsWith("SHARE_PROOF")) {
@@ -826,12 +833,11 @@ class ShareProofActivity : AppCompatActivity() {
     }
 
     private class GenerateProofTask  // only retain a weak reference to the activity
-        (private val activity: ShareProofActivity, private val proofHash: String?) :
+        (private val activity: ShareProofActivity, private val proofHash: String?, private val allowMachineLearning: Boolean) :
         AsyncTask<Uri?, Void?, String?>() {
         override fun doInBackground(vararg params: Uri?): String? {
 
             var isDirectCapture = false; //this is from an import, and we are manually generating proof
-            var allowMachineLearning = false; //by default, we flag to not allow
             C2paUtils.addContentCredentials(activity, params[0], isDirectCapture, allowMachineLearning)
 
             return ProofMode.generateProof(activity, params[0], proofHash)
@@ -844,7 +850,7 @@ class ShareProofActivity : AppCompatActivity() {
         }
     }
 
-    private class GenerateMultiProofTask (private val activity: ShareProofActivity, private val mediaUris :List<Uri>) : AsyncTask<Void?, Void?, String?>() {
+    private class GenerateMultiProofTask (private val activity: ShareProofActivity, private val mediaUris :List<Uri>, private val allowMachineLearning: Boolean) : AsyncTask<Void?, Void?, String?>() {
         override fun doInBackground(vararg voids: Void?): String? {
             var proofHash: String? = null
             for (mediaUri in mediaUris!!) {
@@ -866,7 +872,6 @@ class ShareProofActivity : AppCompatActivity() {
                         var proofDir = ProofMode.getProofDir(activity, genProofHash)
 
                         var isDirectCapture = false; //this is from an import, and we are manually generating proof
-                        var allowMachineLearning = false; //by default, we flag to not allow
                         Looper.prepare()
                         C2paUtils.addContentCredentials(activity, mediaUri, isDirectCapture, allowMachineLearning, proofDir)
 
@@ -1022,7 +1027,7 @@ class ShareProofActivity : AppCompatActivity() {
 
     private fun generateProof(mediaUri: Uri?, proofHash: String?) {
         displayProgress(getString(R.string.progress_generating_proof))
-        GenerateProofTask(this, proofHash).execute(mediaUri)
+        GenerateProofTask(this, proofHash, mAllowMachineLearning == true).execute(mediaUri)
     }
 
     private fun showProofError() {

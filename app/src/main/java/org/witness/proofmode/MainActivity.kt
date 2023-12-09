@@ -630,7 +630,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         var useCredentials = mPrefs.getBoolean(PREF_OPTION_CREDENTIALS, PREF_OPTION_CREDENTIALS_DEFAULT);
 
         intentCam.putExtra(PREF_OPTION_CREDENTIALS, useCredentials);
-        intentCam.putExtra(PREF_OPTION_AI, mPrefs.getBoolean(PREF_OPTION_CREDENTIALS, PREF_OPTION_AI_DEFAULT));
+        intentCam.putExtra(PREF_OPTION_AI, mPrefs.getBoolean(PREF_OPTION_AI, PREF_OPTION_AI_DEFAULT));
 
         if (useCredentials)
             initContentCredentials()
