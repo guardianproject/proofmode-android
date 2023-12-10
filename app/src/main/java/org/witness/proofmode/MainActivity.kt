@@ -118,7 +118,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             // Inflating popup menu from popup_menu.xml file
             popupMenu.menuInflater.inflate(R.menu.menu_share_proof, popupMenu.menu)
             popupMenu.setOnMenuItemClickListener { menuItem ->
-                if (menuItem.itemId == R.id.menu_photo) showImagePicker() else if (menuItem.itemId == R.id.menu_video) showVideoPicker() else if (menuItem.itemId == R.id.menu_files) showDocumentPicker()
+                if (menuItem.itemId == R.id.menu_photo) showMediaPicker()
+                else if (menuItem.itemId == R.id.menu_files) showDocumentPicker()
                 true
             }
             // Showing the popup menu
@@ -243,7 +244,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         )
     }
 
-    private fun showImagePicker() {
+    private fun showMediaPicker() {
         TedImagePicker.with(this).imageAndVideo().showVideoDuration(true).dropDownAlbum()
             .startMultiImage {
                 showShareProof(
@@ -252,16 +253,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 addProofActivity(it)
             }
 
-    }
-
-    private fun showVideoPicker() {
-        TedImagePicker.with(this).video().showVideoDuration(true).dropDownAlbum()
-            .startMultiImage {
-                showShareProof(
-                    it
-                )
-                addProofActivity(it)
-            }
     }
 
     private fun addProofActivity(items: List<Uri>) {
@@ -380,9 +371,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             shareCurrentPublicKey()
             return true
         } else if (id == R.id.action_share_photos) {
-            showImagePicker();
-        } else if (id == R.id.action_share_videos) {
-            showVideoPicker();
+            showMediaPicker();
         }
         return super.onOptionsItemSelected(item)
     }

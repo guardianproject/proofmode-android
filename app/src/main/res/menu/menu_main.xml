@@ -31,11 +31,6 @@
         android:orderInCategory="100"
         android:title="@string/menu_import_photos"
         app:showAsAction="never" />
-    <item
-        android:id="@+id/action_share_videos"
-        android:orderInCategory="100"
-        android:title="@string/menu_import_videos"
-        app:showAsAction="never" />
     <!--
     <item
         android:id="@+id/action_share_documents"

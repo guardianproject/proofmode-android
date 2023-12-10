@@ -182,7 +182,7 @@
     <string name="action_add_content_credentials_c2pa">Send to ProofCheck</string>
     <string name="err_content_credentials">There was a problem verifying or generating content credentials.</string>
     <string name="status_download_content_credentials">Downloading Images with Content Credentials...</string>
-    <string name="menu_import_photos">Import photos...</string>
+    <string name="menu_import_photos">Import...</string>
     <string name="menu_import_videos">Import videos...</string>
     <string name="menu_import_documents">Import documents...</string>
 
