@@ -1,6 +1,8 @@
 package org.witness.proofmode
 
+import android.content.Context
 import android.graphics.RectF
+import android.location.Location
 import android.net.Uri
 import android.widget.MediaController
 import android.widget.VideoView
@@ -44,9 +46,11 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -57,7 +61,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -72,15 +75,14 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.launch
-import org.witness.proofmode.crypto.HashUtils
-import org.witness.proofmode.service.MediaWatcher
+import org.witness.proofmode.service.ProofModeV1Constants
 import org.witness.proofmode.util.ProofModeUtil
-import timber.log.Timber
-import java.io.File
-import java.io.FileNotFoundException
 import java.lang.Float.max
 import java.lang.Float.min
+import java.text.DateFormat
 import java.text.SimpleDateFormat
+import java.util.Locale
+
 
 val LocalShowMetadata = compositionLocalOf<Boolean> { error("Not set") }
 
@@ -97,8 +99,14 @@ fun SingleAssetViewWithToolbar(initialItem: ProofableItem, onClose: () -> Unit) 
         topBar = {
             TopAppBar(
                 title = {
-                    Text(text = title)
+                    Text(text = title, color = Color.White)
                 },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Black,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSecondary
+                ),
                 navigationIcon = {
                     IconButton(onClick = {
                         onClose()
@@ -119,12 +127,14 @@ fun SingleAssetViewWithToolbar(initialItem: ProofableItem, onClose: () -> Unit) 
             SingleAssetView(
                 initialItem = initialItem,
                 modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
+                    .fillMaxSize()
+                    .padding(padding),
                 setShowMetadata = { show -> showMetadata = show},
-                setTitle = { newTitle -> title = newTitle }
+                setTitle = { newTitle -> title = newTitle },
+
             )
             }
+
         })
 }
 
@@ -177,29 +187,30 @@ fun SingleAssetView(initialItem: ProofableItem, modifier: Modifier = Modifier, s
 
     Column(modifier = Modifier.fillMaxSize()) {
         Box(modifier = Modifier
-                .weight(1f, true)
-                .onGloballyPositioned { coordinates ->
-                    topPartHeight = coordinates.size.height.toFloat()
-                    topPartWidth = coordinates.size.width.toFloat()
-                }
+            .weight(1f, true)
+            .background(Color.Black)
+            .onGloballyPositioned { coordinates ->
+                topPartHeight = coordinates.size.height.toFloat()
+                topPartWidth = coordinates.size.width.toFloat()
+            }
         ) {
             BoxWithConstraints(modifier = Modifier
-                    .fillMaxWidth()
-                    .height(itemViewHeight)
-                    .draggable(
-                            orientation = Orientation.Vertical,
-                            state = rememberDraggableState { delta ->
-                                dragOffset += delta
-                            },
-                            onDragStopped = { _ ->
-                                if (metadataOpacity > 0.2 && !showMetadata) {
-                                    setShowMetadata(true)
-                                } else if (metadataOpacity < 0.8 && showMetadata) {
-                                    setShowMetadata(false)
-                                }
-                                dragOffset = 0f
-                            }
-                    )
+                .fillMaxWidth()
+                .height(itemViewHeight)
+                .draggable(
+                    orientation = Orientation.Vertical,
+                    state = rememberDraggableState { delta ->
+                        dragOffset += delta
+                    },
+                    onDragStopped = { _ ->
+                        if (metadataOpacity > 0.2 && !showMetadata) {
+                            setShowMetadata(true)
+                        } else if (metadataOpacity < 0.8 && showMetadata) {
+                            setShowMetadata(false)
+                        }
+                        dragOffset = 0f
+                    }
+                )
             ) {
                 SingleAssetItemView(
                     width = maxWidth,
@@ -217,11 +228,11 @@ fun SingleAssetView(initialItem: ProofableItem, modifier: Modifier = Modifier, s
             }
             Box(
                 modifier = Modifier
-                        .alpha(1f - metadataOpacity)
-                        .offset(y = (64 * metadataOpacity).dp)
-                        .height(64.dp)
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
+                    .alpha(1f - metadataOpacity)
+                    .offset(y = (64 * metadataOpacity).dp)
+                    .height(64.dp)
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
             ) {
                 PreviewsView(allAssets = allAssets, listState = listState, selectedIndex = selectedIndex, selectIndex = { index ->
                     selectedIndex = index
@@ -232,31 +243,16 @@ fun SingleAssetView(initialItem: ProofableItem, modifier: Modifier = Modifier, s
             }
             Column(
                 modifier = Modifier
-                        .alpha(metadataOpacity)
-                        .height(with(localDensity) { (topPartHeight / 2).toDp() })
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
+                    .alpha(metadataOpacity)
+                    .height(with(localDensity) { (topPartHeight / 2).toDp() })
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(6.dp, 6.dp)
+                    .background(Color.White)
+                    .verticalScroll(rememberScrollState())
             ) {
 
-                var hash = ProofModeUtil.getProofHash(initialItem.uri,context)
-                if (hash != null) {
-
-                    var hmap = ProofModeUtil.getProofHashMap(hash, context)
-
-                    if (hmap != null) {
-                        for (key in hmap?.keys!!) {
-                            Row {
-                                Text(modifier = Modifier.padding(3.dp, 3.dp).width(120.dp).background(Color.LightGray), text = "$key")
-                                SelectionContainer() { Text(modifier = Modifier.padding(3.dp, 3.dp), text = "${hmap[key]}") }
-                            }
-                        }
-                    }
-
-                }
-
-
-
+                updateMetadata(initialItem.uri,context)
 
             }
 
@@ -274,8 +270,8 @@ fun SingleAssetView(initialItem: ProofableItem, modifier: Modifier = Modifier, s
                 //enabled = LocalSelectionHandler.current.anySelected(),
                 modifier =
                 Modifier
-                        .width(32.dp)
-                        .height(32.dp),
+                    .width(32.dp)
+                    .height(32.dp),
                 onClick = {
                     (context as? ActivitiesViewDelegate)?.shareItems(
                         items,
@@ -292,6 +288,112 @@ fun SingleAssetView(initialItem: ProofableItem, modifier: Modifier = Modifier, s
     }
 }
 
+@Composable
+fun updateMetadata (itemUri : Uri, context : Context) {
+    var hash = ProofModeUtil.getProofHash(itemUri,context)
+    if (hash != null) {
+
+        val dfParse: DateFormat = SimpleDateFormat(
+            ProofModeV1Constants.ISO_DATE_TIME_FORMAT,
+            Locale.US
+        ) // Quoted "Z" to indicate UTC, no timezone offset
+
+
+        var df = SimpleDateFormat.getDateTimeInstance()
+
+        var hmap : HashMap<String, String>? = ProofModeUtil.getProofHashMap(hash, context)
+        addRow (ProofModeV1Constants.FILE_HASH_SHA_256, hmap)
+        addRow (ProofModeV1Constants.FILE_CREATED, df.format(dfParse.parse(hmap?.get(ProofModeV1Constants.FILE_CREATED))))
+        addRow (ProofModeV1Constants.FILE_MODIFIED, df.format(dfParse.parse(hmap?.get(ProofModeV1Constants.FILE_MODIFIED))))
+        addRow (ProofModeV1Constants.PROOF_GENERATED, df.format(dfParse.parse(hmap?.get(ProofModeV1Constants.PROOF_GENERATED))))
+
+        var lat = hmap?.get(ProofModeV1Constants.LOCATION_LATITUDE)?.toDouble()
+        var loc = hmap?.get(ProofModeV1Constants.LOCATION_LONGITUDE)?.toDouble()
+
+        lat?.let {
+            if (loc != null) {
+                convertDegMinsSecs(lat,loc)?.let { it1 -> addRow("Location", it1) }
+            }
+        }
+
+        addRow (ProofModeV1Constants.HARDWARE, hmap)
+
+        addRow (ProofModeV1Constants.FILE_PATH, hmap)
+
+
+    }
+}
+@Composable
+fun addRow (key : String,  hmap: HashMap<String,String>?) {
+
+    hmap?.get(key)?.let { it1 ->
+        Row {
+            Text(modifier = Modifier.padding(3.dp, 3.dp), text = "$key")
+
+        }
+        Row {
+            SelectionContainer() { Text(modifier = Modifier.padding(3.dp, 3.dp), text = "${it1}") }
+        }
+        Row {
+            Text(modifier = Modifier.padding(3.dp, 3.dp), text = "")
+
+        }
+    }
+
+
+}
+
+private fun convertDegMinsSecs(latitude: Double, longitude: Double): String? {
+    val builder = StringBuilder()
+    val latitudeDegrees = Location.convert(Math.abs(latitude), Location.FORMAT_SECONDS)
+    val latitudeSplit = latitudeDegrees.split(":".toRegex()).dropLastWhile { it.isEmpty() }
+        .toTypedArray()
+    builder.append(latitudeSplit[0])
+    builder.append("°")
+    builder.append(latitudeSplit[1])
+    builder.append("'")
+    builder.append(latitudeSplit[2])
+    builder.append("\"")
+    if (latitude < 0) {
+        builder.append("S ")
+    } else {
+        builder.append("N ")
+    }
+    builder.append("  ")
+    val longitudeDegrees = Location.convert(Math.abs(longitude), Location.FORMAT_SECONDS)
+    val longitudeSplit = longitudeDegrees.split(":".toRegex()).dropLastWhile { it.isEmpty() }
+        .toTypedArray()
+    builder.append(longitudeSplit[0])
+    builder.append("°")
+    builder.append(longitudeSplit[1])
+    builder.append("'")
+    builder.append(longitudeSplit[2])
+    builder.append("\"")
+    if (longitude < 0) {
+        builder.append("W ")
+    } else {
+        builder.append("E ")
+    }
+    return builder.toString()
+}
+
+@Composable
+fun addRow (key : String,  value: String) {
+
+    Row {
+        Text(modifier = Modifier.padding(3.dp, 3.dp), text = "$key")
+
+    }
+    Row {
+        SelectionContainer() { Text(modifier = Modifier.padding(3.dp, 3.dp), text = "${value}") }
+    }
+    Row {
+        Text(modifier = Modifier.padding(3.dp, 3.dp), text = "")
+
+    }
+
+
+}
 
 @Composable
 fun SingleItemView(itemWidth: Dp, allAssets: List<ProofableItem>, index: Int, selectedIndex: Int) {
@@ -300,8 +402,8 @@ fun SingleItemView(itemWidth: Dp, allAssets: List<ProofableItem>, index: Int, se
         val item = allAssets[index]
         Box(
             modifier = Modifier
-                    .requiredWidth(itemWidth)
-                    .fillMaxHeight()
+                .requiredWidth(itemWidth)
+                .fillMaxHeight()
         ) {
 
             val isVideo = remember(item) {
@@ -323,18 +425,18 @@ fun SingleItemView(itemWidth: Dp, allAssets: List<ProofableItem>, index: Int, se
                 )
                 if (LocalSelectionHandler.current.isSelected(item)) {
                     Box(modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(10.dp)) {
+                        .align(Alignment.BottomEnd)
+                        .padding(10.dp)) {
                         Icon(
                                 imageVector = Icons.Default.CheckCircle,
                                 contentDescription = "Selected",
                                 tint = Color(0.3f, 0.6f, 1.0f),
                                 modifier = Modifier
-                                        .align(Alignment.BottomEnd)
-                                        .width(16.dp)
-                                        .height(16.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.White)
+                                    .align(Alignment.BottomEnd)
+                                    .width(16.dp)
+                                    .height(16.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White)
                         )
                     }
                 }
@@ -377,50 +479,54 @@ fun SingleAssetItemView(width: Dp, height: Dp, allAssets: List<ProofableItem>, s
     }
     Row(
         modifier = Modifier
-                .height(height)
-                .requiredWidth(
-                        10.dp
-                                .plus(itemWidth)
-                                .times(5)
-                                .minus(10.dp)
-                )
-                .offset(x = itemWidth
-                        .plus(10.dp)
-                        .times(selectedIndex.toFloat() - animatedOffset))
-                .draggable(
-                        orientation = Orientation.Horizontal,
-                        state = rememberDraggableState { delta ->
-                            dragOffset += delta
-                            animateFromItem = selectedIndex.toFloat() - dragOffset / with(localDensity) {
+            .height(height)
+            .requiredWidth(
+                10.dp
+                    .plus(itemWidth)
+                    .times(5)
+                    .minus(10.dp)
+            )
+            .offset(
+                x = itemWidth
+                    .plus(10.dp)
+                    .times(selectedIndex.toFloat() - animatedOffset)
+            )
+            .draggable(
+                orientation = Orientation.Horizontal,
+                state = rememberDraggableState { delta ->
+                    dragOffset += delta
+                    animateFromItem = selectedIndex.toFloat() - dragOffset / with(localDensity) {
+                        itemWidth
+                            .plus(10.dp)
+                            .toPx()
+                    }
+                },
+                onDragStarted = {
+                    dragOffset = 0f
+                    dragging = true
+                },
+                onDragStopped = { _ ->
+                    if (dragOffset > 50 && selectedIndex > 0) {
+                        animateFromItem =
+                            selectedIndex.toFloat() - dragOffset / with(localDensity) {
                                 itemWidth
-                                        .plus(10.dp)
-                                        .toPx()
+                                    .plus(10.dp)
+                                    .toPx()
                             }
-                        },
-                        onDragStarted = {
-                            dragOffset = 0f
-                            dragging = true
-                        },
-                        onDragStopped = { _ ->
-                            if (dragOffset > 50 && selectedIndex > 0) {
-                                animateFromItem = selectedIndex.toFloat() - dragOffset / with(localDensity) {
-                                    itemWidth
-                                            .plus(10.dp)
-                                            .toPx()
-                                }
-                                selectIndex(selectedIndex - 1)
-                            } else if (dragOffset < -50 && selectedIndex < (allAssets.size - 1)) {
-                                animateFromItem = selectedIndex.toFloat() - dragOffset / with(localDensity) {
-                                    itemWidth
-                                            .plus(10.dp)
-                                            .toPx()
-                                }
-                                selectIndex(selectedIndex + 1)
+                        selectIndex(selectedIndex - 1)
+                    } else if (dragOffset < -50 && selectedIndex < (allAssets.size - 1)) {
+                        animateFromItem =
+                            selectedIndex.toFloat() - dragOffset / with(localDensity) {
+                                itemWidth
+                                    .plus(10.dp)
+                                    .toPx()
                             }
-                            dragOffset = 0f
-                            dragging = false
-                        }
-                )
+                        selectIndex(selectedIndex + 1)
+                    }
+                    dragOffset = 0f
+                    dragging = false
+                }
+            )
     , horizontalArrangement = Arrangement.spacedBy(10.dp)
     , verticalAlignment = Alignment.CenterVertically
     ) {
@@ -438,8 +544,8 @@ fun PreviewsView(allAssets: List<ProofableItem>, listState: LazyListState, selec
     LazyRow (
         state = listState,
         modifier = Modifier
-                .fillMaxSize()
-                .padding(4.dp))
+            .fillMaxSize()
+            .padding(4.dp))
         //.horizontalScroll(scrollState))
     {
         allAssets.forEachIndexed { index, item ->
@@ -451,19 +557,20 @@ fun PreviewsView(allAssets: List<ProofableItem>, listState: LazyListState, selec
                     showSelectionBorder = false,
                     corners = RectF(0f, 0f, 0f, 0f),
                     modifier = Modifier
-                            .width(if (isSelected) 56.dp else 40.dp)
-                            .combinedClickable(
-                                    onClick = {
-                                        selectIndex(index)
-                                    },
-                                    onLongClick = {
-                                        // Ignore, but override default handling in ProofableItemView
-                                    }
-                            )
-                            .padding(
-                                    start = if (isSelected) 8.dp else 0.dp,
-                                    end = if (isSelected) 8.dp else 0.dp
-                            )
+                        .width(if (isSelected) 56.dp else 40.dp)
+                        .combinedClickable(
+                            onClick = {
+                                selectIndex(index)
+                            },
+                            onLongClick = {
+                                // Ignore, but override default handling in ProofableItemView
+                            }
+                        )
+                        .padding(
+                            start = if (isSelected) 8.dp else 0.dp,
+                            end = if (isSelected) 8.dp else 0.dp
+                        )
+                        .background(Color.Black)
                 )
             }
         }

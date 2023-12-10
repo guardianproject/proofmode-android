@@ -2,11 +2,6 @@ package org.witness.proofmode.camera
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import org.witness.proofmode.camera.c2pa.C2paUtils
-import org.witness.proofmode.camera.c2pa.C2paUtils.Companion.IDENTITY_EMAIL_KEY
-import org.witness.proofmode.camera.c2pa.C2paUtils.Companion.IDENTITY_NAME_KEY
-import org.witness.proofmode.camera.c2pa.C2paUtils.Companion.IDENTITY_URI_KEY
-
 class CameraActivity : AppCompatActivity(){
 
 

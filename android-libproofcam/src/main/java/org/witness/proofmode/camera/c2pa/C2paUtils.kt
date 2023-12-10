@@ -23,7 +23,7 @@ class C2paUtils {
         private const val C2PA_CERT_PATH_PARENT = "crp.cert"
         private const val C2PA_KEY_PATH_PARENT = "crp.key"
 
-        private const val CERT_VALIDITY_DAYS = 365U //5 years
+        private const val CERT_VALIDITY_DAYS = 365U //1 year
 
         private var _identityUri = "https://proofmode.org"
         private var _identityName = "ProofMode"
@@ -31,11 +31,6 @@ class C2paUtils {
         private var _identityKey = "0x00000000"
 
         private var userCert : Certificate? = null
-
-        const val IDENTITY_URI_KEY = "id_uri"
-        const val IDENTITY_NAME_KEY = "id_name"
-        const val IDENTITY_EMAIL_KEY = "id_email"
-        const val IDENTITY_PGP_KEY = "id_pgp"
 
         private const val APP_ICON_URI = "https://proofmode.org/images/avatar.jpg"
 
