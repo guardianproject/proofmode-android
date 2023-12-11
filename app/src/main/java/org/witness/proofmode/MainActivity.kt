@@ -48,7 +48,6 @@ import org.witness.proofmode.onboarding.OnboardingActivity
 import org.witness.proofmode.service.MediaWatcher
 import org.witness.proofmode.util.GPSTracker
 import java.io.IOException
-import java.net.URLEncoder
 import java.util.Date
 import java.util.UUID
 
@@ -61,7 +60,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private lateinit var drawer: DrawerLayout
     private lateinit var drawerToggle: ActionBarDrawerToggle
     private lateinit var mainBinding: ActivityMainBinding
-    private lateinit var fab: FloatingActionButton
+    public lateinit var fab: FloatingActionButton
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -128,7 +127,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         //updateOnOffState(false)
 
         if (isOn)
-            (application as ProofModeApp).init(this, true)
+            (application as ProofModeApp).init(this)
 
         // Setup activity view
         val activityView = findViewById<ComposeView>(R.id.activityView)
@@ -295,7 +294,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             if (!askForPermissions(requiredPermissions, REQUEST_CODE_REQUIRED_PERMISSIONS)) {
                 mPrefs.edit().putBoolean(ProofMode.PREFS_DOPROOF, true).apply()
                 //   updateOnOffState(true)
-                (application as ProofModeApp).init(this, true)
+                (application as ProofModeApp).init(this)
             }
         } else {
             mPrefs.edit().putBoolean(ProofMode.PREFS_DOPROOF, false).apply()

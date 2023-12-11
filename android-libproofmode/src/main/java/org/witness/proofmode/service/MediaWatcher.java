@@ -2,6 +2,7 @@ package org.witness.proofmode.service;
 
 import static org.witness.proofmode.ProofMode.EVENT_PROOF_EXISTS;
 import static org.witness.proofmode.ProofMode.EVENT_PROOF_EXTRA_HASH;
+import static org.witness.proofmode.ProofMode.EVENT_PROOF_EXTRA_URI;
 import static org.witness.proofmode.ProofMode.EVENT_PROOF_FAILED;
 import static org.witness.proofmode.ProofMode.EVENT_PROOF_GENERATED;
 import static org.witness.proofmode.ProofMode.EVENT_PROOF_START;
@@ -144,36 +145,23 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
     }
     public String processUri (Uri uriMedia, boolean autogen, Date createdAt) {
 
-        LocalBroadcastManager lbm = LocalBroadcastManager.getInstance(mContext.getApplicationContext());
-
         try {
 
             try {
 
 
                 String mediaHash = HashUtils.getSHA256FromFileContent(mContext.getContentResolver().openInputStream(uriMedia));
-
-                //send gstart event
-                Intent intent = new Intent(EVENT_PROOF_START);
-                intent.setData(uriMedia);
-                intent.putExtra(EVENT_PROOF_EXTRA_HASH, mediaHash);
-                lbm.sendBroadcast(intent);
-
                 String resultHash = processUri(mContext, uriMedia, mediaHash, autogen, createdAt);
 
-                if (resultHash == null)
+                if (resultHash != null)
                 {
-                    intent = new Intent(EVENT_PROOF_EXISTS);
-                    intent.setData(uriMedia);
-                    intent.putExtra(EVENT_PROOF_EXTRA_HASH, mediaHash);
-                    lbm.sendBroadcast(intent);
-                }
-                else {
                     //send generated event
-                    intent = new Intent(EVENT_PROOF_GENERATED);
-                    intent.setData(uriMedia);
+                    Intent intent = new Intent();
+                    intent.setPackage("org.witness.proofmode");
+                    intent.setAction(EVENT_PROOF_GENERATED);
+                    intent.putExtra(EVENT_PROOF_EXTRA_URI, uriMedia.toString());
                     intent.putExtra(EVENT_PROOF_EXTRA_HASH, resultHash);
-                    lbm.sendBroadcast(intent);
+                    mContext.sendBroadcast(intent);
                 }
 
                 return resultHash;
@@ -182,32 +170,32 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                 Timber.d( "FileNotFoundException: unable to open inputstream for hashing: %s", uriMedia);
                 Intent intent = new Intent(EVENT_PROOF_FAILED);
                 intent.setData(uriMedia);
-                lbm.sendBroadcast(intent);
+                mContext.sendBroadcast(intent);
                 return null;
             } catch (IllegalStateException ise) {
                 Timber.d( "IllegalStateException: unable to open inputstream for hashing: %s", uriMedia);
                 Intent intent = new Intent(EVENT_PROOF_FAILED);
                 intent.setData(uriMedia);
-                lbm.sendBroadcast(intent);
+                mContext.sendBroadcast(intent);
                 return null;
             } catch (SecurityException e) {
                 Timber.d( "SecurityException: security exception accessing URI: %s", uriMedia);
                 Intent intent = new Intent(EVENT_PROOF_FAILED);
                 intent.setData(uriMedia);
-                lbm.sendBroadcast(intent);
+                mContext.sendBroadcast(intent);
                 return null;
 
             } catch (PGPException e) {
                 Timber.d( "SecurityException: security exception accessing URI: %s", uriMedia);
                 Intent intent = new Intent(EVENT_PROOF_FAILED);
                 intent.setData(uriMedia);
-                lbm.sendBroadcast(intent);
+                mContext.sendBroadcast(intent);
                 return null;
             } catch (IOException e) {
                 Timber.d( "SecurityException: security exception accessing URI: %s", uriMedia);
                 Intent intent = new Intent(EVENT_PROOF_FAILED);
                 intent.setData(uriMedia);
-                lbm.sendBroadcast(intent);
+                mContext.sendBroadcast(intent);
                 return null;
             }
         }
@@ -216,7 +204,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
             Timber.e(re,"RUNTIME EXCEPTION processing media file: " + re);
             Intent intent = new Intent(EVENT_PROOF_FAILED);
             intent.setData(uriMedia);
-            lbm.sendBroadcast(intent);
+            mContext.sendBroadcast(intent);
             return null;
         }
         catch (Error err)
@@ -224,7 +212,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
             Timber.e(err,"FATAL ERROR processing media file: " + err);
             Intent intent = new Intent(EVENT_PROOF_FAILED);
             intent.setData(uriMedia);
-            lbm.sendBroadcast(intent);
+            mContext.sendBroadcast(intent);
             return null;
         }
     }

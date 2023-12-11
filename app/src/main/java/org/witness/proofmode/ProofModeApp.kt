@@ -35,7 +35,10 @@ import kotlin.random.Random
 class ProofModeApp : MultiDexApplication() {
     override fun onCreate() {
         super.onCreate()
-        init(this, false)
+        init(this)
+
+        //add google safetynet and opentimestamps
+        addDefaultNotarizationProviders()
     }
 
     fun checkAndGeneratePublicKey() {
@@ -98,15 +101,17 @@ class ProofModeApp : MultiDexApplication() {
         }
     }
 
-    fun init(context: Context, startService: Boolean) {
+    fun init(context: Context) {
         if (BuildConfig.DEBUG) {
             Timber.plant(Timber.DebugTree())
         }
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
         if (prefs.getBoolean(ProofMode.PREFS_DOPROOF, false)) {
 
-            //add google safetynet and opentimestamps
-            addDefaultNotarizationProviders()
+
+            ProofMode.initBackgroundService(this)
+
+            /**
             val intentService = Intent(context, ProofService::class.java)
             intentService.action = ProofService.ACTION_START
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -116,7 +121,8 @@ class ProofModeApp : MultiDexApplication() {
                 context.startForegroundService(intentService)
             } else {
                 context.startService(intentService)
-            }
+            }**/
+
         }
 
      //   C2paJNI.init(this)
@@ -180,8 +186,9 @@ class ProofModeApp : MultiDexApplication() {
     }
 
     fun cancel(context: Context) {
-        val intentService = Intent(context, ProofService::class.java)
-        context.stopService(intentService)
+      //  val intentService = Intent(context, ProofService::class.java)
+       // context.stopService(intentService)
+        ProofMode.stopBackgroundService(this)
     }
 
     private fun addDefaultNotarizationProviders() {

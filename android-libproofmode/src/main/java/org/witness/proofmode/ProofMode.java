@@ -90,6 +90,9 @@ public class ProofMode {
 
     public final static String EVENT_PROOF_FAILED = "org.witness.proofmode.PROOF_FAILED";
     public final static String EVENT_PROOF_EXTRA_HASH = "org.witness.proofmode.PROOF_HASH";
+    public final static String EVENT_PROOF_EXTRA_URI = "org.witness.proofmode.PROOF_URI";
+
+
 
     public final static BouncyCastleProvider sProvider = new BouncyCastleProvider();
     static {
