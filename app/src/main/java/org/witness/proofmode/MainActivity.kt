@@ -682,13 +682,15 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         if (fileName != null) {
             val uri = Uri.parse(fileName)
             if (uri != null && contentResolver.getType(uri) != null) {
+
+
                 // Use existing .zip
                 val aList = ArrayList<ProofableItem>()
                 for (item in media) aList.add(item)
                 ShareProofActivity.shareFiltered(
                     this,
                     getString(R.string.select_app),
-                    shareText ?: "",
+                    shareText ?: getString(R.string.default_share_text),
                     null,
                     aList,
                     uri
