@@ -13,11 +13,9 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openpgp.PGPException;
 import org.bouncycastle.openpgp.PGPPublicKey;
-import org.bouncycastle.openpgp.PGPUtil;
 import org.witness.proofmode.crypto.HashUtils;
 import org.witness.proofmode.crypto.pgp.PgpUtils;
 import org.witness.proofmode.notarization.NotarizationProvider;
-import org.witness.proofmode.service.AudioContentJob;
 import org.witness.proofmode.service.CameraEventReceiver;
 import org.witness.proofmode.service.MediaWatcher;
 import org.witness.proofmode.service.PhotosContentJob;
@@ -34,10 +32,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.security.PublicKey;
 import java.security.Security;
 import java.util.Date;
 import java.util.concurrent.Executors;
@@ -111,7 +105,6 @@ public class ProofMode {
             if (Build.VERSION.SDK_INT >= 24) {
                 PhotosContentJob.scheduleJob(context);
                 VideosContentJob.scheduleJob(context);
-                AudioContentJob.scheduleJob(context);
             }
 
             if (mReceiver == null) {
@@ -152,7 +145,6 @@ public class ProofMode {
         if (Build.VERSION.SDK_INT >= 24) {
             PhotosContentJob.cancelJob(context);
             VideosContentJob.cancelJob(context);
-            AudioContentJob.cancelJob(context);
         }
         else
         {
