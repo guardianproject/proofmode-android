@@ -31,6 +31,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.documentfile.provider.DocumentFile
+import androidx.multidex.BuildConfig
 import androidx.preference.PreferenceManager
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody

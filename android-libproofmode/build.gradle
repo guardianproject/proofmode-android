@@ -1,19 +1,26 @@
 apply plugin: 'com.android.library'
-apply plugin: 'maven-publish'
 apply plugin: 'org.jetbrains.kotlin.android'
 
 
 android {
-    compileSdkVersion 33
-    buildToolsVersion "33.0.0"
+    compileSdkVersion 34
+    buildToolsVersion "34.0.0"
 
+    namespace = "org.witness.proofmode.library"
 
     defaultConfig {
-        minSdkVersion 23
-        targetSdkVersion 33
+        minSdkVersion 24
+        targetSdkVersion 34
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         multiDexEnabled true
 
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = "17"
     }
 
 
@@ -53,7 +60,7 @@ dependencies {
     implementation 'org.bouncycastle:bcpkix-jdk15to18:1.72'
     implementation 'org.bouncycastle:bcprov-jdk15to18:1.72'
     api 'org.bouncycastle:bcpg-jdk15to18:1.71'
-    implementation 'androidx.core:core-ktx:1.10.0'
+    implementation 'androidx.core:core-ktx:1.12.0'
 
     // Required -- JUnit 4 framework
     androidTestImplementation 'junit:junit:4.13.2'
@@ -66,6 +73,7 @@ dependencies {
 
 }
 
+/**
 project.afterEvaluate {
     publishing {
         publications {
@@ -77,6 +85,6 @@ project.afterEvaluate {
             }
         }
     }
-}
+}**/
 
 

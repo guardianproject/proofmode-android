@@ -1,16 +1,12 @@
 package org.witness.proofmode
 
 import android.content.Context
-import android.content.Intent
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.preference.PreferenceManager
 import android.widget.Toast
+import androidx.multidex.BuildConfig
 import androidx.multidex.MultiDexApplication
-import org.acra.ACRA.init
-import org.acra.config.CoreConfigurationBuilder
-import org.acra.config.MailSenderConfigurationBuilder
 import org.acra.config.dialog
 import org.acra.config.mailSender
 import org.acra.data.StringFormat

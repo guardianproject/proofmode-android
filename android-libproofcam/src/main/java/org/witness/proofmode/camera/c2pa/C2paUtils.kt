@@ -1,10 +1,12 @@
 package org.witness.proofmode.camera.c2pa
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.database.Cursor
 import android.net.Uri
 import android.os.Build
+import android.preference.PreferenceManager
 import android.provider.MediaStore
 import info.guardianproject.simple_c2pa.*
 import java.io.File
@@ -31,8 +33,12 @@ class C2paUtils {
         private var _identityKey = "0x00000000"
 
         private var userCert : Certificate? = null
+        private var mPrefs : SharedPreferences? = null
 
         private const val APP_ICON_URI = "https://proofmode.org/images/avatar.jpg"
+
+        const val PREF_OPTION_LOCATION = "trackLocation"
+
 
         /**
          * Set identity values for certificate and content credentials
@@ -201,6 +207,14 @@ class C2paUtils {
             if (userCert == null)
                 initCredentials(mContext, emailAddress, pgpFingerprint)
 
+            if (mPrefs == null) mPrefs = PreferenceManager.getDefaultSharedPreferences(mContext)
+
+            val showLocation = mPrefs?.getBoolean(
+                PREF_OPTION_LOCATION,
+                false
+            )
+
+
             val appLabel = getAppName(mContext)
             val appVersion = getAppVersionName(mContext)
             var appIconUri = APP_ICON_URI
@@ -230,16 +244,28 @@ class C2paUtils {
             var exifGpsVersion = "2.2.0.0"
             var exifLat: String? = null
             var exifLong: String? = null
+            var exifAlt: String? = null
+            var exifSpeed: String? = null
 
             var gpsTracker = GPSTracker(mContext)
-            gpsTracker.updateLocation()
-            var location = gpsTracker.getLocation()
-            location?.let {
-                exifLat = GPSTracker.getLatitudeAsDMS(location, 3)
-                exifLong = GPSTracker.getLongitudeAsDMS(location, 3)
+            if (showLocation == true && gpsTracker.canGetLocation()) {
+
+                gpsTracker.updateLocation()
+                var location = gpsTracker.getLocation()
+                location?.let {
+                    exifLat = GPSTracker.getLatitudeAsDMS(location, 3)
+                    exifLong = GPSTracker.getLongitudeAsDMS(location, 3)
+                    location.altitude?.let {
+                        exifAlt = location.altitude.toString()
+                    }
+                    location.speed?.let {
+                        exifSpeed = location.speed.toString()
+                    }
+                }
+
             }
 
-            var exifData = ExifData(exifGpsVersion, exifLat, exifLong, null, null, exifTimestamp, null, null, null, null, null, null, null, null, null, null, null, exifMake, exifModel, null, null, null)
+            var exifData = ExifData(exifGpsVersion, exifLat, exifLong, null, exifAlt, exifTimestamp, null, null, null, null, null, null, null, null, null, null, null, exifMake, exifModel, null, null, null)
             contentCreds?.addExifAssertion(exifData)
 
             contentCreds?.embedManifest(fileImageOut.absolutePath)
