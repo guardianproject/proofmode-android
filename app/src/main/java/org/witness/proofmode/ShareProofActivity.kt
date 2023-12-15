@@ -5,7 +5,6 @@ import android.app.Dialog
 import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.Context
-import android.content.DialogInterface
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.LabeledIntent
@@ -47,6 +46,7 @@ import org.witness.proofmode.ProofMode.PREF_OPTION_AI_DEFAULT
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
 import org.witness.proofmode.camera.c2pa.C2paUtils
+import org.witness.proofmode.camera.c2pa.C2paUtils.Companion.C2PA_CERT_PATH
 import org.witness.proofmode.crypto.HashUtils
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.databinding.ActivityShareBinding
@@ -1555,6 +1555,12 @@ class ShareProofActivity : AppCompatActivity() {
         var entry: ZipEntry? = ZipEntry("pubkey.asc")
         out.putNextEntry(entry)
         out.write(pubKey.toByteArray())
+
+        Timber.d("Adding C2PA certificate")
+        entry = ZipEntry(C2PA_CERT_PATH)
+        out.putNextEntry(entry)
+        out.write(File(filesDir,C2PA_CERT_PATH).readBytes())
+
         Timber.d("Adding HowToVerifyProofData.txt")
         val howToFile = "HowToVerifyProofData.txt"
         entry = ZipEntry(howToFile)

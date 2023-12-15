@@ -19,7 +19,7 @@ class C2paUtils {
 
     companion object {
 
-        private const val C2PA_CERT_PATH = "cr.cert"
+        public const val C2PA_CERT_PATH = "cr.cert"
         private const val C2PA_KEY_PATH = "cr.key"
 
         private const val C2PA_CERT_PATH_PARENT = "crp.cert"
@@ -138,6 +138,10 @@ class C2paUtils {
 
         fun importCredentials (mContext : Context, fileKey : File, fileCert : File) {
 
+        }
+
+        fun getUserCertificate (mContext : Context) : File {
+            return File(mContext.filesDir, C2PA_CERT_PATH)
         }
         /**
          * initialize the private keys and certificates for signing C2PA data

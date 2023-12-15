@@ -75,6 +75,7 @@ public class ProofMode {
 
     public final static String PUBKEY_FILE = "pubkey.asc";
 
+    public final static String C2PA_CERT_FILE = "c2paidentity.cert";
     public final static String PREFS_DOPROOF = "doProof";
 
     public final static String EVENT_PROOF_START = "org.witness.proofmode.PROOF_START";
@@ -465,6 +466,18 @@ public class ProofMode {
         ZipEntry entry = new ZipEntry(PUBKEY_FILE);
         out.putNextEntry(entry);
         out.write(getPublicKeyString(context, passphrase).getBytes());
+
+        String C2PA_CERT_PATH = "cr.cert";
+
+        entry = new ZipEntry(C2PA_CERT_FILE);
+        out.putNextEntry(entry);
+        FileInputStream fisCert = new FileInputStream((new File(context.getFilesDir(), C2PA_CERT_PATH)));
+        // Transfer bytes from in to out
+        byte[] buf = new byte[1024];
+        int len;
+        while ((len = fisCert.read(buf)) > 0) {
+            out.write(buf, 0, len);
+        }
 
         Timber.d("Zip complete");
 
