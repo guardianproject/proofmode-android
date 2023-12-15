@@ -642,6 +642,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             "https://keys.openpgp.org/search?q=" + mPgpUtils?.publicKeyFingerprint
 
         C2paUtils.setC2PAIdentity(display, uri, email, key)
+        if (email != null && key != null) {
+                C2paUtils.initCredentials(this, email, key)
+        }
     }
 
     fun initPgpKey () {

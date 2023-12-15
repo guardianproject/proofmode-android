@@ -136,10 +136,21 @@ class C2paUtils {
             userCert = null
         }
 
+        fun importCredentials (mContext : Context, fileKey : File, fileCert : File) {
+
+        }
         /**
          * initialize the private keys and certificates for signing C2PA data
          */
-        fun initCredentials (mContext : Context, emailAddress: String, pgpFingerprint: String) {
+        fun initCredentials (mContext : Context, emailAddress: String?, pgpFingerprint: String?) {
+
+            emailAddress?.let {
+                _identityEmail = emailAddress
+            }
+
+            pgpFingerprint?.let {
+                _identityKey = pgpFingerprint
+            }
 
             var fileUserCert = File(mContext.filesDir, C2PA_CERT_PATH)
             var fileUserKey = File(mContext.filesDir, C2PA_KEY_PATH)
@@ -171,13 +182,13 @@ class C2paUtils {
                     fileParentCert.writeBytes(rootCert.getCertificateBytes())
 
                     var userCertType =
-                        CertificateType.ContentCredentials("ProofMode-User", CERT_VALIDITY_DAYS)
+                        CertificateType.ContentCredentials("ProofMode-User-$_identityKey", CERT_VALIDITY_DAYS)
                     var userCertOptions = CertificateOptions(
                         userKey,
                         userCertType,
                         rootCert,
-                        "test",
-                        "test"
+                        _identityEmail,
+                        _identityKey
                     )
 
                     userCert = createCertificate(userCertOptions)
@@ -234,8 +245,8 @@ class C2paUtils {
                 contentCreds?.addPermissiveAiTrainingAssertions()
 
             contentCreds?.addEmailAssertion(emailAddress, emailDisplay)
-            contentCreds?.addPgpAssertion(pgpFingerprint, pgpFingerprint)
-            contentCreds?.addWebsiteAssertion(webLink)
+         //   contentCreds?.addPgpAssertion(pgpFingerprint, pgpFingerprint)
+         //   contentCreds?.addWebsiteAssertion(webLink)
 
             var exifMake = Build.MANUFACTURER
             var exifModel = Build.MODEL
