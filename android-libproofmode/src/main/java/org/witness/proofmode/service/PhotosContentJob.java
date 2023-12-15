@@ -32,7 +32,7 @@ import timber.log.Timber;
 @TargetApi(24)
 public class PhotosContentJob extends JobService {
 
-    public static int PHOTOS_CONTENT_JOB = 10001;
+    private static int PHOTOS_CONTENT_JOB = 10001;
 
     JobParameters mRunningParams;
 
@@ -65,6 +65,7 @@ public class PhotosContentJob extends JobService {
     public boolean onStartJob(JobParameters params) {
         Timber.d("Photos JOB STARTED!");
         mRunningParams = params;
+
         doWork ();
         jobFinished(mRunningParams, false);
 
@@ -111,22 +112,9 @@ public class PhotosContentJob extends JobService {
                                 uri = MediaStore.setRequireOriginal(uri);
                             }
 
-                            String mediaHash = null;
                             try {
                                 MediaWatcher mw = MediaWatcher.getInstance(PhotosContentJob.this);
-
-                               // mediaHash = mw.generateHash(uri);
-
-                                //if (mediaHash != null && (!mw.proofExists(PhotosContentJob.this,mediaHash))) {
-
-                                    String resultProofHash = mw.processUri(uri,  true, null);
-
-                                    if (!TextUtils.isEmpty(resultProofHash)) {
-                                //        mHandler.post(() -> Toast.makeText(getApplicationContext(), R.string.proof_generated_success, Toast.LENGTH_SHORT).show());
-
-                                    }
-                                //}
-
+                                String resultProofHash = mw.processUri(uri,  true, null);
                                 mUriStack.remove(uri);
 
                             } catch (RuntimeException e) {
@@ -163,6 +151,8 @@ public class PhotosContentJob extends JobService {
 
 
     public static void scheduleJob(Context context) {
+        PHOTOS_CONTENT_JOB++;
+
         JobScheduler js =
                 (JobScheduler) context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
         JobInfo.Builder builder = new JobInfo.Builder(
@@ -179,11 +169,9 @@ public class PhotosContentJob extends JobService {
                 new JobInfo.TriggerContentUri(Uri.parse("content://media/external_primary"),
                         JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS));
 
-
         // Get all media changes within a tenth of a second.
-        builder.setTriggerContentUpdateDelay(1);
-        builder.setTriggerContentMaxDelay(100);
-        
+        builder.setTriggerContentUpdateDelay(1000);
+        builder.setTriggerContentMaxDelay(1000);
         js.schedule(builder.build());
     }
 

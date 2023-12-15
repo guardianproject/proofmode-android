@@ -142,17 +142,14 @@ public class ProofMode {
 
     public static void stopBackgroundService (Context context)
     {
-        if (Build.VERSION.SDK_INT >= 24) {
-            PhotosContentJob.cancelJob(context);
-            VideosContentJob.cancelJob(context);
-        }
-        else
-        {
-            if (mReceiver != null)
-                context.unregisterReceiver(mReceiver);
 
-            LocalBroadcastManager.getInstance(context).unregisterReceiver(mReceiver);
-        }
+        PhotosContentJob.cancelJob(context);
+        VideosContentJob.cancelJob(context);
+
+        if (mReceiver != null)
+            context.unregisterReceiver(mReceiver);
+
+        LocalBroadcastManager.getInstance(context).unregisterReceiver(mReceiver);
 
         MediaWatcher.getInstance(context).stop();
 

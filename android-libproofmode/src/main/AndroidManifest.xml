@@ -35,6 +35,7 @@ xmlns:tools="http://schemas.android.com/tools"
 
     <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION"
         />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
 </manifest>
 

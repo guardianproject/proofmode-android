@@ -1,12 +1,21 @@
 package org.witness.proofmode
 
+import android.R.attr.tag
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.preference.PreferenceManager
+import android.provider.MediaStore
 import android.widget.Toast
 import androidx.multidex.BuildConfig
 import androidx.multidex.MultiDexApplication
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequest
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.WorkRequest
 import org.acra.config.dialog
 import org.acra.config.mailSender
 import org.acra.data.StringFormat
@@ -19,6 +28,7 @@ import org.witness.proofmode.notaries.GoogleSafetyNetNotarizationProvider
 import org.witness.proofmode.notaries.OpenTimestampsNotarizationProvider
 import org.witness.proofmode.notaries.SafetyNetCheck
 import org.witness.proofmode.notarization.NotarizationProvider
+import org.witness.proofmode.org.witness.proofmode.ProofBackgroundWorker
 import timber.log.Timber
 import java.io.IOException
 import java.util.concurrent.Executors
@@ -106,6 +116,7 @@ class ProofModeApp : MultiDexApplication() {
 
 
             ProofMode.initBackgroundService(this)
+//            ProofBackgroundWorker.scheduleWork(this)
 
             /**
             val intentService = Intent(context, ProofService::class.java)

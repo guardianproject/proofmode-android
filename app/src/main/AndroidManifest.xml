@@ -76,12 +76,6 @@
         android:theme="@style/AppTheme"
         android:requestLegacyExternalStorage="true"
         >
-        <service
-            android:name=".ProofService"
-            android:enabled="true"
-            android:exported="true"
-            android:foregroundServiceType="dataSync|location"
-            />
 
         <activity android:name=".PermissionActivity" />
         <activity
@@ -213,10 +207,6 @@
             android:exported="true"
             android:permission="android.permission.BIND_JOB_SERVICE" />
         <service
-            android:name=".service.AudioContentJob"
-            android:exported="true"
-            android:permission="android.permission.BIND_JOB_SERVICE" />
-        <service
             android:name=".ProofModeTileService"
             android:icon="@drawable/ic_stat_proofmodewhite"
             android:label="@string/app_name"
@@ -267,6 +257,12 @@
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/provider_paths" />
+        </provider>
+
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            tools:node="remove">
         </provider>
     </application>
 
