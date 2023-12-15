@@ -31,7 +31,6 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.documentfile.provider.DocumentFile
-import androidx.multidex.BuildConfig
 import androidx.preference.PreferenceManager
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
@@ -787,7 +786,7 @@ class ShareProofActivity : AppCompatActivity() {
 
                     val uriZip = FileProvider.getUriForFile(
                         this,
-                        BuildConfig.APPLICATION_ID + ".provider",
+                        "$packageName.provider",
                         fileZip
                     )
                     shareFiltered(
@@ -1004,7 +1003,7 @@ class ShareProofActivity : AppCompatActivity() {
             if (result?.exists() == true) {
                 val uriZip = FileProvider.getUriForFile(
                     activity,
-                    BuildConfig.APPLICATION_ID + ".provider",
+                    "$activity.packageName.provider",
                     result
                 )
                 shareFiltered(
