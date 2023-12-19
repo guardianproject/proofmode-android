@@ -88,12 +88,11 @@ public class PgpUtils {
     private PGPSecretKeyRing skr = null;
     private PGPPublicKeyRing pkr = null;
 
-    private final static String keyId = "noone@proofmode.witness.org";
+    private static String keyEmail = "noone@proofmode.witness.org";
 
     private final static String FILE_SECRET_KEY_RING = "pkr.asc";
     private final static String FILE_PUBLIC_KEY_RING = "pub.asc";
 
-    //public final static String DEFAULT_PASSWORD = "password"; //static string for local keystore
     private final static String URL_POST_KEY_ENDPOINT = "https://keys.openpgp.org/vks/v1/upload";
 
     public final static String URL_LOOKUP_ENDPOINT = "https://keys.openpgp.org/search?q=0x";
@@ -308,6 +307,18 @@ public class PgpUtils {
         return fileSecKeyRing.exists() && filePubKeyRing.exists();
     }
 
+    public void resetCrypto (Context context) {
+        File fileSecKeyRing = new File(context.getFilesDir(),FILE_SECRET_KEY_RING);
+        File filePubKeyRing = new File(context.getFilesDir(),FILE_PUBLIC_KEY_RING);
+        fileSecKeyRing.delete();
+        filePubKeyRing.delete();
+        pgpSec = null;
+    }
+
+    public static void setKeyid (String email) {
+        keyEmail = email;
+    }
+
     public synchronized void initCrypto (Context context, String password) throws IOException, PGPException {
         if (pgpSec == null) {
 
@@ -329,7 +340,7 @@ public class PgpUtils {
                     if (password.isEmpty())
                         throw new IOException("Empty PGP Key password not allowed for key generation");
 
-                    final PGPKeyRingGenerator krgen = generateKeyRingGenerator(keyId, password.toCharArray());
+                    final PGPKeyRingGenerator krgen = generateKeyRingGenerator(keyEmail, password.toCharArray());
                     skr = krgen.generateSecretKeyRing();
 
                     ArmoredOutputStream sout = new ArmoredOutputStream((new FileOutputStream(fileSecKeyRing)));

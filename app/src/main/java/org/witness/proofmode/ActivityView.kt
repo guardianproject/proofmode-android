@@ -74,6 +74,8 @@ interface ActivitiesViewDelegate {
     abstract fun openCamera()
     abstract fun shareItems(media: List<ProofableItem>, fileName: String?, shareText: String?)
     abstract fun sharePublicKey(key: String)
+    abstract fun clearItems(activity: Activity)
+
 }
 
 sealed class CapturedAssetRow {
@@ -690,6 +692,23 @@ fun activityMenu(activity: Activity): (@Composable() (BoxScope.() -> Unit))? {
                             )
                         }
                     )
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = pluralStringResource(
+                                    id = R.plurals.clear_these_n_items,
+                                    count = count,
+                                    count
+                                )
+                            )
+                        },
+                        onClick = {
+                            expanded = false
+                            (context as? ActivitiesViewDelegate)?.clearItems(
+                                activity
+                            )
+                        }
+                    )
                 }
 
                 is ActivityType.MediaImported -> {
@@ -713,6 +732,23 @@ fun activityMenu(activity: Activity): (@Composable() (BoxScope.() -> Unit))? {
                             )
                         }
                     )
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = pluralStringResource(
+                                    id = R.plurals.clear_these_n_items,
+                                    count = count,
+                                    count
+                                )
+                            )
+                        },
+                        onClick = {
+                            expanded = false
+                            (context as? ActivitiesViewDelegate)?.clearItems(
+                                activity
+                            )
+                        }
+                    )
                 }
 
                 is ActivityType.MediaShared -> {
@@ -731,6 +767,22 @@ fun activityMenu(activity: Activity): (@Composable() (BoxScope.() -> Unit))? {
                             )
                         }
                     )
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = pluralStringResource(
+                                    id = R.plurals.clear_these_n_items,
+                                    count = 1
+                                )
+                            )
+                        },
+                        onClick = {
+                            expanded = false
+                            (context as? ActivitiesViewDelegate)?.clearItems(
+                                activity
+                            )
+                        }
+                    )
                 }
 
                 is ActivityType.PublicKeyShared -> {
@@ -743,6 +795,22 @@ fun activityMenu(activity: Activity): (@Composable() (BoxScope.() -> Unit))? {
                         onClick = {
                             expanded = false
                             (context as? ActivitiesViewDelegate)?.sharePublicKey(activity.type.key)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = pluralStringResource(
+                                    id = R.plurals.clear_these_n_items,
+                                    count = 1
+                                )
+                            )
+                        },
+                        onClick = {
+                            expanded = false
+                            (context as? ActivitiesViewDelegate)?.clearItems(
+                                activity
+                            )
                         }
                     )
 

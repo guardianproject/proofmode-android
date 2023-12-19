@@ -109,6 +109,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+
     <ImageButton
         android:id="@+id/btnTimer"
         android:layout_width="@dimen/button_size_small"
@@ -167,7 +168,9 @@
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toEndOf="@+id/btnFlash"
         app:layout_constraintTop_toTopOf="@id/btnFlash"
-        tools:ignore="ContentDescription" />
+        tools:ignore="ContentDescription"
+        android:visibility="gone"
+        />
 
     <ImageButton
         android:id="@+id/btnExposure"

@@ -1,12 +1,10 @@
 package org.witness.proofmode.camera.fragments
 
-import android.R.attr.data
 import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
-import android.database.Cursor
 import android.hardware.display.DisplayManager
 import android.net.Uri
 import android.os.Build
@@ -54,6 +52,7 @@ import org.witness.proofmode.camera.utils.*
 import java.io.File
 import java.io.FileNotFoundException
 import java.util.concurrent.ExecutionException
+import java.util.concurrent.Executors
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -602,6 +601,9 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
         captureImage()
     }
 
+
+    private val mExec = Executors.newFixedThreadPool(1)
+
     private fun captureImage() {
         val localImageCapture =
             imageCapture ?: throw IllegalStateException("Camera initialization failed.")
@@ -638,7 +640,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
 
         localImageCapture.takePicture(
             outputOptions, // the options needed for the final image
-            requireContext().mainExecutor(), // the executor, on which the task will run
+            mExec, // the executor, on which the task will run
             object : OnImageSavedCallback { // the callback, about the result of capture process
                 override fun onImageSaved(outputFileResults: OutputFileResults) {
 
@@ -749,7 +751,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
 
         var intent = Intent(NEW_MEDIA_EVENT)
         intent.data = newMediaFile
-        LocalBroadcastManager.getInstance(requireContext()).sendBroadcast(intent)
+        activity?.applicationContext?.let { LocalBroadcastManager.getInstance(it).sendBroadcast(intent) }
 
     }
 

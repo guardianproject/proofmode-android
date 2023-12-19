@@ -26,7 +26,7 @@ class ProofEventReceiver : BroadcastReceiver() {
                     Activity(
                         it, ActivityType.MediaCaptured(
                             items = mutableStateListOf(
-                                ProofableItem(UUID.randomUUID().toString(), Uri.parse(it))
+                                ProofableItem(it, Uri.parse(it))
                             )
                         ), Date()
                     ), context

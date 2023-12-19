@@ -168,14 +168,15 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private class CameraReceiver : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
+                /**
                 "org.witness.proofmode.NEW_MEDIA" -> {
                     val uri = intent.data
                     if (uri != null && context != null) {
                         Activities.addActivity(
                             Activity(
-                                uri.toString(), ActivityType.MediaCaptured(
+                                UUID.randomUUID().toString(), ActivityType.MediaCaptured(
                                     items = mutableStateListOf(
-                                        ProofableItem(UUID.randomUUID().toString(), uri)
+                                        ProofableItem(uri.toString(), uri)
                                     )
                                 ), Date()
                             ), context
@@ -184,7 +185,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         MediaWatcher.getInstance(context).queueMedia(intent.data, true, Date())
 
                     }
-                }
+                }**/
 
                 EVENT_PROOF_GENERATED -> {
                     val uri = intent.data
@@ -704,5 +705,26 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             }
         }
         this.showShareProof(mediaList = media.map { it.uri }.filterNotNull())
+    }
+
+    override fun clearItems(activity: Activity) {
+
+        Activities.clearActivity(activity.id, this)
+
+        if (activity.type is ActivityType.MediaCaptured)
+            for (pi in (activity.type as ActivityType.MediaCaptured).items)
+                Activities.clearActivity(pi.id, this)
+
+        if (activity.type is ActivityType.MediaImported)
+            for (pi in (activity.type as ActivityType.MediaImported).items)
+                Activities.clearActivity(pi.id, this)
+
+        Activities.load(this)
+        val activityView = findViewById<ComposeView>(R.id.activityView)
+        activityView.setContent {
+            ActivitiesView {
+                itemsSelected(it)
+            }
+        }
     }
 }

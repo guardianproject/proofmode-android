@@ -25,7 +25,7 @@ class C2paUtils {
         private const val C2PA_CERT_PATH_PARENT = "crp.cert"
         private const val C2PA_KEY_PATH_PARENT = "crp.key"
 
-        private const val CERT_VALIDITY_DAYS = 365U //1 year
+        private const val CERT_VALIDITY_DAYS = 1825U //5 years
 
         private var _identityUri = "https://proofmode.org"
         private var _identityName = "ProofMode"
@@ -148,13 +148,12 @@ class C2paUtils {
          */
         fun initCredentials (mContext : Context, emailAddress: String?, pgpFingerprint: String?) {
 
-            emailAddress?.let {
-                _identityEmail = emailAddress
-            }
+            if (emailAddress?.isNotEmpty() == true)
+                   _identityEmail = emailAddress
 
-            pgpFingerprint?.let {
+            if (pgpFingerprint?.isNotEmpty() == true)
                 _identityKey = pgpFingerprint
-            }
+
 
             var fileUserCert = File(mContext.filesDir, C2PA_CERT_PATH)
             var fileUserKey = File(mContext.filesDir, C2PA_KEY_PATH)
@@ -162,18 +161,8 @@ class C2paUtils {
             var fileParentCert = File(mContext.filesDir, C2PA_CERT_PATH_PARENT)
             var fileParentKey = File(mContext.filesDir,C2PA_KEY_PATH_PARENT)
 
-            var userKey : FileData
+            if ((!fileUserKey.exists()) || (!fileUserCert.exists())) {
 
-            if (!fileUserKey.exists()) {
-                userKey = createPrivateKey()
-                fileUserKey.writeBytes(userKey.getBytes())
-            }
-            else
-            {
-                userKey = FileData(fileUserKey.absolutePath,fileUserKey.readBytes(),fileUserKey.name)
-            }
-
-            if (!fileUserCert.exists()) {
 
                 var parentKey = createPrivateKey();
                 fileParentKey.writeBytes(parentKey.getBytes())
@@ -184,6 +173,9 @@ class C2paUtils {
                 rootCert?.let {
 
                     fileParentCert.writeBytes(rootCert.getCertificateBytes())
+
+                    var userKey = createPrivateKey()
+                    fileUserKey.writeBytes(userKey.getBytes())
 
                     var userCertType =
                         CertificateType.ContentCredentials("ProofMode-User-$_identityKey", CERT_VALIDITY_DAYS)
@@ -208,16 +200,17 @@ class C2paUtils {
             }
             else
             {
-                var fileDataParentKey = FileData(fileParentKey.absolutePath,fileParentKey.readBytes(),fileParentKey.name)
-                var parentCert = Certificate(FileData(fileParentCert.absolutePath,fileParentCert.readBytes(),fileParentCert.name), fileDataParentKey, null)
-                userCert = Certificate(FileData(fileUserCert.absolutePath,fileUserCert.readBytes(),fileUserKey.name), userKey, parentCert)
+                var userPrivateKey = FileData(fileUserKey.absolutePath,fileUserKey.readBytes(),fileUserKey.name)
+                var parentPrivateKey = FileData(fileParentKey.absolutePath,fileParentKey.readBytes(),fileParentKey.name)
+                var parentCert = Certificate(FileData(fileParentCert.absolutePath,fileParentCert.readBytes(),fileParentCert.name), parentPrivateKey, null)
+                userCert = Certificate(FileData(fileUserCert.absolutePath,fileUserCert.readBytes(),fileUserKey.name), userPrivateKey, parentCert)
             }
         }
 
         /**
          * add new C2PA Content Credential assertions and then embed and sign them
          */
-        fun addContentCredentials(mContext : Context, emailAddress: String, pgpFingerprint: String, emailDisplay: String, webLink: String, isDirectCapture: Boolean, allowMachineLearning: Boolean, fileImageIn: File, fileImageOut: File) {
+        private fun addContentCredentials(mContext : Context, emailAddress: String, pgpFingerprint: String, emailDisplay: String, webLink: String, isDirectCapture: Boolean, allowMachineLearning: Boolean, fileImageIn: File, fileImageOut: File) {
 
             if (userCert == null)
                 initCredentials(mContext, emailAddress, pgpFingerprint)
@@ -248,9 +241,21 @@ class C2paUtils {
             else
                 contentCreds?.addPermissiveAiTrainingAssertions()
 
-            contentCreds?.addEmailAssertion(emailAddress, emailDisplay)
-         //   contentCreds?.addPgpAssertion(pgpFingerprint, pgpFingerprint)
-         //   contentCreds?.addWebsiteAssertion(webLink)
+           // contentCreds?.addEmailAssertion(emailAddress, emailDisplay) //not yet implemented
+
+            /**
+             * ///not yet working
+            contentCreds?.addJsonAssertion("stds.schema-org.CreativeWork","\n" +
+                    "\"@context\": \"http://schema.org/\"," +
+                    "\"@type\": \"CreativeWork\"," +
+                    "\"author\": [" +
+                    "\"@type\": \"Person\"," +
+                    "\"name\": \"$emailDisplay\"\n}]," +
+                    "\"copyrightNotice\": \"$emailDisplay 2023\"")
+                **/
+
+            contentCreds?.addPgpAssertion(pgpFingerprint, pgpFingerprint)
+            contentCreds?.addWebsiteAssertion(webLink)
 
             var exifMake = Build.MANUFACTURER
             var exifModel = Build.MODEL
@@ -284,7 +289,6 @@ class C2paUtils {
             contentCreds?.addExifAssertion(exifData)
 
             contentCreds?.embedManifest(fileImageOut.absolutePath)
-
 
         }
 

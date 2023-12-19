@@ -14,6 +14,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Database
+import androidx.room.Delete
+import androidx.room.DeleteTable
 import androidx.room.Entity
 import androidx.room.Insert
 import androidx.room.PrimaryKey
@@ -139,6 +141,12 @@ interface ActivitiesDao {
     @Insert
     suspend fun insert(activity: Activity?)
 
+    @Delete
+    suspend fun delete(activity: Activity?)
+
+    @Query("DELETE FROM activities WHERE data LIKE '%\"' || :id || '\"%'")
+    suspend fun deleteId(id: String?)
+
     @Query("SELECT * FROM activities WHERE data LIKE '%\"' || :id || '\"%' LIMIT 1")
     suspend fun activityFromProofableItemId(id: String): Activity?
 }
@@ -211,19 +219,43 @@ object Activities: ViewModel()
 
     fun addActivity(activity: Activity, context: Context) {
         val db = getDB(context)
+
         val lastActivity = this.activities.lastOrNull()
-        if (activity.type is ActivityType.MediaCaptured && lastActivity != null && lastActivity.type is ActivityType.MediaCaptured && (lastActivity.startTime.time + timeBatchWindow) >= activity.startTime.time ) {
+        if (activity.type is ActivityType.MediaCaptured && lastActivity != null && lastActivity.type is ActivityType.MediaCaptured && (lastActivity.startTime.time + timeBatchWindow) >= activity.startTime.time) {
             // If within the same minute, add it to the same "batch" as the previous one.
             lastActivity.type.items += activity.type.items
             viewModelScope.launch {
-                db.activitiesDao().update(lastActivity)
+                if (db.activitiesDao().activityFromProofableItemId(activity.id) == null)
+                    db.activitiesDao().update(lastActivity)
             }
         } else {
             this.activities.add(activity)
             viewModelScope.launch {
-                db.activitiesDao().insert(activity)
+                if (db.activitiesDao().activityFromProofableItemId(activity.id) == null)
+                    db.activitiesDao().insert(activity)
             }
         }
+
+    }
+
+    fun clearActivity (id: String, context: Context) {
+        val db = getDB(context)
+        viewModelScope.launch {
+
+           var activity = db.activitiesDao().activityFromProofableItemId(id)
+
+            activities.remove(activity)
+
+            activity?.let {
+                db.activitiesDao().delete(activity)
+                db.activitiesDao().deleteId(activity.id)
+            }
+
+            activities.clear()
+            activities.addAll(db.activitiesDao().getAll())
+        }
+
+
     }
 
     private fun getActivityProofableItems(activity: Activity): SnapshotStateList<ProofableItem> {

@@ -173,6 +173,10 @@
         <item quantity="one">Share this item</item>
         <item quantity="other">Share these %d items</item>
     </plurals>
+    <plurals name="clear_these_n_items">
+        <item quantity="one">Clear this item</item>
+        <item quantity="other">Clear these %d items</item>
+    </plurals>
     <string name="you_shared_your_public_key">You shared your public key</string>
     <string name="re_share">Re-share</string>
 
