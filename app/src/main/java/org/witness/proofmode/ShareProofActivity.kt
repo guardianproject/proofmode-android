@@ -1556,10 +1556,13 @@ class ShareProofActivity : AppCompatActivity() {
         out.putNextEntry(entry)
         out.write(pubKey.toByteArray())
 
-        Timber.d("Adding C2PA certificate")
-        entry = ZipEntry(C2PA_CERT_PATH)
-        out.putNextEntry(entry)
-        out.write(File(filesDir,C2PA_CERT_PATH).readBytes())
+        var fileCert = File(filesDir,C2PA_CERT_PATH)
+        if (fileCert.exists()) {
+            Timber.d("Adding C2PA certificate")
+            entry = ZipEntry(C2PA_CERT_PATH)
+            out.putNextEntry(entry)
+            out.write(fileCert.readBytes())
+        }
 
         Timber.d("Adding HowToVerifyProofData.txt")
         val howToFile = "HowToVerifyProofData.txt"
