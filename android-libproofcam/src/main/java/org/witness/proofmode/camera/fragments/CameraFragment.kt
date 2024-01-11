@@ -602,9 +602,13 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
     }
 
 
-    private val mExec = Executors.newFixedThreadPool(1)
+    private val mExec = Executors.newSingleThreadExecutor()
 
     private fun captureImage() {
+
+        proofModeViewFinder?.visibility = View.GONE
+        proofModeViewFinder?.visibility = View.VISIBLE
+
         val localImageCapture =
             imageCapture ?: throw IllegalStateException("Camera initialization failed.")
 
@@ -645,6 +649,17 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
                 override fun onImageSaved(outputFileResults: OutputFileResults) {
 
 
+
+                    // This function is called if capture is successfully completed
+                    outputFileResults.savedUri
+                        ?.let { uri ->
+                            setGalleryThumbnail(uri)
+                            sendLocalCameraEvent(uri)
+                            Log.d(TAG, "Photo saved in $uri")
+                        }
+                        ?: setLastPictureThumbnail()
+
+
                     if ((activity as CameraActivity).useCredentials) {
 
                         var isDirectCapture = true; //this is from our camera
@@ -657,15 +672,6 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
                             allowMachineLearning
                         )
                     }
-
-                    // This function is called if capture is successfully completed
-                    outputFileResults.savedUri
-                        ?.let { uri ->
-                            setGalleryThumbnail(uri)
-                            sendLocalCameraEvent(uri)
-                            Log.d(TAG, "Photo saved in $uri")
-                        }
-                        ?: setLastPictureThumbnail()
                 }
 
                 override fun onError(exception: ImageCaptureException) {
