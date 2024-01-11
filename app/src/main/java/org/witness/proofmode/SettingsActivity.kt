@@ -25,7 +25,6 @@ import org.witness.proofmode.util.GPSTracker
 
 class SettingsActivity : AppCompatActivity() {
     private lateinit var mPrefs: SharedPreferences
-    private var mPgpUtils: PgpUtils? = null
     private lateinit var switchLocation: CheckBox
     private lateinit var switchNetwork: CheckBox
     private lateinit var switchDevice: CheckBox
@@ -137,7 +136,6 @@ class SettingsActivity : AppCompatActivity() {
             updateUI()
         }
 
-        mPgpUtils = PgpUtils.getInstance(this, null);
     }
 
     private val REQ_ACCOUNT_CHOOSER = 9999;
@@ -228,6 +226,13 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     fun initContentCredentials (accountName : String?) {
+
+        var mKeyPassphase = mPrefs.getString(
+            ProofModeConstants.PREFS_KEY_PASSPHRASE,
+            ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
+        )
+        var mPgpUtils = PgpUtils.getInstance(this, mKeyPassphase);
+
         val email = accountName;
         var display : String? = null
         var key : String? = "0x" + mPgpUtils?.publicKeyFingerprint
