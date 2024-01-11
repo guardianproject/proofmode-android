@@ -337,7 +337,7 @@ public class PgpUtils {
                 }
                 else {
 
-                    if (password.isEmpty())
+                    if (password == null || password.isEmpty())
                         throw new IOException("Empty PGP Key password not allowed for key generation");
 
                     final PGPKeyRingGenerator krgen = generateKeyRingGenerator(keyEmail, password.toCharArray());
