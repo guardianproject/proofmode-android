@@ -216,6 +216,7 @@ object Activities: ViewModel()
     }
 
     var timeBatchWindow = 60000 * 5 //5 minutes
+    private var listItems : List<ProofableItem> = ArrayList<ProofableItem>();
 
     fun addActivity(activity: Activity, context: Context) {
         val db = getDB(context)
@@ -235,6 +236,8 @@ object Activities: ViewModel()
                     db.activitiesDao().insert(activity)
             }
         }
+
+
 
     }
 
@@ -258,7 +261,24 @@ object Activities: ViewModel()
 
     }
 
-    private fun getActivityProofableItems(activity: Activity): SnapshotStateList<ProofableItem> {
+    fun getRelatedProofableItems (context: Context, selectId: String): List<ProofableItem> {
+
+        var listItems = ArrayList<ProofableItem>()
+
+        viewModelScope.launch {
+            var activity =
+                Activities.getDB(context).activitiesDao().activityFromProofableItemId(selectId)
+            if (activity != null) {
+                var proofItems = Activities.getActivityProofableItems(activity)
+                for (proofItem in proofItems)
+                    listItems.add(proofItem)
+            }
+
+        }
+
+        return listItems
+    }
+    fun getActivityProofableItems(activity: Activity): SnapshotStateList<ProofableItem> {
         when (activity.type) {
             is ActivityType.MediaCaptured -> return activity.type.items
             is ActivityType.MediaImported -> return activity.type.items
@@ -268,14 +288,53 @@ object Activities: ViewModel()
         return mutableStateListOf<ProofableItem>()
     }
 
-    fun getAllCapturedAndImportedItems(context: Context): List<ProofableItem> {
-        return activities.flatMap { getActivityProofableItems( it ) }.toMutableStateList().withDeletedItemsRemoved(context).distinctBy { it.uri }
+    fun getProofableItem(context: Context, selectId: String): List<ProofableItem> {
+
+        var listItems = ArrayList<ProofableItem>()
+
+        viewModelScope.launch {
+
+                var item = db.activitiesDao().activityFromProofableItemId(selectId)
+                if (item != null) {
+                    var pItem = ProofableItem(item.id, Uri.parse(selectId))
+                    listItems.add(pItem)
+                }
+
+        }
+
+        return listItems;
     }
+
+    /**
+    fun getAllCapturedAndImportedItems(context: Context): List<ProofableItem> {
+
+        if (listItems.isEmpty())
+            refreshListItems(context)
+
+        return listItems;
+    }
+
+    fun refreshListItems (context: Context) {
+        listItems = activities.flatMap { getActivityProofableItems( it ) }.toMutableStateList().withDeletedItemsRemoved(context).distinctBy { it.uri }
+    }**/
 
     fun selectedItems(context: Context, selection: List<String>): List<ProofableItem> {
         // TODO - We don't really care about the ids here, so we match on the uri and just select
         // the first id one, if more than one mapping from id -> uri.
-        return getAllCapturedAndImportedItems(context).filter { selection.contains(it.uri.toString()) }
+       // return getAllCapturedAndImportedItems(context).filter { selection.contains(it.uri.toString()) }
+        var listItems = ArrayList<ProofableItem>()
+
+        viewModelScope.launch {
+            for (selectId in selection) {
+                var item = db.activitiesDao().activityFromProofableItemId(selectId)
+                if (item != null) {
+                    var pItem = ProofableItem(item.id, Uri.parse(selectId))
+                    listItems.add(pItem)
+                }
+            }
+        }
+
+        return listItems
     }
 
     fun dateForItem(item: ProofableItem, context: Context, onDate: (Date) -> Unit) {
@@ -302,7 +361,7 @@ fun SnapshotStateList<ProofableItem>.withDeletedItemsRemoved(context: Context): 
 
 fun ProofableItem.isDeleted(context: Context): Boolean {
     try {
-        val inputStream: InputStream? = context.getContentResolver().openInputStream(this.uri)
+        val inputStream: InputStream? = context.contentResolver.openInputStream(this.uri)
         if (inputStream != null) {
             inputStream.close()
             return false

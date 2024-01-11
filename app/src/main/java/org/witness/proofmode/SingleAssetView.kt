@@ -84,15 +84,16 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 
 
-val LocalShowMetadata = compositionLocalOf<Boolean> { error("Not set") }
+val LocalShowMetadata = compositionLocalOf<Boolean> { true }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SingleAssetViewWithToolbar(initialItem: ProofableItem, onClose: () -> Unit) {
 
     var showMetadata by remember {
-        mutableStateOf(false)
+        mutableStateOf(true)
     }
+
     var title by remember { mutableStateOf("") }
 
     Scaffold(
@@ -150,12 +151,21 @@ fun SingleAssetView(initialItem: ProofableItem, modifier: Modifier = Modifier, s
     var topPartWidth by remember {
         mutableStateOf(0f)
     }
-    val allAssets by remember {
-        mutableStateOf(
-            Activities.getAllCapturedAndImportedItems(context)
-        )
-    }
+
+    val allAssets = ArrayList<ProofableItem>()
+    allAssets.add(initialItem)
+
+    /***
+    var relatedItems = Activities.getRelatedProofableItems(context,initialItem.id)
+    for (relatedItem in relatedItems)
+        allAssets.add(relatedItem)
+
+
     var selectedIndex by remember { mutableStateOf(allAssets.indexOfFirst { it.uri.toString() == initialItem.uri.toString() } .coerceAtLeast(0)) }
+    **/
+
+
+    var selectedIndex = 0
 
     val showMetadata = LocalShowMetadata.current
     val metadataOpacity: Float by animateFloatAsState(
@@ -226,6 +236,7 @@ fun SingleAssetView(initialItem: ProofableItem, modifier: Modifier = Modifier, s
                     setTitle = setTitle
                 )
             }
+            /**
             Box(
                 modifier = Modifier
                     .alpha(1f - metadataOpacity)
@@ -240,7 +251,7 @@ fun SingleAssetView(initialItem: ProofableItem, modifier: Modifier = Modifier, s
                         listState.scrollToItem(selectedIndex, previewItemCenterOffset)
                     }
                 })
-            }
+            }**/
             Column(
                 modifier = Modifier
                     .alpha(metadataOpacity)
