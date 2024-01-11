@@ -224,7 +224,16 @@ object Activities: ViewModel()
         val lastActivity = this.activities.lastOrNull()
         if (activity.type is ActivityType.MediaCaptured && lastActivity != null && lastActivity.type is ActivityType.MediaCaptured && (lastActivity.startTime.time + timeBatchWindow) >= activity.startTime.time) {
             // If within the same minute, add it to the same "batch" as the previous one.
-            lastActivity.type.items += activity.type.items
+
+            for (pItem in activity.type.items)
+            {
+                if (!lastActivity.type.items.any{ it.uri == pItem.uri})                 
+                {
+                    lastActivity.type.items.add(pItem)
+                }
+            }
+
+           // lastActivity.type.items += activity.type.items
             viewModelScope.launch {
                 if (db.activitiesDao().activityFromProofableItemId(activity.id) == null)
                     db.activitiesDao().update(lastActivity)

@@ -12,12 +12,14 @@ import java.util.UUID
 class ProofEventReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context?, intent: Intent?) {
 
+        /**
         //got event
         Toast.makeText(
             context,
             R.string.progress_generating_proof,
             Toast.LENGTH_SHORT
         ).show()
+            **/
 
         var uriMedia = intent?.getStringExtra(ProofMode.EVENT_PROOF_EXTRA_URI)?.let {
 

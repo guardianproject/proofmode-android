@@ -755,9 +755,9 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
             }
         }
 
-        var intent = Intent(NEW_MEDIA_EVENT)
-        intent.data = newMediaFile
-        activity?.applicationContext?.let { LocalBroadcastManager.getInstance(it).sendBroadcast(intent) }
+       // var intent = Intent(NEW_MEDIA_EVENT)
+       // intent.data = newMediaFile
+       // activity?.applicationContext?.let { LocalBroadcastManager.getInstance(it).sendBroadcast(intent) }
 
     }
 
