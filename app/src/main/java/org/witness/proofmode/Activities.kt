@@ -227,7 +227,7 @@ object Activities: ViewModel()
 
             for (pItem in activity.type.items)
             {
-                if (!lastActivity.type.items.any{ it.uri == pItem.uri})                 
+                if (!lastActivity.type.items.any{ it.uri == pItem.uri})
                 {
                     lastActivity.type.items.add(pItem)
                 }
