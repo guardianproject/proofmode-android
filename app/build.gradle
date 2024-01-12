@@ -94,7 +94,7 @@ android {
         variant.outputs.each { output ->
             def baseVersionCode = abiCodeMap.get(output.getFilter("ABI"))
             if(baseVersionCode != null) {
-                output.versionCodeOverride = Integer.valueOf(variant.versionCode) + Integer.valueOf(baseVersionCode)
+                output.versionCodeOverride = Integer.valueOf(variant.versionCode + "00" + baseVersionCode)
             }
         }
     }
