@@ -47,7 +47,6 @@ import org.witness.proofmode.camera.analyzer.LuminosityAnalyzer
 import org.witness.proofmode.camera.c2pa.C2paUtils
 import org.witness.proofmode.camera.databinding.FragmentCameraBinding
 import org.witness.proofmode.camera.enums.CameraTimer
-import org.witness.proofmode.camera.fragments.CameraFragment.CameraConstants.NEW_MEDIA_EVENT
 import org.witness.proofmode.camera.utils.*
 import java.io.File
 import java.io.FileNotFoundException
@@ -677,7 +676,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
                 override fun onError(exception: ImageCaptureException) {
                     // This function is called if there is an errors during capture process
                     val msg = "Photo capture failed: ${exception.message}"
-                    Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
+                   // Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
                     Log.e(TAG, msg)
                     exception.printStackTrace()
                 }
@@ -730,9 +729,6 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
         private const val RATIO_16_9_VALUE = 16.0 / 9.0 // aspect ratio 16x9
     }
 
-    object CameraConstants {
-        const val NEW_MEDIA_EVENT = "org.witness.proofmode.NEW_MEDIA"
-    }
 
     fun sendLocalCameraEvent(newMediaFile: Uri) {
 
@@ -743,7 +739,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
 
                 MediaStore.Images.Media.insertImage(
                     context?.contentResolver,
-                    f.getAbsolutePath(), f.getName(), null
+                    f.absolutePath, f.name, null
                 )
                 context?.sendBroadcast(
                     Intent(
@@ -755,9 +751,6 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
             }
         }
 
-       // var intent = Intent(NEW_MEDIA_EVENT)
-       // intent.data = newMediaFile
-       // activity?.applicationContext?.let { LocalBroadcastManager.getInstance(it).sendBroadcast(intent) }
 
     }
 

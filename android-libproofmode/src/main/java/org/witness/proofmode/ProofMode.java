@@ -97,6 +97,7 @@ public class ProofMode {
     private static CameraEventReceiver mReceiver;
 
     private static boolean mInit = false;
+    public final static String NEW_MEDIA_EVENT = "org.witness.proofmode.NEW_MEDIA";
 
     public synchronized static void initBackgroundService (Context context)
     {
@@ -110,7 +111,9 @@ public class ProofMode {
 
             if (mReceiver == null) {
                 mReceiver = new CameraEventReceiver();
-                addCameraEventListeners(context, mReceiver);
+                //internal camera event
+                LocalBroadcastManager.getInstance(context).
+                        registerReceiver(mReceiver, new IntentFilter("org.witness.proofmode.NEW_MEDIA"));
             }
 
             startLocationListener(context);
@@ -124,21 +127,6 @@ public class ProofMode {
     private static void startLocationListener (Context context) {
         mLocationTracker = new GPSTracker(context);
         mLocationTracker.updateLocation();
-    }
-
-    private static void addCameraEventListeners (Context context, CameraEventReceiver receiver) {
-
-        //external potential camera events
-        context.registerReceiver(receiver, new IntentFilter("com.android.camera.NEW_PICTURE"));
-        context.registerReceiver(receiver, new IntentFilter("android.hardware.action.NEW_PICTURE"));
-        context.registerReceiver(receiver, new IntentFilter("com.android.camera.NEW_VIDEO"));
-        context.registerReceiver(receiver, new IntentFilter("org.witness.proofmode.NEW_MEDIA"));
-
-        //internal camera event
-        LocalBroadcastManager.getInstance(context).
-                registerReceiver(receiver, new IntentFilter("org.witness.proofmode.NEW_MEDIA"));
-
-
     }
 
     public static void stopBackgroundService (Context context)
