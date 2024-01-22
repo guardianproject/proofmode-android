@@ -33,7 +33,12 @@ android {
 }
 
 dependencies {
+
+
     implementation(kotlin("stdlib"))
+
+    project(":android-libproofmode")
+
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4")
 
     implementation("com.google.android.material:material:1.9.0-alpha02")
@@ -43,11 +48,11 @@ dependencies {
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
 
 
-    implementation("androidx.camera:camera-core:1.2.2")
-    implementation("androidx.camera:camera-camera2:1.2.2")
-    implementation("androidx.camera:camera-lifecycle:1.2.2")
-    implementation("androidx.camera:camera-extensions:1.2.2")
-    implementation("androidx.camera:camera-view:1.2.2")
+    implementation("androidx.camera:camera-core:1.2.3")
+    implementation("androidx.camera:camera-camera2:1.2.3")
+    implementation("androidx.camera:camera-lifecycle:1.2.3")
+    implementation("androidx.camera:camera-extensions:1.2.3")
+    implementation("androidx.camera:camera-view:1.2.3")
 
     implementation("androidx.fragment:fragment:1.5.7")
     implementation("androidx.fragment:fragment-ktx:1.5.7")
