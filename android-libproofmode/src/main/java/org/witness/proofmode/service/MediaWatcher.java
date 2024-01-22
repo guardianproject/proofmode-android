@@ -100,7 +100,6 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
         mContext = context;
         mPassphrase = mPrefs.getString(PREFS_KEY_PASSPHRASE,PREFS_KEY_PASSPHRASE_DEFAULT);
 
-        startFileSystemMonitor();
     }
 
 
@@ -993,59 +992,6 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
             return result == PackageManager.PERMISSION_GRANTED;
         }
         return true;
-    }
-
-  //  public static FileObserver observerMedia;
-
-    public Stack<String> qMedia = new Stack<>();
-    public Timer qTimer = null;
-
-    private void startFileSystemMonitor() {
-
-        if (checkPermissionForReadExternalStorage()) {
-
-            String pathToWatch = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).getAbsolutePath();
-
-            /**
-            observerMedia = new RecursiveFileObserver(pathToWatch, FileObserver.MODIFY|FileObserver.CLOSE_WRITE|FileObserver.MOVED_TO) { // set up a file observer to watch this directory on sd card
-                @Override
-                public void onEvent(int event, final String mediaPath) {
-                    if (mediaPath != null && (!mediaPath.equals(".probe"))) { // check that it's not equal to .probe because thats created every time camera is launched
-
-                        if (!qMedia.contains(mediaPath))
-                            qMedia.push(mediaPath);
-
-                        if (qTimer != null)
-                        {
-                            qTimer.cancel();
-                            qTimer.purge();
-                            qTimer = null;
-                        }
-
-                        qTimer = new Timer();
-                        qTimer.schedule(new TimerTask() {
-                            @Override
-                            public void run() {
-
-                                while (!qMedia.isEmpty())
-                                {
-                                    File fileMedia = new File(qMedia.pop());
-                                    if (fileMedia.exists())
-                                        processUri(Uri.fromFile(fileMedia), true);
-                                }
-
-                            }
-                        }, MediaWatcher.PROOF_GENERATION_DELAY_TIME_MS);
-
-                    }
-                }
-            };
-            observerMedia.startWatching();
-            **/
-
-        }
-
-
     }
 
     public void stop () {

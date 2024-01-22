@@ -94,10 +94,7 @@ public class ProofMode {
         Security.addProvider(sProvider);
     }
 
-    private static CameraEventReceiver mReceiver;
-
     private static boolean mInit = false;
-    public final static String NEW_MEDIA_EVENT = "org.witness.proofmode.NEW_MEDIA";
 
     public synchronized static void initBackgroundService (Context context)
     {
@@ -107,13 +104,6 @@ public class ProofMode {
             if (Build.VERSION.SDK_INT >= 24) {
                 PhotosContentJob.scheduleJob(context);
                 VideosContentJob.scheduleJob(context);
-            }
-
-            if (mReceiver == null) {
-                mReceiver = new CameraEventReceiver();
-                //internal camera event
-                LocalBroadcastManager.getInstance(context).
-                        registerReceiver(mReceiver, new IntentFilter("org.witness.proofmode.NEW_MEDIA"));
             }
 
             startLocationListener(context);
@@ -134,11 +124,6 @@ public class ProofMode {
 
         PhotosContentJob.cancelJob(context);
         VideosContentJob.cancelJob(context);
-
-        if (mReceiver != null)
-            context.unregisterReceiver(mReceiver);
-
-        LocalBroadcastManager.getInstance(context).unregisterReceiver(mReceiver);
 
         MediaWatcher.getInstance(context).stop();
 
