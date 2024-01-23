@@ -21,6 +21,7 @@ import androidx.appcompat.widget.PopupMenu
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.platform.ComposeView
+import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
 import androidx.core.view.MenuItemCompat
 import androidx.drawerlayout.widget.DrawerLayout
@@ -143,12 +144,20 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             addDataType("video/*")
         }
 
-        LocalBroadcastManager.getInstance(applicationContext)
-            .registerReceiver(cameraReceiver, intentFilter)
-        LocalBroadcastManager.getInstance(applicationContext)
-            .registerReceiver(cameraReceiver, IntentFilter(EVENT_PROOF_GENERATED))
+        ContextCompat.registerReceiver(this,
+            cameraReceiver, intentFilter,
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
 
-        registerReceiver(cameraReceiver, IntentFilter(INTENT_ACTIVITY_ITEMS_SHARED))
+        ContextCompat.registerReceiver(this,
+            cameraReceiver, IntentFilter(EVENT_PROOF_GENERATED),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+
+        ContextCompat.registerReceiver(this,
+            cameraReceiver, IntentFilter(INTENT_ACTIVITY_ITEMS_SHARED),
+            ContextCompat.RECEIVER_EXPORTED
+        )
 
         Activities.load(this)
 
