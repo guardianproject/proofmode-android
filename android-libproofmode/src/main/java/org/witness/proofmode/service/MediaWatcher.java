@@ -142,7 +142,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
             processUri(uriMedia, autogen, createdAt);
         });
     }
-    public String processUri (Uri uriMedia, boolean autogen, Date createdAt) {
+    public synchronized String processUri (Uri uriMedia, boolean autogen, Date createdAt) {
 
         try {
 

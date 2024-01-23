@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.runtime.mutableStateListOf
+import timber.log.Timber
 import java.util.Date
 import java.util.UUID
 
@@ -35,6 +36,7 @@ class ProofEventReceiver : BroadcastReceiver() {
                 )
             }
 
+            Timber.d("New Proof Event: " + it)
         }
     }
 
