@@ -28,8 +28,8 @@ android {
         applicationId "org.witness.proofmode"
         minSdkVersion 24
         targetSdkVersion 34
-        versionCode 220304
-        versionName "2.2.0-RC-4"
+        versionCode 220305
+        versionName "2.2.0-RC-5"
         multiDexEnabled true
         archivesBaseName = "ProofMode-$versionName"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
