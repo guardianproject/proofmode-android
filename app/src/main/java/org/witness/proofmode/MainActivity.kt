@@ -146,12 +146,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         ContextCompat.registerReceiver(this,
             cameraReceiver, intentFilter,
-            ContextCompat.RECEIVER_NOT_EXPORTED
+            ContextCompat.RECEIVER_EXPORTED
         )
 
         ContextCompat.registerReceiver(this,
             cameraReceiver, IntentFilter(EVENT_PROOF_GENERATED),
-            ContextCompat.RECEIVER_NOT_EXPORTED
+            ContextCompat.RECEIVER_EXPORTED
         )
 
         ContextCompat.registerReceiver(this,
