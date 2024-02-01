@@ -86,18 +86,33 @@ public class ProofMode {
     public final static String EVENT_PROOF_FAILED = "org.witness.proofmode.PROOF_FAILED";
     public final static String EVENT_PROOF_EXTRA_HASH = "org.witness.proofmode.PROOF_HASH";
     public final static String EVENT_PROOF_EXTRA_URI = "org.witness.proofmode.PROOF_URI";
-
-
-
     public final static BouncyCastleProvider sProvider = new BouncyCastleProvider();
+    // The File system to store proof on, it could be any storage system like encrypted storage
+    // or Google drive it. The implementing app can specify it to avoid saving proof on the default app
+    // storage directory
+    private static File proofFileSystem = null;
+    private static CameraEventReceiver mReceiver;
+    private static boolean mInit = false;
+    private static GPSTracker mLocationTracker;
+
     static {
         Security.addProvider(sProvider);
     }
 
-    private static boolean mInit = false;
+    public static File getProofFileSystem() {
+        return proofFileSystem;
+    }
 
-    public synchronized static void initBackgroundService (Context context)
-    {
+    /**
+     * The implementing file calls this method with the File system they want proof to be stored on.
+     *
+     * @param fileSystem: The file system used for saving proof data
+     */
+    public void setProofFileSystem(File fileSystem) {
+        ProofMode.proofFileSystem = fileSystem;
+    }
+
+    public synchronized static void initBackgroundService(Context context) {
         if (!mInit) {
             MediaWatcher.getInstance(context);
 
@@ -112,9 +127,7 @@ public class ProofMode {
         }
     }
 
-    private static GPSTracker mLocationTracker;
-
-    private static void startLocationListener (Context context) {
+    private static void startLocationListener(Context context) {
         mLocationTracker = new GPSTracker(context);
         mLocationTracker.updateLocation();
     }
@@ -131,50 +144,45 @@ public class ProofMode {
             mLocationTracker.stopUpdateLocation();
     }
 
-    public static BouncyCastleProvider getProvider ()
-    {
+    public static BouncyCastleProvider getProvider() {
         return sProvider;
     }
 
-    public static String generateProof (Context context, Uri uri)
-    {
+    public static String generateProof(Context context, Uri uri) {
 
-        return MediaWatcher.getInstance(context).processUri (uri, false, null);
-
-    }
-
-    public static String generateProof (Context context, Uri uri, FileDescriptor fdMediaFile, String mimeType) throws IOException, PGPException {
-
-        return MediaWatcher.getInstance(context).processFileDescriptor (context, uri, fdMediaFile, mimeType);
+        return MediaWatcher.getInstance(context).processUri(uri, false, null);
 
     }
 
-    public static String generateProof (Context context, Uri uri, byte[] mediaBytes, String mimeType) throws PGPException, IOException {
+    public static String generateProof(Context context, Uri uri, FileDescriptor fdMediaFile, String mimeType) throws IOException, PGPException {
 
-        return MediaWatcher.getInstance(context).processBytes (context, uri, mediaBytes, mimeType, null);
-
-    }
-
-    public static String generateProof (Context context, Uri uri, byte[] mediaBytes, String mimeType, Date createdAt) throws PGPException, IOException {
-
-        return MediaWatcher.getInstance(context).processBytes (context, uri, mediaBytes, mimeType, createdAt);
+        return MediaWatcher.getInstance(context).processFileDescriptor(context, uri, fdMediaFile, mimeType);
 
     }
 
-    public static String generateProof (Context context, Uri uri, String proofHash)
-    {
+    public static String generateProof(Context context, Uri uri, byte[] mediaBytes, String mimeType) throws PGPException, IOException {
 
-        return MediaWatcher.getInstance(context).processUri (uri, proofHash, false, null);
+        return MediaWatcher.getInstance(context).processBytes(context, uri, mediaBytes, mimeType, null);
 
     }
 
-    public static File getProofDir (Context context, String mediaHash)
-    {
+    public static String generateProof(Context context, Uri uri, byte[] mediaBytes, String mimeType, Date createdAt) throws PGPException, IOException {
+
+        return MediaWatcher.getInstance(context).processBytes(context, uri, mediaBytes, mimeType, createdAt);
+
+    }
+
+    public static String generateProof(Context context, Uri uri, String proofHash) {
+
+        return MediaWatcher.getInstance(context).processUri(uri, proofHash, false, null);
+
+    }
+
+    public static File getProofDir(Context context, String mediaHash) {
         return MediaWatcher.getHashStorageDir(context, mediaHash);
     }
 
-    public static void setProofPoints (Context context, boolean deviceIds, boolean location, boolean networks, boolean notarization)
-    {
+    public static void setProofPoints(Context context, boolean deviceIds, boolean location, boolean networks, boolean notarization) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 
         SharedPreferences.Editor editor = prefs.edit();
@@ -188,26 +196,25 @@ public class ProofMode {
 
     }
 
-
-    public static void addNotarizationProvider (Context context, NotarizationProvider provider) {
+    public static void addNotarizationProvider(Context context, NotarizationProvider provider) {
         MediaWatcher.getInstance(context).addNotarizationProvider(provider);
     }
 
-    public static PGPPublicKey getPublicKey (Context context, String passphrase) throws PGPException, IOException {
-        PgpUtils pu = PgpUtils.getInstance(context,passphrase);
+    public static PGPPublicKey getPublicKey(Context context, String passphrase) throws PGPException, IOException {
+        PgpUtils pu = PgpUtils.getInstance(context, passphrase);
         PGPPublicKey pubKey = null;
         return pubKey = pu.getPublicKey();
 
     }
 
-    public static String getPublicKeyString (Context context, String passphrase) throws IOException, PGPException {
-        PgpUtils pu = PgpUtils.getInstance(context,passphrase);
+    public static String getPublicKeyString(Context context, String passphrase) throws IOException, PGPException {
+        PgpUtils pu = PgpUtils.getInstance(context, passphrase);
         String pubKey = pu.getPublicKeyString();
 
         return pubKey;
     }
 
-    public static boolean verifyProofZip (Context context, FileDescriptor proofZip) throws Exception {
+    public static boolean verifyProofZip(Context context, FileDescriptor proofZip) throws Exception {
 
         InputStream proofZipStream = new FileInputStream(proofZip);
 
@@ -225,7 +232,7 @@ public class ProofMode {
 
                     String mimeType = getMimeType(zipEntry.getName());
 
-                    if (mimeType != null && (mimeType.startsWith("audio")||mimeType.startsWith("image")||mimeType.startsWith("video"))) {
+                    if (mimeType != null && (mimeType.startsWith("audio") || mimeType.startsWith("image") || mimeType.startsWith("video"))) {
                         mediaFile = (ByteArrayInputStream) copyStream(zis);
                         mediaHashSha256 = HashUtils.getSHA256FromFileContent(mediaFile);
                         mediaFile.reset();
@@ -252,7 +259,7 @@ public class ProofMode {
 
     }
 
-    public static boolean verifyProofZip (Context context, Uri proofZipUri) throws Exception {
+    public static boolean verifyProofZip(Context context, Uri proofZipUri) throws Exception {
 
         InputStream proofZipStream = context.getContentResolver().openInputStream(proofZipUri);
 
@@ -270,7 +277,7 @@ public class ProofMode {
 
                     String mimeType = getMimeType(zipEntry.getName());
 
-                    if (mimeType != null && (mimeType.startsWith("audio")||mimeType.startsWith("image")||mimeType.startsWith("video"))) {
+                    if (mimeType != null && (mimeType.startsWith("audio") || mimeType.startsWith("image") || mimeType.startsWith("video"))) {
                         mediaFile = (ByteArrayInputStream) copyStream(zis);
                         mediaHashSha256 = HashUtils.getSHA256FromFileContent(mediaFile);
                         mediaFile.reset();
@@ -305,7 +312,7 @@ public class ProofMode {
         return type;
     }
 
-    public static boolean verifyProofZip (Context context, String mediaHashSha256, InputStream mediaFile, InputStream proofZipStream) throws Exception {
+    public static boolean verifyProofZip(Context context, String mediaHashSha256, InputStream mediaFile, InputStream proofZipStream) throws Exception {
 
         boolean verifiedIntegrity = verifyProofZipIntegrity(context, mediaHashSha256, mediaFile, proofZipStream);
 
@@ -313,7 +320,7 @@ public class ProofMode {
         return verifiedIntegrity;
     }
 
-    public static boolean verifyProofZipIntegrity (Context context, String mediaHashSha256, InputStream mediaFile, InputStream proofZipStream) throws Exception {
+    public static boolean verifyProofZipIntegrity(Context context, String mediaHashSha256, InputStream mediaFile, InputStream proofZipStream) throws Exception {
 
         InputStream mediaSig = null;
         InputStream proofFile = null;
@@ -328,26 +335,21 @@ public class ProofMode {
             while (zipEntry != null) {
 
 
-               if (!zipEntry.getName().endsWith(File.separator)) {
+                if (!zipEntry.getName().endsWith(File.separator)) {
 
-                   if (zipEntry.getName().equals(mediaHashSha256 + OPENPGP_FILE_TAG))
-                   {
-                       mediaSig = copyStream(zis);
-                   }
-                   else if (zipEntry.getName().equals(mediaHashSha256 + PROOF_FILE_TAG)) {
-                       //the proof file
-                       proofFile = copyStream(zis);
-                   }
-                   else if (zipEntry.getName().equals(mediaHashSha256 + PROOF_FILE_TAG + OPENPGP_FILE_TAG)) {
-                       //the proof file
-                       proofFileSig = copyStream(zis);
-                   }
-                   else if (zipEntry.getName().equals(PUBKEY_FILE)) {
-                       //the proof file
-                       pubKey = copyStream(zis);
-                   }
-               }
-
+                    if (zipEntry.getName().equals(mediaHashSha256 + OPENPGP_FILE_TAG)) {
+                        mediaSig = copyStream(zis);
+                    } else if (zipEntry.getName().equals(mediaHashSha256 + PROOF_FILE_TAG)) {
+                        //the proof file
+                        proofFile = copyStream(zis);
+                    } else if (zipEntry.getName().equals(mediaHashSha256 + PROOF_FILE_TAG + OPENPGP_FILE_TAG)) {
+                        //the proof file
+                        proofFileSig = copyStream(zis);
+                    } else if (zipEntry.getName().equals(PUBKEY_FILE)) {
+                        //the proof file
+                        pubKey = copyStream(zis);
+                    }
+                }
 
 
                 zipEntry = zis.getNextEntry();
@@ -382,19 +384,18 @@ public class ProofMode {
         return true;
     }
 
-    private static InputStream copyStream (InputStream is) throws IOException {
+    private static InputStream copyStream(InputStream is) throws IOException {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         int count;
         int BUFFER = 1024;
         byte[] data = new byte[BUFFER];
         while ((count = is.read(data, 0, BUFFER)) != -1) {
-            bos.write(data,0,count);
+            bos.write(data, 0, count);
         }
         return new ByteArrayInputStream(bos.toByteArray());
     }
 
-
-    public static boolean verifySignature (Context context, InputStream fileStream, InputStream sigStream, PGPPublicKey publicKey) throws Exception {
+    public static boolean verifySignature(Context context, InputStream fileStream, InputStream sigStream, PGPPublicKey publicKey) throws Exception {
         //PgpUtils.getInstance(context).
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         PgpUtils pu = PgpUtils.getInstance(context, null);
@@ -405,7 +406,7 @@ public class ProofMode {
 
         File fileDirProof = ProofMode.getProofDir(context, proofHash);
         File[] files = fileDirProof.listFiles();
-        File fileZip = new File (fileDirProof.getParent(),fileDirProof.getName() + ".zip");
+        File fileZip = new File(fileDirProof.getParent(), fileDirProof.getName() + ".zip");
 
         BufferedInputStream origin;
         FileOutputStream dest = new FileOutputStream(fileZip);
@@ -427,9 +428,7 @@ public class ProofMode {
                     out.write(data, 0, count);
                 }
                 origin.close();
-            }
-            catch (Exception e)
-            {
+            } catch (Exception e) {
                 Timber.d(e, "Failed adding URI to zip: " + proofFile.getName());
             }
         }
@@ -458,8 +457,7 @@ public class ProofMode {
 
     }
 
-    public static void checkAndGeneratePublicKeyAsync (Context context, String passphrase)
-    {
+    public static void checkAndGeneratePublicKeyAsync(Context context, String passphrase) {
         Executors.newSingleThreadExecutor().execute(() -> {
             //Background work here
             String pubKey = null;
@@ -467,9 +465,9 @@ public class ProofMode {
             try {
                 pubKey = PgpUtils.getInstance(context, passphrase).getPublicKeyFingerprint();
             } catch (PGPException e) {
-                Timber.e(e,"error getting public key");
+                Timber.e(e, "error getting public key");
             } catch (IOException e) {
-                Timber.e(e,"error getting public key");
+                Timber.e(e, "error getting public key");
             }
 
         });
