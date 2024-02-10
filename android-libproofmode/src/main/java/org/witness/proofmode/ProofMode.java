@@ -108,7 +108,7 @@ public class ProofMode {
      *
      * @param fileSystem: The file system used for saving proof data
      */
-    public void setProofFileSystem(File fileSystem) {
+    public static void setProofFileSystem(File fileSystem) {
         ProofMode.proofFileSystem = fileSystem;
     }
 

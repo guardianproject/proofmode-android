@@ -41,6 +41,7 @@ import org.json.JSONObject;
 import org.witness.proofmode.ProofMode;
 import org.witness.proofmode.crypto.HashUtils;
 import org.witness.proofmode.crypto.pgp.PgpUtils;
+import org.witness.proofmode.data_processor.FileWriterReader;
 import org.witness.proofmode.notarization.NotarizationListener;
 import org.witness.proofmode.notarization.NotarizationProvider;
 import org.witness.proofmode.util.DeviceInfo;
@@ -90,6 +91,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
     private Context mContext = null;
     private String mPassphrase = null;
     private ArrayList<NotarizationProvider> mProviders = new ArrayList<>();
+    private static FileWriterReader fileWriterReader;
 
     private MediaWatcher(Context context) {
         if (mPrefs == null)
@@ -156,11 +158,10 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
     }
 
     private static synchronized void writeBytesToFile(Context context, File fileOut, byte[] data) {
+        fileWriterReader = new FileWriterReader(fileOut);
+
         try {
-            DataOutputStream os = new DataOutputStream(new FileOutputStream(fileOut, false));
-            os.write(data);
-            os.flush();
-            os.close();
+            fileWriterReader.writeData(data);
         } catch (IOException ioe) {
             ioe.printStackTrace();
         }
