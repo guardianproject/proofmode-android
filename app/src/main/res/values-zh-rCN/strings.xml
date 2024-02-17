@@ -40,4 +40,5 @@
     </plurals>
     <string name="digital_signatures_whattodo_info">你的 PGP 公钥会随原文件与 proof.csv 文件一起被分享。这让第三方可以验证认证数据中的 PGP “.asc” 签名文件。如果在认证数据中包含 PGP 公钥，就可以保证在设备损坏或重装应用时公钥受到保护。请注意，每次重新安装本应用时都会创建新的电子身份信息（PGP 密钥）。</string>
     <string name="digital_signatures_whatis_info">每次安装 ProofMode 时，都会创建独特的电子身份信息，其中包含 PGP 私钥与公钥。此过程由 OpenPGP 标准提供支持。创建的身份信息用来给媒体文件与支持的证明文件加密签名。如果 PGP 签名与当前 ProofMode 实例的电子身份信息（PGP 密钥）匹配，则签名就是由对应实例创建的。</string>
+    <string name="settings_notary">公证人</string>
 </resources>
