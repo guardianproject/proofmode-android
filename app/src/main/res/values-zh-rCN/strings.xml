@@ -1,2 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources></resources>
+<resources>
+    <string name="onboarding_step3_content">一切总在你掌控之下。“基本”模式分享证明媒体文件存在所需的最小信息。“强力”模式分享获取的所有信息。</string>
+    <string name="proofmode_is_capturing">ProofMode 默认情况下会获取强大集合的元数据。添加更多信息来增加媒体文件的认证能力。</string>
+    <string name="onboarding_step1_content">ProofMode 在后台运行，以生成并保存认证信息。你不需要特意做任何事！</string>
+    <string name="action_settings">设置</string>
+    <string name="action_about">关于 ProofMode</string>
+    <string name="menu_settings">设置</string>
+    <string name="share_share_robust">分享</string>
+    <string name="digital_signatures_title">当你分享认证文件时，你会看到电子签名，以及 “.asc” 文件的公钥附件。</string>
+    <string name="settings_credentials">证书</string>
+    <string name="app_name">ProofMode</string>
+    <string name="share_no_proof_info">如果还没有认证信息，你现在可以生成一个。可能无法反映媒体文件创建的时间与地点。</string>
+    <string name="share_info_robust_message">• 显示个人身份信息
+\n• 与信任的人分享
+\n• 需要网络访问权
+\n• 分享含有数据信息、PGP 与唯一指纹的 .csv 文件</string>
+    <string name="action_publish_key">发布公钥…</string>
+    <string name="action_share_key">分享公钥…</string>
+    <string name="switch_include_device">包含设备身份信息</string>
+    <string name="switch_include_location">包含 GPS 位置信息</string>
+    <string name="switch_enable_proofmode">启用 ProofMode</string>
+    <string name="share_mode_basic">基础</string>
+    <string name="share_mode_robust">强力</string>
+    <string name="share_save_robust">保存</string>
+    <string name="share_upload_robust">上传</string>
+    <string name="share_sign_robust">签名</string>
+    <string name="re_share">重新分享</string>
+    <string name="camera">拍照</string>
+    <string name="title_activity">活动</string>
+    <string name="video">录像</string>
+    <string name="permission_location_content">允许我们记录位置坐标。我们不会跟踪你，也不会以其他方式保存位置信息。</string>
+    <string name="onboarding_privacy_info">ProofMode 默认情况下会获取设备的身份信息。如果你不愿意，可以到设置关闭。</string>
+    <string name="permission_location_info">如果你不想出于安全或隐私目的获取此信息，请不要允许对应权限。</string>
+    <string name="share_info_basic_message">• 不包含个人信息
+\n• 无需信任
+\n• 简短，可使用短信发送</string>
+    <plurals name="n_items_have_been_deleted_or_are_not_accessible">
+        <item quantity="other">这%d个项目已被删除或无法访问</item>
+    </plurals>
+    <string name="digital_signatures_whattodo_info">你的 PGP 公钥会随原文件与 proof.csv 文件一起被分享。这让第三方可以验证认证数据中的 PGP “.asc” 签名文件。如果在认证数据中包含 PGP 公钥，就可以保证在设备损坏或重装应用时公钥受到保护。请注意，每次重新安装本应用时都会创建新的电子身份信息（PGP 密钥）。</string>
+    <string name="digital_signatures_whatis_info">每次安装 ProofMode 时，都会创建独特的电子身份信息，其中包含 PGP 私钥与公钥。此过程由 OpenPGP 标准提供支持。创建的身份信息用来给媒体文件与支持的证明文件加密签名。如果 PGP 签名与当前 ProofMode 实例的电子身份信息（PGP 密钥）匹配，则签名就是由对应实例创建的。</string>
+</resources>
