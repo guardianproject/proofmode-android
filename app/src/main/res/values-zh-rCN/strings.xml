@@ -40,5 +40,33 @@
     </plurals>
     <string name="digital_signatures_whattodo_info">你的 PGP 公钥会随原文件与 proof.csv 文件一起被分享。这让第三方可以验证认证数据中的 PGP “.asc” 签名文件。如果在认证数据中包含 PGP 公钥，就可以保证在设备损坏或重装应用时公钥受到保护。请注意，每次重新安装本应用时都会创建新的电子身份信息（PGP 密钥）。</string>
     <string name="digital_signatures_whatis_info">每次安装 ProofMode 时，都会创建独特的电子身份信息，其中包含 PGP 私钥与公钥。此过程由 OpenPGP 标准提供支持。创建的身份信息用来给媒体文件与支持的证明文件加密签名。如果 PGP 签名与当前 ProofMode 实例的电子身份信息（PGP 密钥）匹配，则签名就是由对应实例创建的。</string>
-    <string name="settings_notary">公证人</string>
+    <string name="settings_notary">公证</string>
+    <string name="settings_location_desc">创建媒体文件所在的位置坐标</string>
+    <string name="settings_phone">设备</string>
+    <string name="open_public_key_page">打开公钥页面</string>
+    <string name="no_external_storage">警告：ProofMode 已启用，但外部存储不可用！</string>
+    <string name="waiting_proof_notify">已准备好添加证明信息</string>
+    <string name="inspect_photos">检查照片</string>
+    <string name="select_app">选择分享证明信息目标应用…</string>
+    <string name="proof_error_message">证明信息不存在</string>
+    <string name="settings_notary_desc">与第三方登记媒体文件的存在</string>
+    <string name="settings_location">位置</string>
+    <string name="settings_phone_desc">设备的认证号码</string>
+    <string name="settings_network">网络</string>
+    <string name="settings_network_desc">连接到的网络名称</string>
+    <string name="tap_hold_turn_off">长按关闭</string>
+    <string name="proofmode_is_off">ProofMode 已关闭 未获取数据</string>
+    <string name="tap_hold_turn_on">长按开启</string>
+    <string name="proofmode_is_on">ProofMode 已开启 正在获取数据</string>
+    <string name="share_notarization">分享公证信息…</string>
+    <string name="last_modified">上次修改于</string>
+    <string name="has_hash">SHA-256 哈希值为</string>
+    <string name="share_proof">分享证明信息…</string>
+    <string name="proof_signed">签名证明文件的 PGP 密钥为 0x</string>
+    <string name="notarize_only">分享公证信息</string>
+    <string name="share_proof_only">分享证明文件元数据</string>
+    <string name="share_proof_with_media">分享证明文件与媒体文件</string>
+    <string name="no_hash_generated">ProofMode 警告：无法访问媒体文件</string>
+    <string name="generating_proof_notify">正在生成证明信息…</string>
+    <string name="inspect_videos">检查视频</string>
 </resources>
