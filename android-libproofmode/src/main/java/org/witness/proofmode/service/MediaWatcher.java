@@ -182,7 +182,9 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
         }
 
     }
-
+/*
+// TODO Involes writing
+ */
     private static void writeMapToCSV(Context context, File fileOut, HashMap<String, String> hmProof, boolean writeHeaders) {
 
         StringBuffer sb = new StringBuffer();
@@ -721,6 +723,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
         return netInfo != null && netInfo.isConnected();
     }
 
+    // TODO : Writing involed
     private void writeProof(Context context, Uri uriMedia, InputStream is, String mediaHash, boolean showDeviceIds, boolean showLocation, boolean showMobileNetwork, String notes, Date createdAt) throws PGPException, IOException {
 
         boolean usePgpArmor = true;

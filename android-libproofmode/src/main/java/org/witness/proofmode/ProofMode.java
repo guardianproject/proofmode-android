@@ -196,7 +196,7 @@ public class ProofMode {
 
     }
 
-    public static void addNotarizationProvider(Context context, NotarizationProvider provider) {
+    public static void addNotarizationProvider(Context context, Notarization                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      Provider provider) {
         MediaWatcher.getInstance(context).addNotarizationProvider(provider);
     }
 
