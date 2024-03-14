@@ -59,20 +59,12 @@ class C2paUtils {
 
         }
 
-        /**
-         * Add content credentials to media from an external URI
-         */
-        fun   addContentCredentials (_context: Context, _uri: Uri?, isDirectCapture: Boolean, allowMachineLearning: Boolean) {
-
-            addContentCredentials(_context, _uri, isDirectCapture, allowMachineLearning, _context.cacheDir)
-
-        }
 
 
         /**
          * Add content credentials to media from an external URI, and specify the output directory of where to stare the new file
          */
-        fun   addContentCredentials (_context: Context, _uri: Uri?, isDirectCapture: Boolean, allowMachineLearning: Boolean, fileOutDir: File) {
+        fun   addContentCredentials (_context: Context, _uri: Uri?, isDirectCapture: Boolean, allowMachineLearning: Boolean) : File {
 
             var filePath: String? = null
             if (_uri != null && "content" == _uri.scheme) {
@@ -90,13 +82,13 @@ class C2paUtils {
                 filePath = _uri!!.path
             }
 
-            var fileMedia = File(filePath)
+            val fileMedia = File(filePath!!)
             var fileOut = fileMedia
             var fileName = fileMedia.name;
 
             if (!isDirectCapture) {
                 fileName = "c2pa-$fileName"
-                fileOut = File(fileOutDir, fileName);
+                fileOut = File(_context.cacheDir, fileName);
             }
 
             if (fileMedia.exists()) {
@@ -112,7 +104,11 @@ class C2paUtils {
                     fileMedia,
                     fileOut
                 )
+
+
             }
+
+            return fileOut
 
         }
 
