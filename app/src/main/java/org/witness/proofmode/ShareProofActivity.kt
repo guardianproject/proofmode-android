@@ -869,7 +869,7 @@ class ShareProofActivity : AppCompatActivity() {
                         Looper.prepare()
                         var fileC2PA = C2paUtils.addContentCredentials(activity, mediaUri, isDirectCapture, allowMachineLearning)
                         //now add fileC2PA to proof folder
-                        storageProvider?.saveStream(proofHash, fileC2PA.name, FileOutputStream(fileC2PA), null)
+                        storageProvider?.saveStream(proofHash, fileC2PA.name, FileInputStream(fileC2PA), null)
                         //all good
                     } else {
                         //error occured

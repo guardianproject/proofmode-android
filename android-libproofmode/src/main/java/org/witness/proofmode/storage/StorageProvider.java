@@ -9,7 +9,7 @@ import java.util.ArrayList;
 
 public interface StorageProvider {
 
-    public void saveStream(String hash, String identifier, OutputStream stream, StorageListener listener);
+    public void saveStream(String hash, String identifier, InputStream stream, StorageListener listener);
 
     public void saveBytes(String hash, String identifier, byte[] data, StorageListener listener);
 

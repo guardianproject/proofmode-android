@@ -22,10 +22,17 @@ public class DefaultStorageProvider (context : Context) : StorageProvider {
     override fun saveStream(
         hash: String?,
         identifier: String?,
-        stream: OutputStream?,
+        stream: InputStream?,
         listener: StorageListener?
     ) {
-        TODO("Not yet implemented")
+        val file = File(
+            getHashStorageDir(
+                hash!!
+            ), identifier!!
+        )
+        if (stream != null) {
+            copyStreamToFile(stream, file)
+        }
     }
 
     override fun saveText(
@@ -41,7 +48,7 @@ public class DefaultStorageProvider (context : Context) : StorageProvider {
             ), identifier!!
         )
         if (data != null) {
-            writeTextToFile(mContext, file, data)
+            writeTextToFile(file, data)
         }
 
     }
@@ -80,7 +87,7 @@ public class DefaultStorageProvider (context : Context) : StorageProvider {
 
             if (data != null) {
                 writeBytesToFile(
-                    mContext, file, data
+                    file, data
                 )
             }
         }
@@ -91,9 +98,7 @@ public class DefaultStorageProvider (context : Context) : StorageProvider {
     }
 
     override fun proofExists(hash: String?) : Boolean {
-                val dirProof = hash?.let { getHashStorageDir(it) }
-        return dirProof?.exists() == true
-
+               return proofIdentifierExists(hash, hash+ProofMode.PROOF_FILE_TAG)
     }
 
     override fun proofIdentifierExists(hash: String?, identifier: String?): Boolean {
@@ -134,7 +139,7 @@ public class DefaultStorageProvider (context : Context) : StorageProvider {
             null
     }
 
-    private fun writeTextToFile(context: Context, fileOut: File, text: String) {
+    private fun writeTextToFile(fileOut: File, text: String) {
         try {
             val ps = PrintStream(FileOutputStream(fileOut, true))
             ps.println(text)
@@ -188,22 +193,24 @@ public class DefaultStorageProvider (context : Context) : StorageProvider {
 
 
     @Synchronized
-    private fun writeBytesToFile(context: Context, fileOut: File, data: ByteArray) {
+    private fun writeBytesToFile(fileOut: File, data: ByteArray) {
         FileOutputStream(fileOut).write(data)
     }
 
-    @Synchronized
-    private fun copyFileToFile(context: Context, fileIn: File, fileOut: File) {
-        try {
-            val inStream = FileInputStream(fileIn)
-            val outStream = FileOutputStream(fileOut)
-            val inChannel = inStream.channel
-            val outChannel = outStream.channel
-            inChannel.transferTo(0, inChannel.size(), outChannel)
-            inStream.close()
-            outStream.close()
-        } catch (ioe: IOException) {
-            ioe.printStackTrace()
-        }
+    private fun copyFileToFile(fileIn: File, fileOut: File) {
+        val inStream = FileInputStream(fileIn)
+        val outStream = FileOutputStream(fileOut)
+        val inChannel = inStream.channel
+        val outChannel = outStream.channel
+        inChannel.transferTo(0, inChannel.size(), outChannel)
+        inStream.close()
+        outStream.close()
+    }
+
+    private fun copyStreamToFile(inStream: InputStream, fileOut: File) {
+        val outStream = FileOutputStream(fileOut)
+        inStream.copyTo(outStream, DEFAULT_BUFFER_SIZE)
+        inStream.close()
+        outStream.close()
     }
 }

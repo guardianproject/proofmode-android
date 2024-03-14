@@ -376,7 +376,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                                 String ext = fileTmp.getName().split(".")[1];
 
                                 try {
-                                    mStorageProvider.saveStream(hash, hash + '.' + ext, new FileOutputStream(fileTmp), new StorageListener() {
+                                    mStorageProvider.saveStream(hash, hash + '.' + ext, new FileInputStream(fileTmp), new StorageListener() {
                                         @Override
                                         public void saveSuccessful(String hash) {}
 
@@ -495,7 +495,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
 
                             String ext = fileTmp.getName().split(".")[1];
                             try {
-                                mStorageProvider.saveStream(hash, hash + '.' + ext, new FileOutputStream(fileTmp), new StorageListener() {
+                                mStorageProvider.saveStream(hash, hash + '.' + ext, new FileInputStream(fileTmp), new StorageListener() {
                                     @Override
                                     public void saveSuccessful(String hash) {}
 
@@ -610,7 +610,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
 
                             String ext = fileTmp.getName().split(".")[1];
                             try {
-                                mStorageProvider.saveStream(hash, hash + '.' + ext, new FileOutputStream(fileTmp), new StorageListener() {
+                                mStorageProvider.saveStream(hash, hash + '.' + ext, new FileInputStream(fileTmp), new StorageListener() {
                                     @Override
                                     public void saveSuccessful(String hash) {}
 
