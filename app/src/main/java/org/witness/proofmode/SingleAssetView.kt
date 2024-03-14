@@ -76,6 +76,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.launch
 import org.witness.proofmode.service.ProofModeV1Constants
+import org.witness.proofmode.storage.DefaultStorageProvider
 import org.witness.proofmode.util.ProofModeUtil
 import java.lang.Float.max
 import java.lang.Float.min
@@ -312,24 +313,44 @@ fun updateMetadata (itemUri : Uri, context : Context) {
 
         var df = SimpleDateFormat.getDateTimeInstance()
 
-        var hmap : HashMap<String, String>? = ProofModeUtil.getProofHashMap(hash, context)
-        addRow (ProofModeV1Constants.FILE_HASH_SHA_256, hmap)
-        addRow (ProofModeV1Constants.FILE_CREATED, df.format(dfParse.parse(hmap?.get(ProofModeV1Constants.FILE_CREATED))))
-        addRow (ProofModeV1Constants.FILE_MODIFIED, df.format(dfParse.parse(hmap?.get(ProofModeV1Constants.FILE_MODIFIED))))
-        addRow (ProofModeV1Constants.PROOF_GENERATED, df.format(dfParse.parse(hmap?.get(ProofModeV1Constants.PROOF_GENERATED))))
+        //ProofMode app uses default storage provider
+        var storageProvider = DefaultStorageProvider(context)
+        var hmap: HashMap<String, String>? =
+            ProofModeUtil.getProofHashMap(storageProvider, hash, context)
 
-        var lat = hmap?.get(ProofModeV1Constants.LOCATION_LATITUDE)?.toDouble()
-        var loc = hmap?.get(ProofModeV1Constants.LOCATION_LONGITUDE)?.toDouble()
+        addRow(ProofModeV1Constants.FILE_HASH_SHA_256, hmap)
+        if (hmap?.contains(ProofModeV1Constants.FILE_CREATED) == true)
+            addRow(
+                ProofModeV1Constants.FILE_CREATED,
+                df.format(dfParse.parse(hmap?.get(ProofModeV1Constants.FILE_CREATED)))
+            )
+        if (hmap?.contains(ProofModeV1Constants.FILE_MODIFIED) == true)
+            addRow(
+                ProofModeV1Constants.FILE_MODIFIED,
+                df.format(dfParse.parse(hmap?.get(ProofModeV1Constants.FILE_MODIFIED)))
+            )
+        if (hmap?.contains(ProofModeV1Constants.PROOF_GENERATED) == true)
+            addRow(
+                ProofModeV1Constants.PROOF_GENERATED,
+                df.format(dfParse.parse(hmap?.get(ProofModeV1Constants.PROOF_GENERATED)))
+            )
 
-        lat?.let {
-            if (loc != null) {
-                convertDegMinsSecs(lat,loc)?.let { it1 -> addRow("Location", it1) }
+        if (hmap?.contains(ProofModeV1Constants.LOCATION_LATITUDE) == true) {
+            var lat = hmap?.get(ProofModeV1Constants.LOCATION_LATITUDE)?.toDouble()
+            var loc = hmap?.get(ProofModeV1Constants.LOCATION_LONGITUDE)?.toDouble()
+
+            lat?.let {
+                if (loc != null) {
+                    convertDegMinsSecs(lat, loc)?.let { it1 -> addRow("Location", it1) }
+                }
             }
         }
 
-        addRow (ProofModeV1Constants.HARDWARE, hmap)
+        if (hmap?.contains(ProofModeV1Constants.HARDWARE) == true)
+            addRow (ProofModeV1Constants.HARDWARE, hmap)
 
-        addRow (ProofModeV1Constants.FILE_PATH, hmap)
+        if (hmap?.contains(ProofModeV1Constants.FILE_PATH) == true)
+            addRow (ProofModeV1Constants.FILE_PATH, hmap)
 
 
     }

@@ -51,6 +51,8 @@ import org.witness.proofmode.crypto.HashUtils
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.databinding.ActivityShareBinding
 import org.witness.proofmode.service.MediaWatcher
+import org.witness.proofmode.storage.DefaultStorageProvider
+import org.witness.proofmode.storage.StorageProvider
 import timber.log.Timber
 import java.io.*
 import java.net.URL
@@ -74,6 +76,8 @@ class ShareProofActivity : AppCompatActivity() {
     private var mPrefs : SharedPreferences? = null
     private var mAllowMachineLearning : Boolean? = false
 
+    private var mStorageProvider : StorageProvider? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityShareBinding.inflate(layoutInflater)
@@ -81,6 +85,7 @@ class ShareProofActivity : AppCompatActivity() {
         pgpUtils = PgpUtils.getInstance(this, mPrefs?.getString(PREFS_KEY_PASSPHRASE,PREFS_KEY_PASSPHRASE_DEFAULT))
         mAllowMachineLearning = mPrefs?.getBoolean(PREF_OPTION_AI, PREF_OPTION_AI_DEFAULT)
         setContentView(binding.root)
+        mStorageProvider = DefaultStorageProvider(applicationContext)
     }
 
     override fun onResume() {
@@ -166,7 +171,7 @@ class ShareProofActivity : AppCompatActivity() {
         if (Intent.ACTION_SEND_MULTIPLE == action) {
             val mediaUris = intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM) ?: emptyList()
 
-            GenerateMultiProofTask (this, mediaUris, mAllowMachineLearning == true).execute();
+            GenerateMultiProofTask (this, mediaUris, mAllowMachineLearning == true, mStorageProvider).execute();
 
 
         } else if (Intent.ACTION_SEND == action || action!!.endsWith("SHARE_PROOF")) {
@@ -343,8 +348,7 @@ class ShareProofActivity : AppCompatActivity() {
             val fileBatchProof: File
             val fBatchProofOut: PrintWriter
             try {
-                val fileFolder = MediaWatcher.getHashStorageDir(this, "batch") ?: return null
-                fileBatchProof = File(fileFolder, Date().time.toString() + "batchproof.csv")
+                fileBatchProof = File(cacheDir, Date().time.toString() + "batchproof.csv")
                 fBatchProofOut = PrintWriter(FileWriter(fileBatchProof, true))
             } catch (ioe: IOException) {
                 return null //unable to open batch proof
@@ -352,6 +356,7 @@ class ShareProofActivity : AppCompatActivity() {
             var successProof = 0
             var isFirstProof = true
             for (mediaUri in mediaUris) {
+                shareUris.add(mediaUri)
                 if (processUri(
                         null,
                         mediaUri,
@@ -377,6 +382,7 @@ class ShareProofActivity : AppCompatActivity() {
             if (mediaUri == null) mediaUri = intent.data
             if (mediaUri != null) {
                 mediaUri = cleanUri(mediaUri)
+                shareUris.add(mediaUri)
                 val mediaHash = hashCache[mediaUri.toString()]
                 if (!processUri(
                         mediaHash,
@@ -534,8 +540,7 @@ class ShareProofActivity : AppCompatActivity() {
             val fileBatchProof: File
             val fBatchProofOut: PrintWriter
             try {
-                val fileFolder = MediaWatcher.getHashStorageDir(this, "batch") ?: return null
-                fileBatchProof = File(fileFolder, Date().time.toString() + "batchproof.csv")
+                fileBatchProof = File(cacheDir, Date().time.toString() + "batchproof.csv")
                 fBatchProofOut = PrintWriter(FileWriter(fileBatchProof, true))
             } catch (ioe: IOException) {
                 return null //unable to open batch proof
@@ -647,23 +652,15 @@ class ShareProofActivity : AppCompatActivity() {
                                 val zipEntry = entries.nextElement()
                                 println(zipEntry.name)
                                 var mediaHash = zipEntry.name.split(".")[0]
-                                val fileFolder = MediaWatcher.getHashStorageDir(this, mediaHash)
-                                fileFolder?.let {
-                                    var fileImageC2PA = File(fileFolder,zipEntry.name+"-c2pa.jpg")
-                                    shareUris.add(Uri.fromFile(fileImageC2PA))
-                                    zipFile.getInputStream(zipEntry).copyTo(FileOutputStream(fileImageC2PA))
-                                }
+                                var identifier = zipEntry.name+"-c2pa.jpg"
+
+                                //var fileImageC2PA = File(fileFolder,)
+                                //shareUris.add(Uri.fromFile(fileImageC2PA)) //TODO STORAGE
+                                mStorageProvider?.getOutputStream(mediaHash, identifier)
+                                    ?.let { zipFile.getInputStream(zipEntry).copyTo(it) }
+
                             }
                             zipFile.close()
-
-                            /**
-                            Timber.d("Preparing proof bundle zip: " + fileZip.absolutePath)
-                            try {
-                                zipProof(shareUris, fileZip)
-                            } catch (e: IOException) {
-                                Timber.e(e, "Error generating proof Zip")
-                                return null
-                            }**/
 
                             return fileZipC2PA
                         }
@@ -702,8 +699,7 @@ class ShareProofActivity : AppCompatActivity() {
             val fileBatchProof: File
             val fBatchProofOut: PrintWriter
             try {
-                val fileFolder = MediaWatcher.getHashStorageDir(this, "batch") ?: return false
-                fileBatchProof = File(fileFolder, Date().time.toString() + "batchproof.csv")
+                fileBatchProof = File(cacheDir, Date().time.toString() + "batchproof.csv")
                 fBatchProofOut = PrintWriter(FileWriter(fileBatchProof, true))
             } catch (ioe: IOException) {
                 return false //unable to open batch proof
@@ -711,6 +707,7 @@ class ShareProofActivity : AppCompatActivity() {
             var successProof = 0
             var isFirstProof = true
             for (mediaUri in mediaUris) {
+                shareUris.add(mediaUri)
                 if (processUri(
                         null,
                         mediaUri,
@@ -736,6 +733,7 @@ class ShareProofActivity : AppCompatActivity() {
             if (mediaUri == null) mediaUri = intent.data
             if (mediaUri != null) {
                 mediaUri = cleanUri(mediaUri)
+                shareUris.add(mediaUri)
                 val mediaHash = hashCache[mediaUri.toString()]
                 if (!processUri(
                         mediaHash,
@@ -822,12 +820,11 @@ class ShareProofActivity : AppCompatActivity() {
         if (hash != null) {
             hashCache[sMediaUri] = hash
             Timber.d("Proof check if exists for URI %s and hash %s", mediaUri, hash)
-            val fileFolder = MediaWatcher.getHashStorageDir(this, hash)
-            return if (fileFolder != null) {
-                val fileMediaProof = File(fileFolder, hash + ProofMode.PROOF_FILE_TAG)
-                //generate now?
-                if (fileMediaProof.exists()) hash else null
-            } else null
+            if (mStorageProvider?.proofExists(hash) == true)
+            {
+                if (mStorageProvider?.proofIdentifierExists(hash, hash + ProofMode.PROOF_FILE_TAG) == true)
+                    return hash
+            }
         }
         return null
     }
@@ -850,7 +847,7 @@ class ShareProofActivity : AppCompatActivity() {
         }
     }
 
-    private class GenerateMultiProofTask (private val activity: ShareProofActivity, private val mediaUris :List<Uri>, private val allowMachineLearning: Boolean) : AsyncTask<Void?, Void?, String?>() {
+    private class GenerateMultiProofTask (private val activity: ShareProofActivity, private val mediaUris :List<Uri>, private val allowMachineLearning: Boolean, private val storageProvider: StorageProvider?) : AsyncTask<Void?, Void?, String?>() {
         override fun doInBackground(vararg voids: Void?): String? {
             var proofHash: String? = null
             for (mediaUri in mediaUris!!) {
@@ -868,13 +865,11 @@ class ShareProofActivity : AppCompatActivity() {
                     )
                     if (genProofHash != null && genProofHash == proofHash) {
 
-
-                        var proofDir = ProofMode.getProofDir(activity, genProofHash)
-
-                        var isDirectCapture = false; //this is from an import, and we are manually generating proof
+                        val isDirectCapture = false; //this is from an import, and we are manually generating proof
                         Looper.prepare()
-                        C2paUtils.addContentCredentials(activity, mediaUri, isDirectCapture, allowMachineLearning, proofDir)
-
+                        var fileC2PA = C2paUtils.addContentCredentials(activity, mediaUri, isDirectCapture, allowMachineLearning)
+                        //now add fileC2PA to proof folder
+                        storageProvider?.saveStream(proofHash, fileC2PA.name, FileOutputStream(fileC2PA), null)
                         //all good
                     } else {
                         //error occured
@@ -1061,18 +1056,7 @@ class ShareProofActivity : AppCompatActivity() {
 
     }
 
-    private fun getRealUri(contentUri: Uri?): Uri? {
-        val unusablePath = contentUri!!.path
-        val startIndex = unusablePath!!.indexOf("external/")
-        val endIndex = unusablePath.indexOf("/ACTUAL")
-        return if (startIndex != -1 && endIndex != -1) {
-            val embeddedPath = unusablePath.substring(startIndex, endIndex)
-            val builder = contentUri.buildUpon()
-            builder.path(embeddedPath)
-            builder.authority("media")
-            builder.build()
-        } else contentUri
-    }
+
 
     @Throws(IOException::class, PGPException::class)
     private fun processUri(
@@ -1165,48 +1149,25 @@ class ShareProofActivity : AppCompatActivity() {
                 uriMedia!!
             )
         )
-        if (hash != null) {
-            val fileFolder = MediaWatcher.getHashStorageDir(this, hash) ?: return null
-            val fileMediaSig = File(fileFolder, hash + ProofMode.OPENPGP_FILE_TAG)
-            val fileMediaProof = File(fileFolder, hash + ProofMode.PROOF_FILE_TAG)
-            val fileMediaProofSig =
-                File(fileFolder, hash + ProofMode.PROOF_FILE_TAG + ProofMode.OPENPGP_FILE_TAG)
-            val fileMediaProofJSON = File(fileFolder, hash + ProofMode.PROOF_FILE_JSON_TAG)
-            val fileMediaProofJSONSig =
-                File(fileFolder, hash + ProofMode.PROOF_FILE_JSON_TAG + ProofMode.OPENPGP_FILE_TAG)
-            val fileMediaOpentimestamps = File(fileFolder, hash + ProofMode.OPENTIMESTAMPS_FILE_TAG)
-            val fileMediaGoogleSafetyNet =
-                File(fileFolder, hash + ProofMode.GOOGLE_SAFETYNET_FILE_TAG)
-            if (fileMediaProof.exists()) {
-                var lastModified: Date? = null
-                if (fileMedia != null) lastModified = Date(fileMedia.lastModified())
+        if (hash != null && mStorageProvider?.proofExists(hash) == true) {
 
-                val fileList = fileFolder.listFiles()
-                for (file in fileList)
-                {
-                    shareUris.add(Uri.fromFile(file))
-                }
+            mStorageProvider?.getProofSet(hash)?.let { shareUris.addAll(it) }
 
-                generateProofOutput(
-                    uriMedia,
-                    fileMedia,
-                    lastModified,
-                    fileMediaSig,
-                    fileMediaProof,
-                    fileMediaProofSig,
-                    fileMediaProofJSON,
-                    fileMediaProofJSONSig,
-                    fileMediaOpentimestamps,
-                    fileMediaGoogleSafetyNet,
-                    hash,
-                    shareMedia,
-                    fBatchProofOut,
-                    shareUris,
-                    sb,
-                    isFirstProof
-                )
-                return hash
+            val sdf = SimpleDateFormat.getDateTimeInstance()
+            val fingerprint = pgpUtils.publicKeyFingerprint
+            if (fileMedia != null) {
+                sb.append(fileMedia.name).append(' ')
+                sb.append(getString(R.string.last_modified)).append(' ')
+                    .append(sdf.format(fileMedia.lastModified()))
+                sb.append(' ')
             }
+            sb.append(getString(R.string.has_hash)).append(' ').append(hash)
+            sb.append("\n\n")
+            sb.append(getString(R.string.proof_signed)).append(fingerprint)
+            sb.append("\n")
+
+            return hash
+
         }
         return null
     }
@@ -1248,52 +1209,13 @@ class ShareProofActivity : AppCompatActivity() {
                 fileMediaProofSig = File(fileMediaProof.absolutePath + ProofMode.OPENPGP_FILE_TAG)
             }
         }
-        generateProofOutput(
-            mediaUri,
-            fileMedia,
-            Date(fileMedia.lastModified()),
-            fileMediaSig,
-            fileMediaProof,
-            fileMediaProofSig,
-            null,
-            null,
-            null,
-            null,
-            hash,
-            shareMedia,
-            fBatchProofOut,
-            shareUris,
-            sb,
-            true
-        )
-        return hash
-    }
 
-    @Throws(IOException::class, PGPException::class)
-    private fun generateProofOutput(
-        uriMedia: Uri?,
-        fileMedia: File?,
-        fileLastModified: Date?,
-        fileMediaSig: File?,
-        fileMediaProof: File,
-        fileMediaProofSig: File?,
-        fileMediaProofJSON: File?,
-        fileMediaProofJSONSig: File?,
-        fileMediaNotary: File?,
-        fileMediaNotary2: File?,
-        hash: String,
-        shareMedia: Boolean,
-        fBatchProofOut: PrintWriter?,
-        shareUris: ArrayList<Uri?>,
-        sb: StringBuffer,
-        isFirstProof: Boolean
-    ) {
         val sdf = SimpleDateFormat.getDateTimeInstance()
         val fingerprint = pgpUtils.publicKeyFingerprint
         if (fileMedia != null) {
             sb.append(fileMedia.name).append(' ')
             sb.append(getString(R.string.last_modified)).append(' ')
-                .append(sdf.format(fileLastModified))
+                .append(sdf.format(fileMedia?.lastModified()))
             sb.append(' ')
         }
         sb.append(getString(R.string.has_hash)).append(' ').append(hash)
@@ -1301,41 +1223,7 @@ class ShareProofActivity : AppCompatActivity() {
         sb.append(getString(R.string.proof_signed)).append(fingerprint)
         sb.append("\n")
 
-        //shareUris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + PROVIDER_TAG,fileMediaProof));
-        shareUris.add(Uri.fromFile(fileMediaProof))
-        if (shareMedia) {
-            shareUris.add(uriMedia)
-            if (fileMediaSig != null
-                && fileMediaSig.exists()
-            ) shareUris.add(Uri.fromFile(fileMediaSig))
-            if (fileMediaProofSig != null
-                && fileMediaProofSig.exists()
-            ) shareUris.add(Uri.fromFile(fileMediaProofSig))
-            if (fileMediaProofJSON != null
-                && fileMediaProofJSON.exists()
-            ) shareUris.add(Uri.fromFile(fileMediaProofJSON))
-            if (fileMediaProofJSONSig != null
-                && fileMediaProofJSONSig.exists()
-            ) shareUris.add(Uri.fromFile(fileMediaProofJSONSig))
-            if (fileMediaNotary != null
-                && fileMediaNotary.exists()
-            ) shareUris.add(Uri.fromFile(fileMediaNotary))
-            if (fileMediaNotary2 != null
-                && fileMediaNotary2.exists()
-            ) shareUris.add(Uri.fromFile(fileMediaNotary2))
-        }
-        if (fBatchProofOut != null) {
-            val br = BufferedReader(FileReader(fileMediaProof))
-            if (!isFirstProof) {
-                br.readLine() //skip header
-            } else {
-                //get header from proof
-                fBatchProofOut.println(br.readLine())
-            }
-            val csvLine = br.readLine()
-            fBatchProofOut.println(csvLine)
-            br.close()
-        }
+        return hash
     }
 
     private fun shareNotarization(shareText: String) {
@@ -1511,18 +1399,6 @@ class ShareProofActivity : AppCompatActivity() {
         startActivity(openInChooser)
     }
 
-    private fun askForPermission(permission: String, requestCode: Int) {
-        if (ContextCompat.checkSelfPermission(
-                this,
-                permission
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-
-            // Should we show an explanation?
-            ActivityCompat.requestPermissions(this, arrayOf(permission), requestCode)
-        }
-    }
-
     @Throws(IOException::class, PGPException::class)
     fun zipProof(uris: ArrayList<Uri?>, fileZip: File?) {
         var origin: BufferedInputStream
@@ -1535,9 +1411,12 @@ class ShareProofActivity : AppCompatActivity() {
         val data = ByteArray(BUFFER)
         for (uri in uris) {
             try {
-                val fileName = getFileNameFromUri(uri)
+                val fileName = getFileNameFromUri(contentResolver, uri)
                 Timber.d("adding to zip: $fileName")
-                origin = BufferedInputStream(contentResolver.openInputStream(uri!!), BUFFER)
+                var isProofItem = mStorageProvider?.getProofItem(uri!!)
+                if (isProofItem == null)
+                    isProofItem = contentResolver.openInputStream(uri!!)
+                origin = BufferedInputStream(isProofItem, BUFFER)
                 val entry = ZipEntry(fileName)
                 out.putNextEntry(entry)
                 var count: Int
@@ -1581,54 +1460,7 @@ class ShareProofActivity : AppCompatActivity() {
     }
 
 
-    private fun getFileNameFromUri(uri: Uri?): String? {
-        val projection = arrayOfNulls<String>(2)
-        val mimeType = contentResolver.getType(uri!!)
-        val mimeTypeMap = MimeTypeMap.getSingleton()
-        val fileExt = mimeTypeMap.getExtensionFromMimeType(mimeType)
-        if (mimeType != null) {
-            if (mimeType.startsWith("image")) {
-                projection[0] = MediaStore.Images.Media.DATA
-                projection[1] = MediaStore.Images.Media.DISPLAY_NAME
-            } else if (mimeType.startsWith("video")) {
-                projection[0] = MediaStore.Video.Media.DATA
-                projection[1] = MediaStore.Video.Media.DISPLAY_NAME
-            } else if (mimeType.startsWith("audio")) {
-                projection[0] = MediaStore.Audio.Media.DATA
-                projection[1] = MediaStore.Audio.Media.DISPLAY_NAME
-            }
-        } else {
-            projection[0] = MediaStore.Images.Media.DATA
-            projection[1] = MediaStore.Images.Media.DISPLAY_NAME
-        }
-        val cursor = contentResolver.query(getRealUri(uri)!!, projection, null, null, null)
-        val result = false
 
-        //default name with file extension
-        var fileName = uri.lastPathSegment
-        if (fileExt != null && fileName!!.indexOf(".") == -1) fileName += ".$fileExt"
-        if (cursor != null) {
-            if (cursor.count > 0) {
-                cursor.moveToFirst()
-                try {
-                    var columnIndex = cursor.getColumnIndexOrThrow(projection[0])
-                    val path = cursor.getString(columnIndex)
-                    if (path != null) {
-                        val fileMedia = File(path)
-                        if (fileMedia.exists()) fileName = fileMedia.name
-                    }
-                    if (TextUtils.isEmpty(fileName)) {
-                        columnIndex = cursor.getColumnIndexOrThrow(projection[1])
-                        fileName = cursor.getString(columnIndex)
-                    }
-                } catch (_: IllegalArgumentException) {
-                }
-            }
-            cursor.close()
-        }
-        if (TextUtils.isEmpty(fileName)) fileName = uri.lastPathSegment
-        return fileName
-    }
 
     private fun showInfoBasic() {
         val builder = AlertDialog.Builder(this)
