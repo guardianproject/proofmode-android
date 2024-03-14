@@ -1,6 +1,10 @@
+
+plugins {
+    id 'maven-publish'
+}
+
 apply plugin: 'com.android.library'
 apply plugin: 'org.jetbrains.kotlin.android'
-
 
 android {
     compileSdkVersion 34
@@ -73,18 +77,17 @@ dependencies {
 
 }
 
-/**
+
 project.afterEvaluate {
     publishing {
         publications {
             release(MavenPublication) {
                 groupId 'org.proofmode'
                 artifactId 'android-libproofmode'
-                version '1.0.26'
+                version '1.0.27'
                 from components.release
             }
         }
     }
-}**/
-
+}
 

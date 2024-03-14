@@ -178,10 +178,6 @@ public class ProofMode {
 
     }
 
-    public static File getProofDir(Context context, String mediaHash) {
-        return MediaWatcher.getHashStorageDir(context, mediaHash);
-    }
-
     public static void setProofPoints(Context context, boolean deviceIds, boolean location, boolean networks, boolean notarization) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 
@@ -196,7 +192,7 @@ public class ProofMode {
 
     }
 
-    public static void addNotarizationProvider(Context context, Notarization                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      Provider provider) {
+    public static void addNotarizationProvider(Context context, NotarizationProvider provider) {
         MediaWatcher.getInstance(context).addNotarizationProvider(provider);
     }
 
@@ -402,6 +398,7 @@ public class ProofMode {
         return pu.verifyDetachedSignature(fileStream, sigStream, publicKey);
     }
 
+    /**
     public static void generateProofZip(Context context, String proofHash, String passphrase) throws IOException, PGPException {
 
         File fileDirProof = ProofMode.getProofDir(context, proofHash);
@@ -455,7 +452,7 @@ public class ProofMode {
 
         out.close();
 
-    }
+    }**/
 
     public static void checkAndGeneratePublicKeyAsync(Context context, String passphrase) {
         Executors.newSingleThreadExecutor().execute(() -> {
