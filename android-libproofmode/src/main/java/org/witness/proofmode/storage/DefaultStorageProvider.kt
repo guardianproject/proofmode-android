@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.core.net.toFile
 import org.witness.proofmode.ProofMode
 import org.witness.proofmode.service.MediaWatcher
+import timber.log.Timber
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -53,13 +54,16 @@ public class DefaultStorageProvider (context : Context) : StorageProvider {
 
     }
 
-    override fun getInputStream(hash: String?, identifier: String?): InputStream {
+    override fun getInputStream(hash: String?, identifier: String?): InputStream? {
         val file = File(
             getHashStorageDir(
                 hash!!
             ), identifier!!
         )
-        return FileInputStream(file)
+        if (file.exists())
+            return FileInputStream(file)
+        else
+            return null
     }
 
     override fun getOutputStream(hash: String?, identifier: String?): OutputStream {
@@ -106,7 +110,13 @@ public class DefaultStorageProvider (context : Context) : StorageProvider {
         val dirProof = hash?.let { getHashStorageDir(it) }
         if (dirProof?.exists() == true)
         {
-            return (identifier?.let { File(dirProof, it).exists() } == true)
+            return (identifier?.let {
+                val dirProofHash = File(dirProof, it)
+                dirProofHash.listFiles()?.forEach { Timber.d(it.absolutePath)}
+                dirProofHash.exists()
+            } == true)
+
+
         }
 
         return false

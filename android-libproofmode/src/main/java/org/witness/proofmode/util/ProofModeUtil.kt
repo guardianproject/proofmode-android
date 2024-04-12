@@ -55,29 +55,30 @@ class ProofModeUtil {
 
         fun getProofHashMap (storageProvider: StorageProvider, proofHash: String, context: Context): HashMap<String,String>? {
 
-            val hmap = HashMap<String,String>()
+            val hashMapProof = HashMap<String,String>()
             val identifier = proofHash+ProofMode.PROOF_FILE_JSON_TAG
 
             if (storageProvider.proofIdentifierExists(proofHash,identifier))
             {
-                val jsonData = BufferedReader(InputStreamReader(storageProvider.getInputStream(proofHash,identifier))).readText();
-                val jsonObject = JSONObject(jsonData)
-                val itKeys = jsonObject.keys()
-                while (itKeys.hasNext())
-                {
-                    while (itKeys.hasNext())
-                    {
-                        val key = itKeys.next()
-                        val value = jsonObject.getString(key)
-                        if (value.isNotEmpty()) {
-                            hmap[key] = value
+                val proofStream = storageProvider.getInputStream(proofHash,identifier)
+                proofStream.let {
+                    val jsonData = BufferedReader(InputStreamReader(proofStream)).readText();
+                    val jsonObject = JSONObject(jsonData)
+                    val itKeys = jsonObject.keys()
+                    while (itKeys.hasNext()) {
+                        while (itKeys.hasNext()) {
+                            val key = itKeys.next()
+                            val value = jsonObject.getString(key)
+                            if (value.isNotEmpty()) {
+                                hashMapProof[key] = value
+                            }
                         }
                     }
                 }
 
             }
 
-            return hmap
+            return hashMapProof
         }
     }
 }
