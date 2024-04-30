@@ -280,7 +280,8 @@ object Activities: ViewModel()
             if (activity != null) {
                 var proofItems = Activities.getActivityProofableItems(activity)
                 for (proofItem in proofItems)
-                    listItems.add(proofItem)
+                    if (!listItems.contains(proofItem))
+                        listItems.add(proofItem)
             }
 
         }
@@ -306,7 +307,8 @@ object Activities: ViewModel()
                 var item = db.activitiesDao().activityFromProofableItemId(selectId)
                 if (item != null) {
                     var pItem = ProofableItem(item.id, Uri.parse(selectId))
-                    listItems.add(pItem)
+                    if (!listItems.contains(pItem))
+                        listItems.add(pItem)
                 }
 
         }
@@ -338,7 +340,8 @@ object Activities: ViewModel()
                 var item = db.activitiesDao().activityFromProofableItemId(selectId)
                 if (item != null) {
                     var pItem = ProofableItem(item.id, Uri.parse(selectId))
-                    listItems.add(pItem)
+                    if (!listItems.contains(pItem))
+                        listItems.add(pItem)
                 }
             }
         }
