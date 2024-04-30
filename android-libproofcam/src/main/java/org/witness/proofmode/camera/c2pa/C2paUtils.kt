@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.preference.PreferenceManager
 import android.provider.MediaStore
+import android.system.Os
 import info.guardianproject.simple_c2pa.*
 import java.io.File
 import java.io.FileInputStream
@@ -40,6 +41,11 @@ class C2paUtils {
         const val PREF_OPTION_LOCATION = "trackLocation"
 
 
+        fun init (context: Context)
+        {
+            //this needs to be set to
+            Os.setenv("TMPDIR",context.cacheDir.absolutePath, true);
+        }
         /**
          * Set identity values for certificate and content credentials
          */
