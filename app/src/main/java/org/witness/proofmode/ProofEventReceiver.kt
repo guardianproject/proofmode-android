@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.runtime.mutableStateListOf
 import timber.log.Timber
@@ -36,7 +37,7 @@ class ProofEventReceiver : BroadcastReceiver() {
                 )
             }
 
-            Timber.d("New Proof Event: " + it)
+            Timber.tag("ProofEventReceiver").i("New Proof Event: " + it)
         }
     }
 

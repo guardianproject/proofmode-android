@@ -78,7 +78,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
     private var cameraProvider: ProcessCameraProvider? = null
     private var imageCapture: ImageCapture? = null
     private var imageAnalyzer: ImageAnalysis? = null
-`
+
     // A lazy instance of the current fragment's view binding
     override val binding: FragmentCameraBinding by lazy {
         FragmentCameraBinding.inflate(

@@ -48,6 +48,7 @@ import org.witness.proofmode.databinding.ActivityMainBinding
 import org.witness.proofmode.onboarding.OnboardingActivity
 import org.witness.proofmode.service.MediaWatcher
 import org.witness.proofmode.util.GPSTracker
+import timber.log.Timber
 import java.io.IOException
 import java.util.Date
 import java.util.UUID
@@ -265,6 +266,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     private fun addProofActivity(items: List<Uri>) {
 
+        Timber.d("addProofActivity: New Proof Items: ${items.size}")
 
         val proofItems = ArrayList<ProofableItem>()
         for (item in items) {
