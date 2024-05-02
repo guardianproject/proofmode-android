@@ -38,6 +38,7 @@ import coil.request.ImageRequest
 import coil.transform.CircleCropTransformation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.witness.proofmode.camera.CameraActivity
 import org.witness.proofmode.camera.R
 import org.witness.proofmode.camera.c2pa.C2paUtils
 import org.witness.proofmode.camera.databinding.FragmentVideoBinding
@@ -55,6 +56,7 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
     private lateinit var pinchToZoomDetector: ScaleGestureDetector
     private lateinit var viewFinder: PreviewView
     private val lensViewModel: CameraLensViewModel by activityViewModels()
+    private lateinit var context: Context
 
     // An instance for display manager to get display change callbacks
     private val displayManager by lazy { requireContext().getSystemService(Context.DISPLAY_SERVICE) as DisplayManager }
@@ -329,6 +331,9 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
 
     @SuppressLint("MissingPermission")
     private fun recordVideo() {
+
+        context = requireContext()
+
         val localVideoCapture =
             videoCapture ?: throw IllegalStateException("Camera initialization failed.")
 
@@ -360,10 +365,6 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
                 object : VideoCapture.OnVideoSavedCallback { // the callback after recording a video
                     override fun onVideoSaved(outputFileResults: VideoCapture.OutputFileResults) {
 
-                        var isDirectCapture = true; //this is from our camera
-                        var allowMachineLearning = false; //by default, we flag to not allow
-
-                        C2paUtils.addContentCredentials(requireContext(), outputFileResults.savedUri, isDirectCapture, allowMachineLearning)
 
                         // Create small preview
                         outputFileResults.savedUri
@@ -373,6 +374,20 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
                                 Log.d(TAG, "Video saved in $uri")
                             }
                             ?: setLastPictureThumbnail()
+
+                        if (CameraActivity.useCredentials) {
+
+                            var isDirectCapture = true; //this is from our camera
+                            var allowMachineLearning = CameraActivity.useAIFlag; //by default, we flag to not allow
+
+                            C2paUtils.addContentCredentials(
+                                context,
+                                outputFileResults.savedUri,
+                                isDirectCapture,
+                                allowMachineLearning
+                            )
+                        }
+
                     }
 
                     override fun onError(

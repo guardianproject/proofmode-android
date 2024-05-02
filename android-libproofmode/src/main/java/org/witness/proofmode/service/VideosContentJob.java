@@ -22,6 +22,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import timber.log.Timber;
 
@@ -96,8 +98,8 @@ public class VideosContentJob extends JobService {
         return true;
     }
 
-    private HashMap<Uri,String> mUriStack = new HashMap<>();
-    private Handler mHandler = new Handler();
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+
     private void doWork ()
     {
 
@@ -105,42 +107,51 @@ public class VideosContentJob extends JobService {
 
             if (mRunningParams.getTriggeredContentUris() != null) {
 
+                HashMap<String, Uri> uriList = new HashMap<String, Uri>();
+
                 for (Uri uri : mRunningParams.getTriggeredContentUris()) {
-                    mUriStack.put(uri,uri.toString());
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        uri = MediaStore.setRequireOriginal(uri);
+                    }
+
+                    String mediaPath = MediaWatcher.getMediaPath(VideosContentJob.this, uri);
+
+                    if (mediaPath != null)
+                        uriList.put(mediaPath, uri);
+                    else
+                        uriList.put(uri.toString(), uri);
                 }
 
-                Timer t = new Timer();
-                t.schedule(new TimerTask() {
-                    @Override
-                    public void run() {
-                        ArrayList<Uri> uriKeys = new ArrayList<Uri>(mUriStack.keySet());
+                for (Uri uri : uriList.values())
+                {
 
-                        for (Uri uri : uriKeys) {
-                            String resultProofHash = MediaWatcher.getInstance(VideosContentJob.this).processUri(uri, true, null);
+                    final Uri uriProcess = uri;
 
-                            if (!TextUtils.isEmpty(resultProofHash)) {
-                               // mHandler.post(() -> Toast.makeText(getApplicationContext(), R.string.proof_generated_success, Toast.LENGTH_SHORT).show());
+                    executor.execute(() -> {
+                        try {
+                            MediaWatcher mw = MediaWatcher.getInstance(VideosContentJob.this);
+                            String resultProofHash = mw.processUri(uriProcess, true, null);
 
-                            }
+                        } catch (RuntimeException e) {
+                            Timber.d(e, "Error generating hash from proof URI");
 
-                            mUriStack.remove(uri);
                         }
+                    });
 
-                    }
-                }, MediaWatcher.PROOF_GENERATION_DELAY_TIME_MS);
-
+                }
 
 
             } else {
                 // We don't have any details about URIs (because too many changed at once),
                 // so just note that we need to do a full rescan.
 
-               // Timber.w("rescan is needed since many videos changed at once");
-            
+                Timber.w("rescan is needed since many photos changed at once");
+                //      Toast.makeText(this,"Rescan is needed!",Toast.LENGTH_SHORT).show();
+
+
             }
-
         }
-
     }
 
 

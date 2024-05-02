@@ -319,7 +319,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
         if (mediaHash != null) {
 
             try {
-                if (proofExists(context, mediaHash))
+                if (proofExists(mediaHash))
                     return null;
             } catch (FileNotFoundException e) {
                 //must not exist!
@@ -443,7 +443,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
         if (mediaHash != null) {
 
             try {
-                if (proofExists(context, mediaHash))
+                if (proofExists(mediaHash))
                     return mediaHash;
             } catch (FileNotFoundException e) {
                 //must not exist!
@@ -557,7 +557,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
         if (mediaHash != null) {
 
             try {
-                if (proofExists(context, mediaHash))
+                if (proofExists(mediaHash))
                     return mediaHash;
             } catch (FileNotFoundException e) {
                 //must not exist!
@@ -659,7 +659,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
         return HashUtils.getSHA256FromFileContent(mContext.getContentResolver().openInputStream(uri));
     }
 
-    public boolean proofExists(Context context, String hash) throws FileNotFoundException {
+    public boolean proofExists(String hash) throws FileNotFoundException {
 
         if (hash != null)
             return mStorageProvider.proofExists(hash);
@@ -724,7 +724,8 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
         return false;
     }
 
-    private HashMap<String, String> buildProof(Context context, Uri uriMedia, String mediaHash, boolean showDeviceIds, boolean showLocation, boolean showMobileNetwork, String notes, Date createdAt) {
+    public static String getMediaPath (Context context, Uri uriMedia)
+    {
         String mediaPath = null;
 
         if (uriMedia != null) {
@@ -755,7 +756,13 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
             }
         }
 
-        TimeZone tz = TimeZone.getDefault();
+        return mediaPath;
+    }
+
+    private HashMap<String, String> buildProof(Context context, Uri uriMedia, String mediaHash, boolean showDeviceIds, boolean showLocation, boolean showMobileNetwork, String notes, Date createdAt) {
+        String mediaPath = getMediaPath(context, uriMedia);
+
+       TimeZone tz = TimeZone.getDefault();
         DateFormat df = new SimpleDateFormat(ISO_DATE_TIME_FORMAT, Locale.US); // Quoted "Z" to indicate UTC, no timezone offset
         df.setTimeZone(tz);
 
