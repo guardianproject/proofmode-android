@@ -17,6 +17,8 @@ import org.junit.runners.MethodSorters;
 import org.witness.proofmode.ProofMode;
 import org.witness.proofmode.crypto.HashUtils;
 import org.witness.proofmode.crypto.pgp.PgpUtils;
+import org.witness.proofmode.util.ProofModeUtil;
+import org.witness.proofmode.storage.DefaultStorageProvider;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -42,6 +44,7 @@ public class ProofmodeGenerationTests {
         Context context = InstrumentationRegistry.getInstrumentation().getContext();
         String testFile = "102474397-prooftestbytes";
         Uri uriMedia = Uri.parse("assets://" + testFile);
+        DefaultStorageProvider storageProvider = new DefaultStorageProvider(context);
 
         boolean useDeviceIds = true;
         boolean useLocation = true;
@@ -72,7 +75,7 @@ public class ProofmodeGenerationTests {
             Timber.i("hash generated: " + hash);
             assertNotNull(hash);
 
-            File fileDirProof = ProofMode.getProofDir(context, hash);
+            File fileDirProof = storageProvider.getHashStorageDir(hash);
             assertNotNull(fileDirProof);
 
             File fileMediaSig = new File(fileDirProof, hash + OPENPGP_FILE_TAG);
@@ -100,22 +103,26 @@ public class ProofmodeGenerationTests {
 
         Context context = InstrumentationRegistry.getInstrumentation().getContext();
         String testFile = "102474397-prooftestbytes";
+        DefaultStorageProvider storageProvider = new DefaultStorageProvider(context);
 
         final AssetManager assets = context.getAssets();
         try {
+            PgpUtils.init(context, "password");
+
             InputStream is = assets.open(testFile);
             String mediaHashSha256Check = HashUtils.getSHA256FromFileContent(is);
             assertNotNull(mediaHashSha256Check);
             is.close();
 
-            File fileDirProof = ProofMode.getProofDir(context, mediaHashSha256Check);
+            File fileDirProof = storageProvider.getHashStorageDir(mediaHashSha256Check);
+
             assertNotNull(fileDirProof);
 
             File[] files = fileDirProof.listFiles();
             assertNotNull(files);
 
             File fileZip = new File (fileDirProof.getParent(),fileDirProof.getName() + ".zip");
-            zipProof(files, fileZip,ProofMode.getPublicKeyString(context, "password"));
+            zipProof(files, fileZip,ProofMode.getPublicKeyString());
             assertTrue(fileZip.exists());
 
             //verify specific file and hash

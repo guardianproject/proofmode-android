@@ -82,7 +82,7 @@ class ShareProofActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityShareBinding.inflate(layoutInflater)
         mPrefs = PreferenceManager.getDefaultSharedPreferences(this)
-        pgpUtils = PgpUtils.getInstance(this, mPrefs?.getString(PREFS_KEY_PASSPHRASE,PREFS_KEY_PASSPHRASE_DEFAULT))
+        pgpUtils = PgpUtils.getInstance()
         mAllowMachineLearning = mPrefs?.getBoolean(PREF_OPTION_AI, PREF_OPTION_AI_DEFAULT)
         setContentView(binding.root)
         mStorageProvider = DefaultStorageProvider(applicationContext)
@@ -1430,7 +1430,7 @@ class ShareProofActivity : AppCompatActivity() {
         }
         Timber.d("Adding public key")
         //add public key
-        val pubKey = ProofMode.getPublicKeyString(this, "")
+        val pubKey = ProofMode.getPublicKeyString()
         var entry: ZipEntry? = ZipEntry("pubkey.asc")
         out.putNextEntry(entry)
         out.write(pubKey.toByteArray())

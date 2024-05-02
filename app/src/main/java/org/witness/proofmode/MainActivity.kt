@@ -55,7 +55,6 @@ import java.util.UUID
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener,
     ActivitiesViewDelegate {
     private lateinit var mPrefs: SharedPreferences
-    private var mPgpUtils: PgpUtils? = null
     private lateinit var layoutOn: View
     private lateinit var layoutOff: View
     private lateinit var drawer: DrawerLayout
@@ -429,11 +428,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     private fun publishKey() {
         try {
-            if (mPgpUtils == null) mPgpUtils = PgpUtils.getInstance(
-                this,
-                mPrefs.getString(PREFS_KEY_PASSPHRASE, PREFS_KEY_PASSPHRASE_DEFAULT)
-            )
-            mPgpUtils?.publishPublicKey()
+
+
+            PgpUtils.getInstance()?.publishPublicKey()
             Toast.makeText(
                 this,
                 getString(R.string.publish_key_to) + PgpUtils.URL_LOOKUP_ENDPOINT,
@@ -452,12 +449,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     private fun shareCurrentPublicKey() {
         try {
-            if (mPgpUtils == null) mPgpUtils = PgpUtils.getInstance(
-                this,
-                mPrefs.getString(PREFS_KEY_PASSPHRASE, PREFS_KEY_PASSPHRASE_DEFAULT)
-            )
-            mPgpUtils?.publishPublicKey()
-            val pubKey = mPgpUtils?.publicKeyString
+
+
+            PgpUtils.getInstance()?.publishPublicKey()
+            val pubKey = PgpUtils.getInstance()?.publicKeyString
             if (pubKey != null) {
                 sharePublicKey(pubKey)
             }
@@ -623,52 +618,21 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     fun startCamera(view: View?) {
         val intentCam = Intent(this, CameraActivity::class.java)
 
-        initPgpKey()
-
-        var useCredentials = mPrefs.getBoolean(PREF_OPTION_CREDENTIALS, PREF_OPTION_CREDENTIALS_DEFAULT);
+        val useCredentials = mPrefs.getBoolean(
+            ProofMode.PREF_OPTION_CREDENTIALS,
+            ProofMode.PREF_OPTION_CREDENTIALS_DEFAULT
+        );
 
         intentCam.putExtra(PREF_OPTION_CREDENTIALS, useCredentials);
         intentCam.putExtra(PREF_OPTION_AI, mPrefs.getBoolean(PREF_OPTION_AI, PREF_OPTION_AI_DEFAULT));
 
         if (useCredentials)
-            initContentCredentials()
-
+            (application as ProofModeApp).initContentCredentials()
 
         startActivity(intentCam)
     }
 
-    fun initContentCredentials () {
-        val email = mPrefs.getString(PREF_CREDENTIALS_PRIMARY,"");
-        var display : String? = null
-        var key : String? = "0x" + mPgpUtils?.publicKeyFingerprint
-        var uri : String? = null
 
-        if (email?.isNotEmpty() == true)
-        {
-            display = "${email.replace("@"," at ")}"
-        }
-
-        uri =
-            "https://keys.openpgp.org/search?q=" + mPgpUtils?.publicKeyFingerprint
-
-        C2paUtils.init(this)
-        C2paUtils.setC2PAIdentity(display, uri, email, key)
-        if (email != null && key != null) {
-                C2paUtils.initCredentials(this, email, key)
-        }
-    }
-
-    fun initPgpKey () {
-        if (mPgpUtils == null) {
-            mPgpUtils = PgpUtils.getInstance(
-                this,
-                mPrefs.getString(PREFS_KEY_PASSPHRASE, PREFS_KEY_PASSPHRASE_DEFAULT)
-            )
-
-            initContentCredentials()
-
-        }
-    }
 
     companion object {
         private const val REQUEST_CODE_INTRO = 9999

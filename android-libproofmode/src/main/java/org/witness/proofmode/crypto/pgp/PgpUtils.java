@@ -102,18 +102,18 @@ public class PgpUtils {
 
     }
 
-    /**
-    public static synchronized PgpUtils getInstance (Context context) throws PGPException, IOException {
-        return getInstance(context, DEFAULT_PASSWORD);
-    }
-    **/
-
-    public static synchronized PgpUtils getInstance (Context context, String password) throws PGPException, IOException {
+    public static synchronized void init (Context context, String password) throws PGPException, IOException {
         if (mInstance == null)
         {
             mInstance = new PgpUtils();
             mInstance.initCrypto(context, password);
         }
+    }
+
+    public static PgpUtils getInstance () throws PGPException {
+
+        if (mInstance == null)
+            throw new PGPException("not yet initialized");
 
         return mInstance;
 

@@ -227,11 +227,7 @@ class SettingsActivity : AppCompatActivity() {
 
     fun initContentCredentials (accountName : String?) {
 
-        var mKeyPassphase = mPrefs.getString(
-            ProofModeConstants.PREFS_KEY_PASSPHRASE,
-            ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
-        )
-        var mPgpUtils = PgpUtils.getInstance(this, mKeyPassphase);
+        var mPgpUtils = PgpUtils.getInstance();
 
         val email = accountName;
         var display : String? = null

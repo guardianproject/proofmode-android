@@ -124,7 +124,7 @@ public class DefaultStorageProvider (context : Context) : StorageProvider {
 
     override fun getProofSet(hash: String?): ArrayList<Uri> {
 
-        var listProofSet = ArrayList<Uri>()
+        val listProofSet = ArrayList<Uri>()
 
         val dirProof = hash?.let { getHashStorageDir(it) }
         if (dirProof?.exists() == true)

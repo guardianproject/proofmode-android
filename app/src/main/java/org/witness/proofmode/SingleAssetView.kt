@@ -316,7 +316,7 @@ fun updateMetadata (itemUri : Uri, context : Context) {
         //ProofMode app uses default storage provider
         var storageProvider = DefaultStorageProvider(context)
         var hmap: HashMap<String, String>? =
-            ProofModeUtil.getProofHashMap(storageProvider, hash, context)
+            ProofModeUtil.getProofHashMap(storageProvider, hash)
 
         addRow(ProofModeV1Constants.FILE_HASH_SHA_256, hmap)
         if (hmap?.contains(ProofModeV1Constants.FILE_CREATED) == true)

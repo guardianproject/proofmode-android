@@ -2,6 +2,7 @@ package org.witness.proofmode
 
 import android.R.attr.tag
 import android.content.Context
+import android.content.SharedPreferences
 import android.os.Handler
 import android.os.Looper
 import android.preference.PreferenceManager
@@ -24,6 +25,7 @@ import org.bouncycastle.openpgp.PGPException
 import org.bouncycastle.openpgp.PGPUtil
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
+import org.witness.proofmode.camera.c2pa.C2paUtils
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.notaries.GoogleSafetyNetNotarizationProvider
 import org.witness.proofmode.notaries.OpenTimestampsNotarizationProvider
@@ -35,6 +37,8 @@ import java.io.IOException
 import java.util.concurrent.Executors
 import kotlin.random.Random
 
+private var mPgpUtils: PgpUtils? = null
+private lateinit var mPrefs: SharedPreferences
 
 /**
  * Created by n8fr8 on 10/10/16.
@@ -46,7 +50,52 @@ class ProofModeApp : MultiDexApplication() {
 
         //add google safetynet and opentimestamps
         addDefaultNotarizationProviders()
+
+        mPrefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
+
+        initPgpKey ()
     }
+
+    fun initPgpKey () {
+
+        if (mPgpUtils == null) {
+
+            PgpUtils.init(this, mPrefs.getString(PREFS_KEY_PASSPHRASE, PREFS_KEY_PASSPHRASE_DEFAULT))
+            mPgpUtils = PgpUtils.getInstance()
+
+            var useCredentials = mPrefs.getBoolean(
+                ProofMode.PREF_OPTION_CREDENTIALS,
+                ProofMode.PREF_OPTION_CREDENTIALS_DEFAULT
+            );
+
+            if (useCredentials)
+                initContentCredentials()
+        }
+
+    }
+
+    fun initContentCredentials () {
+        val email = mPrefs.getString(ProofMode.PREF_CREDENTIALS_PRIMARY,"");
+        var display : String? = null
+        var key : String? = "0x" + mPgpUtils?.publicKeyFingerprint
+        var uri : String? = null
+
+        if (email?.isNotEmpty() == true)
+        {
+            display = "${email.replace("@"," at ")}"
+        }
+
+        uri =
+            "https://keys.openpgp.org/search?q=" + mPgpUtils?.publicKeyFingerprint
+
+        C2paUtils.init(this)
+        C2paUtils.setC2PAIdentity(display, uri, email, key)
+        if (email != null && key != null) {
+            C2paUtils.initCredentials(this, email, key)
+        }
+    }
+
+
 
     fun checkAndGeneratePublicKey() {
         Executors.newSingleThreadExecutor().execute {
@@ -57,12 +106,7 @@ class ProofModeApp : MultiDexApplication() {
                 val prefs = PreferenceManager.getDefaultSharedPreferences(this)
 
                 if (PgpUtils.keyRingExists(this)) {
-                    pubKey = PgpUtils.getInstance(
-                        applicationContext, prefs.getString(
-                            PREFS_KEY_PASSPHRASE,
-                            PREFS_KEY_PASSPHRASE_DEFAULT
-                        )
-                    ).publicKeyFingerprint
+                    pubKey = mPgpUtils?.publicKeyFingerprint
                 }
                 else
                 {
@@ -75,9 +119,7 @@ class ProofModeApp : MultiDexApplication() {
                         PgpUtils.setKeyid(accountEmail)
                     }
 
-                    pubKey = PgpUtils.getInstance(
-                        applicationContext, newPassPhrase
-                    ).publicKeyFingerprint
+                    pubKey = mPgpUtils?.publicKeyFingerprint
 
                 }
 

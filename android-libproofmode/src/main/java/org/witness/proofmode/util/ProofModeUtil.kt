@@ -27,7 +27,7 @@ class ProofModeUtil {
             return hash
         }
 
-        fun getProofSummary (storageProvider: StorageProvider, proofHash: String, context: Context): String? {
+        fun getProofSummary (storageProvider: StorageProvider, proofHash: String): String {
 
             var sb = StringBuffer ()
 
@@ -53,7 +53,7 @@ class ProofModeUtil {
             return sb.toString()
         }
 
-        fun getProofHashMap (storageProvider: StorageProvider, proofHash: String, context: Context): HashMap<String,String>? {
+        fun getProofHashMap (storageProvider: StorageProvider, proofHash: String): HashMap<String,String> {
 
             val hashMapProof = HashMap<String,String>()
             val identifier = proofHash+ProofMode.PROOF_FILE_JSON_TAG

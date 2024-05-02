@@ -693,7 +693,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
         JSONObject jProof = new JSONObject(hmProof);
         mStorageProvider.saveText(mediaHash, mediaHash + PROOF_FILE_JSON_TAG, jProof.toString(), null);
 
-        PgpUtils pu = PgpUtils.getInstance(context, null);
+        PgpUtils pu = PgpUtils.getInstance();
 
         //sign the proof file again
         InputStream isProof = mStorageProvider.getInputStream(mediaHash, mediaHash + PROOF_FILE_TAG);

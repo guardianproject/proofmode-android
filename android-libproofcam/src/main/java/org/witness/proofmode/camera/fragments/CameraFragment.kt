@@ -63,6 +63,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
     private lateinit var proofModeViewFinder: PreviewView
     private lateinit var tapDetector: GestureDetector
     private lateinit var pinchToZoomDetector: ScaleGestureDetector
+    private lateinit var context: Context
 
     private val lensViewModel: CameraLensViewModel by activityViewModels()
 
@@ -77,7 +78,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
     private var cameraProvider: ProcessCameraProvider? = null
     private var imageCapture: ImageCapture? = null
     private var imageAnalyzer: ImageAnalysis? = null
-
+`
     // A lazy instance of the current fragment's view binding
     override val binding: FragmentCameraBinding by lazy {
         FragmentCameraBinding.inflate(
@@ -605,6 +606,8 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
 
     private fun captureImage() {
 
+        context = requireContext()
+
         proofModeViewFinder?.visibility = View.GONE
         proofModeViewFinder?.visibility = View.VISIBLE
 
@@ -647,8 +650,6 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
             object : OnImageSavedCallback { // the callback, about the result of capture process
                 override fun onImageSaved(outputFileResults: OutputFileResults) {
 
-
-
                     // This function is called if capture is successfully completed
                     outputFileResults.savedUri
                         ?.let { uri ->
@@ -659,13 +660,13 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
                         ?: setLastPictureThumbnail()
 
 
-                    if ((activity as CameraActivity).useCredentials) {
+                    if (CameraActivity.useCredentials) {
 
                         var isDirectCapture = true; //this is from our camera
-                        var allowMachineLearning = (activity as CameraActivity).useAIFlag; //by default, we flag to not allow
+                        var allowMachineLearning = CameraActivity.useAIFlag; //by default, we flag to not allow
 
                         C2paUtils.addContentCredentials(
-                            requireContext(),
+                            context,
                             outputFileResults.savedUri,
                             isDirectCapture,
                             allowMachineLearning

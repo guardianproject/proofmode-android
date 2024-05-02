@@ -8,8 +8,10 @@ class CameraActivity : AppCompatActivity(){
     private val PREF_OPTION_AI = "blockAI"
     private val PREF_OPTION_CREDENTIALS = "addCR"
 
-    var useCredentials = true
-    var useAIFlag = true
+    companion object {
+        var useCredentials = true
+        var useAIFlag = true
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
