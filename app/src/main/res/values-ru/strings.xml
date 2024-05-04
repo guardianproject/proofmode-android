@@ -134,4 +134,54 @@
     <string name="pub_key_id">Создан открытый ключ идентификации:</string>
     <string name="pub_key_gen_error">Ошибка при генерации идентификационного ключа. Пожалуйста, переустановите.</string>
     <string name="proof_generated_success">Доказательства получены!</string>
+    <plurals name="you_imported_n_items">
+        <item quantity="one">Вы импортировали один,двадцать один,тридцать один,сорок один,пятьдесят один,шестьдесят один,семдесят один,восемдисят один,девяносто один,сто один %d предмет</item>
+        <item quantity="few">Вы импортировали два,три,четыре,двадцать два,двадцать три,двадцать четыре,тридцать два,тридцать три,тридцать четыре,сорок два %d предмета</item>
+        <item quantity="many">Вы импортировали ноль,пять,шесть,семь,восемь,девять,десять,одинадцать,двенадцать,тринадцать %d предметов</item>
+        <item quantity="other">Вы импортировали ноль,пять,шесть,семь,восемь,девять,десять,одинадцать,двенадцать,тринадцать %d предметов</item>
+    </plurals>
+    <plurals name="you_shared_n_items">
+        <item quantity="one">Вы поделились одним,двадцать одним,тридцать одним,сорок одним,пятьдесят одним,шестьдесят одним,семдесят одним,восемдисят одним,девяносто одним,сто одним %d предметом</item>
+        <item quantity="few">Вы поделились двумя,тремя,четырьмя,двадцати двумя,двадцати т ремя,двадцати четырьмя,тридцати двумя,тридцати тремя,тридцати четырьмя,сорока двумя %d предметами</item>
+        <item quantity="many">Вы поделились ноль,пятью,шестью,семью,восьмью,девятью,десятью,одинадцатью,двенадцатью,тринадцатью %d предметами</item>
+        <item quantity="other">Вы поделились ноль,пятью,шестью,семью,восьмью,девятью,десятью,одинадцатью,двенадцатью,тринадцатью %d предметами</item>
+    </plurals>
+    <plurals name="n_items_have_been_deleted_or_are_not_accessible">
+        <item quantity="one">%d один,двадцать один,тридцать один,сорок один,пятьдесят один,шестьдесят один,семьдесят один,восемдесят один,девяносто один,сто один элемент был удален или недоступен</item>
+        <item quantity="few">%d два,три,четыре,двадцать два,двадцать три,двадцать четыре,тридцать два,тридцать три,тридцать четыре,сорок два элемента были удалены или недоступны</item>
+        <item quantity="many">%dноль,пять,шесть,семь,восемь,девять,десять,одинадцать,двенадцать,тринадцать элементов были удалены или недоступны</item>
+        <item quantity="other">%dноль,пять,шесть,семь,восемь,девять,десять,одинадцать,двенадцать,тринадцать элементов были удалены или недоступны</item>
+    </plurals>
+    <string name="share_with_proofsign">Поделиться с облачной службой ProofSign, чтобы добавить учетные данные содержимого (C2PA)?</string>
+    <string name="err_content_credentials">Возникла проблема с проверкой или созданием учетных данных контента.</string>
+    <string name="cb_switch">Переключение между фронтальной и задней камерами</string>
+    <string name="settings_credentials_desc">Добавление удостоверений содержания (C2PA) к фотографиям и видеозаписям</string>
+    <plurals name="share_these_n_items">
+        <item quantity="one">%d Поделиться этим одним,двадцать одним,тридцать одним,сорок одним,пятьдесят одним,шестьдесят одним,семдесят одним,восемдисят одним,пунктом</item>
+        <item quantity="few">Поделитесь этими %dдвумя,тремя,четырьмя,двадцатью двумя,двадцатью тремя,двадцатью четырьмя,тридцатью двумя,тридцатью тремя, предметами</item>
+        <item quantity="many">Поделитесь этими %dнулевыми,пятью,шестью,семью,восьмю,девятью,десятью,одинадцатью,двенадцатью,тринадцатью предметами</item>
+        <item quantity="other">Поделитесь этими %dнулевыми,пятью,шестью,семью,восьмю,девятью,десятью,одинадцатью,двенадцатью,тринадцатью предметами</item>
+    </plurals>
+    <string name="date_display_days_since_yesterday">\'Вчера\' \'ЧЧ:ММ</string>
+    <string name="date_display_days_since_other">d МММ ГГГГ</string>
+    <string name="date_display_single_item">d МММ ГГГГ</string>
+    <string name="you_shared_your_public_key">Вы поделились своим открытым ключом</string>
+    <string name="re_share">Поделиться</string>
+    <string name="progress_signing_proof">Совместное использование и проверка с помощью ProofSign...</string>
+    <string name="action_share_proof_zip">Поделиться Доказательство Zip</string>
+    <string name="action_add_content_credentials_c2pa">Отправить в ProofCheck</string>
+    <string name="status_download_content_credentials">Загрузка изображений с помощью учетных данных содержимого...</string>
+    <string name="menu_import_photos">Импортируйте фотографии...</string>
+    <string name="menu_import_videos">Импортируйте видео...</string>
+    <string name="menu_import_documents">Импортные документы...</string>
+    <string name="title_activity">Активность</string>
+    <string name="cd_take_picture">Сделайте снимок</string>
+    <string name="cb_open_gallery">Перейти в галерею</string>
+    <string name="cb_timer">Выберите таймер</string>
+    <string name="camera">Камера</string>
+    <string name="video">Видео</string>
+    <string name="settings_credentials">Учетные данные</string>
+    <string name="settings_ai">Блок ИИ</string>
+    <string name="settings_ai_desc">Флаг не использовать для обучения машинному обучению</string>
+    <string name="date_display_days_since_today">\'Сегодня\' \'ЧЧ:мм</string>
 </resources>
