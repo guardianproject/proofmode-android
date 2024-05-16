@@ -13,7 +13,7 @@ android {
     namespace = "org.witness.proofmode"
 
     buildFeatures {
-        viewBinding true`
+        viewBinding true
     }
 
     flavorDimensions 'default'
