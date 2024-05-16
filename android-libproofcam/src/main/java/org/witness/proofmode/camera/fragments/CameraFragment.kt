@@ -1,12 +1,10 @@
 package org.witness.proofmode.camera.fragments
 
-import android.R.attr.data
 import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
-import android.database.Cursor
 import android.hardware.display.DisplayManager
 import android.net.Uri
 import android.os.Build
@@ -49,11 +47,11 @@ import org.witness.proofmode.camera.analyzer.LuminosityAnalyzer
 import org.witness.proofmode.camera.c2pa.C2paUtils
 import org.witness.proofmode.camera.databinding.FragmentCameraBinding
 import org.witness.proofmode.camera.enums.CameraTimer
-import org.witness.proofmode.camera.fragments.CameraFragment.CameraConstants.NEW_MEDIA_EVENT
 import org.witness.proofmode.camera.utils.*
 import java.io.File
 import java.io.FileNotFoundException
 import java.util.concurrent.ExecutionException
+import java.util.concurrent.Executors
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -607,7 +605,14 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
         captureImage()
     }
 
+
+    private val mExec = Executors.newSingleThreadExecutor()
+
     private fun captureImage() {
+
+        proofModeViewFinder?.visibility = View.GONE
+        proofModeViewFinder?.visibility = View.VISIBLE
+
         val localImageCapture =
             imageCapture ?: throw IllegalStateException("Camera initialization failed.")
 
@@ -643,9 +648,20 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
 
         localImageCapture.takePicture(
             outputOptions, // the options needed for the final image
-            requireContext().mainExecutor(), // the executor, on which the task will run
+            mExec, // the executor, on which the task will run
             object : OnImageSavedCallback { // the callback, about the result of capture process
                 override fun onImageSaved(outputFileResults: OutputFileResults) {
+
+
+
+                    // This function is called if capture is successfully completed
+                    outputFileResults.savedUri
+                        ?.let { uri ->
+                            setGalleryThumbnail(uri)
+                            sendLocalCameraEvent(uri)
+                            Log.d(TAG, "Photo saved in $uri")
+                        }
+                        ?: setLastPictureThumbnail()
 
 
                     if ((activity as CameraActivity).useCredentials) {
@@ -660,15 +676,6 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
                             allowMachineLearning
                         )
                     }
-
-                    // This function is called if capture is successfully completed
-                    outputFileResults.savedUri
-                        ?.let { uri ->
-                            setGalleryThumbnail(uri)
-                            sendLocalCameraEvent(uri)
-                            Log.d(TAG, "Photo saved in $uri")
-                        }
-                        ?: setLastPictureThumbnail()
                 }
 
                 override fun onError(exception: ImageCaptureException) {
@@ -726,9 +733,6 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
         private const val RATIO_16_9_VALUE = 16.0 / 9.0 // aspect ratio 16x9
     }
 
-    object CameraConstants {
-        const val NEW_MEDIA_EVENT = "org.witness.proofmode.NEW_MEDIA"
-    }
 
     fun sendLocalCameraEvent(newMediaFile: Uri) {
 
@@ -739,7 +743,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
 
                 MediaStore.Images.Media.insertImage(
                     context?.contentResolver,
-                    f.getAbsolutePath(), f.getName(), null
+                    f.absolutePath, f.name, null
                 )
                 context?.sendBroadcast(
                     Intent(
@@ -751,9 +755,6 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
             }
         }
 
-        var intent = Intent(NEW_MEDIA_EVENT)
-        intent.data = newMediaFile
-        LocalBroadcastManager.getInstance(requireContext()).sendBroadcast(intent)
 
     }
 

@@ -11,6 +11,7 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.Looper;
 import android.provider.Settings;
 
 import androidx.core.app.ActivityCompat;
@@ -71,10 +72,11 @@ public final class GPSTracker implements LocationListener {
         isNetworkEnabled = locationManager
                 .isProviderEnabled(LocationManager.NETWORK_PROVIDER);
 
+        /**
         if (isGPSEnabled)
             locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,60000,0,this);
         else if (isNetworkEnabled)
-            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER,60000,0,this);
+            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER,60000,0,this);**/
     }
 
     public void stopUpdateLocation () {

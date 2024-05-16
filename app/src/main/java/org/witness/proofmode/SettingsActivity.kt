@@ -17,6 +17,7 @@ import org.witness.proofmode.PermissionActivity
 import org.witness.proofmode.PermissionActivity.Companion.hasPermissions
 import org.witness.proofmode.ProofMode.PREF_CREDENTIALS_PRIMARY
 import org.witness.proofmode.ProofMode.PREF_OPTION_AI_DEFAULT
+import org.witness.proofmode.camera.c2pa.C2paUtils
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.databinding.ActivitySettingsBinding
 import org.witness.proofmode.util.GPSTracker
@@ -24,7 +25,6 @@ import org.witness.proofmode.util.GPSTracker
 
 class SettingsActivity : AppCompatActivity() {
     private lateinit var mPrefs: SharedPreferences
-    private val mPgpUtils: PgpUtils? = null
     private lateinit var switchLocation: CheckBox
     private lateinit var switchNetwork: CheckBox
     private lateinit var switchDevice: CheckBox
@@ -135,6 +135,7 @@ class SettingsActivity : AppCompatActivity() {
                 .commit()
             updateUI()
         }
+
     }
 
     private val REQ_ACCOUNT_CHOOSER = 9999;
@@ -217,12 +218,41 @@ class SettingsActivity : AppCompatActivity() {
 
                 mPrefs.edit().putString(PREF_CREDENTIALS_PRIMARY, accountName).commit()
 
+                initContentCredentials(accountName)
+
             }
 
         }
     }
 
+    fun initContentCredentials (accountName : String?) {
+
+        var mKeyPassphase = mPrefs.getString(
+            ProofModeConstants.PREFS_KEY_PASSPHRASE,
+            ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
+        )
+        var mPgpUtils = PgpUtils.getInstance(this, mKeyPassphase);
+
+        val email = accountName;
+        var display : String? = null
+        var key : String? = "0x" + mPgpUtils?.publicKeyFingerprint
+        var uri : String? =  "https://keys.openpgp.org/search?q=" + mPgpUtils?.publicKeyFingerprint
+
+        if (email?.isNotEmpty() == true)
+        {
+            display = "${email.replace("@"," at ")}"
+            uri = "mailto://$email"
+        }
+
+        C2paUtils.setC2PAIdentity(display, uri, email, key)
+        if (email != null && key != null) {
+            C2paUtils.resetCredentials(this)
+            C2paUtils.initCredentials(this, email, key)
+        }
+    }
+
     override fun onBackPressed() {
+        super.onBackPressed()
         finish()
     }
 

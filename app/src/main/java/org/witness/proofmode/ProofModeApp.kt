@@ -21,6 +21,7 @@ import org.acra.config.mailSender
 import org.acra.data.StringFormat
 import org.acra.ktx.initAcra
 import org.bouncycastle.openpgp.PGPException
+import org.bouncycastle.openpgp.PGPUtil
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
 import org.witness.proofmode.crypto.pgp.PgpUtils
@@ -67,6 +68,13 @@ class ProofModeApp : MultiDexApplication() {
                 {
                     var newPassPhrase = getRandPassword(12)
                     prefs.edit().putString(PREFS_KEY_PASSPHRASE,newPassPhrase).commit()
+
+
+                    var accountEmail = prefs.getString(ProofMode.PREF_CREDENTIALS_PRIMARY, "")
+                    if (accountEmail?.isNotEmpty() == true) {
+                        PgpUtils.setKeyid(accountEmail)
+                    }
+
                     pubKey = PgpUtils.getInstance(
                         applicationContext, newPassPhrase
                     ).publicKeyFingerprint

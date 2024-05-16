@@ -14,6 +14,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Database
+import androidx.room.Delete
+import androidx.room.DeleteTable
 import androidx.room.Entity
 import androidx.room.Insert
 import androidx.room.PrimaryKey
@@ -139,6 +141,12 @@ interface ActivitiesDao {
     @Insert
     suspend fun insert(activity: Activity?)
 
+    @Delete
+    suspend fun delete(activity: Activity?)
+
+    @Query("DELETE FROM activities WHERE data LIKE '%\"' || :id || '\"%'")
+    suspend fun deleteId(id: String?)
+
     @Query("SELECT * FROM activities WHERE data LIKE '%\"' || :id || '\"%' LIMIT 1")
     suspend fun activityFromProofableItemId(id: String): Activity?
 }
@@ -208,25 +216,79 @@ object Activities: ViewModel()
     }
 
     var timeBatchWindow = 60000 * 5 //5 minutes
+    private var listItems : List<ProofableItem> = ArrayList<ProofableItem>();
 
     fun addActivity(activity: Activity, context: Context) {
         val db = getDB(context)
+
         val lastActivity = this.activities.lastOrNull()
-        if (activity.type is ActivityType.MediaCaptured && lastActivity != null && lastActivity.type is ActivityType.MediaCaptured && (lastActivity.startTime.time + timeBatchWindow) >= activity.startTime.time ) {
+        if (activity.type is ActivityType.MediaCaptured && lastActivity != null && lastActivity.type is ActivityType.MediaCaptured && (lastActivity.startTime.time + timeBatchWindow) >= activity.startTime.time) {
             // If within the same minute, add it to the same "batch" as the previous one.
-            lastActivity.type.items += activity.type.items
+
+            for (pItem in activity.type.items)
+            {
+                if (!lastActivity.type.items.any{ it.uri == pItem.uri})
+                {
+                    lastActivity.type.items.add(pItem)
+                }
+            }
+
+           // lastActivity.type.items += activity.type.items
             viewModelScope.launch {
-                db.activitiesDao().update(lastActivity)
+                if (db.activitiesDao().activityFromProofableItemId(activity.id) == null)
+                    db.activitiesDao().update(lastActivity)
             }
         } else {
             this.activities.add(activity)
             viewModelScope.launch {
-                db.activitiesDao().insert(activity)
+                if (db.activitiesDao().activityFromProofableItemId(activity.id) == null)
+                    db.activitiesDao().insert(activity)
             }
         }
+
+
+
     }
 
-    private fun getActivityProofableItems(activity: Activity): SnapshotStateList<ProofableItem> {
+    fun clearActivity (id: String, context: Context) {
+        val db = getDB(context)
+        viewModelScope.launch {
+
+           var activity = db.activitiesDao().activityFromProofableItemId(id)
+
+            activities.remove(activity)
+
+            activity?.let {
+                db.activitiesDao().delete(activity)
+                db.activitiesDao().deleteId(activity.id)
+            }
+
+            activities.clear()
+            activities.addAll(db.activitiesDao().getAll())
+        }
+
+
+    }
+
+    fun getRelatedProofableItems (context: Context, selectId: String): List<ProofableItem> {
+
+        var listItems = ArrayList<ProofableItem>()
+
+        viewModelScope.launch {
+            var activity =
+                Activities.getDB(context).activitiesDao().activityFromProofableItemId(selectId)
+            if (activity != null) {
+                var proofItems = Activities.getActivityProofableItems(activity)
+                for (proofItem in proofItems)
+                    if (!listItems.contains(proofItem))
+                        listItems.add(proofItem)
+            }
+
+        }
+
+        return listItems
+    }
+    fun getActivityProofableItems(activity: Activity): SnapshotStateList<ProofableItem> {
         when (activity.type) {
             is ActivityType.MediaCaptured -> return activity.type.items
             is ActivityType.MediaImported -> return activity.type.items
@@ -236,14 +298,55 @@ object Activities: ViewModel()
         return mutableStateListOf<ProofableItem>()
     }
 
-    fun getAllCapturedAndImportedItems(context: Context): List<ProofableItem> {
-        return activities.flatMap { getActivityProofableItems( it ) }.toMutableStateList().withDeletedItemsRemoved(context).distinctBy { it.uri }
+    fun getProofableItem(context: Context, selectId: String): List<ProofableItem> {
+
+        var listItems = ArrayList<ProofableItem>()
+
+        viewModelScope.launch {
+
+                var item = db.activitiesDao().activityFromProofableItemId(selectId)
+                if (item != null) {
+                    var pItem = ProofableItem(item.id, Uri.parse(selectId))
+                    if (!listItems.contains(pItem))
+                        listItems.add(pItem)
+                }
+
+        }
+
+        return listItems;
     }
+
+    /**
+    fun getAllCapturedAndImportedItems(context: Context): List<ProofableItem> {
+
+        if (listItems.isEmpty())
+            refreshListItems(context)
+
+        return listItems;
+    }
+
+    fun refreshListItems (context: Context) {
+        listItems = activities.flatMap { getActivityProofableItems( it ) }.toMutableStateList().withDeletedItemsRemoved(context).distinctBy { it.uri }
+    }**/
 
     fun selectedItems(context: Context, selection: List<String>): List<ProofableItem> {
         // TODO - We don't really care about the ids here, so we match on the uri and just select
         // the first id one, if more than one mapping from id -> uri.
-        return getAllCapturedAndImportedItems(context).filter { selection.contains(it.uri.toString()) }
+       // return getAllCapturedAndImportedItems(context).filter { selection.contains(it.uri.toString()) }
+        var listItems = ArrayList<ProofableItem>()
+
+        viewModelScope.launch {
+            for (selectId in selection) {
+                var item = db.activitiesDao().activityFromProofableItemId(selectId)
+                if (item != null) {
+                    var pItem = ProofableItem(item.id, Uri.parse(selectId))
+                    if (!listItems.contains(pItem))
+                        listItems.add(pItem)
+                }
+            }
+        }
+
+        return listItems
     }
 
     fun dateForItem(item: ProofableItem, context: Context, onDate: (Date) -> Unit) {
@@ -270,7 +373,7 @@ fun SnapshotStateList<ProofableItem>.withDeletedItemsRemoved(context: Context): 
 
 fun ProofableItem.isDeleted(context: Context): Boolean {
     try {
-        val inputStream: InputStream? = context.getContentResolver().openInputStream(this.uri)
+        val inputStream: InputStream? = context.contentResolver.openInputStream(this.uri)
         if (inputStream != null) {
             inputStream.close()
             return false

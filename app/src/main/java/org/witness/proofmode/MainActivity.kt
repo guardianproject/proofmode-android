@@ -21,6 +21,7 @@ import androidx.appcompat.widget.PopupMenu
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.platform.ComposeView
+import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
 import androidx.core.view.MenuItemCompat
 import androidx.drawerlayout.widget.DrawerLayout
@@ -143,12 +144,20 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             addDataType("video/*")
         }
 
-        LocalBroadcastManager.getInstance(applicationContext)
-            .registerReceiver(cameraReceiver, intentFilter)
-        LocalBroadcastManager.getInstance(applicationContext)
-            .registerReceiver(cameraReceiver, IntentFilter(EVENT_PROOF_GENERATED))
+        ContextCompat.registerReceiver(this,
+            cameraReceiver, intentFilter,
+            ContextCompat.RECEIVER_EXPORTED
+        )
 
-        registerReceiver(cameraReceiver, IntentFilter(INTENT_ACTIVITY_ITEMS_SHARED))
+        ContextCompat.registerReceiver(this,
+            cameraReceiver, IntentFilter(EVENT_PROOF_GENERATED),
+            ContextCompat.RECEIVER_EXPORTED
+        )
+
+        ContextCompat.registerReceiver(this,
+            cameraReceiver, IntentFilter(INTENT_ACTIVITY_ITEMS_SHARED),
+            ContextCompat.RECEIVER_EXPORTED
+        )
 
         Activities.load(this)
 
@@ -168,14 +177,15 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private class CameraReceiver : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
+                /**
                 "org.witness.proofmode.NEW_MEDIA" -> {
                     val uri = intent.data
                     if (uri != null && context != null) {
                         Activities.addActivity(
                             Activity(
-                                uri.toString(), ActivityType.MediaCaptured(
+                                UUID.randomUUID().toString(), ActivityType.MediaCaptured(
                                     items = mutableStateListOf(
-                                        ProofableItem(UUID.randomUUID().toString(), uri)
+                                        ProofableItem(uri.toString(), uri)
                                     )
                                 ), Date()
                             ), context
@@ -184,7 +194,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         MediaWatcher.getInstance(context).queueMedia(intent.data, true, Date())
 
                     }
-                }
+                }**/
 
                 EVENT_PROOF_GENERATED -> {
                     val uri = intent.data
@@ -641,7 +651,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         uri =
             "https://keys.openpgp.org/search?q=" + mPgpUtils?.publicKeyFingerprint
 
+        C2paUtils.init(this)
         C2paUtils.setC2PAIdentity(display, uri, email, key)
+        if (email != null && key != null) {
+                C2paUtils.initCredentials(this, email, key)
+        }
     }
 
     fun initPgpKey () {
@@ -701,5 +715,26 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             }
         }
         this.showShareProof(mediaList = media.map { it.uri }.filterNotNull())
+    }
+
+    override fun clearItems(activity: Activity) {
+
+        Activities.clearActivity(activity.id, this)
+
+        if (activity.type is ActivityType.MediaCaptured)
+            for (pi in (activity.type as ActivityType.MediaCaptured).items)
+                Activities.clearActivity(pi.id, this)
+
+        if (activity.type is ActivityType.MediaImported)
+            for (pi in (activity.type as ActivityType.MediaImported).items)
+                Activities.clearActivity(pi.id, this)
+
+        Activities.load(this)
+        val activityView = findViewById<ComposeView>(R.id.activityView)
+        activityView.setContent {
+            ActivitiesView {
+                itemsSelected(it)
+            }
+        }
     }
 }

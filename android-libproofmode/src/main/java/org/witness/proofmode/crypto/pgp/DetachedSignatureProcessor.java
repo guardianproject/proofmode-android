@@ -10,6 +10,7 @@ import org.bouncycastle.bcpg.sig.Features;
 import org.bouncycastle.bcpg.sig.KeyFlags;
 import org.bouncycastle.crypto.generators.RSAKeyPairGenerator;
 import org.bouncycastle.crypto.params.RSAKeyGenerationParameters;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openpgp.PGPCompressedData;
 import org.bouncycastle.openpgp.PGPCompressedDataGenerator;
 import org.bouncycastle.openpgp.PGPEncryptedData;
@@ -130,8 +131,11 @@ public class DetachedSignatureProcessor
             out = new ArmoredOutputStream(out);
         }
 
-        PGPPrivateKey            pgpPrivKey = skey.extractPrivateKey(new JcePBESecretKeyDecryptorBuilder().setProvider(ProofMode.getProvider()).build(pass));
-        PGPSignatureGenerator sGen = new PGPSignatureGenerator(new JcaPGPContentSignerBuilder(skey.getPublicKey().getAlgorithm(), PGPUtil.SHA256).setProvider(ProofMode.getProvider()));
+        BouncyCastleProvider prov = ProofMode.getProvider();
+
+        PBESecretKeyDecryptor keyDecryptor = new JcePBESecretKeyDecryptorBuilder().setProvider(prov).build(pass);
+        PGPPrivateKey            pgpPrivKey = skey.extractPrivateKey(keyDecryptor);
+        PGPSignatureGenerator sGen = new PGPSignatureGenerator(new JcaPGPContentSignerBuilder(skey.getPublicKey().getAlgorithm(), PGPUtil.SHA256).setProvider(prov));
 
         sGen.init(PGPSignature.BINARY_DOCUMENT, pgpPrivKey);
 

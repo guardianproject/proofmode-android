@@ -1,11 +1,9 @@
 package org.witness.proofmode.service;
 
-import static org.witness.proofmode.ProofMode.EVENT_PROOF_EXISTS;
 import static org.witness.proofmode.ProofMode.EVENT_PROOF_EXTRA_HASH;
 import static org.witness.proofmode.ProofMode.EVENT_PROOF_EXTRA_URI;
 import static org.witness.proofmode.ProofMode.EVENT_PROOF_FAILED;
 import static org.witness.proofmode.ProofMode.EVENT_PROOF_GENERATED;
-import static org.witness.proofmode.ProofMode.EVENT_PROOF_START;
 import static org.witness.proofmode.ProofMode.OPENPGP_FILE_TAG;
 import static org.witness.proofmode.ProofMode.PREFS_DOPROOF;
 import static org.witness.proofmode.ProofMode.PROOF_FILE_JSON_TAG;
@@ -31,22 +29,21 @@ import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.provider.MediaStore;
 import android.text.TextUtils;
-import android.util.Base64;
-
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import org.bouncycastle.openpgp.PGPException;
 import org.json.JSONObject;
 import org.witness.proofmode.ProofMode;
 import org.witness.proofmode.crypto.HashUtils;
 import org.witness.proofmode.crypto.pgp.PgpUtils;
+import org.witness.proofmode.storage.DefaultStorageProvider;
 import org.witness.proofmode.notarization.NotarizationListener;
 import org.witness.proofmode.notarization.NotarizationProvider;
+import org.witness.proofmode.storage.StorageListener;
+import org.witness.proofmode.storage.StorageProvider;
 import org.witness.proofmode.util.DeviceInfo;
 import org.witness.proofmode.util.GPSTracker;
 
 import java.io.ByteArrayInputStream;
-import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
@@ -54,9 +51,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintStream;
-import java.io.UnsupportedEncodingException;
-import java.nio.channels.FileChannel;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -67,9 +62,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
-import java.util.Stack;
 import java.util.TimeZone;
-import java.util.Timer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -78,38 +71,117 @@ import timber.log.Timber;
 public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Constants {
 
     public static final String UTF_8 = "UTF-8";
-    private final static String PROOF_BASE_FOLDER = "proofmode/";
-
-    private SharedPreferences mPrefs;
-
     public final static int PROOF_GENERATION_DELAY_TIME_MS = 500; // 30 seconds
+
     private static MediaWatcher mInstance;
-
-    private ExecutorService mExec = Executors.newFixedThreadPool(1);
-
+    private SharedPreferences mPrefs;
+    private final ExecutorService mExec = Executors.newFixedThreadPool(1);
     private Context mContext = null;
-
     private String mPassphrase = null;
-
     private ArrayList<NotarizationProvider> mProviders = new ArrayList<>();
 
-    private MediaWatcher (Context context) {
+    private StorageProvider mStorageProvider = null;
+
+    private MediaWatcher(Context context, StorageProvider storageProvider) {
         if (mPrefs == null)
             mPrefs = PreferenceManager.getDefaultSharedPreferences(context);
 
         mContext = context;
-        mPassphrase = mPrefs.getString(PREFS_KEY_PASSPHRASE,PREFS_KEY_PASSPHRASE_DEFAULT);
 
-        startFileSystemMonitor();
+        if (storageProvider != null)
+            mStorageProvider = storageProvider;
+        else
+            mStorageProvider = new DefaultStorageProvider(mContext);
+
+        mPassphrase = mPrefs.getString(PREFS_KEY_PASSPHRASE, PREFS_KEY_PASSPHRASE_DEFAULT);
+
+    }
+
+    public void setStorageProvider (StorageProvider storageProvider)
+    {
+        mStorageProvider = storageProvider;
+    }
+
+    public static synchronized MediaWatcher getInstance(Context context) {
+        if (mInstance == null)
+            mInstance = new MediaWatcher(context, null);
+
+        return mInstance;
     }
 
 
-    public static synchronized MediaWatcher getInstance (Context context)
-    {
-        if (mInstance == null)
-            mInstance = new MediaWatcher(context);
+/*
+// TODO Involes writing
+ */
+    private void writeMapToCSV(Context context, String mediaHash, String identifier, HashMap<String, String> hmProof, boolean writeHeaders) {
 
-        return mInstance;
+        StringBuffer sb = new StringBuffer();
+
+        if (writeHeaders) {
+            for (String key : hmProof.keySet()) {
+                sb.append(key).append(",");
+            }
+
+            sb.append("\n");
+        }
+
+        for (String key : hmProof.keySet()) {
+            String value = hmProof.get(key);
+            value = value.replace(',', ' '); //remove commas from CSV file
+            sb.append(value).append(",");
+        }
+
+        mStorageProvider.saveText(mediaHash, identifier, sb.toString(), null);
+    }
+
+
+
+    private static String getSHA256FromFileContent(String filename) {
+
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] buffer = new byte[65536]; //created at start.
+            InputStream fis = new FileInputStream(filename);
+            int n = 0;
+            while (n != -1) {
+                n = fis.read(buffer);
+                if (n > 0) {
+                    digest.update(buffer, 0, n);
+                }
+            }
+            byte[] digestResult = digest.digest();
+            return asHex(digestResult);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static String getSHA256FromFileContent(InputStream fis) {
+
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] buffer = new byte[65536]; //created at start.
+            int n = 0;
+            while (n != -1) {
+                n = fis.read(buffer);
+                if (n > 0) {
+                    digest.update(buffer, 0, n);
+                }
+            }
+            byte[] digestResult = digest.digest();
+            return asHex(digestResult);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static String asHex(byte[] arrayBytes) {
+        StringBuffer stringBuffer = new StringBuffer();
+        for (int i = 0; i < arrayBytes.length; i++) {
+            stringBuffer.append(Integer.toString((arrayBytes[i] & 0xff) + 0x100, 16)
+                    .substring(1));
+        }
+        return stringBuffer.toString();
     }
 
     @Override
@@ -133,17 +205,17 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
 
     }
 
-    public void addNotarizationProvider (NotarizationProvider provider) {
+    public void addNotarizationProvider(NotarizationProvider provider) {
         mProviders.add(provider);
     }
 
-
-    public void queueMedia (Uri uriMedia, boolean autogen, Date createdAt) {
+    public void queueMedia(Uri uriMedia, boolean autogen, Date createdAt) {
         mExec.submit(() -> {
             processUri(uriMedia, autogen, createdAt);
         });
     }
-    public String processUri (Uri uriMedia, boolean autogen, Date createdAt) {
+
+    public synchronized String processUri (Uri uriMedia, boolean autogen, Date createdAt) {
 
         try {
 
@@ -153,8 +225,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                 String mediaHash = HashUtils.getSHA256FromFileContent(mContext.getContentResolver().openInputStream(uriMedia));
                 String resultHash = processUri(mContext, uriMedia, mediaHash, autogen, createdAt);
 
-                if (resultHash != null)
-                {
+                if (resultHash != null) {
                     //send generated event
                     Intent intent = new Intent();
                     intent.setPackage("org.witness.proofmode");
@@ -167,49 +238,45 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                 return resultHash;
 
             } catch (FileNotFoundException e) {
-                Timber.d( "FileNotFoundException: unable to open inputstream for hashing: %s", uriMedia);
+                Timber.d("FileNotFoundException: unable to open inputstream for hashing: %s", uriMedia);
                 Intent intent = new Intent(EVENT_PROOF_FAILED);
                 intent.setData(uriMedia);
                 mContext.sendBroadcast(intent);
                 return null;
             } catch (IllegalStateException ise) {
-                Timber.d( "IllegalStateException: unable to open inputstream for hashing: %s", uriMedia);
+                Timber.d("IllegalStateException: unable to open inputstream for hashing: %s", uriMedia);
                 Intent intent = new Intent(EVENT_PROOF_FAILED);
                 intent.setData(uriMedia);
                 mContext.sendBroadcast(intent);
                 return null;
             } catch (SecurityException e) {
-                Timber.d( "SecurityException: security exception accessing URI: %s", uriMedia);
+                Timber.d("SecurityException: security exception accessing URI: %s", uriMedia);
                 Intent intent = new Intent(EVENT_PROOF_FAILED);
                 intent.setData(uriMedia);
                 mContext.sendBroadcast(intent);
                 return null;
 
             } catch (PGPException e) {
-                Timber.d( "SecurityException: security exception accessing URI: %s", uriMedia);
+                Timber.d("SecurityException: security exception accessing URI: %s", uriMedia);
                 Intent intent = new Intent(EVENT_PROOF_FAILED);
                 intent.setData(uriMedia);
                 mContext.sendBroadcast(intent);
                 return null;
             } catch (IOException e) {
-                Timber.d( "SecurityException: security exception accessing URI: %s", uriMedia);
+                Timber.d("SecurityException: security exception accessing URI: %s", uriMedia);
                 Intent intent = new Intent(EVENT_PROOF_FAILED);
                 intent.setData(uriMedia);
                 mContext.sendBroadcast(intent);
                 return null;
             }
-        }
-        catch (RuntimeException re)
-        {
-            Timber.e(re,"RUNTIME EXCEPTION processing media file: " + re);
+        } catch (RuntimeException re) {
+            Timber.e(re, "RUNTIME EXCEPTION processing media file: " + re);
             Intent intent = new Intent(EVENT_PROOF_FAILED);
             intent.setData(uriMedia);
             mContext.sendBroadcast(intent);
             return null;
-        }
-        catch (Error err)
-        {
-            Timber.e(err,"FATAL ERROR processing media file: " + err);
+        } catch (Error err) {
+            Timber.e(err, "FATAL ERROR processing media file: " + err);
             Intent intent = new Intent(EVENT_PROOF_FAILED);
             intent.setData(uriMedia);
             mContext.sendBroadcast(intent);
@@ -217,55 +284,48 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
         }
     }
 
-    public String processUri (Uri fileUri, String proofHash, boolean autogenerated, Date createdAt) {
+    public String processUri(Uri fileUri, String proofHash, boolean autogenerated, Date createdAt) {
         try {
             return processUri(mContext, fileUri, proofHash, autogenerated, createdAt);
-        }
-        catch (FileNotFoundException re)
-        {
-            Timber.e(re,"FILENOTFOUND EXCEPTION processing media file: " + re);
+        } catch (FileNotFoundException re) {
+            Timber.e(re, "FILENOTFOUND EXCEPTION processing media file: " + re);
             return null;
-        }
-        catch (PGPException e) {
-            Timber.e(e,"PGPException EXCEPTION processing media file: " + e);
+        } catch (PGPException e) {
+            Timber.e(e, "PGPException EXCEPTION processing media file: " + e);
             return null;
         } catch (IOException e) {
-            Timber.e(e,"IOException EXCEPTION processing media file: " + e);
+            Timber.e(e, "IOException EXCEPTION processing media file: " + e);
             return null;
-        }
-        catch (RuntimeException re)
-        {
-            Timber.e(re,"RUNTIME EXCEPTION processing media file: " + re);
+        } catch (RuntimeException re) {
+            Timber.e(re, "RUNTIME EXCEPTION processing media file: " + re);
             return null;
-        }
-        catch (Error err)
-        {
-            Timber.e(err,"FATAL ERROR processing media file: " + err);
+        } catch (Error err) {
+            Timber.e(err, "FATAL ERROR processing media file: " + err);
 
             return null;
         }
     }
 
-    public synchronized String processUri (final Context context, final Uri uriMedia, String mediaHash, boolean autogenerated, Date createdAt) throws IOException, PGPException {
+    public synchronized String processUri(final Context context, final Uri uriMedia, String mediaHash, boolean autogenerated, Date createdAt) throws IOException, PGPException {
 
         if (mPrefs == null)
             mPrefs = PreferenceManager.getDefaultSharedPreferences(context);
 
-        final boolean showDeviceIds = mPrefs.getBoolean(ProofMode.PREF_OPTION_PHONE,ProofMode.PREF_OPTION_PHONE_DEFAULT);
-        final boolean showLocation = mPrefs.getBoolean(ProofMode.PREF_OPTION_LOCATION,ProofMode.PREF_OPTION_LOCATION_DEFAULT) && checkPermissionForLocation();
+        final boolean showDeviceIds = mPrefs.getBoolean(ProofMode.PREF_OPTION_PHONE, ProofMode.PREF_OPTION_PHONE_DEFAULT);
+        final boolean showLocation = mPrefs.getBoolean(ProofMode.PREF_OPTION_LOCATION, ProofMode.PREF_OPTION_LOCATION_DEFAULT) && checkPermissionForLocation();
         final boolean autoNotarize = mPrefs.getBoolean(ProofMode.PREF_OPTION_NOTARY, ProofMode.PREF_OPTION_NOTARY_DEFAULT);
-        final boolean showMobileNetwork = mPrefs.getBoolean(ProofMode.PREF_OPTION_NETWORK,ProofMode.PREF_OPTION_NETWORK_DEFAULT);
+        final boolean showMobileNetwork = mPrefs.getBoolean(ProofMode.PREF_OPTION_NETWORK, ProofMode.PREF_OPTION_NETWORK_DEFAULT);
 
         if (mediaHash != null) {
 
             try {
-                if (proofExists(context,mediaHash))
+                if (proofExists(context, mediaHash))
                     return null;
             } catch (FileNotFoundException e) {
                 //must not exist!
             }
 
-            Timber.d("Writing proof for hash %s for path %s",mediaHash, uriMedia);
+            Timber.d("Writing proof for hash %s for path %s", mediaHash, uriMedia);
 
             String notes = "";
 
@@ -294,19 +354,19 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                             @Override
                             public void notarizationSuccessful(String hash, String result) {
                                 Timber.d("Got notarization success response for %s", provider.getNotarizationFileExtension());
-                                File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + provider.getNotarizationFileExtension());
 
                                 try {
-                                    //byte[] rawNotarizeData = Base64.decode(result, Base64.DEFAULT);
+                                    mStorageProvider.saveBytes(hash, hash + provider.getNotarizationFileExtension(), result.getBytes(StandardCharsets.UTF_8), new StorageListener() {
+                                        @Override
+                                        public void saveSuccessful(String hash) {}
 
-                                    writeBytesToFile(context, fileMediaNotarizeData, result.getBytes(UTF_8));
+                                        @Override
+                                        public void saveFailed(Exception exception) {}
+                                    });
+
                                 } catch (Exception e) {
-                                    //if an error, then just write the bytes
-                                    try {
-                                        writeBytesToFile(context, fileMediaNotarizeData, result.getBytes(UTF_8));
-                                    } catch (UnsupportedEncodingException ex) {
-                                        ex.printStackTrace();
-                                    }
+                                        e.printStackTrace();
+
                                 }
                             }
 
@@ -314,15 +374,32 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                             public void notarizationSuccessful(String hash, File fileTmp) {
                                 Timber.d("Got notarization success response for %s", fileTmp.getName());
                                 String ext = fileTmp.getName().split(".")[1];
-                                File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + '.' + ext);
-                                copyFileToFile(context, fileTmp, fileMediaNotarizeData);
+
+                                try {
+                                    mStorageProvider.saveStream(hash, hash + '.' + ext, new FileInputStream(fileTmp), new StorageListener() {
+                                        @Override
+                                        public void saveSuccessful(String hash) {}
+
+                                        @Override
+                                        public void saveFailed(Exception exception) {}
+                                    });
+                                } catch (FileNotFoundException e) {
+                                    throw new RuntimeException(e);
+                                }
+
                             }
 
                             @Override
                             public void notarizationSuccessful(String hash, byte[] result) {
                                 Timber.d("Got notarization success response for %s, timestamp: %s", provider.getNotarizationFileExtension(), result);
-                                File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + provider.getNotarizationFileExtension());
-                                writeBytesToFile(context, fileMediaNotarizeData, result);
+                                mStorageProvider.saveBytes(hash, hash + provider.getNotarizationFileExtension(), result, new StorageListener() {
+                                    @Override
+                                    public void saveSuccessful(String hash) {}
+
+                                    @Override
+                                    public void saveFailed(Exception exception) {}
+                                });
+
                             }
 
                             @Override
@@ -343,9 +420,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
 
 
             return mediaHash;
-        }
-        else
-        {
+        } else {
             Timber.d("Unable to generated hash of media files, no proof generated");
 
         }
@@ -353,28 +428,28 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
         return null;
     }
 
-    public String processBytes (final Context context, Uri uriMedia, final byte[] mediaBytes, String mimeType, Date createdAt) throws PGPException, IOException {
+    public String processBytes(final Context context, Uri uriMedia, final byte[] mediaBytes, String mimeType, Date createdAt) throws PGPException, IOException {
 
         if (mPrefs == null)
             mPrefs = PreferenceManager.getDefaultSharedPreferences(context);
 
-        final boolean showDeviceIds = mPrefs.getBoolean(ProofMode.PREF_OPTION_PHONE,ProofMode.PREF_OPTION_PHONE_DEFAULT);
-        final boolean showLocation = mPrefs.getBoolean(ProofMode.PREF_OPTION_LOCATION,ProofMode.PREF_OPTION_LOCATION_DEFAULT) && checkPermissionForLocation();
+        final boolean showDeviceIds = mPrefs.getBoolean(ProofMode.PREF_OPTION_PHONE, ProofMode.PREF_OPTION_PHONE_DEFAULT);
+        final boolean showLocation = mPrefs.getBoolean(ProofMode.PREF_OPTION_LOCATION, ProofMode.PREF_OPTION_LOCATION_DEFAULT) && checkPermissionForLocation();
         final boolean autoNotarize = mPrefs.getBoolean(ProofMode.PREF_OPTION_NOTARY, ProofMode.PREF_OPTION_NOTARY_DEFAULT);
-        final boolean showMobileNetwork = mPrefs.getBoolean(ProofMode.PREF_OPTION_NETWORK,ProofMode.PREF_OPTION_NETWORK_DEFAULT);
+        final boolean showMobileNetwork = mPrefs.getBoolean(ProofMode.PREF_OPTION_NETWORK, ProofMode.PREF_OPTION_NETWORK_DEFAULT);
 
         String mediaHash = HashUtils.getSHA256FromBytes(mediaBytes);
 
         if (mediaHash != null) {
 
             try {
-                if (proofExists(context,mediaHash))
+                if (proofExists(context, mediaHash))
                     return mediaHash;
             } catch (FileNotFoundException e) {
                 //must not exist!
             }
 
-            Timber.d("Writing proof for hash %s for path %s",mediaHash, uriMedia);
+            Timber.d("Writing proof for hash %s for path %s", mediaHash, uriMedia);
 
             String notes = "";
 
@@ -393,56 +468,71 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
 
             if (autoNotarize && isOnline(context)) {
 
-                    for (NotarizationProvider provider : mProviders)
-                    {
-                        provider.notarize(mediaHash, mimeType, new ByteArrayInputStream(mediaBytes), new NotarizationListener() {
-                            @Override
-                            public void notarizationSuccessful(String hash, String result) {
-                                Timber.d("Got notarization success response timestamp: %s", result);
-                                File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + provider.getNotarizationFileExtension());
+                for (NotarizationProvider provider : mProviders) {
+                    provider.notarize(mediaHash, mimeType, new ByteArrayInputStream(mediaBytes), new NotarizationListener() {
+                        @Override
+                        public void notarizationSuccessful(String hash, String result) {
+                            Timber.d("Got notarization success response timestamp: %s", result);
+                            try {
+                                mStorageProvider.saveBytes(hash, hash + provider.getNotarizationFileExtension(), result.getBytes(StandardCharsets.UTF_8), new StorageListener() {
+                                    @Override
+                                    public void saveSuccessful(String hash) {}
 
-                                //byte[] rawNotarizeData = Base64.decode(result, Base64.DEFAULT);
+                                    @Override
+                                    public void saveFailed(Exception exception) {}
+                                });
 
-                                try {
-                                    writeBytesToFile(context, fileMediaNotarizeData, result.getBytes("UTF-8"));
-                                } catch (UnsupportedEncodingException e) {
-                                    e.printStackTrace();
-                                }
-
-                            }
-
-                            @Override
-                            public void notarizationSuccessful(String hash, File fileTmp) {
-                                Timber.d("Got notarization success response for %s", fileTmp.getName());
-
-                                String ext = fileTmp.getName().split(".")[1];
-                                File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + '.' + ext);
-                                copyFileToFile(context, fileTmp, fileMediaNotarizeData);
-                            }
-
-                            @Override
-                            public void notarizationSuccessful(String hash, byte[] result) {
-                                Timber.d("Got notarization success response for %s, timestamp: %s", provider.getNotarizationFileExtension(), result);
-                                File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + provider.getNotarizationFileExtension());
-                                writeBytesToFile(context, fileMediaNotarizeData, result);
-                            }
-
-                            @Override
-                            public void notarizationFailed(int errCode, String message) {
-
-                                Timber.d("Got notarization error response: %s", message);
+                            } catch (Exception e) {
+                                e.printStackTrace();
 
                             }
-                        });
-                    }
+
+                        }
+
+                        @Override
+                        public void notarizationSuccessful(String hash, File fileTmp) {
+                            Timber.d("Got notarization success response for %s", fileTmp.getName());
+
+                            String ext = fileTmp.getName().split(".")[1];
+                            try {
+                                mStorageProvider.saveStream(hash, hash + '.' + ext, new FileInputStream(fileTmp), new StorageListener() {
+                                    @Override
+                                    public void saveSuccessful(String hash) {}
+
+                                    @Override
+                                    public void saveFailed(Exception exception) {}
+                                });
+                            } catch (FileNotFoundException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
+
+                        @Override
+                        public void notarizationSuccessful(String hash, byte[] result) {
+                            Timber.d("Got notarization success response for %s, timestamp: %s", provider.getNotarizationFileExtension(), result);
+                            mStorageProvider.saveBytes(hash, hash + provider.getNotarizationFileExtension(), result, new StorageListener() {
+                                @Override
+                                public void saveSuccessful(String hash) {}
+
+                                @Override
+                                public void saveFailed(Exception exception) {}
+                            });
+                        }
+
+                        @Override
+                        public void notarizationFailed(int errCode, String message) {
+
+                            Timber.d("Got notarization error response: %s", message);
+
+                        }
+                    });
+                }
 
 
             }
 
             return mediaHash;
-        }
-        else
-        {
+        } else {
             Timber.d("Unable to generated hash of media files, no proof generated");
 
         }
@@ -450,15 +540,15 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
         return null;
     }
 
-    public String processFileDescriptor (final Context context, Uri uriMedia, final FileDescriptor fdMedia, String mimeType) throws IOException, PGPException {
+    public String processFileDescriptor(final Context context, Uri uriMedia, final FileDescriptor fdMedia, String mimeType) throws IOException, PGPException {
 
         if (mPrefs == null)
             mPrefs = PreferenceManager.getDefaultSharedPreferences(context);
 
-        final boolean showDeviceIds = mPrefs.getBoolean(ProofMode.PREF_OPTION_PHONE,ProofMode.PREF_OPTION_PHONE_DEFAULT);
-        final boolean showLocation = mPrefs.getBoolean(ProofMode.PREF_OPTION_LOCATION,ProofMode.PREF_OPTION_LOCATION_DEFAULT) && checkPermissionForLocation();
+        final boolean showDeviceIds = mPrefs.getBoolean(ProofMode.PREF_OPTION_PHONE, ProofMode.PREF_OPTION_PHONE_DEFAULT);
+        final boolean showLocation = mPrefs.getBoolean(ProofMode.PREF_OPTION_LOCATION, ProofMode.PREF_OPTION_LOCATION_DEFAULT) && checkPermissionForLocation();
         final boolean autoNotarize = mPrefs.getBoolean(ProofMode.PREF_OPTION_NOTARY, ProofMode.PREF_OPTION_NOTARY_DEFAULT);
-        final boolean showMobileNetwork = mPrefs.getBoolean(ProofMode.PREF_OPTION_NETWORK,ProofMode.PREF_OPTION_NETWORK_DEFAULT);
+        final boolean showMobileNetwork = mPrefs.getBoolean(ProofMode.PREF_OPTION_NETWORK, ProofMode.PREF_OPTION_NETWORK_DEFAULT);
 
         InputStream isMedia = new FileInputStream(fdMedia);
         String mediaHash = HashUtils.getSHA256FromFileContent(isMedia);
@@ -467,13 +557,13 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
         if (mediaHash != null) {
 
             try {
-                if (proofExists(context,mediaHash))
+                if (proofExists(context, mediaHash))
                     return mediaHash;
             } catch (FileNotFoundException e) {
                 //must not exist!
             }
 
-            Timber.d("Writing proof for hash %s for path %s",mediaHash, uriMedia);
+            Timber.d("Writing proof for hash %s for path %s", mediaHash, uriMedia);
 
             String notes = "";
 
@@ -492,20 +582,24 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
 
             if (autoNotarize && isOnline(context)) {
 
-                for (NotarizationProvider provider : mProviders)
-                {
+                for (NotarizationProvider provider : mProviders) {
                     InputStream isMediaNotarize = new FileInputStream(fdMedia);
                     provider.notarize(mediaHash, mimeType, isMediaNotarize, new NotarizationListener() {
                         @Override
                         public void notarizationSuccessful(String hash, String result) {
                             Timber.d("Got notarization success response timestamp: %s", result);
-                            File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + provider.getNotarizationFileExtension());
-
-                         //   byte[] rawNotarizeData = Base64.decode(result, Base64.DEFAULT);
                             try {
-                                writeBytesToFile(context, fileMediaNotarizeData, result.getBytes("UTF-8"));
-                            } catch (UnsupportedEncodingException e) {
+                                mStorageProvider.saveBytes(hash, hash + provider.getNotarizationFileExtension(), result.getBytes(StandardCharsets.UTF_8), new StorageListener() {
+                                    @Override
+                                    public void saveSuccessful(String hash) {}
+
+                                    @Override
+                                    public void saveFailed(Exception exception) {}
+                                });
+
+                            } catch (Exception e) {
                                 e.printStackTrace();
+
                             }
 
                         }
@@ -515,15 +609,29 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                             Timber.d("Got notarization success response for %s", fileTmp.getName());
 
                             String ext = fileTmp.getName().split(".")[1];
-                            File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + '.' + ext);
-                            copyFileToFile(context, fileTmp, fileMediaNotarizeData);
+                            try {
+                                mStorageProvider.saveStream(hash, hash + '.' + ext, new FileInputStream(fileTmp), new StorageListener() {
+                                    @Override
+                                    public void saveSuccessful(String hash) {}
+
+                                    @Override
+                                    public void saveFailed(Exception exception) {}
+                                });
+                            } catch (FileNotFoundException e) {
+                                throw new RuntimeException(e);
+                            }
                         }
 
                         @Override
                         public void notarizationSuccessful(String hash, byte[] result) {
                             Timber.d("Got notarization success response for %s, timestamp: %s", provider.getNotarizationFileExtension(), result);
-                            File fileMediaNotarizeData = new File(getHashStorageDir(context, hash), hash + provider.getNotarizationFileExtension());
-                            writeBytesToFile(context, fileMediaNotarizeData, result);
+                            mStorageProvider.saveBytes(hash, hash + provider.getNotarizationFileExtension(), result, new StorageListener() {
+                                @Override
+                                public void saveSuccessful(String hash) {}
+
+                                @Override
+                                public void saveFailed(Exception exception) {}
+                            });
                         }
 
                         @Override
@@ -539,9 +647,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
             }
 
             return mediaHash;
-        }
-        else
-        {
+        } else {
             Timber.d("Unable to generated hash of media files, no proof generated");
 
         }
@@ -549,39 +655,17 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
         return null;
     }
 
-    public String generateHash (Uri uri) throws FileNotFoundException {
+    public String generateHash(Uri uri) throws FileNotFoundException {
         return HashUtils.getSHA256FromFileContent(mContext.getContentResolver().openInputStream(uri));
     }
 
-    public boolean proofExists (Context context, String hash) throws FileNotFoundException {
-        boolean result = false;
+    public boolean proofExists(Context context, String hash) throws FileNotFoundException {
 
-        if (hash != null) {
-
-
-            File fileFolder = MediaWatcher.getHashStorageDir(context,hash);
-
-            if (fileFolder != null ) {
-                File fileMediaProof = new File(fileFolder, hash + PROOF_FILE_TAG);
-
-
-                if (fileMediaProof.exists()) {
-                    Timber.d("Proof EXISTS for hash %s", hash);
-
-                    result = true;
-                } else {
-                    //generate now?
-                    result = false;
-                    Timber.d("Proof DOES NOT EXIST for hash %s", hash);
-
-
-                }
-            }
-        }
-
-        return result;
+        if (hash != null)
+            return mStorageProvider.proofExists(hash);
+        else
+            return false;
     }
-
 
     public boolean isOnline(Context context) {
         ConnectivityManager cm =
@@ -590,86 +674,45 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
         return netInfo != null && netInfo.isConnected();
     }
 
-
-    private void writeProof (Context context, Uri uriMedia, InputStream is, String mediaHash, boolean showDeviceIds, boolean showLocation, boolean showMobileNetwork, String notes, Date createdAt) throws PGPException, IOException {
+    // TODO : Writing involed
+    private void writeProof(Context context, Uri uriMedia, InputStream is, String mediaHash, boolean showDeviceIds, boolean showLocation, boolean showMobileNetwork, String notes, Date createdAt) throws PGPException, IOException {
 
         boolean usePgpArmor = true;
 
-        File fileFolder = getHashStorageDir(context,mediaHash);
+//        File fileMediaProof = new File(fileFolder, mediaHash + PROOF_FILE_TAG);
 
-        if (fileFolder != null) {
+        boolean proofExists = mStorageProvider.proofExists(mediaHash);
 
-            File fileMediaProof = new File(fileFolder, mediaHash + PROOF_FILE_TAG);
+        //add data to proof csv and sign again
+        boolean writeHeaders = !proofExists;
 
-            File fileMediaProofJson = new File(fileFolder, mediaHash + PROOF_FILE_JSON_TAG);
+        HashMap<String, String> hmProof = buildProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, notes, createdAt);
 
-            //add data to proof csv and sign again
-            boolean writeHeaders = !fileMediaProof.exists();
+        writeMapToCSV(context, mediaHash, mediaHash + PROOF_FILE_TAG, hmProof, writeHeaders);
 
-            HashMap<String,String> hmProof = buildProof(context, uriMedia, mediaHash, showDeviceIds, showLocation, showMobileNetwork, notes, createdAt);
-            writeMapToCSV(context, fileMediaProof, hmProof, writeHeaders);
+        JSONObject jProof = new JSONObject(hmProof);
+        mStorageProvider.saveText(mediaHash, mediaHash + PROOF_FILE_JSON_TAG, jProof.toString(), null);
 
-            JSONObject jProof = new JSONObject(hmProof);
-            writeTextToFile(context, fileMediaProofJson, jProof.toString());
+        PgpUtils pu = PgpUtils.getInstance(context, null);
 
-            PgpUtils pu = PgpUtils.getInstance(context, null);
+        //sign the proof file again
+        InputStream isProof = mStorageProvider.getInputStream(mediaHash, mediaHash + PROOF_FILE_TAG);
+        OutputStream osProofSig = mStorageProvider.getOutputStream(mediaHash, mediaHash + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
+        pu.createDetachedSignature(isProof, osProofSig, mPassphrase, usePgpArmor);
 
-            if (fileMediaProof.exists()) {
-                //sign the proof file again
-                pu.createDetachedSignature(fileMediaProof, new File(fileFolder, mediaHash + PROOF_FILE_TAG + OPENPGP_FILE_TAG), mPassphrase, usePgpArmor);
-            }
+        //sign the proof file again
+        InputStream isProofJson = mStorageProvider.getInputStream(mediaHash, mediaHash + PROOF_FILE_JSON_TAG);
+        OutputStream osProofJsonSig = mStorageProvider.getOutputStream(mediaHash, mediaHash + PROOF_FILE_JSON_TAG + OPENPGP_FILE_TAG);
+        pu.createDetachedSignature(isProofJson, osProofJsonSig, mPassphrase, usePgpArmor);
 
-            if (fileMediaProofJson.exists()) {
-                //sign the proof file again
-               pu.createDetachedSignature(fileMediaProofJson, new File(fileFolder, mediaHash + PROOF_FILE_JSON_TAG + OPENPGP_FILE_TAG), mPassphrase, usePgpArmor);
-            }
+        //sign the media file
+        //File fileMediaSig = new File(fileFolder, mediaHash + OPENPGP_FILE_TAG);
+        //if ((!fileMediaSig.exists()) || fileMediaSig.length() == 0)
+        OutputStream osMediaSig = mStorageProvider.getOutputStream(mediaHash, mediaHash + OPENPGP_FILE_TAG);
+        pu.createDetachedSignature(is, osMediaSig, mPassphrase, usePgpArmor);
 
-            //sign the media file
-            File fileMediaSig = new File(fileFolder, mediaHash + OPENPGP_FILE_TAG);
-           if ((!fileMediaSig.exists()) || fileMediaSig.length() == 0)
-              pu.createDetachedSignature(is, new FileOutputStream(fileMediaSig), mPassphrase, usePgpArmor);
+        Timber.d("Proof written/updated for uri %s and hash %s", uriMedia, mediaHash);
 
-            Timber.d("Proof written/updated for uri %s and hash %s", uriMedia, mediaHash);
-
-        }
-    }
-
-    public static File getHashStorageDir(Context context, String hash) {
-
-        // Get the directory for the user's public pictures directory.
-        File fileParentDir = new File(context.getFilesDir(),PROOF_BASE_FOLDER);
-        if (!fileParentDir.exists()) {
-            fileParentDir.mkdir();
-        }
-
-        /**
-        if (android.os.Build.VERSION.SDK_INT >= 19) {
-            fileParentDir = new File(Environment.getExternalStoragePublicDirectory(
-                    Environment.DIRECTORY_DOCUMENTS), PROOF_BASE_FOLDER);
-
-        }
-        else
-        {
-            fileParentDir = new File(Environment.getExternalStoragePublicDirectory(
-                    Environment.DIRECTORY_DOWNLOADS), PROOF_BASE_FOLDER);
-        }
-
-        if (!fileParentDir.exists()) {
-            if (!fileParentDir.mkdir())
-            {
-                fileParentDir = new File(Environment.getExternalStorageDirectory(), PROOF_BASE_FOLDER);
-                if (!fileParentDir.exists())
-                    if (!fileParentDir.mkdir())
-                        return null;
-            }
-        }**/
-
-        File fileHashDir = new File(fileParentDir, hash + '/');
-        if (!fileHashDir.exists())
-            if (!fileHashDir.mkdir())
-                return null;
-
-        return fileHashDir;
     }
 
     /* Checks if external storage is available for read and write */
@@ -681,8 +724,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
         return false;
     }
 
-    private HashMap<String,String> buildProof (Context context, Uri uriMedia, String mediaHash, boolean showDeviceIds, boolean showLocation, boolean showMobileNetwork, String notes, Date createdAt)
-    {
+    private HashMap<String, String> buildProof(Context context, Uri uriMedia, String mediaHash, boolean showDeviceIds, boolean showLocation, boolean showMobileNetwork, String notes, Date createdAt) {
         String mediaPath = null;
 
         if (uriMedia != null) {
@@ -707,9 +749,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                     } else {
                         mediaPath = uriMedia.toString();
                     }
-                }
-                catch (Exception e)
-                {
+                } catch (Exception e) {
                     mediaPath = uriMedia.toString();
                 }
             }
@@ -722,14 +762,14 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
         HashMap<String, String> hmProof = new HashMap<>();
 
         if (mediaPath != null)
-            hmProof.put(FILE_PATH,mediaPath);
+            hmProof.put(FILE_PATH, mediaPath);
         else
-            hmProof.put(FILE_PATH,uriMedia.toString());
+            hmProof.put(FILE_PATH, uriMedia.toString());
 
-        hmProof.put(FILE_HASH_SHA_256,mediaHash);
+        hmProof.put(FILE_HASH_SHA_256, mediaHash);
 
         if (createdAt != null)
-            hmProof.put(FILE_CREATED,df.format(createdAt));
+            hmProof.put(FILE_CREATED, df.format(createdAt));
         else if (mediaPath != null) {
             File fileMedia = new File(mediaPath);
             if (fileMedia.exists()) {
@@ -739,7 +779,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                     try {
                         attr = Files.readAttributes(fileMedia.toPath(), BasicFileAttributes.class);
                         long createdAtMs = attr.creationTime().toMillis();
-                        hmProof.put(FILE_CREATED,df.format(new Date(createdAtMs)));
+                        hmProof.put(FILE_CREATED, df.format(new Date(createdAtMs)));
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -749,12 +789,12 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
         }
 
         if (mediaPath != null)
-            hmProof.put(FILE_MODIFIED,df.format(new Date(new File(mediaPath).lastModified())));
+            hmProof.put(FILE_MODIFIED, df.format(new Date(new File(mediaPath).lastModified())));
 
-        hmProof.put(PROOF_GENERATED,df.format(new Date()));
+        hmProof.put(PROOF_GENERATED, df.format(new Date()));
 
-        hmProof.put(LANGUAGE,DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_LANGUAGE));
-        hmProof.put(LOCALE,DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_LOCALE));
+        hmProof.put(LANGUAGE, DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_LANGUAGE));
+        hmProof.put(LOCALE, DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_LOCALE));
 
         if (showDeviceIds) {
             try {
@@ -765,15 +805,15 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                 hmProof.put(NETWORK, DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_NETWORK));
                 hmProof.put(DATA_TYPE, DeviceInfo.getDataType(context));
                 hmProof.put(NETWORK_TYPE, DeviceInfo.getNetworkType(context));
-            }catch (SecurityException se){}
+            } catch (SecurityException se) {
+            }
         }
 
-        hmProof.put(HARDWARE,DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_HARDWARE_MODEL));
-        hmProof.put(MANUFACTURER,DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_MANUFACTURE));
-        hmProof.put(SCREEN_SIZE,DeviceInfo.getDeviceInch(context));
+        hmProof.put(HARDWARE, DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_HARDWARE_MODEL));
+        hmProof.put(MANUFACTURER, DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_MANUFACTURE));
+        hmProof.put(SCREEN_SIZE, DeviceInfo.getDeviceInch(context));
 
-        if (showLocation)
-        {
+        if (showLocation) {
             GPSTracker gpsTracker = new GPSTracker(context);
 
             if (gpsTracker.canGetLocation()) {
@@ -799,9 +839,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                     hmProof.put(LOCATION_BEARING, loc.getBearing() + "");
                     hmProof.put(LOCATION_SPEED, loc.getSpeed() + "");
                     hmProof.put(LOCATION_TIME, loc.getTime() + "");
-                }
-                else
-                {
+                } else {
                     hmProof.put(LOCATION_LATITUDE, "");
                     hmProof.put(LOCATION_LONGITUDE, "");
                     hmProof.put(LOCATION_PROVIDER, "none");
@@ -819,9 +857,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
             else
                 hmProof.put(CELL_INFO, "none");
 
-        }
-        else
-        {
+        } else {
             hmProof.put(LOCATION_LATITUDE, "");
             hmProof.put(LOCATION_LONGITUDE, "");
             hmProof.put(LOCATION_PROVIDER, "none");
@@ -838,147 +874,16 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
         hmProof.put(SAFETY_CHECK_TIMESTAMP, "");
 
         if (!TextUtils.isEmpty(notes))
-            hmProof.put(NOTES,notes);
+            hmProof.put(NOTES, notes);
         else
-            hmProof.put(NOTES,"");
+            hmProof.put(NOTES, "");
 
         return hmProof;
 
     }
 
-    private static synchronized void writeBytesToFile (Context context, File fileOut, byte[] data)
-    {
-        try {
-            DataOutputStream os = new DataOutputStream(new FileOutputStream(fileOut,false));
-            os.write(data);
-            os.flush();
-            os.close();
-        }
-        catch (IOException ioe)
-        {
-            ioe.printStackTrace();
-        }
+    //  public static FileObserver observerMedia;
 
-    }
-
-    private static synchronized void copyFileToFile (Context context, File fileIn, File fileOut)
-    {
-        try {
-            FileInputStream inStream = new FileInputStream(fileIn);
-            FileOutputStream outStream = new FileOutputStream(fileOut);
-            FileChannel inChannel = inStream.getChannel();
-            FileChannel outChannel = outStream.getChannel();
-            inChannel.transferTo(0, inChannel.size(), outChannel);
-            inStream.close();
-            outStream.close();
-        }
-        catch (IOException ioe)
-        {
-            ioe.printStackTrace();
-        }
-
-    }
-
-    private static void writeMapToCSV (Context context, File fileOut, HashMap<String,String> hmProof, boolean writeHeaders)
-    {
-
-        StringBuffer sb = new StringBuffer();
-
-        if (writeHeaders) {
-            for (String key : hmProof.keySet()) {
-                sb.append(key).append(",");
-            }
-
-            sb.append("\n");
-        }
-
-        for (String key : hmProof.keySet())
-        {
-            String value = hmProof.get(key);
-            value = value.replace(',',' '); //remove commas from CSV file
-            sb.append(value).append(",");
-        }
-
-        writeTextToFile(context, fileOut, sb.toString());
-    }
-
-    private static void writeTextToFile (Context context, File fileOut, String text)
-    {
-        try {
-            PrintStream ps = new PrintStream(new FileOutputStream(fileOut,true));
-            ps.println(text);
-            ps.flush();
-            ps.close();
-        }
-        catch (IOException ioe)
-        {
-            ioe.printStackTrace();
-        }
-
-    }
-
-    private static String getSHA256FromFileContent(String filename)
-    {
-
-        try
-        {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] buffer = new byte[65536]; //created at start.
-            InputStream fis = new FileInputStream(filename);
-            int n = 0;
-            while (n != -1)
-            {
-                n = fis.read(buffer);
-                if (n > 0)
-                {
-                    digest.update(buffer, 0, n);
-                }
-            }
-            byte[] digestResult = digest.digest();
-            return asHex(digestResult);
-        }
-        catch (Exception e)
-        {
-            return null;
-        }
-    }
-
-
-    private static String getSHA256FromFileContent(InputStream fis)
-    {
-
-        try
-        {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] buffer = new byte[65536]; //created at start.
-            int n = 0;
-            while (n != -1)
-            {
-                n = fis.read(buffer);
-                if (n > 0)
-                {
-                    digest.update(buffer, 0, n);
-                }
-            }
-            byte[] digestResult = digest.digest();
-            return asHex(digestResult);
-        }
-        catch (Exception e)
-        {
-            return null;
-        }
-    }
-
-    private static String asHex(byte[] arrayBytes) {
-        StringBuffer stringBuffer = new StringBuffer();
-        for (int i = 0; i < arrayBytes.length; i++) {
-            stringBuffer.append(Integer.toString((arrayBytes[i] & 0xff) + 0x100, 16)
-                    .substring(1));
-        }
-        return stringBuffer.toString();
-    }
-
-    private static final int READ_STORAGE_PERMISSION_REQUEST_CODE = 41;
     public boolean checkPermissionForReadExternalStorage() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             int result = mContext.checkSelfPermission(android.Manifest.permission.READ_EXTERNAL_STORAGE);
@@ -995,65 +900,11 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
         return true;
     }
 
-  //  public static FileObserver observerMedia;
-
-    public Stack<String> qMedia = new Stack<>();
-    public Timer qTimer = null;
-
-    private void startFileSystemMonitor() {
-
-        if (checkPermissionForReadExternalStorage()) {
-
-            String pathToWatch = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).getAbsolutePath();
-
-            /**
-            observerMedia = new RecursiveFileObserver(pathToWatch, FileObserver.MODIFY|FileObserver.CLOSE_WRITE|FileObserver.MOVED_TO) { // set up a file observer to watch this directory on sd card
-                @Override
-                public void onEvent(int event, final String mediaPath) {
-                    if (mediaPath != null && (!mediaPath.equals(".probe"))) { // check that it's not equal to .probe because thats created every time camera is launched
-
-                        if (!qMedia.contains(mediaPath))
-                            qMedia.push(mediaPath);
-
-                        if (qTimer != null)
-                        {
-                            qTimer.cancel();
-                            qTimer.purge();
-                            qTimer = null;
-                        }
-
-                        qTimer = new Timer();
-                        qTimer.schedule(new TimerTask() {
-                            @Override
-                            public void run() {
-
-                                while (!qMedia.isEmpty())
-                                {
-                                    File fileMedia = new File(qMedia.pop());
-                                    if (fileMedia.exists())
-                                        processUri(Uri.fromFile(fileMedia), true);
-                                }
-
-                            }
-                        }, MediaWatcher.PROOF_GENERATION_DELAY_TIME_MS);
-
-                    }
-                }
-            };
-            observerMedia.startWatching();
-            **/
-
-        }
-
-
-    }
-
     public void stop () {
-
         /**
-        if (observerMedia != null)
-        {
-            observerMedia.stopWatching();
-        }**/
+         if (observerMedia != null)
+         {
+         observerMedia.stopWatching();
+         }**/
     }
 }

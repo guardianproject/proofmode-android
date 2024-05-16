@@ -115,7 +115,7 @@
     <string name="share_save_downloads">Prueba guardada en la carpeta de descargas</string>
     <string name="proof_generated_success">¡Prueba generada!</string>
     <string name="start_camera">Iniciar cámara</string>
-    <string name="action_add_content_credentials_c2pa">Añadir las credenciales para el contenido (C2PA)</string>
+    <string name="action_add_content_credentials_c2pa">Enviar a ProofCheck</string>
     <string name="verify_proof">Comprobar la prueba</string>
     <string name="cb_open_gallery">Ir a la Galería</string>
     <string name="re_share">Volver a compartir</string>
@@ -169,4 +169,13 @@
     </plurals>
     <string name="err_content_credentials">Se ha producido un problema al verificar o generar las credenciales del contenido.</string>
     <string name="share_sign_robust">Firmar</string>
+    <string name="settings_credentials">Acreditaciones</string>
+    <plurals name="you_imported_n_items">
+        <item quantity="one">Has importado un artículo</item>
+        <item quantity="many">Has importado %d artículos</item>
+        <item quantity="other">Has importado %d artículos</item>
+    </plurals>
+    <string name="settings_ai">Bloquear IA</string>
+    <string name="settings_credentials_desc">Añadir credenciales del contenido (C2PA) a fotos y vídeos</string>
+    <string name="settings_ai_desc">Marcar que no se utilizará para la capacitación en el aprendizaje automático</string>
 </resources>
