@@ -77,7 +77,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
     private var preview: Preview? = null
     private var cameraProvider: ProcessCameraProvider? = null
     private var imageCapture: ImageCapture? = null
-    private var imageAnalyzer: ImageAnalysis? = null
+    //private var imageAnalyzer: ImageAnalysis? = null
 
     // A lazy instance of the current fragment's view binding
     override val binding: FragmentCameraBinding by lazy {
@@ -91,7 +91,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
     // Selector showing which camera is selected (front or back)
     //private var lensFacing = CameraSelector.DEFAULT_BACK_CAMERA
     private var defaultLensFacing = CameraSelector.LENS_FACING_BACK
-    private var hdrCameraSelector: CameraSelector? = null
+    //private var hdrCameraSelector: CameraSelector? = null
 
     // Selector showing which flash mode is selected (on, off or auto)
     private var flashMode by Delegates.observable(FLASH_MODE_OFF) { _, _, new ->
@@ -128,7 +128,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
             if (displayId == this@CameraFragment.displayId) {
                 preview?.targetRotation = view.display.rotation
                 imageCapture?.targetRotation = view.display.rotation
-                imageAnalyzer?.targetRotation = view.display.rotation
+          //      imageAnalyzer?.targetRotation = view.display.rotation
             }
         } ?: Unit
     }
@@ -138,7 +138,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
         super.onViewCreated(view, savedInstanceState)
         flashMode = prefs.getInt(KEY_FLASH, FLASH_MODE_OFF)
         hasGrid = prefs.getBoolean(KEY_GRID, false)
-        hasHdr = prefs.getBoolean(KEY_HDR, false)
+        hasHdr = false;//prefs.getBoolean(KEY_HDR, false)
         initViews()
 
         displayManager.registerDisplayListener(displayListener, null)
@@ -160,7 +160,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
             btnTimer.setOnClickListener { selectTimer() }
             btnGrid.setOnClickListener { toggleGrid() }
             btnFlash.setOnClickListener { selectFlash() }
-            btnHdr.setOnClickListener { toggleHdr() }
+          //  btnHdr.setOnClickListener { toggleHdr() }
             btnTimerOff.setOnClickListener { closeTimerAndSelect(CameraTimer.OFF) }
             btnTimer3.setOnClickListener { closeTimerAndSelect(CameraTimer.S3) }
             btnTimer10.setOnClickListener { closeTimerAndSelect(CameraTimer.S10) }
@@ -339,6 +339,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
     /**
      * Turns on or off the HDR if available
      * */
+    /**
     private fun toggleHdr() {
         binding.btnHdr.toggleButton(
             flag = hasHdr,
@@ -350,7 +351,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
             prefs.putBoolean(KEY_HDR, flag)
             startCamera()
         }
-    }
+    }**/
 
     override fun onPermissionGranted() {
         // Each time apps is coming to foreground the need permission check is being processed
@@ -418,14 +419,13 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
 
 
             checkForHdrExtensionAvailability()
-
+/**
             // The Configuration of image analyzing
             imageAnalyzer = ImageAnalysis.Builder()
                 .setTargetAspectRatio(aspectRatio) // set the analyzer aspect ratio
                 .setTargetRotation(rotation) // set the analyzer rotation
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST) // in our analysis, we care about the latest image
-                .build()
-                .also { setLuminosityAnalyzer(it) }
+                .build()**/
 
             // Unbind the use-cases before rebinding them
             localCameraProvider.unbindAll()
@@ -493,24 +493,30 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
                     )
                 )
 
+                binding.btnHdr.visibility = View.GONE
+
+                /**
                 // Check if the extension is available on the device
                 if (!isAvailable) {
                     // If not, hide the HDR button
                     binding.btnHdr.visibility = View.GONE
                 } else if (hasHdr) {
                     // If yes, turn on if the HDR is turned on by the user
+
                     binding.btnHdr.visibility = View.VISIBLE
                     hdrCameraSelector =
                         extensionsManager.getExtensionEnabledCameraSelector(
                             selector,
                             ExtensionMode.HDR
                         )
-                }
+
+                }**/
             },
             ContextCompat.getMainExecutor(requireContext())
         )
     }
 
+   /**
     private fun setLuminosityAnalyzer(imageAnalysis: ImageAnalysis) {
         // Use a worker thread for image analysis to prevent glitches
         val analyzerThread = HandlerThread("LuminosityAnalysis").apply { start() }
@@ -518,7 +524,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
             ThreadExecutor(Handler(analyzerThread.looper)),
             LuminosityAnalyzer()
         )
-    }
+    }**/
 
     @SuppressLint("ClickableViewAccessibility")
     private fun bindToLifecycle(
@@ -533,8 +539,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
                 viewLifecycleOwner, // current lifecycle owner
                 hdrCameraSelector ?: selector, // either front or back facing
                 preview, // camera preview use case
-                imageCapture, // image capture use case
-                imageAnalyzer, // image analyzer use case
+                imageCapture // image capture use case
             ).apply {
                 // Init camera exposure control
                 cameraInfo.exposureState.run {
@@ -677,7 +682,6 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
                 override fun onError(exception: ImageCaptureException) {
                     // This function is called if there is an errors during capture process
                     val msg = "Photo capture failed: ${exception.message}"
-                   // Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
                     Log.e(TAG, msg)
                     exception.printStackTrace()
                 }
