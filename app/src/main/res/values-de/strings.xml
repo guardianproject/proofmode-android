@@ -1,2 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources></resources>
+<resources>
+    <string name="permissions_needed_content">Bitte aktiviere die erforderlichen Berechtigungen in den Systemeinstellungen.</string>
+    <string name="share_mode_robust">Robust</string>
+    <string name="digital_signatures_whattodo_title">Was soll ich damit machen?</string>
+    <string name="you_shared_your_public_key">Du hast deinen öffentlichen Schlüssel geteilt</string>
+    <plurals name="you_captured_n_items">
+        <item quantity="one">Du hast ein Element aufgezeichnet</item>
+        <item quantity="other">Du hast %d Elemente aufgezeichnet</item>
+    </plurals>
+    <plurals name="you_shared_n_items">
+        <item quantity="one">Du hast ein Element geteilt</item>
+        <item quantity="other">Du hast %d Elemente geteilt</item>
+    </plurals>
+    <string name="menu_import_videos">Videos importieren...</string>
+    <string name="menu_how_it_works">Wie es funktioniert</string>
+    <string name="menu_settings">Einstellungen</string>
+    <string name="menu_datalegend">Datenlegende</string>
+    <string name="menu_digital_signatures">Digitale Signaturen</string>
+    <string name="permissions_needed_title">Berechtigungen erforderlich</string>
+    <string name="start_camera">Kamera starten</string>
+    <plurals name="n_items_selected">
+        <item quantity="one">Ein Element ausgewählt</item>
+        <item quantity="other">%d Elemente ausgewählt</item>
+    </plurals>
+    <plurals name="you_imported_n_items">
+        <item quantity="one">Du hast ein Element importiert</item>
+        <item quantity="other">Du hast %d Elemente importiert</item>
+    </plurals>
+    <plurals name="share_these_n_items">
+        <item quantity="one">Dieses Element teilen</item>
+        <item quantity="other">Diese %d Elemente teilen</item>
+    </plurals>
+    <string name="date_display_days_since_today">\'Heute \'HH:mm</string>
+    <string name="date_display_days_since_yesterday">\'Gestern \'HH:MM</string>
+    <string name="re_share">Erneut teilen</string>
+    <string name="menu_import_photos">Importieren...</string>
+    <string name="menu_import_documents">Dokumente importieren...</string>
+    <string name="cd_take_picture">Bild aufnehmen</string>
+    <string name="camera">Kamera</string>
+    <string name="video">Video</string>
+    <string name="settings_credentials">Anmeldedaten</string>
+    <string name="settings_ai">KI blockieren</string>
+    <string name="settings_phone">Telefon</string>
+</resources>
