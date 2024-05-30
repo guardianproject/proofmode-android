@@ -42,4 +42,20 @@
     <string name="settings_credentials">Anmeldedaten</string>
     <string name="settings_ai">KI blockieren</string>
     <string name="settings_phone">Telefon</string>
+    <string name="action_settings">Einstellungen</string>
+    <string name="action_share_key">Öffentlichen Schlüssel teilen...</string>
+    <string name="action_publish_key">Öffentlichen Schlüssel veröffentlichen...</string>
+    <string name="action_about">Über ProofMode</string>
+    <string name="proofmode_is_off">PROOFMODE IST AUSGESCHALTET UND ZEICHNET KEINE DATEN AUF</string>
+    <string name="share_save_robust">Speichern</string>
+    <string name="share_share_robust">Teilen</string>
+    <string name="share_upload_robust">Hochladen</string>
+    <string name="share_sign_robust">Signieren</string>
+    <string name="switch_enable_proofmode">ProofMode aktivieren</string>
+    <string name="settings_location">Standort</string>
+    <string name="settings_phone_desc">Identifikationsnummer deines Telefons</string>
+    <string name="settings_network">Netzwerk</string>
+    <string name="settings_network_desc">Name des Netzes/der Netze, mit dem/denen du verbunden bist</string>
+    <string name="settings_notary">Notar</string>
+    <string name="proofmode_is_on">PROOFMODE IST EINGESCHALTET UND ZEICHNET DATEN AUF</string>
 </resources>
