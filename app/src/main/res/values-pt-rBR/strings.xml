@@ -139,7 +139,7 @@
     <string name="cb_timer">Selecionar um temporizador</string>
     <string name="status_download_content_credentials">Baixando as imagens com credenciais de conteúdo...</string>
     <string name="share_with_proofsign">Compartilhar com o serviço de nuvem ProofSign para adicionar Credenciais de Conteúdo (C2PA)\?</string>
-    <string name="menu_import_photos">Importar fotos...</string>
+    <string name="menu_import_photos">Importar...</string>
     <string name="progress_signing_proof">Compartilhando e verificando com o ProofSign...</string>
     <plurals name="n_items_selected">
         <item quantity="one">Um item foi selecionado</item>
@@ -165,7 +165,7 @@
     <string name="err_content_credentials">Houve um problema ao verificar ou ao gerar as credenciais de conteúdo.</string>
     <string name="share_sign_robust">Assinar</string>
     <string name="share_upload_robust">Enviar</string>
-    <string name="title_activity">Atividade</string>
+    <string name="title_activity">Registro de provas</string>
     <string name="video">Vídeo</string>
     <string name="camera">Câmera</string>
     <string name="cd_take_picture">Tirar uma foto</string>
