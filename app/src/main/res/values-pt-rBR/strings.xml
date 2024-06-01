@@ -178,4 +178,10 @@
     <string name="settings_ai">Bloquear IA</string>
     <string name="settings_credentials_desc">Adicionar credenciais de conteúdo (C2PA) a fotos e vídeos</string>
     <string name="settings_ai_desc">Defina para não ser usado para treinamento de aprendizado de máquina</string>
+    <plurals name="clear_these_n_items">
+        <item quantity="one">Limpar este item</item>
+        <item quantity="many">Limpar estes %d itens</item>
+        <item quantity="other">Limpar estes %d itens</item>
+    </plurals>
+    <string name="default_share_text">Este é um ProofPack que contém arquivos de mídia, metadados e assinaturas digitais. Saiba como verificar isso em https://proofmode.org/verify</string>
 </resources>
