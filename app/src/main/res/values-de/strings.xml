@@ -58,4 +58,12 @@
     <string name="settings_network_desc">Name des Netzes/der Netze, mit dem/denen du verbunden bist</string>
     <string name="settings_notary">Notar</string>
     <string name="proofmode_is_on">PROOFMODE IST EINGESCHALTET UND ZEICHNET DATEN AUF</string>
+    <string name="switch_include_device">Gerätekennung einbeziehen</string>
+    <string name="switch_include_location">GPS-Standort einbeziehen</string>
+    <string name="settings_location_desc">GPS-Koordinaten bei der Aufnahme von Medien</string>
+    <string name="app_name">ProofMode</string>
+    <string name="settings_notary_desc">Registrierung bei einer dritten Partei, dass dein Medium existiert</string>
+    <string name="tap_hold_turn_off">Zum Ausschalten berühren und halten</string>
+    <string name="proofmode_is_capturing">ProofMode erfasst standardmäßig einen umfangreichen Satz von Metadaten. Erhöhe die Verifizierbarkeit deiner Medien, indem du mehr hinzufügst.</string>
+    <string name="tap_hold_turn_on">Tippe auf Halten, um einzuschalten</string>
 </resources>
