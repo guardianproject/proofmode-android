@@ -137,7 +137,7 @@
     <string name="cb_timer">Seleccionar un temporizador</string>
     <string name="status_download_content_credentials">Descargando las imágenes con las credenciales de contenido...</string>
     <string name="share_with_proofsign">¿Compartir con el servicio en la nube de ProofSign para añadir las credenciales del contenido (C2PA)\?</string>
-    <string name="menu_import_photos">Importar las fotos...</string>
+    <string name="menu_import_photos">Importando…</string>
     <string name="proof_integrity_verified_success">Integridad de la prueba comprobada</string>
     <string name="progress_signing_proof">Compartir y verificar con ProofSign...</string>
     <plurals name="n_items_selected">
@@ -145,7 +145,7 @@
         <item quantity="many">%d elementos seleccionados</item>
         <item quantity="other">%d elementos seleccionados</item>
     </plurals>
-    <string name="title_activity">Actividad</string>
+    <string name="title_activity">Registro de pruebas</string>
     <string name="date_display_days_since_other">dd MM aaaa</string>
     <string name="date_display_single_item">dd-mmm-yyyy</string>
     <string name="you_shared_your_public_key">Compartiste tu clave pública</string>
@@ -178,4 +178,10 @@
     <string name="settings_ai">Bloquear IA</string>
     <string name="settings_credentials_desc">Añadir credenciales del contenido (C2PA) a fotos y vídeos</string>
     <string name="settings_ai_desc">Marcar que no se utilizará para la capacitación en el aprendizaje automático</string>
+    <plurals name="clear_these_n_items">
+        <item quantity="one">Borrar este elemento</item>
+        <item quantity="many">Borrar estos %d elementos</item>
+        <item quantity="other">Borrar estos %d elementos</item>
+    </plurals>
+    <string name="default_share_text">Se trata de un ProofPack que contiene archivos multimedia, metadatos y firmas digitales. Aprende a verificarlo en https://proofmode.org/verify</string>
 </resources>
