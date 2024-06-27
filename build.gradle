@@ -38,7 +38,10 @@ allprojects {
         maven {
             url 'https://gitlab.com/api/v4/projects/52243488/packages/maven'
         }
-    }
+        maven { url "https://dl.cloudsmith.io/public/libp2p/jvm-libp2p/maven/" }
+        maven { url "https://artifacts.consensys.net/public/maven/maven/" }
+
+}
     project.ext {
         // these are common variables used in */build.gradle
         buildToolsVersion="34.0.0"

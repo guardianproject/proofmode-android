@@ -43,7 +43,7 @@ android {
     }
     packagingOptions {
         resources {
-            excludes += ['org.bitcoin.production.checkpoints', 'org.bitcoin.test.checkpoints', 'org/bitcoinj/crypto/cacerts', 'org/bitcoinj/crypto/mnemonic/wordlist/english.txt', 'lib/x86_64/darwin/libscrypt.dylib', 'com/google/thirdparty/publicsuffix/PublicSuffixType.gwt.xml', 'com/google/thirdparty/publicsuffix/PublicSuffixPatterns.gwt.xml', 'com/google/thirdparty/publicsuffix/PublicSuffixPatterns.gwt.xml', 'org/apache/commons/cli/AlreadySelectedException.class']
+            excludes += ['org.bitcoin.production.checkpoints', 'org.bitcoin.test.checkpoints', 'org/bitcoinj/crypto/cacerts', 'org/bitcoinj/crypto/mnemonic/wordlist/english.txt', 'lib/x86_64/darwin/libscrypt.dylib', 'com/google/thirdparty/publicsuffix/PublicSuffixType.gwt.xml', 'com/google/thirdparty/publicsuffix/PublicSuffixPatterns.gwt.xml', 'com/google/thirdparty/publicsuffix/PublicSuffixPatterns.gwt.xml', 'org/apache/commons/cli/AlreadySelectedException.class','META-INF/INDEX.LIST','META-INF/io.netty.versions.properties']
         }
     }
     lint {
@@ -101,7 +101,10 @@ android {
 }
 
 dependencies {
-  //  implementation files('src/main/libs/Web3StorageMobile.aar')
+    implementation 'androidx.navigation:navigation-fragment-ktx:2.7.7'
+    implementation 'androidx.navigation:navigation-ui-ktx:2.7.7'
+
+    //  implementation files('src/main/libs/Web3StorageMobile.aar')
     testImplementation 'junit:junit:4.13.2'
 
     implementation project(':android-libproofmode')
@@ -183,6 +186,8 @@ dependencies {
     // Kotlin + coroutines
     implementation "androidx.work:work-runtime-ktx:$work_version"
 
+    //libp2p
+    implementation 'io.libp2p:jvm-libp2p:1.1.1-RELEASE'
 
 
 

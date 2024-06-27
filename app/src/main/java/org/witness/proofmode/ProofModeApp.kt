@@ -32,10 +32,12 @@ import org.witness.proofmode.notaries.OpenTimestampsNotarizationProvider
 import org.witness.proofmode.notaries.SafetyNetCheck
 import org.witness.proofmode.notarization.NotarizationProvider
 import org.witness.proofmode.org.witness.proofmode.ProofBackgroundWorker
+import org.witness.proofmode.org.witness.proofmode.share.p2p.P2PNotarizationProvider
 import timber.log.Timber
 import java.io.IOException
 import java.util.concurrent.Executors
 import kotlin.random.Random
+import java.util.concurrent.CompletableFuture.runAsync
 
 private var mPgpUtils: PgpUtils? = null
 private lateinit var mPrefs: SharedPreferences
@@ -256,6 +258,12 @@ class ProofModeApp : MultiDexApplication() {
             //notarize and then write proof so we can include notarization response
             val gProvider = GoogleSafetyNetNotarizationProvider(this)
             ProofMode.addNotarizationProvider(this, gProvider)
+
+            runAsync {
+                val p2pProvider = P2PNotarizationProvider()
+                ProofMode.addNotarizationProvider(this, p2pProvider)
+            }
+
         } catch (ce: ClassNotFoundException) {
             //SafetyNet API not available
         }

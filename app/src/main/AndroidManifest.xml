@@ -2,57 +2,52 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="org.witness.proofmode">
-
     <!-- A device that has any camera be it front, back or external will work. -->
     <uses-feature
         android:name="android.hardware.camera.any"
         android:required="false" />
-    <!-- Required only if your app needs to access images or photos
-     that other apps created. -->
+    <!--
+ Required only if your app needs to access images or photos
+     that other apps created.
+    -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-
-    <!-- Required only if your app needs to access videos
-         that other apps created. -->
+    <!--
+ Required only if your app needs to access videos
+         that other apps created.
+    -->
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
-
-    <!-- Required only if your app needs to access audio files
-         that other apps created. -->
+    <!--
+ Required only if your app needs to access audio files
+         that other apps created.
+    -->
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
-
-    <!-- If your app doesn't need to access media files that other apps created,
-         set the "maxSdkVersion" attribute to "28" instead. -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+    <!--
+ If your app doesn't need to access media files that other apps created,
+         set the "maxSdkVersion" attribute to "28" instead.
+    -->
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
-
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        tools:remove="android:maxSdkVersion"
-        />
-
-    <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION"
-       />
-
-    <!-- SDK 33 and up -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-
-
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        tools:remove="android:maxSdkVersion" />
+    <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" /> <!-- SDK 33 and up -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission
         android:name="android.permission.CAMERA"
         tools:remove="android:maxSdkVersion" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
-
-
     <uses-permission
         android:name="android.permission.ACCESS_COARSE_LOCATION"
         tools:remove="android:maxSdkVersion" />
     <uses-permission
         android:name="android.permission.ACCESS_FINE_LOCATION"
         tools:remove="android:maxSdkVersion" />
-
     <!--
     <uses-permission
         android:name="android.permission.ACCESS_BACKGROUND_LOCATION"
-        tools:remove="android:maxSdkVersion" />-->
-
+        tools:remove="android:maxSdkVersion" />
+    -->
     <uses-permission
         android:name="android.permission.ACCESS_NETWORK_STATE"
         tools:remove="android:maxSdkVersion" />
@@ -62,9 +57,8 @@
     <uses-permission
         android:name="android.permission.READ_PHONE_STATE"
         tools:remove="android:maxSdkVersion" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
-
-    <uses-permission android:name="android.permission.GET_ACCOUNTS"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.GET_ACCOUNTS" />
 
     <application
         android:name=".ProofModeApp"
@@ -72,11 +66,14 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:largeHeap="true"
-        android:supportsRtl="true"
-        android:theme="@style/AppTheme"
         android:requestLegacyExternalStorage="true"
-        >
-
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+        <activity
+            android:name=".org.witness.proofmode.share.p2p.P2PShareActivity"
+            android:exported="false"
+            android:label="@string/title_activity_p2_pshare"
+            android:theme="@style/AppTheme" />
         <activity android:name=".PermissionActivity" />
         <activity
             android:name=".onboarding.OnboardingActivity"
@@ -85,10 +82,10 @@
             android:theme="@style/FullscreenTheme" />
         <activity
             android:name=".MainActivity"
+            android:exported="true"
             android:label="@string/app_name"
             android:screenOrientation="portrait"
-            android:theme="@style/AppTheme.NoActionBar"
-            android:exported="true">
+            android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -133,9 +130,9 @@
 
         <activity
             android:name=".ShareProofActivity"
+            android:exported="true"
             android:label="@string/share_proof_action"
-            android:theme="@style/AppTheme.NoActionBar"
-            android:exported="true">
+            android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>
                 <action
                     android:name="android.intent.action.SEND"
@@ -169,7 +166,8 @@
                     android:label="@string/share_proof_action" />
 
                 <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="audio/*"/>
+
+                <data android:mimeType="audio/*" />
                 <data android:mimeType="image/*" />
                 <data android:mimeType="video/*" />
             </intent-filter>
@@ -177,16 +175,17 @@
                 <action
                     android:name="org.witness.proofmode.action.SHARE_PROOF"
                     android:label="@string/share_proof_action" />
+
                 <category android:name="android.intent.category.DEFAULT" />
+
                 <data android:mimeType="*/*" />
             </intent-filter>
         </activity>
-
         <activity
             android:name=".VerifyProofActivity"
+            android:exported="true"
             android:label="@string/verify_proof"
-            android:theme="@style/AppTheme.NoActionBar"
-            android:exported="true">
+            android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>
                 <action
                     android:name="android.intent.action.SEND"
@@ -208,45 +207,41 @@
             android:permission="android.permission.BIND_JOB_SERVICE" />
         <service
             android:name=".ProofModeTileService"
+            android:exported="false"
             android:icon="@drawable/ic_stat_proofmodewhite"
             android:label="@string/app_name"
-            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
-            android:exported="false">
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
         </service>
 
         <receiver
-            android:name="org.witness.proofmode.service.CameraEventReceiver"
-            android:exported="true"
-            android:enabled="true" >
-
+            android:name=".service.CameraEventReceiver"
+            android:enabled="true"
+            android:exported="true">
             <intent-filter android:priority="10000">
                 <action android:name="com.android.camera.NEW_PICTURE" />
+
                 <category android:name="android.intent.category.DEFAULT" />
+
                 <data android:mimeType="image/*" />
             </intent-filter>
-
-
             <intent-filter android:priority="10000">
                 <action android:name="com.android.camera.NEW_VIDEO" />
+
                 <category android:name="android.intent.category.DEFAULT" />
+
                 <data android:mimeType="video/*" />
             </intent-filter>
-
         </receiver>
-
         <receiver
-            android:name="org.witness.proofmode.ProofEventReceiver"
-            android:exported="true"
+            android:name=".ProofEventReceiver"
             android:enabled="true"
-            >
-
+            android:exported="true">
             <intent-filter android:priority="10000">
                 <action android:name="org.witness.proofmode.PROOF_GENERATED" />
             </intent-filter>
-
         </receiver>
 
         <provider
@@ -258,12 +253,10 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/provider_paths" />
         </provider>
-
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"
-            tools:node="remove">
-        </provider>
+            tools:node="remove"></provider>
     </application>
 
 </manifest>

@@ -537,7 +537,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
                 .build() else CameraSelector.DEFAULT_BACK_CAMERA
             proofModeCamera = localCameraProvider.bindToLifecycle(
                 viewLifecycleOwner, // current lifecycle owner
-                hdrCameraSelector ?: selector, // either front or back facing
+                selector, // either front or back facing
                 preview, // camera preview use case
                 imageCapture // image capture use case
             ).apply {

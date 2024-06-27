@@ -204,4 +204,11 @@
     <string name="settings_ai_desc">Flag to not be used for machine learning training</string>
 
     <string name="default_share_text">This is a ProofPack that contains media files, metadata, and digital signatures. Learn how to verify this at https://proofmode.org/verify</string>
+    <string name="title_activity_p2_pshare">P2PShareActivity</string>
+    <!-- Strings used for fragments for navigation -->
+    <string name="first_fragment_label">First Fragment</string>
+    <string name="second_fragment_label">Second Fragment</string>
+    <string name="next">Next</string>
+    <string name="previous">Previous</string>
+
 </resources>
