@@ -171,10 +171,10 @@
     <string name="action_share_proof_zip">Поделиться Доказательство Zip</string>
     <string name="action_add_content_credentials_c2pa">Отправить в ProofCheck</string>
     <string name="status_download_content_credentials">Загрузка изображений с помощью учетных данных содержимого...</string>
-    <string name="menu_import_photos">Импортируйте фотографии...</string>
+    <string name="menu_import_photos">Импорт...</string>
     <string name="menu_import_videos">Импортируйте видео...</string>
     <string name="menu_import_documents">Импортные документы...</string>
-    <string name="title_activity">Активность</string>
+    <string name="title_activity">Журнал логов</string>
     <string name="cd_take_picture">Сделайте снимок</string>
     <string name="cb_open_gallery">Перейти в галерею</string>
     <string name="cb_timer">Выберите таймер</string>
@@ -184,4 +184,5 @@
     <string name="settings_ai">Блок ИИ</string>
     <string name="settings_ai_desc">Флаг не использовать для обучения машинному обучению</string>
     <string name="date_display_days_since_today">\'Сегодня\' \'ЧЧ:мм</string>
+    <string name="default_share_text">Это пакет доказательств, содержащий медиафайлы, метаданные и цифровые подписи. Узнайте, как проверить это на сайте https://proofmode.org/verify</string>
 </resources>
