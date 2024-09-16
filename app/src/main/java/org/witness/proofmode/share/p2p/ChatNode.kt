@@ -50,10 +50,6 @@ class ChatNode(private val printMsg: OnMessage) {
 
     fun send(message: String) {
         peers.values.forEach { it.controller.send(message) }
-
-        if (message.startsWith("alias ")) {
-            currentAlias = message.substring(6).trim()
-        }
     } // send
 
     fun stop() {
@@ -62,6 +58,18 @@ class ChatNode(private val printMsg: OnMessage) {
     } // stop
 
     private fun messageReceived(id: PeerId, msg: String) {
+
+        if (msg.startsWith("notarize ")) {
+            var notarizeNonce = msg.split(" ")[1];
+
+            var notarizeResponse = "notarized $notarizeNonce";
+            send(notarizeResponse)
+
+            return;
+
+        }
+
+        /**
         if (msg == "/who") {
             peers[id]?.controller?.send("alias $currentAlias")
             return
@@ -79,10 +87,16 @@ class ChatNode(private val printMsg: OnMessage) {
 
         val alias = peers[id]?.name ?: id.toBase58()
         printMsg("$alias > $msg")
+        **/
+
+        val alias = peers[id]?.name ?: id.toBase58()
+        printMsg("$alias > $msg")
+
+
     } // messageReceived
 
     private fun peerFound(info: PeerInfo) {
-        if (
+         if (
             info.peerId == chatHost.peerId ||
             knownNodes.contains(info.peerId)
         ) {

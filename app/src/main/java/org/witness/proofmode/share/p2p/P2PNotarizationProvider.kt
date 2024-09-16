@@ -26,8 +26,13 @@ class P2PNotarizationProvider : NotarizationProvider {
         `is`: InputStream?,
         listener: NotarizationListener?
     ) {
+
+        if (listener != null) {
+            notarizationListener = listener
+        }
+
         hash?.let {
-            chatNode.send(it)
+            chatNode.send("notarize $it")
         }
 
     }
