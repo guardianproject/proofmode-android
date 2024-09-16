@@ -69,6 +69,12 @@ dependencies {
     // Required -- JUnit 4 framework
     androidTestImplementation 'junit:junit:4.13.2'
 
+
+    //new C2PA content authenticity support
+    implementation ("info.guardianproject:simple_c2pa:0.0.6")
+    implementation ("net.java.dev.jna:jna:5.13.0@aar")
+
+
     // Testing-only dependencies
     androidTestImplementation 'androidx.test:core:' + rootProject.coreVersion;
     androidTestImplementation 'androidx.test.ext:junit:' + rootProject.extJUnitVersion;

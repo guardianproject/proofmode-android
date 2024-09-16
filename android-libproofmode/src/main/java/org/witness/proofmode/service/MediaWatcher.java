@@ -82,7 +82,12 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
 
     private StorageProvider mStorageProvider = null;
 
-    private MediaWatcher(Context context, StorageProvider storageProvider) {
+    public MediaWatcher () {
+
+
+    }
+
+    private void init(Context context, StorageProvider storageProvider) {
         if (mPrefs == null)
             mPrefs = PreferenceManager.getDefaultSharedPreferences(context);
 
@@ -104,7 +109,8 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
 
     public static synchronized MediaWatcher getInstance(Context context) {
         if (mInstance == null)
-            mInstance = new MediaWatcher(context, null);
+            mInstance = new MediaWatcher();
+            mInstance.init(context, null);
 
         return mInstance;
     }
@@ -186,6 +192,8 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
 
     @Override
     public void onReceive(final Context context, final Intent intent) {
+
+        init (context, null);
 
         mExec.submit(() -> {
 

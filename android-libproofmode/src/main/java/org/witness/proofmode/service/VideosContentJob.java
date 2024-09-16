@@ -132,6 +132,7 @@ public class VideosContentJob extends JobService {
                         try {
                             MediaWatcher mw = MediaWatcher.getInstance(VideosContentJob.this);
                             String resultProofHash = mw.processUri(uriProcess, true, null);
+                            Timber.d("generated hash via job: " + resultProofHash);
 
                         } catch (RuntimeException e) {
                             Timber.d(e, "Error generating hash from proof URI");
