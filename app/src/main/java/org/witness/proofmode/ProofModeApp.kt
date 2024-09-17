@@ -265,10 +265,11 @@ class ProofModeApp : MultiDexApplication() {
             val gProvider = GoogleSafetyNetNotarizationProvider(this)
             ProofMode.addNotarizationProvider(this, gProvider)
 
+            /**
             runAsync {
                 val p2pProvider = P2PNotarizationProvider()
                 ProofMode.addNotarizationProvider(this, p2pProvider)
-            }
+            }**/
 
         } catch (ce: ClassNotFoundException) {
             //SafetyNet API not available
