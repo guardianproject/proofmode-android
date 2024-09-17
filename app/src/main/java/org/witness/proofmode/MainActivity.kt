@@ -71,7 +71,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 Manifest.permission.ACCESS_MEDIA_LOCATION,
                 Manifest.permission.POST_NOTIFICATIONS,
                 Manifest.permission.READ_MEDIA_IMAGES,
-                Manifest.permission.READ_MEDIA_VIDEO
+                Manifest.permission.READ_MEDIA_VIDEO,
+                Manifest.permission.ACCESS_FINE_LOCATION
             )
         }
 
@@ -230,18 +231,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     private val cameraReceiver = CameraReceiver()
 
-    /**
-    private fun startService() {
-        val intentService = Intent(this, ProofService::class.java)
-        intentService.action = ProofService.ACTION_START
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(intentService)
-        } else {
-            startService(intentService)
-        }
-    }**/
-
     private fun showDocumentPicker() {
         val intent = Intent()
         intent.type = "*/*"
@@ -314,52 +303,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
     }
 
-    /**
-    private fun updateOnOffState(animate: Boolean) {
-    val isOn = mPrefs.getBoolean("doProof", false)
-    if (animate) {
-    layoutOn.animate().alpha(if (isOn) 1.0f else 0.0f).setDuration(300)
-    .setListener(object : Animator.AnimatorListener {
-    override fun onAnimationStart(animation: Animator) {
-    if (isOn) {
-    layoutOn.visibility = View.VISIBLE
-    }
-    }
 
-    override fun onAnimationEnd(animation: Animator) {
-    if (!isOn) {
-    layoutOn.visibility = View.GONE
-    }
-    }
-
-    override fun onAnimationCancel(animation: Animator) {}
-    override fun onAnimationRepeat(animation: Animator) {}
-    }).start()
-    layoutOff.animate().alpha(if (isOn) 0.0f else 1.0f).setDuration(300)
-    .setListener(object : Animator.AnimatorListener {
-    override fun onAnimationStart(animation: Animator) {
-    if (!isOn) {
-    layoutOff.visibility = View.VISIBLE
-    }
-    }
-
-    override fun onAnimationEnd(animation: Animator) {
-    if (isOn) {
-    layoutOff.visibility = View.GONE
-    }
-    }
-
-    override fun onAnimationCancel(animation: Animator) {}
-    override fun onAnimationRepeat(animation: Animator) {}
-    }).start()
-    } else {
-    layoutOn.alpha = if (isOn) 1.0f else 0.0f
-    layoutOn.visibility = if (isOn) View.VISIBLE else View.GONE
-    layoutOff.alpha = if (isOn) 0.0f else 1.0f
-    layoutOff.visibility = if (isOn) View.GONE else View.VISIBLE
-    }
-
-    }**/
 
     override fun onResume() {
         super.onResume()
@@ -646,7 +590,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
          * The permissions needed for "base" ProofMode to work, without extra options.
          */
         private var requiredPermissions = arrayOf(
-            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.ACCESS_FINE_LOCATION
         )
         private val optionalPermissions = arrayOf(
             Manifest.permission.ACCESS_NETWORK_STATE,
