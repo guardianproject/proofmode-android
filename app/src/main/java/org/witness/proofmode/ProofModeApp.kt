@@ -17,6 +17,10 @@ import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkRequest
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.acra.config.dialog
 import org.acra.config.mailSender
 import org.acra.data.StringFormat
@@ -55,7 +59,9 @@ class ProofModeApp : MultiDexApplication() {
 
         mPrefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
 
-        initPgpKey ()
+        GlobalScope.launch(Dispatchers.IO) {
+            initPgpKey()
+        }
     }
 
     fun initPgpKey () {
