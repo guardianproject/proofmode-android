@@ -133,7 +133,6 @@ dependencies {
     // To use Kotlin Symbol Processing (KSP)
     ksp "androidx.room:room-compiler:$room_version"
 
-   // implementation project(":camera")
     implementation project(":android-libproofcam")
     implementation 'com.google.android.material:material:1.9.0-alpha01'
 
@@ -165,9 +164,9 @@ dependencies {
     androidTestImplementation 'androidx.test:runner:' + rootProject.runnerVersion;
     androidTestImplementation 'androidx.test.espresso:espresso-core:' + rootProject.espressoVersion;
 
-    //new C2PA content authenticity support
-    implementation "info.guardianproject:simple_c2pa:0.0.6"
-    implementation "net.java.dev.jna:jna:5.13.0@aar"
+    //new C2PA content authenticity support - now built into proofmode library
+    //implementation "info.guardianproject:simple_c2pa:0.0.6"
+    //implementation "net.java.dev.jna:jna:5.13.0@aar"
 
     //for upload to proofcheck
     implementation 'com.squareup.okio:okio:2.10.0'
