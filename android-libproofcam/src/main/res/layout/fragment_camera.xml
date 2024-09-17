@@ -111,14 +111,14 @@
 
 
     <ImageButton
-        android:id="@+id/btnTimer"
+        android:id="@+id/btnExit"
         android:layout_width="@dimen/button_size_small"
         android:layout_height="@dimen/button_size_small"
         android:background="@android:color/transparent"
         android:elevation="1dp"
         android:padding="@dimen/half_margin"
         android:scaleType="centerInside"
-        android:src="@drawable/ic_timer_off"
+        android:src="@drawable/baseline_close_24"
         app:layout_constraintEnd_toStartOf="@+id/btnGrid"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
@@ -136,8 +136,8 @@
         android:src="@drawable/ic_grid_off"
         app:layout_constraintEnd_toStartOf="@+id/btnFlash"
         app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toEndOf="@+id/btnTimer"
-        app:layout_constraintTop_toTopOf="@id/btnTimer"
+        app:layout_constraintStart_toEndOf="@+id/btnExit"
+        app:layout_constraintTop_toTopOf="@id/btnExit"
         tools:ignore="ContentDescription" />
 
     <ImageButton

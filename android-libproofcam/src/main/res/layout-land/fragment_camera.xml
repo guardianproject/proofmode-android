@@ -81,14 +81,14 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <ImageButton
-        android:id="@+id/btnTimer"
+        android:id="@+id/btnExit"
         android:layout_width="@dimen/button_size_small"
         android:layout_height="@dimen/button_size_small"
         android:background="@android:color/transparent"
         android:elevation="1dp"
         android:padding="@dimen/half_margin"
         android:scaleType="centerInside"
-        android:src="@drawable/ic_timer_off"
+        android:src="@drawable/baseline_close_24"
         app:layout_constraintBottom_toTopOf="@+id/btnGrid"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
@@ -104,8 +104,8 @@
         android:scaleType="centerInside"
         android:src="@drawable/ic_grid_off"
         app:layout_constraintBottom_toTopOf="@+id/btnFlash"
-        app:layout_constraintStart_toStartOf="@id/btnTimer"
-        app:layout_constraintTop_toBottomOf="@+id/btnTimer"
+        app:layout_constraintStart_toStartOf="@id/btnExit"
+        app:layout_constraintTop_toBottomOf="@+id/btnExit"
         tools:ignore="ContentDescription" />
 
     <ImageButton
@@ -134,7 +134,9 @@
         app:layout_constraintBottom_toTopOf="@id/btnExposure"
         app:layout_constraintStart_toStartOf="@id/btnFlash"
         app:layout_constraintTop_toBottomOf="@+id/btnFlash"
-        tools:ignore="ContentDescription" />
+        tools:ignore="ContentDescription"
+        android:visibility="gone"
+        />
 
     <ImageButton
         android:id="@+id/btnExposure"

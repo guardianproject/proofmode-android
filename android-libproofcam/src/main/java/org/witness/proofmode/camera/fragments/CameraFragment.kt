@@ -157,13 +157,15 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
             btnTakePicture.setOnClickListener { takePicture() }
             btnGallery.setOnClickListener { openPreview() }
             btnSwitchCamera.setOnClickListener { toggleCamera() }
-            btnTimer.setOnClickListener { selectTimer() }
+            btnExit.setOnClickListener { activity?.finish() }
             btnGrid.setOnClickListener { toggleGrid() }
             btnFlash.setOnClickListener { selectFlash() }
           //  btnHdr.setOnClickListener { toggleHdr() }
+            /**
             btnTimerOff.setOnClickListener { closeTimerAndSelect(CameraTimer.OFF) }
             btnTimer3.setOnClickListener { closeTimerAndSelect(CameraTimer.S3) }
             btnTimer10.setOnClickListener { closeTimerAndSelect(CameraTimer.S10) }
+            **/
             btnFlashOff.setOnClickListener { closeFlashAndSelect(FLASH_MODE_OFF) }
             btnFlashOn.setOnClickListener { closeFlashAndSelect(FLASH_MODE_ON) }
             btnFlashAuto.setOnClickListener { closeFlashAndSelect(FLASH_MODE_AUTO) }
@@ -219,7 +221,8 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
                 view.endMargin = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars()).right
             }
         }
-        binding.btnTimer.onWindowInsets { view, windowInsets ->
+
+        binding.btnExit.onWindowInsets { view, windowInsets ->
             view.topMargin = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars()).top
         }
         binding.llTimerOptions.onWindowInsets { view, windowInsets ->
@@ -276,13 +279,14 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
      * Show timer selection menu by circular reveal animation.
      *  circularReveal() function is an Extension function which is adding the circular reveal
      * */
-    private fun selectTimer() = binding.llTimerOptions.circularReveal(binding.btnTimer)
+  //  private fun selectTimer() = binding.llTimerOptions.circularReveal(binding.btnTimer)
 
     /**
      * This function is called from XML view via Data Binding to select a timer
      *  possible values are OFF, S3 or S10
      *  circularClose() function is an Extension function which is adding circular close
      * */
+    /**
     private fun closeTimerAndSelect(timer: CameraTimer) =
         binding.llTimerOptions.circularClose(binding.btnTimer) {
             selectedTimer = timer
@@ -293,7 +297,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
                     CameraTimer.OFF -> R.drawable.ic_timer_off
                 }
             )
-        }
+        }**/
 
     /**
      * Show flashlight selection menu by circular reveal animation.
@@ -712,9 +716,10 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
     }
 
     override fun onBackPressed() = when {
+        /**
         binding.llTimerOptions.visibility == View.VISIBLE -> binding.llTimerOptions.circularClose(
             binding.btnTimer
-        )
+        )**/
 
         binding.llFlashOptions.visibility == View.VISIBLE -> binding.llFlashOptions.circularClose(
             binding.btnFlash
