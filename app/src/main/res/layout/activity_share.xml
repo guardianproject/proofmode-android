@@ -97,6 +97,8 @@
             android:layout_width="50dp"
             android:layout_height="50dp"
             app:svg="ic_basic.svg"
+            android:visibility="gone"
+
             />
         <TextView
             android:layout_width="wrap_content"
@@ -130,6 +132,7 @@
             android:layout_width="50dp"
             android:layout_height="50dp"
             app:svg="ic_robust.svg"
+            android:visibility="gone"
             />
         <TextView
             android:layout_width="wrap_content"
@@ -169,20 +172,53 @@
                 android:text="@string/share_save_robust"
                 android:onClick="saveAll"
                 />
+
         </LinearLayout>
 
-        <!--       <Button
-                   android:layout_width="wrap_content"
-                   android:layout_height="wrap_content"
-                   android:text="@string/share_proof_only"
-                   android:onClick="clickProof"
-                   />
-               <Button
-                   android:layout_width="wrap_content"
-                   android:layout_height="wrap_content"
-                   android:text="@string/share_proof_with_media"
-                   android:onClick="clickAll"
-                   />-->
+        <com.caverock.androidsvg.SVGImageView
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            app:svg="ic_robust.svg"
+            android:visibility="gone"
+
+            />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/content_credentials"
+            android:layout_margin="10dp"
+            android:textAllCaps="true"
+            style="@style/OnboardingStepContentStyle"
+            android:visibility="gone"
+            />
+
+        <TextView
+            android:id="@+id/tvInfoContentCredentials"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:drawableEnd="@drawable/ic_info"
+            android:drawableRight="@drawable/ic_info"
+            android:text="@string/share_content_credentials_info"
+            style="@style/OnboardingStepContentStyle"
+            android:visibility="gone"
+            />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:visibility="gone"
+            >
+            <Button
+                android:layout_width="160dp"
+                android:layout_height="wrap_content"
+                android:layout_margin="10dp"
+                android:text="@string/share_sign_robust"
+                android:onClick="signAll"
+                />
+
+
+        </LinearLayout>
 
 
     </LinearLayout>
