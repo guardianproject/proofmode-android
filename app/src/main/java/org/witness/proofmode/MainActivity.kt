@@ -63,6 +63,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private lateinit var mainBinding: ActivityMainBinding
     public lateinit var fab: FloatingActionButton
 
+    private val ACTION_OPEN_CAMERA = "org.witness.proofmode.OPEN_CAMERA"
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -75,6 +77,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 Manifest.permission.ACCESS_FINE_LOCATION
             )
         }
+
+
 
         mainBinding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(mainBinding.root)
@@ -164,6 +168,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         fab = findViewById<FloatingActionButton>(R.id.fab)
         fab.setOnClickListener { view ->
+            openCamera()
+        }
+
+        if (intent?.action == ACTION_OPEN_CAMERA)
+        {
             openCamera()
         }
     }
