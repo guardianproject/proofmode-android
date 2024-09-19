@@ -65,6 +65,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     private val ACTION_OPEN_CAMERA = "org.witness.proofmode.OPEN_CAMERA"
 
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -78,14 +79,56 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             )
         }
 
+        mPrefs = PreferenceManager.getDefaultSharedPreferences(this)
 
+        val isOn = mPrefs.getBoolean("doProof", false)
+
+        if (isOn)
+            (application as ProofModeApp).init(this)
+
+        val intentFilter = IntentFilter("org.witness.proofmode.NEW_MEDIA")
+        intentFilter.apply {
+            addDataType("image/*")
+            addDataType("video/*")
+        }
+
+        ContextCompat.registerReceiver(this,
+            cameraReceiver, intentFilter,
+            ContextCompat.RECEIVER_EXPORTED
+        )
+
+        ContextCompat.registerReceiver(this,
+            cameraReceiver, IntentFilter(EVENT_PROOF_GENERATED),
+            ContextCompat.RECEIVER_EXPORTED
+        )
+
+        ContextCompat.registerReceiver(this,
+            cameraReceiver, IntentFilter(INTENT_ACTIVITY_ITEMS_SHARED),
+            ContextCompat.RECEIVER_EXPORTED
+        )
+
+        initUI()
+
+        if (intent?.action == ACTION_OPEN_CAMERA)
+        {
+            openCamera()
+        }
+        else
+        {
+
+        }
+
+
+
+    }
+
+    private fun initUI () {
 
         mainBinding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(mainBinding.root)
         val toolbar = mainBinding.toolbar
         setSupportActionBar(toolbar)
         supportActionBar?.title = ""
-        mPrefs = PreferenceManager.getDefaultSharedPreferences(this)
         layoutOn = mainBinding.contentMain.layoutOn
         layoutOff = mainBinding.contentMain.layoutOff
         if (mPrefs.getBoolean("firsttime", true)) {
@@ -104,9 +147,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         var switchItem = navigationView.menu.findItem(R.id.menu_background_service);
         var switchView = MenuItemCompat.getActionView(switchItem) as CompoundButton
-        val isOn = mPrefs.getBoolean("doProof", false)
 
-        switchView.isChecked = isOn
+        switchView.isChecked =  mPrefs.getBoolean("doProof", false)
 
         switchView.setOnCheckedChangeListener { buttonView, isChecked ->
             setProofModeOn(isChecked)
@@ -130,50 +172,28 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             // Showing the popup menu
             popupMenu.show()
         }
+
         //updateOnOffState(false)
 
-        if (isOn)
-            (application as ProofModeApp).init(this)
-
-        // Setup activity view
-        val activityView = findViewById<ComposeView>(R.id.activityView)
-        activityView.setContent {
-            ActivitiesView {
-                itemsSelected(it)
-            }
-        }
-
-        val intentFilter = IntentFilter("org.witness.proofmode.NEW_MEDIA")
-        intentFilter.apply {
-            addDataType("image/*")
-            addDataType("video/*")
-        }
-
-        ContextCompat.registerReceiver(this,
-            cameraReceiver, intentFilter,
-            ContextCompat.RECEIVER_EXPORTED
-        )
-
-        ContextCompat.registerReceiver(this,
-            cameraReceiver, IntentFilter(EVENT_PROOF_GENERATED),
-            ContextCompat.RECEIVER_EXPORTED
-        )
-
-        ContextCompat.registerReceiver(this,
-            cameraReceiver, IntentFilter(INTENT_ACTIVITY_ITEMS_SHARED),
-            ContextCompat.RECEIVER_EXPORTED
-        )
-
-        Activities.load(this)
 
         fab = findViewById<FloatingActionButton>(R.id.fab)
         fab.setOnClickListener { view ->
             openCamera()
         }
 
-        if (intent?.action == ACTION_OPEN_CAMERA)
-        {
-            openCamera()
+
+        // Setup activity view
+        val activityView = findViewById<ComposeView>(R.id.activityView)
+
+        /**
+        Activities.load(this)
+
+        }**/
+
+        activityView.setContent {
+            ActivitiesView {
+                itemsSelected(it)
+            }
         }
     }
 
@@ -316,7 +336,13 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     override fun onResume() {
         super.onResume()
-        //   updateOnOffState(false)
+
+        if (intent?.action != ACTION_OPEN_CAMERA) {
+            if (!activitiesLoaded) {
+                Activities.load(this)
+                activitiesLoaded = true
+            }
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -506,6 +532,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             startActivity(intentShare)
 
 
+        } else if (requestCode == REQUEST_CODE_CAMERA) {
+            if (!activitiesLoaded) {
+                Activities.load(this)
+                activitiesLoaded = true
+            }
         }
     }
 
@@ -584,7 +615,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         if (useCredentials)
             (application as ProofModeApp).initContentCredentials()
 
-        startActivity(intentCam)
+        startActivityForResult(intentCam,REQUEST_CODE_CAMERA)
     }
 
 
@@ -594,6 +625,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         private const val REQUEST_CODE_REQUIRED_PERMISSIONS = 9998
         private const val REQUEST_CODE_OPTIONAL_PERMISSIONS = 9997
         private const val REQUEST_CODE_CHOOSE_MEDIA = 9996
+        private const val REQUEST_CODE_CAMERA = 9995
 
         /**
          * The permissions needed for "base" ProofMode to work, without extra options.
@@ -604,6 +636,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         private val optionalPermissions = arrayOf(
             Manifest.permission.ACCESS_NETWORK_STATE,
         )
+
+        var activitiesLoaded = false
+
     }
 
     override fun openCamera() {
