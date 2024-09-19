@@ -44,7 +44,10 @@ import org.witness.proofmode.camera.c2pa.C2paUtils
 import org.witness.proofmode.camera.databinding.FragmentVideoBinding
 import org.witness.proofmode.camera.fragments.VideoFragment.CameraConstants.NEW_MEDIA_EVENT
 import org.witness.proofmode.camera.utils.*
+import org.witness.proofmode.service.MediaWatcher
+import timber.log.Timber
 import java.io.File
+import java.util.Date
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -365,6 +368,7 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
                 object : VideoCapture.OnVideoSavedCallback { // the callback after recording a video
                     override fun onVideoSaved(outputFileResults: VideoCapture.OutputFileResults) {
 
+                        val dateSaved = Date()
 
                         // Create small preview
                         outputFileResults.savedUri
@@ -375,18 +379,31 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
                             }
                             ?: setLastPictureThumbnail()
 
+                        var proofUri = outputFileResults.savedUri
+                        val isDirectCapture = true; //this is from our camera
+
                         if (CameraActivity.useCredentials) {
 
-                            var isDirectCapture = true; //this is from our camera
-                            var allowMachineLearning = CameraActivity.useAIFlag; //by default, we flag to not allow
-
-                            C2paUtils.addContentCredentials(
+                            val allowMachineLearning = CameraActivity.useAIFlag; //by default, we flag to not allow
+                            val fileOut = C2paUtils.addContentCredentials(
                                 context,
-                                outputFileResults.savedUri,
+                                proofUri,
                                 isDirectCapture,
                                 allowMachineLearning
                             )
+
+                            proofUri = Uri.fromFile(fileOut)
+
+
                         }
+
+
+                        val mw: MediaWatcher = MediaWatcher.getInstance(context)
+                        val resultProofHash: String = mw.processUri(proofUri, isDirectCapture, dateSaved)
+
+                        Timber.tag(CameraFragment.TAG).d("Video proof generated: %s", resultProofHash)
+
+
 
                     }
 

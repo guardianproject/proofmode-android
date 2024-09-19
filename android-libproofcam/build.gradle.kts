@@ -37,7 +37,7 @@ dependencies {
 
     implementation(kotlin("stdlib"))
 
-    project(":android-libproofmode")
+    implementation(project(":android-libproofmode"))
 
     //new C2PA content authenticity support
     api ("info.guardianproject:simple_c2pa:0.0.14")

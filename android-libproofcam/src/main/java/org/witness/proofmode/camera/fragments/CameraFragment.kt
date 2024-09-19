@@ -9,8 +9,6 @@ import android.hardware.display.DisplayManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.HandlerThread
 import android.provider.MediaStore
 import android.util.DisplayMetrics
 import android.util.Log
@@ -31,7 +29,6 @@ import androidx.core.net.toFile
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.Navigation
 import androidx.navigation.fragment.findNavController
 import coil.load
@@ -43,13 +40,15 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.witness.proofmode.camera.CameraActivity
 import org.witness.proofmode.camera.R
-import org.witness.proofmode.camera.analyzer.LuminosityAnalyzer
 import org.witness.proofmode.camera.c2pa.C2paUtils
 import org.witness.proofmode.camera.databinding.FragmentCameraBinding
 import org.witness.proofmode.camera.enums.CameraTimer
 import org.witness.proofmode.camera.utils.*
+import org.witness.proofmode.service.MediaWatcher
+import timber.log.Timber
 import java.io.File
 import java.io.FileNotFoundException
+import java.util.Date
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executors
 import kotlin.math.abs
@@ -659,28 +658,40 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
             object : OnImageSavedCallback { // the callback, about the result of capture process
                 override fun onImageSaved(outputFileResults: OutputFileResults) {
 
+                    val dateSaved = Date()
+
                     // This function is called if capture is successfully completed
                     outputFileResults.savedUri
                         ?.let { uri ->
                             setGalleryThumbnail(uri)
                             sendLocalCameraEvent(uri)
-                            Log.d(TAG, "Photo saved in $uri")
+                            Timber.tag(TAG).d("Photo saved in " + uri)
                         }
                         ?: setLastPictureThumbnail()
 
+                    var proofUri = outputFileResults.savedUri
+                    val isDirectCapture = true; //this is from our camera
 
                     if (CameraActivity.useCredentials) {
 
-                        var isDirectCapture = true; //this is from our camera
-                        var allowMachineLearning = CameraActivity.useAIFlag; //by default, we flag to not allow
-
-                        C2paUtils.addContentCredentials(
+                        val allowMachineLearning = CameraActivity.useAIFlag; //by default, we flag to not allow
+                        val fileOut = C2paUtils.addContentCredentials(
                             context,
-                            outputFileResults.savedUri,
+                            proofUri,
                             isDirectCapture,
                             allowMachineLearning
                         )
+
+                        proofUri = Uri.fromFile(fileOut)
+
+
                     }
+
+
+                    val mw: MediaWatcher = MediaWatcher.getInstance(context)
+                    val resultProofHash: String = mw.processUri(proofUri, isDirectCapture, dateSaved)
+
+                    Timber.tag(CameraFragment.TAG).d("Photo proof generated: %s", resultProofHash)
                 }
 
                 override fun onError(exception: ImageCaptureException) {
@@ -729,7 +740,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
     }
 
     companion object {
-        private const val TAG = "libProofCam"
+        const val TAG = "libProofCam"
 
         const val KEY_FLASH = "sPrefFlashCamera"
         const val KEY_GRID = "sPrefGridCamera"
