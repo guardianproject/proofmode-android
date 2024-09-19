@@ -371,14 +371,6 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
 
                         val dateSaved = Date()
 
-                        // Create small preview
-                        outputFileResults.savedUri
-                            ?.let { uri ->
-                                setGalleryThumbnail(uri)
-                                sendLocalCameraEvent(uri)
-                                Log.d(TAG, "Video saved in $uri")
-                            }
-                            ?: setLastPictureThumbnail()
 
                         var proofUri = outputFileResults.savedUri
                         val isDirectCapture = true; //this is from our camera
@@ -393,11 +385,9 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
                                 allowMachineLearning
                             )
 
-                            proofUri = Uri.fromFile(fileOut)
-
+                          //  proofUri = Uri.fromFile(fileOut)
 
                         }
-
 
                         val mw: MediaWatcher = MediaWatcher.getInstance(context)
                         val resultProofHash: String = mw.processUri(proofUri, isDirectCapture, dateSaved)
@@ -405,6 +395,14 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
                         Timber.tag(CameraFragment.TAG).d("Video proof generated: %s", resultProofHash)
 
 
+                        // Create small preview
+                        outputFileResults.savedUri
+                            ?.let { uri ->
+                                setGalleryThumbnail(uri)
+                                sendLocalCameraEvent(uri)
+                                Log.d(TAG, "Video saved in $uri")
+                            }
+                            ?: setLastPictureThumbnail()
 
                     }
 

@@ -20,16 +20,10 @@ class CameraActivity : AppCompatActivity(){
         super.onCreate(savedInstanceState)
         // If the Android version is lower than Jellybean, use this call to hide
         // the status bar.
-        if (Build.VERSION.SDK_INT < 16) {
-            window.setFlags(
-                WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                WindowManager.LayoutParams.FLAG_FULLSCREEN)
-        }
-        else
-        {
+        if (Build.VERSION.SDK_INT >= 16) {
 
             window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN
-            window.setDecorFitsSystemWindows(true)
+       
 
         }
 
