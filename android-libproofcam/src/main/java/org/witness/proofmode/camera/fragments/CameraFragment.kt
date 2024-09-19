@@ -224,6 +224,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
         binding.btnExit.onWindowInsets { view, windowInsets ->
             view.topMargin = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars()).top
         }
+
         binding.llTimerOptions.onWindowInsets { view, windowInsets ->
             if (resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT) {
                 view.topPadding =

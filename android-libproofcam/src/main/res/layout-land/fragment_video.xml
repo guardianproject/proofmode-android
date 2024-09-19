@@ -37,6 +37,20 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+
+    <ImageButton
+        android:id="@+id/btnExit"
+        android:layout_width="@dimen/button_size_small"
+        android:layout_height="@dimen/button_size_small"
+        android:background="@android:color/transparent"
+        android:elevation="1dp"
+        android:padding="@dimen/half_margin"
+        android:scaleType="centerInside"
+        android:src="@drawable/baseline_close_24"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.3" />
+
     <ImageButton
         android:id="@+id/btnGallery"
         android:layout_width="@dimen/button_size_small"
@@ -75,6 +89,7 @@
         app:layout_constraintEnd_toEndOf="@id/btnFlash"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
 
     <ImageButton
         android:id="@+id/btnGrid"

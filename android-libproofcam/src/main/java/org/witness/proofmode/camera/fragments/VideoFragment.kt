@@ -167,6 +167,7 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
             btnSwitchCamera.setOnClickListener { toggleCamera() }
             btnGrid.setOnClickListener { toggleGrid() }
             btnFlash.setOnClickListener { toggleFlash() }
+            btnExit.setOnClickListener { activity?.finish() }
 
             // This swipe gesture adds a fun gesture to switch between video and photo
             val swipeGestures = SwipeGestureDetector().apply {
