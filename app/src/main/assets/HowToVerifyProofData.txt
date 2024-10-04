@@ -1,5 +1,5 @@
 Brief information on how to verify the media file, proof and signatures contained in a ProofMode ZIP file.
-Please visit https://proofmode.org or email support@guardianproject.info for more information.
+Please visit https://proofmode.org/verify or email support@guardianproject.info for more information.
 
 1) Import public key shared from ProofMode:
 
@@ -9,7 +9,7 @@ gpg: key xxx: public key "noone@proofmode.witness.org" imported
 gpg: Total number processed: 1
 gpg:               imported: 1
 
-2) Check the hash of the media file against the hash in the proofmetadat:
+2) Check the hash of the media file against the hash in the proofmetadata:
 
 sha256sum PXL_20220204_035043227.jpg
 
