@@ -40,8 +40,8 @@ dependencies {
     implementation(project(":android-libproofmode"))
 
     //new C2PA content authenticity support
-    api ("info.guardianproject:simple_c2pa:0.0.14")
-    implementation ("net.java.dev.jna:jna:5.13.0@aar")
+    //api ("info.guardianproject:simple_c2pa:0.0.14")
+   // implementation ("net.java.dev.jna:jna:5.13.0@aar")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4")
 

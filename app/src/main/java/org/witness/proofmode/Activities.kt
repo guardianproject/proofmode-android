@@ -299,6 +299,7 @@ object Activities: ViewModel()
     }
 
     fun getProofableItem(context: Context, selectId: String): List<ProofableItem> {
+        getDB(context)
 
         var listItems = ArrayList<ProofableItem>()
 

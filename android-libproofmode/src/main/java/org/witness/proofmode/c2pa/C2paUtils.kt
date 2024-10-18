@@ -1,4 +1,4 @@
-package org.witness.proofmode.camera.c2pa
+package org.witness.proofmode.c2pa
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -290,7 +290,10 @@ class C2paUtils {
             var exifData = ExifData(exifGpsVersion, exifLat, exifLong, null, exifAlt, exifTimestamp, null, null, null, null, null, null, null, null, null, null, null, exifMake, exifModel, null, null, null)
             contentCreds?.addExifAssertion(exifData)
 
-            contentCreds?.embedManifest(fileImageOut.absolutePath)
+            if (isDirectCapture)
+                contentCreds?.embedManifest(fileImageOut.absolutePath)
+            else
+                contentCreds?.exportManifest(fileImageOut.absolutePath)
 
         }
 

@@ -45,8 +45,8 @@ import org.witness.proofmode.ProofMode.PREF_OPTION_AI
 import org.witness.proofmode.ProofMode.PREF_OPTION_AI_DEFAULT
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
-import org.witness.proofmode.camera.c2pa.C2paUtils
-import org.witness.proofmode.camera.c2pa.C2paUtils.Companion.C2PA_CERT_PATH
+import org.witness.proofmode.c2pa.C2paUtils
+import org.witness.proofmode.c2pa.C2paUtils.Companion.C2PA_CERT_PATH
 import org.witness.proofmode.crypto.HashUtils
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.databinding.ActivityShareBinding

@@ -46,9 +46,11 @@ public class VideosContentJob extends JobService {
         JobInfo.Builder builder = new JobInfo.Builder(
                 VIDEO_JOB_ID,
                 new ComponentName(context, VideosContentJob.class));
+
         builder.addTriggerContentUri(
                 new JobInfo.TriggerContentUri(MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
                         JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS));
+
         builder.addTriggerContentUri(
                 new JobInfo.TriggerContentUri(MediaStore.Video.Media.INTERNAL_CONTENT_URI,
                         JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS));

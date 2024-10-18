@@ -29,7 +29,7 @@ import org.bouncycastle.openpgp.PGPException
 import org.bouncycastle.openpgp.PGPUtil
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
-import org.witness.proofmode.camera.c2pa.C2paUtils
+import org.witness.proofmode.c2pa.C2paUtils
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.notaries.GoogleSafetyNetNotarizationProvider
 import org.witness.proofmode.notaries.OpenTimestampsNotarizationProvider

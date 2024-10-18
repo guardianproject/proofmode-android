@@ -17,9 +17,11 @@ import android.os.Handler;
 import android.provider.MediaStore;
 import android.text.TextUtils;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
@@ -27,6 +29,7 @@ import java.util.concurrent.Executors;
 
 import timber.log.Timber;
 
+import org.witness.proofmode.c2pa.C2paUtils;
 /**
  * Job to monitor when there is a change to photos in the media provider.
  */
@@ -96,8 +99,9 @@ public class PhotosContentJob extends JobService {
 
                             String mediaPath = MediaWatcher.getMediaPath(PhotosContentJob.this, uri);
 
+                            //if we can get to the direct file path, we should!
                             if (mediaPath != null)
-                                uriList.put(mediaPath, uri);
+                                uriList.put(mediaPath, Uri.fromFile(new File(mediaPath)));
                             else
                                 uriList.put(uri.toString(), uri);
                         }
@@ -109,6 +113,10 @@ public class PhotosContentJob extends JobService {
 
                             executor.execute(() -> {
                                 try {
+
+                                    if (Objects.equals(uriProcess.getScheme(), "file"))
+                                        C2paUtils.Companion.addContentCredentials(PhotosContentJob.this, uriProcess, true, true);
+
                                     MediaWatcher mw = MediaWatcher.getInstance(PhotosContentJob.this);
                                     String resultProofHash = mw.processUri(uriProcess, true, null);
                                     Timber.d("generated hash via job: " + resultProofHash);
@@ -158,9 +166,9 @@ public class PhotosContentJob extends JobService {
                 new JobInfo.TriggerContentUri(MediaStore.Images.Media.INTERNAL_CONTENT_URI,
                         JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS));
 
-        builder.addTriggerContentUri(
-                new JobInfo.TriggerContentUri(Uri.parse("content://media/external_primary"),
-                        JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS));
+      //  builder.addTriggerContentUri(
+        //        new JobInfo.TriggerContentUri(Uri.parse("content://media/external_primary"),
+          //              JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS));
 
         // Get all media changes within a tenth of a second.
         builder.setTriggerContentUpdateDelay(1000);

@@ -17,7 +17,7 @@ import org.witness.proofmode.PermissionActivity
 import org.witness.proofmode.PermissionActivity.Companion.hasPermissions
 import org.witness.proofmode.ProofMode.PREF_CREDENTIALS_PRIMARY
 import org.witness.proofmode.ProofMode.PREF_OPTION_AI_DEFAULT
-import org.witness.proofmode.camera.c2pa.C2paUtils
+import org.witness.proofmode.c2pa.C2paUtils
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.databinding.ActivitySettingsBinding
 import org.witness.proofmode.util.GPSTracker

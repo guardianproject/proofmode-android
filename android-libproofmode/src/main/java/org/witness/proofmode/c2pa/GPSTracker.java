@@ -1,4 +1,4 @@
-package org.witness.proofmode.camera.c2pa;
+package org.witness.proofmode.c2pa;
 
 
 import android.Manifest;

@@ -38,9 +38,9 @@ import coil.request.ImageRequest
 import coil.transform.CircleCropTransformation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.witness.proofmode.c2pa.C2paUtils
 import org.witness.proofmode.camera.CameraActivity
 import org.witness.proofmode.camera.R
-import org.witness.proofmode.camera.c2pa.C2paUtils
 import org.witness.proofmode.camera.databinding.FragmentVideoBinding
 import org.witness.proofmode.camera.fragments.VideoFragment.CameraConstants.NEW_MEDIA_EVENT
 import org.witness.proofmode.camera.utils.*
@@ -385,7 +385,7 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
                                 allowMachineLearning
                             )
 
-                          //  proofUri = Uri.fromFile(fileOut)
+                           // proofUri = Uri.fromFile(fileOut)
 
                         }
 

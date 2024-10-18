@@ -38,9 +38,9 @@ import coil.transform.CircleCropTransformation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.witness.proofmode.c2pa.C2paUtils
 import org.witness.proofmode.camera.CameraActivity
 import org.witness.proofmode.camera.R
-import org.witness.proofmode.camera.c2pa.C2paUtils
 import org.witness.proofmode.camera.databinding.FragmentCameraBinding
 import org.witness.proofmode.camera.enums.CameraTimer
 import org.witness.proofmode.camera.utils.*
