@@ -70,7 +70,7 @@ dependencies {
     androidTestImplementation 'junit:junit:4.13.2'
 
     //new C2PA content authenticity support
-    api ("info.guardianproject:simple_c2pa:0.0.14")
+    api ("info.guardianproject:simple_c2pa:0.0.15")
     api ("net.java.dev.jna:jna:5.13.0@aar")
 
 
