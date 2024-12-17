@@ -683,16 +683,27 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
                             allowMachineLearning
                         )
 
-                        proofUri = Uri.fromFile(fileOut)
+                        var proofUriC2pa = Uri.fromFile(fileOut)
 
+                        if (proofUriC2pa != null)
+                            proofUri = proofUriC2pa
 
                     }
 
-
                     val mw: MediaWatcher = MediaWatcher.getInstance(context)
-                    val resultProofHash: String = mw.processUri(proofUri, isDirectCapture, dateSaved)
 
-                    Timber.tag(CameraFragment.TAG).d("Photo proof generated: %s", resultProofHash)
+                    if (proofUri != null) {
+                        val resultProofHash: String? =
+                            mw.processUri(proofUri, isDirectCapture, dateSaved)
+
+                        Timber.tag(CameraFragment.TAG)
+                            .d("Photo proof generated: %s", resultProofHash)
+                    }
+                    else
+                    {
+                        Timber.tag(CameraFragment.TAG)
+                            .d("Photo URI was null")
+                    }
                 }
 
                 override fun onError(exception: ImageCaptureException) {
