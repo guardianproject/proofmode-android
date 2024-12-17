@@ -212,5 +212,7 @@
     <string name="previous">Previous</string>
     <string name="content_credentials">Content Credentials</string>
     <string name="share_content_credentials_info">Shares image or video directly with proof metadata directly embedded in the file itself, verified and signed by ProofMode.org</string>
+    <string name="optional_filename">Optional Filename</string>
+    <string name="set_a_custom_name_for_the_proof_zip">Set a custom name for the proof zip</string>
 
 </resources>

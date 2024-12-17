@@ -22,6 +22,7 @@ import android.view.View
 import android.webkit.MimeTypeMap
 import android.widget.CheckBox
 import android.widget.CompoundButton
+import android.widget.EditText
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -193,43 +194,51 @@ class ShareProofActivity : AppCompatActivity() {
     }
 
     fun clickNotarize(button: View?) {
-        shareProof(false, false)
+        shareProof("", false, false)
     }
 
     fun clickAll(button: View?) {
 
 
-        shareProof(sendMedia, true)
-
-        /**
-        val options = arrayOf(getString(R.string.action_share_proof_zip),getString(R.string.action_add_content_credentials_c2pa))
-
-        val builder = AlertDialog.Builder(this)
-        builder.setItems(options, DialogInterface.OnClickListener { dialog, which ->
-            // The 'which' argument contains the index position
-            // of the selected item
-
-            if (which == 0)
-            {
-                shareProof(sendMedia, true)
+        val inputEditTextField = EditText(this)
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(getString(R.string.optional_filename))
+            .setMessage(getString(R.string.set_a_custom_name_for_the_proof_zip))
+            .setView(inputEditTextField)
+            .setPositiveButton(getString(android.R.string.ok)) { _, _ ->
+                val editTextInput = inputEditTextField .text.toString()
+                shareProof(editTextInput, sendMedia, true)
             }
-            else if (which == 1)
-            {
-                signProof(sendMedia, true)
+            .setNegativeButton(getString(android.R.string.cancel))  { _, _ ->
+                shareProof("", sendMedia, true)
             }
+            .create()
+        dialog.show()
 
-        })
-            .setCancelable(true)
 
-        val alert = builder.create()
-        alert.show()
-        **/
 
 
     }
 
     fun saveAll(button: View?) {
-        saveProof(sendMedia, true)
+
+        val inputEditTextField = EditText(this)
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(getString(R.string.optional_filename))
+            .setMessage(getString(R.string.set_a_custom_name_for_the_proof_zip))
+            .setView(inputEditTextField)
+            .setPositiveButton(getString(android.R.string.ok)) { _, _ ->
+                val editTextInput = inputEditTextField .text.toString()
+                shareProof(editTextInput, sendMedia, true)
+                saveProof(sendMedia, true)
+            }
+            .setNegativeButton(getString(android.R.string.cancel))  { _, _ ->
+                shareProof("", sendMedia, true)
+            }
+            .create()
+        dialog.show()
+
+
     }
 
     fun signAll(button: View?) {
@@ -500,9 +509,9 @@ class ShareProofActivity : AppCompatActivity() {
         return fileProofDownloads
     }
 
-    private fun shareProof(shareMedia: Boolean, shareProof: Boolean) {
+    private fun shareProof(fileName: String, shareMedia: Boolean, shareProof: Boolean) {
         displayProgress(getString(R.string.progress_building_proof))
-        ShareProofTask(this).execute(shareMedia, shareProof)
+        ShareProofTask(this, fileName).execute(shareMedia, shareProof)
     }
 
     private fun signProof(shareMedia: Boolean, shareProof: Boolean) {
@@ -631,7 +640,9 @@ class ShareProofActivity : AppCompatActivity() {
                         if (response.code == 200) {
                             var rs = response.body?.byteStream()
 
-                            Timber.d("success uploading to proofsign: " + fileZip.absolutePath)
+                            var contentType = response.body?.contentType().toString()
+
+                            Timber.d("response from proofsign: type=$contentType path=$fileZip.absolutePath");
 
                             displayProgressAsync(getString(R.string.status_download_content_credentials))
 
@@ -685,13 +696,19 @@ class ShareProofActivity : AppCompatActivity() {
 
     @Synchronized
     @Throws(IOException::class, PGPException::class)
-    private fun shareProofAsync(shareMedia: Boolean, shareProof: Boolean): Boolean {
+    private fun shareProofAsync(fileNameOrig: String, shareMedia: Boolean, shareProof: Boolean): Boolean {
 
         // Get intent, action and MIME type
         val intent = intent
         val action = intent.action
         val shareUris = ArrayList<Uri?>()
         val shareItems = ArrayList<ProofableItem>()
+
+        var fileName = fileNameOrig
+        if (fileNameOrig.isEmpty())
+        {
+            fileName = "proofmode"
+        }
 
         val shareText = StringBuffer()
         if (Intent.ACTION_SEND_MULTIPLE == action) {
@@ -755,7 +772,7 @@ class ShareProofActivity : AppCompatActivity() {
                 val sdf = SimpleDateFormat(ZIP_FILE_DATETIME_FORMAT)
                 val dateString = sdf.format(Date())
                 val userId = pgpUtils.publicKeyFingerprint
-                val fileZip = File(fileCacheFolder, "proofmode-0x$userId-$dateString.zip")
+                val fileZip = File(fileCacheFolder, "${fileName}-0x$userId-$dateString.zip")
                 Timber.d("Preparing proof bundle zip: " + fileZip.absolutePath)
                 try {
                     zipProof(shareUris, fileZip)
@@ -765,10 +782,10 @@ class ShareProofActivity : AppCompatActivity() {
                 }
                 if (fileZip.length() > 0) {
                     Timber.d("Proof zip completed. Size:" + fileZip.length())
-                    val encryptZip = false
+                    val encryptZip = false //we never do this
                     if (encryptZip) {
                         val fileZipEnc =
-                            File(fileCacheFolder, "proofmode-0x$userId-$dateString.zip.gpg")
+                            File(fileCacheFolder, fileZip.name + ".gpg")
                         try {
                             pgpUtils.encrypt(
                                 FileInputStream(fileZip),
@@ -947,12 +964,12 @@ class ShareProofActivity : AppCompatActivity() {
     }
 
     private class ShareProofTask  // only retain a weak reference to the activity
-    internal constructor(private val activity: ShareProofActivity) :
+    internal constructor(private val activity: ShareProofActivity, val fileName: String) :
         AsyncTask<Boolean?, Void?, Boolean>() {
         override fun doInBackground(vararg params: Boolean?): Boolean {
             var result = false
             return try {
-                result = activity.shareProofAsync(params[0]!!, params[1]!!)
+                result = activity.shareProofAsync(fileName, params[0]!!, params[1]!!)
                 result
             } catch (e: IOException) {
                 Timber.e(e, "error sharing proof")
