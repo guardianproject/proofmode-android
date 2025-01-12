@@ -78,7 +78,7 @@
     <string name="onboarding_get_started">Anfangen</string>
     <string name="onboarding_privacy_continue">Weiter</string>
     <string name="choose_my_settings">Meine Einstellungen ändern</string>
-    <string name="onboarding_privacy_options">Privatsphäreeinstellungen</string>
+    <string name="onboarding_privacy_options">Datenschutz-Optionen</string>
     <string name="cb_switch">Wechsle zwischen Front- und Rückkamera</string>
     <string name="activity_settings_title">WÄHLE DEINE EINSTELLUNGEN</string>
     <string name="onboarding_intro_content">ProofMode erfasst Informationen, die deine Medien vertrauenswürdiger machen.</string>
