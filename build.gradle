@@ -2,16 +2,15 @@
 buildscript {
     repositories {
         mavenCentral()
-        jcenter()
         google()
         maven { url 'https://jitpack.io' }
 
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.2.0'
+        classpath 'com.android.tools.build:gradle:8.2.2'
         classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.10'
         classpath "org.jetbrains.kotlin:kotlin-serialization:1.6.21"
-        classpath "androidx.navigation:navigation-safe-args-gradle-plugin:2.5.0"
+        classpath "androidx.navigation:navigation-safe-args-gradle-plugin:2.8.5"
     }
 }
 
@@ -31,7 +30,6 @@ ext {
 allprojects {
     repositories {
         mavenCentral()
-        jcenter()
         google()
         maven { url "https://raw.githubusercontent.com/guardianproject/gpmaven/master" }
         maven { url 'https://jitpack.io' }

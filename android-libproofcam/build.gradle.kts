@@ -10,7 +10,7 @@ android {
     namespace = "org.witness.proofmode.camera"
 
     defaultConfig {
-        minSdk = 21
+        minSdk = 24
         targetSdk = 34
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
