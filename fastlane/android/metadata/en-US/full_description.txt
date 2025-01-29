@@ -1,6 +1,8 @@
-ProofMode is light, minimal “reboot” of our full encrypted, verified secure camera app, CameraV (https://guardianproject.info/apps/camerav). Our hope was to create a lightweight, almost invisible utility, that you can run all of the time on your phone, that automatically extra digital proof data to all photos and videos you take. This data can then be easily shared through a “Share Proof” share action, to anyone you choose.
+ProofMode is light, minimal “reboot” of our full encrypted, verified secure camera app, CameraV (https://guardianproject.info/apps/camerav). Our hope was to create a lightweight, almost invisible utility, that you can run all of the time on your phone, that automatically extra digital proof data to all photos and videos you take. This data can then be easily shared through a “Share Proof” share action, to anyone you choose. 
 
-**ProofMode is an open-source project: https://github.com/guardianproject/proofmode **
+ProofMode supports the Coalition for Content Provenance and Authentication standard (C2PA). Learn more at https://c2pa.org
+
+**ProofMode is an open-source project. Learn more at https://proofmode.org **
 
 ### Goals
 
