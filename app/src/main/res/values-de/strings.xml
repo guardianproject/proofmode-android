@@ -66,4 +66,20 @@
     <string name="tap_hold_turn_off">Zum Ausschalten berühren und halten</string>
     <string name="proofmode_is_capturing">ProofMode erfasst standardmäßig einen umfangreichen Satz von Metadaten. Erhöhe die Verifizierbarkeit deiner Medien, indem du mehr hinzufügst.</string>
     <string name="tap_hold_turn_on">Tippe auf Halten, um einzuschalten</string>
+    <string name="onboarding_learn_more">Mehr Erfahren</string>
+    <string name="onboarding_step1">Schritt 1</string>
+    <string name="onboarding_step2">Schritt 2</string>
+    <string name="permission_location_title">Wir benötigen deinen Standort, um zu dokumentieren, wo deine Medien erstellt wurden.</string>
+    <string name="got_it">Verstanden</string>
+    <string name="onboarding_step3">Schritt 3</string>
+    <string name="onboarding_step4">Schritt 4</string>
+    <string name="inspect_photos">Untersuche Fotos</string>
+    <string name="inspect_videos">Untersuche Videos</string>
+    <string name="onboarding_get_started">Anfangen</string>
+    <string name="onboarding_privacy_continue">Weiter</string>
+    <string name="choose_my_settings">Meine Einstellungen ändern</string>
+    <string name="onboarding_privacy_options">Datenschutz-Optionen</string>
+    <string name="cb_switch">Wechsle zwischen Front- und Rückkamera</string>
+    <string name="activity_settings_title">WÄHLE DEINE EINSTELLUNGEN</string>
+    <string name="onboarding_intro_content">ProofMode erfasst Informationen, die deine Medien vertrauenswürdiger machen.</string>
 </resources>
