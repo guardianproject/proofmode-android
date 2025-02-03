@@ -1,2 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources></resources>
+<resources>
+    <string name="settings_notary">ملحوظة</string>
+    <string name="settings_location_desc">إحداثيات نظام تحديد المواقع عند أخذ وسائل الإعلام</string>
+    <string name="app_name">ProofMode</string>
+    <string name="settings_network">الشبكة</string>
+    <string name="action_publish_key">نشر المفتاح العام...</string>
+    <string name="action_share_key">نتشارك المفتاح العام.</string>
+    <string name="packaging_proof">التعبئة دليل على المشاركة...</string>
+    <string name="action_about">بشأن دليل</string>
+    <string name="settings_location">الموقع</string>
+    <string name="settings_phone">الهاتف</string>
+    <string name="select_app">اختيار التطبيق لتقاسم الأدلة إلى...</string>
+    <string name="got_it">مفهوم</string>
+    <string name="onboarding_step1">الخطوة 1</string>
+    <string name="action_settings">إعدادات</string>
+    <string name="settings_phone_desc">رقم تعريف هاتفك</string>
+    <string name="no_external_storage">دليل المورد مُمكّن، لكن لا يوجد مخزن خارجي!</string>
+    <string name="generating_proof_notify">تولد الدليل...</string>
+    <string name="waiting_proof_notify">مستعد لإضافة دليل</string>
+    <string name="open_public_key_page">فتح صفحة رئيسية عامة</string>
+    <string name="no_hash_generated">ProofMode إنذار: غير قادر على الوصول إلى ملفات وسائط الإعلام</string>
+    <string name="inspect_photos">فحص الصور</string>
+    <string name="inspect_videos">فحص الفيديو</string>
+    <string name="onboarding_learn_more">إعرف/ي أكثر</string>
+    <string name="onboarding_step2">الخطوة 2</string>
+    <string name="onboarding_privacy_continue">المتابعة</string>
+    <string name="menu_home">الرئيسية</string>
+    <string name="menu_settings">الاعدادات</string>
+    <string name="share_save_robust">حفظ</string>
+    <string name="share_upload_robust">رفع</string>
+    <string name="share_share_robust">مشاركة</string>
+    <string name="camera">الكاميرا</string>
+    <string name="video">فيديو</string>
+    <string name="next">التالي</string>
+    <string name="independent_notary">التوثيق المستقل من قبل شركة Enigio Time ضرب في:</string>
+    <string name="settings_notary_desc">تسجيل مع طرف ثالث أن وسائل الإعلام موجودة</string>
+</resources>
