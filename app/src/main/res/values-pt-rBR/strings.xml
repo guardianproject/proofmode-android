@@ -191,4 +191,6 @@
     <string name="share_content_credentials_info">Compartilha imagens ou vídeos diretamente com metadados de prova incorporados no próprio arquivo, verificados e assinados pelo ProofMode.org</string>
     <string name="optional_filename">Nome opcional do arquivo</string>
     <string name="set_a_custom_name_for_the_proof_zip">Defina um nome personalizado para o arquivo ZIP de comprovação</string>
+    <string name="next">Próximo</string>
+    <string name="previous">Anterior</string>
 </resources>
