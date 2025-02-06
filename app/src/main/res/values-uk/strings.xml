@@ -110,7 +110,7 @@
     <string name="menu_digital_signatures">Цифрові підписи</string>
     <string name="permissions_needed_title">Необхідний дозвіл</string>
     <string name="permissions_needed_content">Будь ласка, увімкніть необхідні дозволи в налаштуваннях системи.</string>
-    <string name="share_mode_robust_info">Зберігає все, що ви увімкнули ProofMode, у файлі з криптографічним підписом.</string>
+    <string name="share_mode_robust_info">Надає спільний доступ до всього, що ви ввімкнули для запису ProofMode, в одному файлі zip.</string>
     <string name="share_info_basic_title">Поділитися відбитком вашого медіа, щоб підтвердити, що воно існує.</string>
     <string name="digital_signatures_title">Коли ви опублікуєте докази, ви побачите цифрові підписи і ваш відкритий ключ, прикріплені у вигляді файлів з розширенням \".asc\".</string>
     <string name="share_info_robust_title">Зберігає все, що ви увімкнули ProofMode, у файлі з криптографічним підписом.</string>
@@ -191,4 +191,13 @@
     <string name="camera">Камера</string>
     <string name="video">відео</string>
     <string name="settings_ai_desc">Позначка, яку не можна використовувати для навчання машинному навчанню</string>
+    <string name="title_activity_p2_pshare">P2PShareActivity</string>
+    <string name="first_fragment_label">Перший фрагмент</string>
+    <string name="second_fragment_label">Другий фрагмент</string>
+    <string name="previous">Попередній</string>
+    <string name="set_a_custom_name_for_the_proof_zip">Встановіть спеціальну назву для proof zip</string>
+    <string name="optional_filename">Додаткове ім\'я файлу</string>
+    <string name="next">Далі</string>
+    <string name="content_credentials">Облікові дані вмісту</string>
+    <string name="share_content_credentials_info">Надає спільний доступ до зображення або відео безпосередньо з метаданими доказів, вбудованими безпосередньо в сам файл, перевіреними та підписаними ProofMode.org</string>
 </resources>

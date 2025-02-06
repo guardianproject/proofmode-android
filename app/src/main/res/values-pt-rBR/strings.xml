@@ -87,7 +87,7 @@
     <string name="share_no_proof">Nenhuma prova existe ainda. Tente novamente após um minuto.</string>
     <string name="share_no_proof_info">Caso ainda não haja provas, você pode gerar uma prova agora. Pode não refletir a hora e o local de quando e onde a mídia foi criada.</string>
     <string name="share_mode_robust">Robusto</string>
-    <string name="share_mode_robust_info">Compartilha tudo o que você ativou no ProofMode para capturar num arquivo assinado criptograficamente.</string>
+    <string name="share_mode_robust_info">Compartilhe tudo o que você ativou no ProofMode para capturar em um único arquivo ZIP.</string>
     <string name="share_share_robust">Compartilhar</string>
     <string name="share_info_basic_title">Compartilhe uma impressão digital da sua mídia para estabelecer que ela existe.</string>
     <string name="share_info_basic_message">• Não inclui informações pessoais
@@ -184,4 +184,13 @@
         <item quantity="other">Limpar estes %d itens</item>
     </plurals>
     <string name="default_share_text">Este é um ProofPack que contém arquivos de mídia, metadados e assinaturas digitais. Saiba como verificar isso em https://proofmode.org/verify</string>
+    <string name="title_activity_p2_pshare">P2PShareActivity</string>
+    <string name="first_fragment_label">Primeiro fragmento</string>
+    <string name="second_fragment_label">Segundo fragmento</string>
+    <string name="content_credentials">Credenciais do conteúdo</string>
+    <string name="share_content_credentials_info">Compartilha imagens ou vídeos diretamente com metadados de prova incorporados no próprio arquivo, verificados e assinados pelo ProofMode.org</string>
+    <string name="optional_filename">Nome opcional do arquivo</string>
+    <string name="set_a_custom_name_for_the_proof_zip">Defina um nome personalizado para o arquivo ZIP de comprovação</string>
+    <string name="next">Próximo</string>
+    <string name="previous">Anterior</string>
 </resources>
