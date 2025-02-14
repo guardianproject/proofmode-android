@@ -62,7 +62,7 @@ class CameraViewModel : ViewModel() {
     override fun onCleared() {
         if (this::timerRunnable.isInitialized)
             handler.removeCallbacks(timerRunnable)
-        
+
         super.onCleared()
     }
 }
