@@ -215,11 +215,11 @@ class SettingsActivity : AppCompatActivity() {
 
     fun initContentCredentials (accountName : String?) {
 
-        var mPgpUtils = PgpUtils.getInstance();
+        val mPgpUtils = PgpUtils.getInstance();
 
         val email = accountName;
         var display : String? = null
-        var key : String? = "0x" + mPgpUtils?.publicKeyFingerprint
+        val key : String? = "0x" + mPgpUtils?.publicKeyFingerprint
         var uri : String? =  "https://keys.openpgp.org/search?q=" + mPgpUtils?.publicKeyFingerprint
 
         if (email?.isNotEmpty() == true)
