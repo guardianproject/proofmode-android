@@ -64,7 +64,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
     private lateinit var pinchToZoomDetector: ScaleGestureDetector
     private lateinit var context: Context
 
-    private val lensViewModel: CameraLensViewModel by activityViewModels()
+    private val lensViewModel: CameraViewModel by activityViewModels()
 
 
     // An instance for display manager to get display change callbacks

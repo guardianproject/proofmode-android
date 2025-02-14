@@ -20,6 +20,7 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:alpha="0.4"
+        android:id="@+id/view"
         android:background="@android:color/black"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -36,6 +37,19 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <com.google.android.material.chip.Chip
+        android:id="@+id/chipTimer"
+        android:elevation="@dimen/half_margin"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_width="wrap_content"
+        android:visibility="gone"
+        tools:visibility="visible"
+        app:chipBackgroundColor="@android:color/holo_red_light"
+        android:layout_marginBottom="@dimen/half_margin"
+        app:layout_constraintTop_toBottomOf="@+id/btnRecordVideo"
+        android:layout_height="wrap_content" />
 
 
     <ImageButton

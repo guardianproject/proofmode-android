@@ -25,6 +25,8 @@
             android:name=".CameraActivity"
             android:exported="true"
             android:label="@string/app_name"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+            android:windowSoftInputMode="adjustNothing"
             android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>
                 <action android:name="android.media.action.IMAGE_CAPTURE" />
