@@ -6,7 +6,6 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
-import android.database.Cursor
 import android.hardware.display.DisplayManager
 import android.net.Uri
 import android.os.Build
@@ -58,7 +57,7 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
     private lateinit var tapDetector: GestureDetector
     private lateinit var pinchToZoomDetector: ScaleGestureDetector
     private lateinit var viewFinder: PreviewView
-    private val lensViewModel: CameraLensViewModel by activityViewModels()
+    private val cameraViewModel: CameraViewModel by activityViewModels()
     private lateinit var context: Context
 
     // An instance for display manager to get display change callbacks
@@ -183,6 +182,11 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
                 tapDetector.onTouchEvent(motionEvent)
                 return@setOnTouchListener true
             }
+
+            cameraViewModel.elapsedTime.observe(viewLifecycleOwner) { time->
+                binding.chipTimer?.text = time
+
+            }
         }
     }
 
@@ -223,7 +227,7 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
      *  toggleButton() function is an Extension function made to animate button rotation
      * */
     private fun toggleCamera() = binding.btnSwitchCamera.toggleButton(
-        flag = lensViewModel.lensFacing.value == CameraSelector.LENS_FACING_BACK,
+        flag = cameraViewModel.lensFacing.value == CameraSelector.LENS_FACING_BACK,
         rotationAngle = 180f,
         firstIcon = R.drawable.ic_outline_camera_rear,
         secondIcon = R.drawable.ic_outline_camera_front,
@@ -236,7 +240,7 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
             ).show()
             return@toggleButton
         } else {
-            lensViewModel.toggleLensFacing()
+            cameraViewModel.toggleLensFacing()
             startCamera()
         }
 
@@ -282,7 +286,7 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
                 // Bind all use cases to the camera with lifecycle
                 val selector = CameraSelector.Builder()
                     .requireLensFacing(
-                        lensViewModel.lensFacing.value ?: CameraSelector.LENS_FACING_BACK
+                        cameraViewModel.lensFacing.value ?: CameraSelector.LENS_FACING_BACK
                     )
                     .build()
                 camera = localCameraProvider.bindToLifecycle(
@@ -363,6 +367,8 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
 
         if (!isRecording) {
             animateRecord.start()
+            binding.chipTimer?.visibility = View.VISIBLE
+            cameraViewModel.startTimer()
             localVideoCapture.startRecording(
                 outputOptions, // the options needed for the final video
                 requireContext().mainExecutor(), // the executor, on which the task will run
@@ -422,6 +428,9 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
         } else {
             animateRecord.cancel()
             localVideoCapture.stopRecording()
+            cameraViewModel.stopTimer()
+            binding.chipTimer?.visibility = View.GONE
+
         }
         isRecording = !isRecording
     }
