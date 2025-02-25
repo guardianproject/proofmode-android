@@ -94,7 +94,11 @@ class CameraViewModel(private val app: Application) : AndroidViewModel(app) {
     }
 
     override fun onCleared() {
-        handler.removeCallbacks(timerRunnable)
+        try {
+            handler.removeCallbacks(timerRunnable)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
         super.onCleared()
     }
 }

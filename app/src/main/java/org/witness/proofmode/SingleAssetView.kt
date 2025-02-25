@@ -78,6 +78,8 @@ import kotlinx.coroutines.launch
 import org.witness.proofmode.service.ProofModeV1Constants
 import org.witness.proofmode.storage.DefaultStorageProvider
 import org.witness.proofmode.util.ProofModeUtil
+import timber.log.Timber
+import java.io.FileNotFoundException
 import java.lang.Float.max
 import java.lang.Float.min
 import java.text.DateFormat
@@ -302,7 +304,15 @@ fun SingleAssetView(initialItem: ProofableItem, modifier: Modifier = Modifier, s
 
 @Composable
 fun updateMetadata (itemUri : Uri, context : Context) {
-    var hash = ProofModeUtil.getProofHash(itemUri,context)
+    var hash = try {
+        ProofModeUtil.getProofHash(itemUri,context)
+    } catch (ex: FileNotFoundException) {
+        Timber.e("FIle with uri ${itemUri.path} not found", ex)
+        null
+    } catch (ex: Exception) {
+        Timber.e("Error getting hash for uri ${itemUri.path}", ex)
+        null
+    }
     if (hash != null) {
 
         val dfParse: DateFormat = SimpleDateFormat(
