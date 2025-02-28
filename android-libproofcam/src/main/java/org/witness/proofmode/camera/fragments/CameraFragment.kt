@@ -3,7 +3,6 @@ package org.witness.proofmode.camera.fragments
 import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.content.Context
-import android.content.Intent
 import android.content.res.Configuration
 import android.hardware.display.DisplayManager
 import android.net.Uri
@@ -18,14 +17,27 @@ import android.view.ScaleGestureDetector
 import android.view.Surface
 import android.view.View
 import android.widget.Toast
-import androidx.camera.core.*
-import androidx.camera.core.ImageCapture.*
+import androidx.camera.core.AspectRatio
+import androidx.camera.core.Camera
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageCapture
+import androidx.camera.core.ImageCapture.Builder
+import androidx.camera.core.ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY
+import androidx.camera.core.ImageCapture.FLASH_MODE_AUTO
+import androidx.camera.core.ImageCapture.FLASH_MODE_OFF
+import androidx.camera.core.ImageCapture.FLASH_MODE_ON
+import androidx.camera.core.ImageCapture.FlashMode
+import androidx.camera.core.ImageCapture.Metadata
+import androidx.camera.core.ImageCapture.OnImageSavedCallback
+import androidx.camera.core.ImageCapture.OutputFileOptions
+import androidx.camera.core.ImageCapture.OutputFileResults
+import androidx.camera.core.ImageCaptureException
+import androidx.camera.core.Preview
 import androidx.camera.extensions.ExtensionMode
 import androidx.camera.extensions.ExtensionsManager
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
-import androidx.core.net.toFile
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
@@ -43,11 +55,22 @@ import org.witness.proofmode.camera.CameraActivity
 import org.witness.proofmode.camera.R
 import org.witness.proofmode.camera.databinding.FragmentCameraBinding
 import org.witness.proofmode.camera.enums.CameraTimer
-import org.witness.proofmode.camera.utils.*
+import org.witness.proofmode.camera.utils.SharedPrefsManager
+import org.witness.proofmode.camera.utils.bottomMargin
+import org.witness.proofmode.camera.utils.circularClose
+import org.witness.proofmode.camera.utils.circularReveal
+import org.witness.proofmode.camera.utils.createPinchDetector
+import org.witness.proofmode.camera.utils.createTapGestureDetector
+import org.witness.proofmode.camera.utils.endMargin
+import org.witness.proofmode.camera.utils.fitSystemWindows
+import org.witness.proofmode.camera.utils.onWindowInsets
+import org.witness.proofmode.camera.utils.startPadding
+import org.witness.proofmode.camera.utils.toggleButton
+import org.witness.proofmode.camera.utils.topMargin
+import org.witness.proofmode.camera.utils.topPadding
 import org.witness.proofmode.service.MediaWatcher
 import timber.log.Timber
 import java.io.File
-import java.io.FileNotFoundException
 import java.util.Date
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executors
@@ -665,7 +688,7 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
                     outputFileResults.savedUri
                         ?.let { uri ->
                             setGalleryThumbnail(uri)
-                            sendLocalCameraEvent(uri)
+                            lensViewModel.sendLocalCameraEvent(uri, CameraEventType.NEW_IMAGE)
                             Timber.tag(TAG).d("Photo saved in " + uri)
                         }
                         ?: setLastPictureThumbnail()
@@ -760,31 +783,6 @@ class CameraFragment : BaseFragment<FragmentCameraBinding>(R.layout.fragment_cam
 
         private const val RATIO_4_3_VALUE = 4.0 / 3.0 // aspect ratio 4x3
         private const val RATIO_16_9_VALUE = 16.0 / 9.0 // aspect ratio 16x9
-    }
-
-
-    fun sendLocalCameraEvent(newMediaFile: Uri) {
-
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-
-            try {
-                var f = newMediaFile.toFile()
-
-                MediaStore.Images.Media.insertImage(
-                    context?.contentResolver,
-                    f.absolutePath, f.name, null
-                )
-                context?.sendBroadcast(
-                    Intent(
-                        Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(f)
-                    )
-                )
-            } catch (e: FileNotFoundException) {
-                e.printStackTrace()
-            }
-        }
-
-
     }
 
     private val orientationEventListener by lazy {

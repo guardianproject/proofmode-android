@@ -23,12 +23,9 @@ class CameraActivity : AppCompatActivity(){
         if (Build.VERSION.SDK_INT >= 16) {
 
             window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN
-       
-
         }
 
         setContentView(R.layout.camera_main)
-
         useCredentials = intent.getBooleanExtra(PREF_OPTION_CREDENTIALS, true)
         useAIFlag = intent.getBooleanExtra(PREF_OPTION_AI, true)
 

@@ -4,7 +4,6 @@ import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.content.Context
-import android.content.Intent
 import android.content.res.Configuration
 import android.hardware.display.DisplayManager
 import android.net.Uri
@@ -19,7 +18,12 @@ import android.view.ScaleGestureDetector
 import android.view.Surface
 import android.view.View
 import android.widget.Toast
-import androidx.camera.core.*
+import androidx.camera.core.AspectRatio
+import androidx.camera.core.Camera
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageCapture
+import androidx.camera.core.Preview
+import androidx.camera.core.VideoCapture
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.animation.doOnCancel
@@ -27,7 +31,6 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.Navigation
 import androidx.navigation.fragment.findNavController
 import coil.decode.VideoFrameDecoder
@@ -41,8 +44,17 @@ import org.witness.proofmode.c2pa.C2paUtils
 import org.witness.proofmode.camera.CameraActivity
 import org.witness.proofmode.camera.R
 import org.witness.proofmode.camera.databinding.FragmentVideoBinding
-import org.witness.proofmode.camera.fragments.VideoFragment.CameraConstants.NEW_MEDIA_EVENT
-import org.witness.proofmode.camera.utils.*
+import org.witness.proofmode.camera.utils.SharedPrefsManager
+import org.witness.proofmode.camera.utils.SwipeGestureDetector
+import org.witness.proofmode.camera.utils.bottomMargin
+import org.witness.proofmode.camera.utils.createPinchDetector
+import org.witness.proofmode.camera.utils.createTapGestureDetector
+import org.witness.proofmode.camera.utils.endMargin
+import org.witness.proofmode.camera.utils.fitSystemWindows
+import org.witness.proofmode.camera.utils.mainExecutor
+import org.witness.proofmode.camera.utils.onWindowInsets
+import org.witness.proofmode.camera.utils.toggleButton
+import org.witness.proofmode.camera.utils.topMargin
 import org.witness.proofmode.service.MediaWatcher
 import timber.log.Timber
 import java.io.File
@@ -58,7 +70,6 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
     private lateinit var pinchToZoomDetector: ScaleGestureDetector
     private lateinit var viewFinder: PreviewView
     private val cameraViewModel: CameraViewModel by activityViewModels()
-    private lateinit var context: Context
 
     // An instance for display manager to get display change callbacks
     private val displayManager by lazy { requireContext().getSystemService(Context.DISPLAY_SERVICE) as DisplayManager }
@@ -111,6 +122,7 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
             binding.btnGallery.visibility = View.VISIBLE
         }
     }
+
 
     override fun onResume() {
         super.onResume()
@@ -339,9 +351,7 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
 
     @SuppressLint("MissingPermission")
     private fun recordVideo() {
-
-        context = requireContext()
-
+        val activity = requireActivity()
         val localVideoCapture =
             videoCapture ?: throw IllegalStateException("Camera initialization failed.")
 
@@ -353,7 +363,7 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
                 put(MediaStore.MediaColumns.RELATIVE_PATH, outputDirectory)
             }
 
-            requireContext().contentResolver.run {
+            activity.contentResolver.run {
                 val contentUri = MediaStore.Video.Media.EXTERNAL_CONTENT_URI
 
                 VideoCapture.OutputFileOptions.Builder(this, contentUri, contentValues)
@@ -371,7 +381,7 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
             cameraViewModel.startTimer()
             localVideoCapture.startRecording(
                 outputOptions, // the options needed for the final video
-                requireContext().mainExecutor(), // the executor, on which the task will run
+                activity.mainExecutor(), // the executor, on which the task will run
                 object : VideoCapture.OnVideoSavedCallback { // the callback after recording a video
                     override fun onVideoSaved(outputFileResults: VideoCapture.OutputFileResults) {
 
@@ -385,7 +395,7 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
 
                             val allowMachineLearning = CameraActivity.useAIFlag; //by default, we flag to not allow
                             val fileOut = C2paUtils.addContentCredentials(
-                                context,
+                                activity,
                                 proofUri,
                                 isDirectCapture,
                                 allowMachineLearning
@@ -395,7 +405,7 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
 
                         }
 
-                        val mw: MediaWatcher = MediaWatcher.getInstance(context)
+                        val mw: MediaWatcher = MediaWatcher.getInstance(activity.applicationContext)
                         val resultProofHash: String = mw.processUri(proofUri, isDirectCapture, dateSaved)
 
                         Timber.tag(CameraFragment.TAG).d("Video proof generated: %s", resultProofHash)
@@ -405,7 +415,8 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
                         outputFileResults.savedUri
                             ?.let { uri ->
                                 setGalleryThumbnail(uri)
-                                sendLocalCameraEvent(uri)
+                                cameraViewModel.sendLocalCameraEvent(uri, CameraEventType.NEW_VIDEO)
+                                //sendLocalCameraEvent(uri)
                                 Log.d(TAG, "Video saved in $uri")
                             }
                             ?: setLastPictureThumbnail()
@@ -528,19 +539,6 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
 
         private const val RATIO_4_3_VALUE = 4.0 / 3.0 // aspect ratio 4x3
         private const val RATIO_16_9_VALUE = 16.0 / 9.0 // aspect ratio 16x9
-    }
-
-
-    object CameraConstants {
-        const val NEW_MEDIA_EVENT = "org.witness.proofmode.NEW_MEDIA"
-    }
-
-    fun sendLocalCameraEvent(newMediaFile: Uri) {
-
-        var intent = Intent(NEW_MEDIA_EVENT)
-        intent.data = newMediaFile
-        LocalBroadcastManager.getInstance(requireContext()).sendBroadcast(intent)
-
     }
 
     private val orientationEventListener by lazy {
