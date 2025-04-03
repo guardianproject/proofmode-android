@@ -8,8 +8,7 @@ plugins {
 
 
 android {
-    compileSdkVersion 34
-    buildToolsVersion "34.0.0"
+    compileSdk 35
     namespace = "org.witness.proofmode"
 
     buildFeatures {
@@ -123,13 +122,17 @@ dependencies {
     implementation "androidx.preference:preference-ktx:1.2.1"
 
     // Activity view
-    implementation 'androidx.compose.ui:ui:1.5.4'
-    implementation 'androidx.compose.runtime:runtime:1.5.4'
-    implementation 'androidx.compose.material3:material3:1.1.2'
-    implementation 'androidx.compose.ui:ui-tooling:1.5.4'
-    implementation "androidx.constraintlayout:constraintlayout-compose:1.0.1"
-    implementation "androidx.activity:activity-compose:1.8.2"
+    implementation 'androidx.compose.ui:ui:1.7.8'
+    implementation 'androidx.compose.runtime:runtime:1.7.8'
+    implementation 'androidx.compose.material3:material3:1.3.1'
+    implementation 'androidx.compose.ui:ui-tooling:1.7.8'
+    implementation "androidx.constraintlayout:constraintlayout-compose:1.1.1"
+    implementation "androidx.activity:activity-compose:1.10.1"
     implementation "io.coil-kt:coil-compose:2.4.0"
+    implementation("io.coil-kt:coil-video:2.4.0") {
+    }
+    implementation("io.coil-kt:coil-compose:2.4.0"){
+    }
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0'
 
     // Room database support (for activity view)

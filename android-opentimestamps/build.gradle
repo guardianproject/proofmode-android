@@ -4,14 +4,13 @@ apply plugin: 'org.jetbrains.kotlin.android'
 
 
 android {
-    compileSdkVersion 34
-    buildToolsVersion "34.0.0"
+    compileSdk 35
     namespace = "com.eternitywall"
 
 
     defaultConfig {
         minSdkVersion 24
-        targetSdkVersion 34
+        targetSdk 35
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         multiDexEnabled true
 

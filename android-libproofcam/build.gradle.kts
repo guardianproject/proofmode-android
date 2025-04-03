@@ -6,12 +6,12 @@ plugins {
 }
 
 android {
-    compileSdk = 34
+    compileSdk = 35
     namespace = "org.witness.proofmode.camera"
 
     defaultConfig {
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 35
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
@@ -24,17 +24,40 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+
     kotlinOptions {
         jvmTarget = "17"
     }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.14"
+    }
     buildFeatures {
         viewBinding = true
+        compose = true
     }
 }
 
 dependencies {
 
 
+    val cameraxVersion = "1.5.0-alpha06"
+    val nav_version = "2.8.9"
+    val accompanist =  "0.36.0"
+    val composeBom = platform("androidx.compose:compose-bom:2025.02.00")
+    implementation(composeBom)
+    implementation("androidx.compose.material3:material3")
+    // Optional - Add full set of material icons
+    implementation("androidx.compose.material:material-icons-extended")
+    // Optional - Add window size utils
+    implementation("androidx.compose.material3.adaptive:adaptive")
+
+    // Optional - Integration with activities
+    implementation("androidx.activity:activity-compose:1.10.1")
+    // Optional - Integration with ViewModels
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+    implementation("androidx.navigation:navigation-compose:$nav_version")
+    implementation ("androidx.constraintlayout:constraintlayout-compose:1.1.1")
     implementation(kotlin("stdlib"))
 
     implementation(project(":android-libproofmode"))
@@ -52,11 +75,14 @@ dependencies {
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
 
 
-    implementation("androidx.camera:camera-core:1.2.3")
-    implementation("androidx.camera:camera-camera2:1.2.3")
-    implementation("androidx.camera:camera-lifecycle:1.2.3")
-    implementation("androidx.camera:camera-extensions:1.2.3")
-    implementation("androidx.camera:camera-view:1.2.3")
+    implementation("androidx.camera:camera-core:$cameraxVersion")
+    implementation("androidx.camera:camera-camera2:$cameraxVersion")
+    implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
+    implementation("androidx.camera:camera-extensions:$cameraxVersion")
+    implementation("androidx.camera:camera-view:$cameraxVersion")
+    implementation("androidx.camera:camera-compose:$cameraxVersion")
+
+    implementation("com.google.accompanist:accompanist-permissions:$accompanist")
 
     implementation("androidx.fragment:fragment:1.6.2")
     implementation("androidx.fragment:fragment-ktx:1.6.2")
@@ -70,6 +96,9 @@ dependencies {
     }
     implementation("io.coil-kt:coil-video:2.2.2") {
     }
+    implementation("io.coil-kt:coil-compose:2.2.2"){
+    }
+
 
     //logging
     implementation ("com.jakewharton.timber:timber:5.0.1")

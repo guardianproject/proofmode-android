@@ -305,7 +305,7 @@ class C2paUtils {
             var appVersionName = ""
             try {
                 appVersionName =
-                    context.packageManager.getPackageInfo(context.packageName, 0).versionName
+                    context.packageManager.getPackageInfo(context.packageName, 0).versionName?:""
             } catch (e: PackageManager.NameNotFoundException) {
                 e.printStackTrace()
             }
@@ -316,7 +316,7 @@ class C2paUtils {
             var appVersionName = ""
             try {
                 appVersionName =
-                    context.packageManager.getPackageInfo(context.packageName, 0).applicationInfo.name
+                    context.packageManager.getPackageInfo(context.packageName, 0).applicationInfo?.name?:""
             } catch (e: PackageManager.NameNotFoundException) {
                 e.printStackTrace()
             }

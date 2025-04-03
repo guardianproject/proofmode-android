@@ -1,3 +1,4 @@
+/*
 package org.witness.proofmode.camera.fragments
 
 import android.animation.ObjectAnimator
@@ -132,11 +133,13 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
     // A lazy instance of the current fragment's view binding
     override val binding: FragmentVideoBinding by lazy { FragmentVideoBinding.inflate(layoutInflater) }
 
-    /**
+    */
+/**
      * A display listener for orientation changes that do not trigger a configuration
      * change, for example if we choose to override config change in manifest or for 180-degree
      * orientation changes.
-     */
+     *//*
+
     private val displayListener = object : DisplayManager.DisplayListener {
         override fun onDisplayAdded(displayId: Int) = Unit
         override fun onDisplayRemoved(displayId: Int) = Unit
@@ -206,9 +209,11 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
         findNavController().navigate(R.id.action_video_to_camera)
     }
 
-    /**
+    */
+/**
      * Create some initial states
-     * */
+     * *//*
+
     private fun initViews() {
         binding.btnGrid.setImageResource(if (hasGrid) R.drawable.ic_grid_on else R.drawable.ic_grid_off)
         binding.groupGridLines.visibility = if (hasGrid) View.VISIBLE else View.GONE
@@ -216,9 +221,11 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
         adjustInsets()
     }
 
-    /**
+    */
+/**
      * This methods adds all necessary margins to some views based on window insets and screen orientation
-     * */
+     * *//*
+
     private fun adjustInsets() {
         activity?.window?.fitSystemWindows()
         binding.btnRecordVideo.onWindowInsets { view, windowInsets ->
@@ -234,10 +241,12 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
         }
     }
 
-    /**
+    */
+/**
      * Change the facing of camera
      *  toggleButton() function is an Extension function made to animate button rotation
-     * */
+     * *//*
+
     private fun toggleCamera() = binding.btnSwitchCamera.toggleButton(
         flag = cameraViewModel.lensFacing.value == CameraSelector.LENS_FACING_BACK,
         rotationAngle = 180f,
@@ -258,9 +267,11 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
 
     }
 
-    /**
+    */
+/**
      * Unbinds all the lifecycles from CameraX, then creates new with new parameters
-     * */
+     * *//*
+
     private fun startCamera() {
         // This is the Texture View where the camera will be rendered
         viewFinder = binding.viewFinder
@@ -327,13 +338,15 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
         }, ContextCompat.getMainExecutor(requireContext()))
     }
 
-    /**
+    */
+/**
      *  Detecting the most suitable aspect ratio for current dimensions
      *
      *  @param width - preview width
      *  @param height - preview height
      *  @return suitable aspect ratio
-     */
+     *//*
+
     private fun aspectRatio(width: Int, height: Int): Int {
         val previewRatio = max(width, height).toDouble() / min(width, height)
         if (abs(previewRatio - RATIO_4_3_VALUE) <= abs(previewRatio - RATIO_16_9_VALUE)) {
@@ -342,9 +355,11 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
         return AspectRatio.RATIO_16_9
     }
 
-    /**
+    */
+/**
      * Navigate to PreviewFragment
-     * */
+     * *//*
+
     private fun openPreview() {
         view?.let { Navigation.findNavController(it).navigate(R.id.action_video_to_preview) }
     }
@@ -446,9 +461,11 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
         isRecording = !isRecording
     }
 
-    /**
+    */
+/**
      * Turns on or off the grid on the screen
-     * */
+     * *//*
+
     private fun toggleGrid() = binding.btnGrid.toggleButton(
         flag = hasGrid,
         rotationAngle = 180f,
@@ -460,9 +477,11 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
         binding.groupGridLines.visibility = if (flag) View.VISIBLE else View.GONE
     }
 
-    /**
+    */
+/**
      * Turns on or off the flashlight
-     * */
+     * *//*
+
     private fun toggleFlash() = binding.btnFlash.toggleButton(
         flag = flashMode == ImageCapture.FLASH_MODE_ON,
         rotationAngle = 360f,
@@ -521,9 +540,11 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
     }
 
 
-    /**
+    */
+/**
      * Navigate back to the Camera fragment when the back button is pressed
-     */
+     *//*
+
     override fun onBackPressed() = navigateToCameraFragment()
 
     override fun onStop() {
@@ -560,3 +581,4 @@ class VideoFragment : BaseFragment<FragmentVideoBinding>(R.layout.fragment_video
         }
     }
 }
+*/

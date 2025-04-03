@@ -6,7 +6,7 @@
     android:tag="@string/video_fragment"
     android:layout_height="match_parent"
     android:background="@android:color/black"
-    tools:context="org.witness.proofmode.camera.fragments.VideoFragment">
+    >
 
     <androidx.camera.view.PreviewView
         android:id="@+id/viewFinder"

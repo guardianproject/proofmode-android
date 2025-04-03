@@ -5,6 +5,7 @@ import android.graphics.RectF
 import android.text.format.DateUtils
 import android.view.View
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -62,6 +63,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.decode.VideoFrameDecoder
+import coil.request.ImageRequest
+import coil.size.Size
 import java.text.SimpleDateFormat
 import java.util.Date
 
@@ -106,7 +110,13 @@ fun ProofableItemView(
     }
 
     AsyncImage(
-        model = if (!isVideo) item.uri.toString() else getVideoThumbnail(context, item.uri),
+        model = ImageRequest.Builder(context)
+            .data(item.uri).apply {
+                if (isVideo) {
+                    decoderFactory { result, options, _ -> VideoFrameDecoder(result.source, options) }
+                }
+                size(Size.ORIGINAL)
+            }.build(),
         contentDescription = "Asset view",
         alignment = Alignment.Center,
         contentScale = if (contain) ContentScale.Fit else ContentScale.Crop,
@@ -631,7 +641,7 @@ fun ActivitiesView(onAnyItemSelected: ((Boolean) -> Unit)? = null) {
             }
         }
     }
-    val activity = LocalContext.current as android.app.Activity
+    val activity = LocalActivity.current
 
     BackHandler {
         if (showSingleAssetView != null) {
@@ -645,7 +655,7 @@ fun ActivitiesView(onAnyItemSelected: ((Boolean) -> Unit)? = null) {
                 onAnyItemSelected?.invoke(false)
             } else {
               //  backPressedDispatcher?.onBackPressed()
-                activity.finish()
+                activity?.finish()
 
             }
 
