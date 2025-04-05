@@ -3,7 +3,6 @@ package org.witness.proofmode
 import android.annotation.SuppressLint
 import android.graphics.RectF
 import android.text.format.DateUtils
-import android.view.View
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
