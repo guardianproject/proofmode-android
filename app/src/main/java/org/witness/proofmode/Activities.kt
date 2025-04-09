@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Parcel
 import android.os.Parcelable
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
@@ -51,7 +52,7 @@ object ActivityConstants
 }
 
 @Serializable
-data class ProofableItem(val id: String, @Serializable(with = UriSerializer::class) val uri: Uri)
+data class  ProofableItem(val id: String, @Serializable(with = UriSerializer::class) val uri: Uri)
     : Parcelable {
     constructor(parcel: Parcel) : this(
         id = parcel.readString() ?: "",
@@ -289,13 +290,15 @@ object Activities: ViewModel()
         return listItems
     }
     fun getActivityProofableItems(activity: Activity): SnapshotStateList<ProofableItem> {
-        when (activity.type) {
-            is ActivityType.MediaCaptured -> return activity.type.items
-            is ActivityType.MediaImported -> return activity.type.items
-            is ActivityType.MediaShared -> return activity.type.items
-            else -> {}
+        val items = when (activity.type) {
+            is ActivityType.MediaCaptured -> activity.type.items
+            is ActivityType.MediaImported -> activity.type.items
+            is ActivityType.MediaShared -> activity.type.items
+            else -> emptyList()
         }
-        return mutableStateListOf<ProofableItem>()
+        Log.d("ProofableItems", "$items")
+        return items.distinctBy { it.uri }.toMutableStateList()
+
     }
 
     fun getProofableItem(context: Context, selectId: String): List<ProofableItem> {

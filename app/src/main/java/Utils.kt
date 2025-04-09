@@ -106,3 +106,28 @@ fun getFileNameFromUri(contentResolver: ContentResolver, uri: Uri?): String? {
     if (TextUtils.isEmpty(fileName)) fileName = uri.lastPathSegment
     return fileName
 }
+
+enum class MediaType {
+    IMAGE, VIDEO, UNKNOWN
+}
+
+/**
+ * Gets mime types for File Uris
+ */
+
+fun getMediaTypeFromFileUri(uri: Uri): MediaType {
+    val file = File(uri.path ?: return MediaType.UNKNOWN)
+    val extension = file.extension.lowercase()
+
+    if (extension.isEmpty()) return MediaType.UNKNOWN
+
+    val mimeType = MimeTypeMap.getSingleton()
+        .getMimeTypeFromExtension(extension)
+
+    return when {
+        mimeType == null -> MediaType.UNKNOWN
+        mimeType.startsWith("image/") -> MediaType.IMAGE
+        mimeType.startsWith("video/") -> MediaType.VIDEO
+        else -> MediaType.UNKNOWN
+    }
+}

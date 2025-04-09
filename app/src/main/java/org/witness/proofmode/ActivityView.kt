@@ -3,6 +3,7 @@ package org.witness.proofmode
 import android.annotation.SuppressLint
 import android.graphics.RectF
 import android.text.format.DateUtils
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
@@ -103,9 +104,13 @@ fun ProofableItemView(
     val context = LocalContext.current
     // Verify if Uri MIME type is image or video and if it is a video,get the thumbnail
     val isVideo = remember(item) {
-        item.uri.let { uri ->
+        val uri = item.uri
+        if (uri.scheme == "content") {
             context.contentResolver.getType(uri)?.contains("video") ?: false
+        } else{
+            getMediaTypeFromFileUri(uri) == MediaType.VIDEO
         }
+
     }
 
     AsyncImage(
@@ -595,8 +600,8 @@ fun ActivitiesView(onAnyItemSelected: ((Boolean) -> Unit)? = null) {
 
                                     modifier =
                                     Modifier
-                                            .width(48.dp)
-                                            .height(48.dp),
+                                        .width(48.dp)
+                                        .height(48.dp),
                                     onClick = {
                                         (context as? ActivitiesViewDelegate)?.shareItems(selectedItems, fileName = null, shareText = null)
                                         selectedAssets.clear()
@@ -614,8 +619,8 @@ fun ActivitiesView(onAnyItemSelected: ((Boolean) -> Unit)? = null) {
 
                                     modifier =
                                     Modifier
-                                            .width(48.dp)
-                                            .height(48.dp),
+                                        .width(48.dp)
+                                        .height(48.dp),
                                     onClick = {
                                         selectedAssets.clear()
 

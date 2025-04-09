@@ -17,6 +17,7 @@ import android.util.Range
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraControl
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ExposureState
 import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCapture.FlashMode
@@ -85,11 +86,19 @@ class CameraViewModel(private val app: Application) : AndroidViewModel(app) {
     private var surfaceOrientedMeteringPointFactory:SurfaceOrientedMeteringPointFactory? = null
     private val _surfaceRequest = MutableStateFlow<SurfaceRequest?>(null)
     val surfaceRequest: StateFlow<SurfaceRequest?> = _surfaceRequest
+    // Used for navigating to the preview page. Supposed to have content credentials attached if enabled
     private var _lastCapturedMedia: MutableStateFlow<Media?> = MutableStateFlow(null)
     val lastCapturedMedia: StateFlow<Media?> = _lastCapturedMedia
+    // Used for rounded thumbnail to immediately show when an image or video is captured
+    var _thumbPreviewUri = MutableStateFlow<Media?>(null)
+    val thumbPreviewUri: StateFlow<Media?> = _thumbPreviewUri
+
 
     private val _cameraQualities = MutableStateFlow<List<Quality>>(emptyList())
     val cameraQualities: StateFlow<List<Quality>> = _cameraQualities
+
+    private var _exposureState:MutableStateFlow<ExposureState?> = MutableStateFlow(null)
+    val exposureState: StateFlow<ExposureState?> = _exposureState
     private val previewUseCase = Preview.Builder()
         .build().apply {
         setSurfaceProvider { newSurfaceRequest->
@@ -103,26 +112,44 @@ class CameraViewModel(private val app: Application) : AndroidViewModel(app) {
 
     }
     init {
-        viewModelScope.launch {
-            getMediaFlow(app.applicationContext,outputDirectory)
-                .collect{ media->
-                    _mediaFiles.value = media
-                    if (media.isNotEmpty() && _lastCapturedMedia.value == null){
-                        _lastCapturedMedia.value = media.first()
-                    }
-                }
-        }
+        loadMediaFiles()
 
     }
 
-    fun deleteMedia(media: Media){
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                app.applicationContext.contentResolver.delete(media.uri,null,null)
-                _mediaFiles.update { list-> list.filterNot { it.uri == media.uri } }
+    private fun loadMediaFiles() {
+        viewModelScope.launch {
+            getMediaFlow(app.applicationContext,outputDirectory)
+                .collect{ media->
+                    _thumbPreviewUri.value = media.firstOrNull()
+                    _mediaFiles.value = media
+                    _lastCapturedMedia.value = media.firstOrNull()
+                }
+        }
+    }
 
-            }catch (e:Exception){
-                Timber.e(CameraViewModel::class.java.simpleName,e.message.toString())
+    fun deleteMedia(media: Media?) {
+        viewModelScope.launch(Dispatchers.IO) {
+            media?.let {
+                // Get contentResolver
+                val contentResolver = app.applicationContext.contentResolver
+
+                // Delete the media from the content provider (MediaStore)
+                val rowsDeleted = contentResolver.delete(it.uri, null, null)
+
+                if (rowsDeleted > 0) {
+                    // If deletion is successful, remove from the local media list
+                    val currentList = _mediaFiles.value.toMutableList()
+                    currentList.remove(it)  // Remove the media from the list
+                    _mediaFiles.value = currentList  // Update the media list
+
+                    // If the deleted media was the last captured media, update accordingly
+                    if (_lastCapturedMedia.value == it) {
+                        _lastCapturedMedia.value = currentList.firstOrNull()
+                    }
+                } else {
+                    // Handle failure to delete from the content provider if necessary
+                    Timber.e("Failed to delete media from content provider: ${it.uri}")
+                }
             }
         }
     }
@@ -171,8 +198,8 @@ class CameraViewModel(private val app: Application) : AndroidViewModel(app) {
     private var _videoCapabilities = MutableStateFlow<List<VideoCapability>>(emptyList())
     val videoCapabilities: StateFlow<List<VideoCapability>> = _videoCapabilities
 
-    private var _ultraHdrOn = MutableStateFlow(false)
-    val ultraHdrOn: StateFlow<Boolean> = _ultraHdrOn
+    private var _ultraHdr = MutableStateFlow(UltraHDRAvailabilityState.OFF)
+    val ultraHdr: StateFlow<UltraHDRAvailabilityState> = _ultraHdr
 
     private val imageCaptureBuilder = ImageCapture.Builder()
         .setJpegQuality(100)
@@ -184,14 +211,6 @@ class CameraViewModel(private val app: Application) : AndroidViewModel(app) {
         cameraControl?.enableTorch(_torchOn.value)
     }
 
-    fun toggleMode(mode: CameraMode?) {
-        when(mode){
-            CameraMode.IMAGE -> _currentDestination.update { CameraDestinations.PHOTO }
-            CameraMode.VIDEO -> _currentDestination.update { CameraDestinations.VIDEO }
-            null -> _currentDestination.update { CameraDestinations.PREVIEW }
-
-        }
-    }
 
     fun toggleFlashMode( @FlashMode newMode: Int, lifecycleOwner: LifecycleOwner) {
         _flashMode.value = newMode
@@ -200,7 +219,9 @@ class CameraViewModel(private val app: Application) : AndroidViewModel(app) {
         imageCaptureBuilder.setFlashMode(flashMode.value)
         imageCapture = imageCaptureBuilder.build()
         camera = cameraProvider!!.bindToLifecycle(lifecycleOwner,CameraSelector.Builder().requireLensFacing(lensFacing.value?:CameraSelector.LENS_FACING_BACK).build(),
-            previewUseCase,imageCapture)
+            previewUseCase,imageCapture).apply {
+                cameraInfo.exposureState.exposureCompensationRange
+        }
         zoomState = camera!!.cameraInfo.zoomState
         cameraControl = camera?.cameraControl
 
@@ -281,16 +302,18 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
             .requireLensFacing(lensFacing.value?:CameraSelector.LENS_FACING_BACK).build()
         val isUltraHdrSupported = isUltraHdrSupported(cameraSelector,cameraProvider!!)
         if (isUltraHdrSupported){
-            if (ultraHdrOn.value) {
+            if (ultraHdr.value == UltraHDRAvailabilityState.ON) {
                 imageCaptureBuilder.setOutputFormat(ImageCapture.OUTPUT_FORMAT_JPEG_ULTRA_HDR)
             }
         } else {
-            _ultraHdrOn.update { false }
+            _ultraHdr.update { UltraHDRAvailabilityState.NOT_SUPPORTED }
         }
         imageCapture = imageCaptureBuilder
             .build()
         camera = cameraProvider!!.bindToLifecycle(lifecycleOwner = lifecycleOwner,cameraSelector,
-            previewUseCase,imageCapture)
+            previewUseCase,imageCapture).apply {
+                _exposureState.value = cameraInfo.exposureState
+        }
         zoomState = camera!!.cameraInfo.zoomState
         cameraControl = camera?.cameraControl
         /*try {
@@ -305,9 +328,14 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
             .requireLensFacing(lensFacing.value?:CameraSelector.LENS_FACING_BACK).build()
         val isUltraHdrSupported = isUltraHdrSupported(cameraSelector,cameraProvider!!)
         if (!isUltraHdrSupported) {
-            _ultraHdrOn.update { false }
+            _ultraHdr.update { UltraHDRAvailabilityState.NOT_SUPPORTED }
         } else {
-            _ultraHdrOn.update { !ultraHdrOn.value }
+            val currentUltraHdrState = ultraHdr.value
+            if (currentUltraHdrState == UltraHDRAvailabilityState.ON) {
+                _ultraHdr.update { UltraHDRAvailabilityState.OFF }
+            } else {
+                _ultraHdr.update { UltraHDRAvailabilityState.ON }
+            }
             _previewAlpha.update { 0.5f }
             delay(800)
             _previewAlpha.update { 1f }
@@ -315,13 +343,16 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
             imageCapture = null
             imageCapture = imageCaptureBuilder
                 .apply {
-                    if (ultraHdrOn.value) {
+                    if (ultraHdr.value == UltraHDRAvailabilityState.ON) {
                         setOutputFormat(ImageCapture.OUTPUT_FORMAT_JPEG_ULTRA_HDR)
                     }
                 }
                 .build()
             camera = cameraProvider!!.bindToLifecycle(lifecycleOwner = lifecycleOwner,cameraSelector,
                 previewUseCase,imageCapture)
+                .apply {
+                    _exposureState.value = cameraInfo.exposureState
+                }
             zoomState = camera!!.cameraInfo.zoomState
             cameraControl = camera?.cameraControl
         }
@@ -363,24 +394,15 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
             object : OnImageSavedCallback {
                 override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
                     val savedUri = outputFileResults.savedUri
+                    // Create a temporary image to immediately show in thumbnail.
+                    savedUri?.let { _thumbPreviewUri.value = Media(it,false,System.currentTimeMillis()) }
                     val capturedTime = System.currentTimeMillis()
-                    val uriWithContentCredentials = attachContentCredentialsAndProofData(savedUri,CameraEventType.NEW_IMAGE)
-                    if (uriWithContentCredentials != null) {
-                        val newMedia = Media(uriWithContentCredentials,false,capturedTime)
-                        _lastCapturedMedia.value = newMedia
-                        _mediaFiles.value = listOf(newMedia) + mediaFiles.value
-                    } else{
-                        savedUri?.let {uri->
-                            val newMedia = Media(uri,false,capturedTime)
-                            _lastCapturedMedia.value = newMedia
-                            _mediaFiles.value = listOf(newMedia) + mediaFiles.value
-
-                        }
+                    val mediaWithContentCredentials = attachContentCredentialsAndProofData(savedUri,CameraEventType.NEW_IMAGE)
+                    val newMedia = mediaWithContentCredentials?:savedUri?.let { Media(it,false,capturedTime)  }
+                    newMedia?.let {
+                        _lastCapturedMedia.value = it
+                        _mediaFiles.value = listOf(it) + mediaFiles.value
                     }
-
-
-
-
 
                 }
 
@@ -392,7 +414,7 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
         )
     }
 
-    private fun attachContentCredentialsAndProofData(proofUri: Uri?,cameraEventType: CameraEventType):Uri? {
+    private fun attachContentCredentialsAndProofData(proofUri: Uri?,cameraEventType: CameraEventType):Media? {
         var finalUri = proofUri
         val isDirectCapture = true
         val dateSaved = Date()
@@ -428,7 +450,10 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
             Timber.tag("CameraViewModel")
                 .d("URI was null")
         }
-        return finalUri
+        return if (finalUri != null) {
+            Media(uri = finalUri, isVideo = cameraEventType == CameraEventType.NEW_VIDEO, date = dateSaved.time)
+        } else null
+
     }
     @SuppressLint("MissingPermission")
     fun startRecording() {
@@ -457,20 +482,14 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
                         if (!recordEvent.hasError()) {
                             _recordingState.update {  RecordingState.Stopped}
                             val savedUri:Uri? = recordEvent.outputResults.outputUri
-                            val capturedTime = System.currentTimeMillis()
-                            val uriWithContentCredentials = attachContentCredentialsAndProofData(savedUri,CameraEventType.NEW_VIDEO)
+                            savedUri?.let { _thumbPreviewUri.value = Media(it,true,System.currentTimeMillis())  }
 
-                            if (uriWithContentCredentials != null) {
-                                val newMedia = Media(uriWithContentCredentials,true,capturedTime)
-                                Log.d("NewMedia","${newMedia.uri.path},${newMedia.isVideo}")
-                                _lastCapturedMedia.value = newMedia
-                                _mediaFiles.value = listOf(newMedia) + mediaFiles.value
-                            } else {
-                                savedUri?.let {
-                                    val newMedia = Media(it,true,capturedTime)
-                                    _lastCapturedMedia.value = newMedia
-                                    _mediaFiles.value = listOf(newMedia) + mediaFiles.value
-                                }
+                            val capturedTime = System.currentTimeMillis()
+                            val mediaWithContentCredentials = attachContentCredentialsAndProofData(savedUri,CameraEventType.NEW_VIDEO)
+                            val newMedia = mediaWithContentCredentials?:savedUri?.let { Media(it,true,capturedTime)  }
+                            newMedia?.let {
+                                _lastCapturedMedia.value = it
+                                _mediaFiles.value = listOf(it) + mediaFiles.value
                             }
                         } else {
                             _recordingState.update { RecordingState.Error("Recording finished with error") }
@@ -556,6 +575,10 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
 
     }
 
+    fun updateExposureCompensation(compensationIndex:Int){
+        cameraControl?.setExposureCompensationIndex(compensationIndex)
+    }
+
 
 
     // Format the elapsed time
@@ -590,6 +613,7 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
         handler.post(timerRunnable)
     }
 
+
     override fun onCleared() {
         try {
         if (this::timerRunnable.isInitialized)
@@ -606,6 +630,7 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
             val meteringAction = FocusMeteringAction.Builder(point).build()
             if (camera?.cameraInfo?.isFocusMeteringSupported(meteringAction) == true){
                 cameraControl?.startFocusAndMetering(meteringAction)
+
             }
 
         }
@@ -641,4 +666,10 @@ sealed class RecordingState {
 enum class CameraMode{
     VIDEO,
     IMAGE
+}
+
+enum class UltraHDRAvailabilityState(val description: String) {
+    ON("On"),
+    OFF("Off"),
+    NOT_SUPPORTED("Not supported")
 }

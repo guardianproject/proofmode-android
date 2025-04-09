@@ -8,22 +8,19 @@ import android.widget.MediaController
 import android.widget.VideoView
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,27 +28,33 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
 import coil.decode.VideoFrameDecoder
 import coil.load
 import coil.request.ImageRequest
 import coil.size.Size
+import org.witness.proofmode.camera.R
 import org.witness.proofmode.camera.adapter.Media
-import org.witness.proofmode.camera.utils.ThumbSize
-import org.witness.proofmode.camera.utils.getVideoThumbnail
+import org.witness.proofmode.camera.utils.share
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -62,6 +65,10 @@ fun MediaPreview(viewModel: CameraViewModel, modifier: Modifier = Modifier,
     val pagerState = rememberPagerState(pageCount = {
         mediaItems.size
     })
+    val context = LocalContext.current
+    var showDeleteDialog by remember {
+        mutableStateOf(false)
+    }
 
     BackHandler(enabled = onNavigateBack != null) {
         onNavigateBack?.invoke()
@@ -74,23 +81,25 @@ fun MediaPreview(viewModel: CameraViewModel, modifier: Modifier = Modifier,
             }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Go back")
             }
-        }, modifier = Modifier.height(24.dp).background(Color.Transparent))
+        },
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = ColorPrimary,
+                navigationIconContentColor = Color.White,
+                titleContentColor = Color.White))
     }, bottomBar = {
         BottomAppBar(containerColor = MaterialTheme.colorScheme.onSurface) {
             Row(horizontalArrangement = Arrangement.SpaceEvenly,
                 modifier = Modifier.fillMaxWidth()) {
-                IconButton(onClick = {}) {
+                IconButton(onClick = {
+                    val currentItem = mediaItems.getOrNull(pagerState.currentPage)
+                    currentItem?.let {
+                        context.share(it)
+                    }
+                }) {
                     Icon(Icons.Filled.Share, contentDescription = "Share media", tint = Color.White)
                 }
 
                 IconButton(onClick = {
-                    //viewModel.deleteMedia()
-                    if (mediaItems.isNotEmpty()){
-                        val currentItem = mediaItems.getOrNull(pagerState.currentPage)
-                        currentItem?.let {
-                            viewModel.deleteMedia(it)
-                        }
-                    }
+                    showDeleteDialog = true
 
                 }) {
                     Icon(Icons.Outlined.Delete, contentDescription = "Share media", tint = Color.White)
@@ -109,13 +118,20 @@ fun MediaPreview(viewModel: CameraViewModel, modifier: Modifier = Modifier,
             //ItemPreview(media = mediaItems[it], modifier = Modifier.fillMaxSize())
         }
 
+        if (showDeleteDialog) {
+            DeleteMediaDialog(onDismiss = { showDeleteDialog = false }, onConfirmDelete = {
+                viewModel.deleteMedia(mediaItems[pagerState.currentPage])
+                showDeleteDialog = false
+            })
+        }
+
     }
 
 }
 
 
 @Composable
-fun ImagePreview(modifier: Modifier,media: Media, onPlayClick: (() -> Unit)? = null){
+fun ImagePreview(modifier: Modifier,media: Media){
     Box(modifier = modifier,
         contentAlignment = Alignment.Center){
         AndroidView(factory = { context->
@@ -133,13 +149,6 @@ fun ImagePreview(modifier: Modifier,media: Media, onPlayClick: (() -> Unit)? = n
             imageView
 
         }, modifier = Modifier.fillMaxSize())
-        if (media.isVideo) {
-            Icon(imageVector = Icons.Filled.PlayCircle, contentDescription = null, tint = Color.Red, modifier = Modifier.size(48.dp)
-                .clickable(enabled = onPlayClick != null){
-                    onPlayClick?.invoke()
-                }
-            )
-        }
     }
 
 }
@@ -167,6 +176,22 @@ fun SimpleVideoView(videoUri:Uri,modifier: Modifier = Modifier) {
     })
 }
 
+
+@Composable
+fun DeleteMediaDialog(onDismiss: () -> Unit, onConfirmDelete: () -> Unit) {
+    AlertDialog(onDismissRequest = onDismiss,
+        title = {
+            Text("Delete Media",style = MaterialTheme.typography.titleMedium)
+        },
+        text = {
+            Text(stringResource(R.string.delete_media_confirmation))
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirmDelete) {
+                Text(text = stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
+            }
+        })
+}
 @Composable
 fun ItemPreview(modifier: Modifier = Modifier, media: Media){
     val context = LocalContext.current
@@ -188,4 +213,9 @@ fun ItemPreview(modifier: Modifier = Modifier, media: Media){
                 strokeWidth = 2.dp)
         }
     }
+}
+
+@Composable
+fun ItemPreview(modifier: Modifier,uri: Uri?) {
+
 }

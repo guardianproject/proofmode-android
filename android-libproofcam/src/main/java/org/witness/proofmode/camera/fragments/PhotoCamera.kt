@@ -3,9 +3,11 @@ package org.witness.proofmode.camera.fragments
 import androidx.camera.compose.CameraXViewfinder
 import androidx.camera.core.ImageCapture
 import androidx.camera.viewfinder.compose.MutableCoordinateTransformer
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -30,11 +32,14 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FlashAuto
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
+import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material.icons.outlined.Camera
 import androidx.compose.material.icons.outlined.Cameraswitch
+import androidx.compose.material.icons.outlined.Exposure
 import androidx.compose.material.icons.outlined.GridOff
 import androidx.compose.material.icons.outlined.GridOn
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -42,6 +47,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -53,6 +59,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
@@ -63,6 +70,7 @@ import androidx.compose.ui.geometry.takeOrElse
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.round
 import androidx.constraintlayout.compose.ConstraintLayout
@@ -84,6 +92,7 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                 onNavigateToPreview: () -> Unit) {
 
     val latestMediaFile by cameraViewModel.lastCapturedMedia.collectAsStateWithLifecycle()
+    val thumbPreviewUri by cameraViewModel.thumbPreviewUri.collectAsStateWithLifecycle()
     val surfaceRequest by cameraViewModel.surfaceRequest.collectAsStateWithLifecycle()
     var showGridLines:Boolean by remember {
         mutableStateOf(false)
@@ -95,9 +104,11 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
     val previewAlpha by cameraViewModel.previewAlpha.collectAsStateWithLifecycle()
     var zoom by remember { mutableFloatStateOf(1f) }
 
+    val exposureState by cameraViewModel.exposureState.collectAsStateWithLifecycle()
+    var showExposureIndicator by remember { mutableStateOf(false) }
     val flashMode by cameraViewModel.flashMode.collectAsStateWithLifecycle()
     var showFlashModes by remember { mutableStateOf(false) }
-    val ultraHdrOn by cameraViewModel.ultraHdrOn.collectAsStateWithLifecycle()
+    val ultraHdrOn by cameraViewModel.ultraHdr.collectAsStateWithLifecycle()
     var autofocusRequest by remember {
         mutableStateOf(UUID.randomUUID() to Offset.Unspecified)
     }
@@ -108,6 +119,14 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
     // Ensure that initial coordinates for each auto focus request are cached
     val autofocusCoordinates = remember(autoRequestId) {
         autofocusRequest.second
+    }
+
+    val lowerSliderRange:Float = exposureState?.exposureCompensationRange?.lower?.toFloat() ?:0F
+    val upperSliderRange:Float = exposureState?.exposureCompensationRange?.upper?.toFloat() ?:0F
+    val steps = (upperSliderRange - lowerSliderRange).toInt()
+    val currentExposureIndex = exposureState?.exposureCompensationIndex ?: 0F
+    var currentSliderPosition by remember(currentExposureIndex) {
+        mutableStateOf(currentExposureIndex)
     }
 
     // Queue hiding the request for each unique autofocus tap
@@ -204,14 +223,27 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                                 showGridLines = !showGridLines
                             }) {
                                 Icon(imageVector = if (showGridLines) Icons.Outlined.GridOff else Icons.Outlined.GridOn,
-                                    tint = Color.White,contentDescription = if (showGridLines) "Hide grid lines" else "Show grid lines")
+                                    tint = Color.White,contentDescription = if (showGridLines) stringResource(
+                                        R.string.grid_lines_hide_description
+                                    ) else stringResource(R.string.show_grid_lines_description)
+                                )
                             }
                             IconButton(onClick = {
                                 showFlashModes = true
 
                             }) {
                                 Icon(imageVector = flashModeToIconRes(flashMode),
-                                    tint = Color.White,contentDescription = "Change flash mode")
+                                    tint = Color.White,contentDescription = stringResource(R.string.change_flash_mode_content_description)
+                                )
+                            }
+
+                            IconButton(onClick = {
+                                showExposureIndicator = true
+                            }) {
+                                Icon(Icons.Outlined.Exposure, tint = Color.White,contentDescription = stringResource(
+                                    R.string.change_exposure_compensation
+                                )
+                                )
                             }
                         }
                     }
@@ -234,7 +266,8 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                                 Icon(
                                     Icons.Filled.FlashOff,
                                     tint = if (flashMode == ImageCapture.FLASH_MODE_OFF) Color.Red else Color.White,
-                                    contentDescription = "Turn off flash")
+                                    contentDescription = stringResource(R.string.turn_off_flash_description)
+                                )
 
                             }
                             IconButton(onClick = {
@@ -244,7 +277,8 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                                 Icon(
                                     Icons.Filled.FlashAuto,
                                     tint = if (flashMode == ImageCapture.FLASH_MODE_AUTO) Color.Red else Color.White,
-                                    contentDescription = "Turn flash on auto")
+                                    contentDescription = stringResource(R.string.turn_flash_on_auto_description)
+                                )
 
                             }
 
@@ -255,7 +289,8 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                                 Icon(
                                     Icons.Filled.FlashOn,
                                     tint = if (flashMode == ImageCapture.FLASH_MODE_ON) Color.Red else Color.White,
-                                    contentDescription = "Turn flash on")
+                                    contentDescription = stringResource(R.string.turn_flash_on_description)
+                                )
 
                             }
                         }
@@ -292,7 +327,8 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                         Icon(
                             imageVector = Icons.Outlined.Camera,
                             tint = Color.White,
-                            contentDescription = "Capture image")
+                            contentDescription = stringResource(R.string.capture_image_description)
+                        )
                     }
 
                     Box(
@@ -310,11 +346,28 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
 
 
                     ) {
-                        latestMediaFile?.let{ ItemPreview(modifier = Modifier.matchParentSize()
-                            .clickable {
-                                onNavigateToPreview()
+                        AnimatedContent(targetState = thumbPreviewUri,
+                            transitionSpec = {
+                                fadeIn() togetherWith fadeOut()
+                            },
+                            modifier = Modifier.matchParentSize()) { media->
+                            if (media != null) {
+                                ItemPreview(modifier = Modifier
+                                    .matchParentSize()
+                                    .clickable {
+                                        onNavigateToPreview()
+                                    }
+                                    , media = media )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Photo,
+                                    contentDescription = "No media",
+                                    tint = Color.Gray,
+                                    modifier = Modifier
+                                        .align(Alignment.Center)
+                                )
                             }
-                            , media = it ) }
+                        }
                     }
 
                     IconButton(onClick = {
@@ -346,10 +399,10 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                             top.linkTo(captureButton.bottom, margin = 8.dp)
 
                         }) {
-                        Text("Camera")
+                        Text(stringResource(R.string.camera))
                     }
 
-                    Text(text = "Video",
+                    Text(text = stringResource(R.string.video),
                         modifier = Modifier
                             .constrainAs(videoText) {
                                 end.linkTo(cameraText.start)
@@ -436,13 +489,13 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                         horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         Box(modifier = Modifier.weight(1f)){
                             Column{
-                                Text("Ultra HDR", style = MaterialTheme.typography.bodyLarge)
-                                Text("Shows more vibrant colors", style = MaterialTheme.typography.bodySmall)
+                                Text(stringResource(R.string.ultra_hdr), style = MaterialTheme.typography.bodyLarge)
+                                Text(text = stringResource(R.string.ultra_hdr_description,ultraHdrOn.description), style = MaterialTheme.typography.bodySmall)
                             }
 
                         }
 
-                        Switch(checked = ultraHdrOn, onCheckedChange = {
+                        Switch(checked = ultraHdrOn == UltraHDRAvailabilityState.ON, onCheckedChange = {
                             scope.launch {
                                 cameraViewModel.toggleUltraHdr(lifecycleOwner)
                             }
@@ -453,11 +506,33 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
 
                     Spacer(modifier = Modifier.height(40.dp))
 
+                }
+            }
 
-
+            if (showExposureIndicator){
+                BasicAlertDialog(onDismissRequest = {
+                    showExposureIndicator = false
+                }) {
+                    Column (modifier = Modifier
+                        .background(MaterialTheme.colorScheme.onBackground)
+                        .padding(4.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally){
+                        Text("Exposure:${currentSliderPosition.toInt()}", style = MaterialTheme.typography.titleMedium.copy(color = MaterialTheme.colorScheme.primary))
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Slider(
+                            valueRange = lowerSliderRange..upperSliderRange,
+                            value = currentSliderPosition.toFloat(),
+                            onValueChange = {
+                                currentSliderPosition = it
+                                cameraViewModel.updateExposureCompensation(it.toInt())
+                            },
+                            steps = steps
+                        )
+                    }
                 }
             }
         }
     }
 
 }
+

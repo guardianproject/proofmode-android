@@ -11,6 +11,7 @@ import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
 import android.util.Size
+import android.webkit.MimeTypeMap
 import androidx.annotation.OptIn
 import androidx.camera.camera2.interop.Camera2CameraInfo
 import androidx.camera.camera2.interop.ExperimentalCamera2Interop
@@ -115,7 +116,7 @@ suspend fun getMedia(context: Context, outputDirectory: String): List<Media> = w
     } else {
         getMediaQMinus(context, outputDirectory)
     }
-}.reversed()
+}
 
 private fun getMediaQPlus(context: Context, outputDirectory: String): List<Media> {
     val items = mutableListOf<Media>()
@@ -130,7 +131,7 @@ private fun getMediaQPlus(context: Context, outputDirectory: String): List<Media
         ),
         null,
         null,
-        "${MediaStore.Video.Media.DISPLAY_NAME} ASC"
+        "${MediaStore.Video.Media.DATE_TAKEN} DESC"
     )?.use { cursor ->
         val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID)
         val pathColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.RELATIVE_PATH)
@@ -159,7 +160,7 @@ private fun getMediaQPlus(context: Context, outputDirectory: String): List<Media
         ),
         null,
         null,
-        "${MediaStore.Images.Media.DISPLAY_NAME} ASC"
+        "${MediaStore.Images.Media.DATE_TAKEN} DESC"
     )?.use { cursor ->
         val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
         val pathColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.RELATIVE_PATH)
@@ -178,9 +179,9 @@ private fun getMediaQPlus(context: Context, outputDirectory: String): List<Media
             }
         }
     }
-    items.sortBy { it.date }
 
-    return items
+
+    return items.sortedByDescending { it.date }
 }
 
 private fun getMediaQMinus(context: Context, outputDirectory: String): List<Media> {
@@ -229,6 +230,7 @@ fun getVideoThumbnail(context: Context, videoUri: Uri,size: ThumbSize = ThumbSiz
 
 
 }
+
 
 enum class ThumbSize {
     SMALL,

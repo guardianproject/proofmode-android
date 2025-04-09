@@ -1,13 +1,17 @@
 package org.witness.proofmode.camera.fragments
 
-import android.widget.Toast
+import android.Manifest
+import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.camera.compose.CameraXViewfinder
 import androidx.camera.core.CameraSelector
 import androidx.camera.viewfinder.compose.MutableCoordinateTransformer
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -31,6 +35,7 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.outlined.Cameraswitch
@@ -56,6 +61,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
@@ -68,6 +74,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.round
 import androidx.constraintlayout.compose.ConstraintLayout
@@ -86,13 +93,26 @@ import org.witness.proofmode.camera.utils.getName
 import org.witness.proofmode.camera.utils.toIconRes
 import java.util.UUID
 
+private val permissions = mutableListOf(
+    Manifest.permission.CAMERA,
+    Manifest.permission.RECORD_AUDIO,
+    Manifest.permission.READ_EXTERNAL_STORAGE,
+).apply {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        add(Manifest.permission.ACCESS_MEDIA_LOCATION)
+    }
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        remove(Manifest.permission.READ_EXTERNAL_STORAGE)
+    }
+}
+
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun CameraScreen(modifier: Modifier = Modifier) {
     val lifecycleOwner = LocalLifecycleOwner.current
     val viewModel: CameraViewModel = viewModel()
     val navController = rememberNavController()
-    val permissionsState = rememberMultiplePermissionsState(listOf(android.Manifest.permission.CAMERA,android.Manifest.permission.RECORD_AUDIO))
+    val permissionsState = rememberMultiplePermissionsState(permissions)
     if (permissionsState.allPermissionsGranted) {
         CameraNavigation(navController = navController, viewModel = viewModel, lifecycleOwner = lifecycleOwner)
         //PhotoCamera(modifier = modifier)
@@ -103,9 +123,9 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             .widthIn(max = 480.dp) ) {
 
             val textToShow = if(permissionsState.shouldShowRationale) {
-                "The camera and microphone permissions are important for ProofMode to record video,capture images. Please grant the permissions."
+                "Grant permissions in order to be able to fully use ProofMode."
             } else {
-                "Camera and microphone not available"
+                stringResource(R.string.message_no_permissions)
 
             }
 
@@ -125,7 +145,6 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                 onNavigateToPhotoCamera: () -> Unit,
                 onNavigateBack: (() -> Unit)? = null,
                 onNavigateToPreview: () -> Unit) {
-    val context = LocalContext.current
     val surfaceRequest by cameraViewModel.surfaceRequest.collectAsStateWithLifecycle()
     var showGridLines:Boolean by remember {
         mutableStateOf(false)
@@ -136,8 +155,6 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
     val scope = rememberCoroutineScope()
     var showBSettingsBottomSheet by remember { mutableStateOf(false) }
     val cameraQualities by cameraViewModel.cameraQualities.collectAsStateWithLifecycle()
-    //val videoCapabilities by cameraViewModel.videoCapabilities.collectAsStateWithLifecycle()
-    val lensFacing by cameraViewModel.lensFacing.asFlow().collectAsStateWithLifecycle(CameraSelector.LENS_FACING_BACK)
     val selectedQuality by cameraViewModel.selectedQuality.collectAsStateWithLifecycle()
     val previewAlpha by cameraViewModel.previewAlpha.collectAsStateWithLifecycle()
    var zoom by remember { mutableStateOf(1f) }
@@ -155,8 +172,7 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
     val autofocusCoordinates = remember(autoRequestId) {
         autofocusRequest.second
     }
-    val mediaFiles by cameraViewModel.mediaFiles.collectAsStateWithLifecycle()
-    val latestMediaFile by cameraViewModel.lastCapturedMedia.collectAsStateWithLifecycle()
+    val thumbPreviewUri by cameraViewModel.thumbPreviewUri.collectAsStateWithLifecycle()
 
     // Queue hiding the request for each unique autofocus tap
     if (showAutoFocusIndicator){
@@ -196,7 +212,6 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                     .fillMaxSize()
                     .pointerInput(cameraViewModel, coordinateTransformer) {
                         detectTapGestures { tapCoordinates ->
-                            //Toast.makeText(context, tapCoordinates.toString(),Toast.LENGTH_SHORT).show()
                             with(coordinateTransformer) {
                                 cameraViewModel.tapToFocus(tapCoordinates.transform())
                             }
@@ -345,15 +360,30 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                                 .border(width = 2.dp, color = Color.White, shape = CircleShape)
 
                         ) {
-                            latestMediaFile?.let {
-                                ItemPreview(
-                                    modifier = Modifier.matchParentSize()
+                            AnimatedContent(targetState = thumbPreviewUri,
+                                transitionSpec = {
+                                    fadeIn() togetherWith fadeOut()
+                                },
+                                modifier = Modifier.matchParentSize()) { media->
+
+                                if (media != null) {
+                                    ItemPreview(modifier = Modifier
+                                        .matchParentSize()
                                         .clickable {
                                             onNavigateToPreview()
                                         }
-                                    , media = it)
-
+                                        , media = media )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.Photo,
+                                        contentDescription = "No media",
+                                        tint = Color.Gray,
+                                        modifier = Modifier
+                                            .align(Alignment.Center)
+                                    )
+                                }
                             }
+
                         }
                     }
 
