@@ -5,8 +5,7 @@
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="org.witness.proofmode.MainActivity"
-    tools:showIn="@layout/camera_main">
+    tools:context="org.witness.proofmode.MainActivity">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/layout_on"

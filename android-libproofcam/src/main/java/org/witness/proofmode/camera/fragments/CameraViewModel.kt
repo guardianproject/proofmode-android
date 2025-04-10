@@ -31,6 +31,7 @@ import androidx.camera.core.SurfaceRequest
 import androidx.camera.core.ZoomState
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.lifecycle.awaitInstance
+import androidx.camera.video.FallbackStrategy
 import androidx.camera.video.MediaStoreOutputOptions
 import androidx.camera.video.Quality
 import androidx.camera.video.QualitySelector
@@ -254,7 +255,8 @@ class CameraViewModel(private val app: Application) : AndroidViewModel(app) {
         videoCapture = null
         recorder = null
         recorder = Recorder.Builder()
-            .setQualitySelector(QualitySelector.from(_selectedQuality.value))
+            .setQualitySelector(QualitySelector.from(_selectedQuality.value, FallbackStrategy.lowerQualityThan(
+                _selectedQuality.value)))
             .build()
         videoCapture = VideoCapture.withOutput(recorder!!)
         camera = cameraProvider!!.bindToLifecycle(lifecycleOwner = lifecycleOwner,CameraSelector.Builder().requireLensFacing(lensFacing.value?:CameraSelector.LENS_FACING_BACK).build(),
@@ -280,15 +282,21 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
     }
     //cameraProvider?.unbindAll()
     recorder = Recorder.Builder()
-        .setQualitySelector(QualitySelector.from(_selectedQuality.value))
+        .setQualitySelector(QualitySelector.from(_selectedQuality.value, FallbackStrategy.lowerQualityThan(
+            _selectedQuality.value)))
         .build()
     videoCapture = VideoCapture
         .withOutput(recorder!!)
-    camera = cameraProvider!!.bindToLifecycle(lifecycleOwner = lifecycleOwner,CameraSelector.Builder().requireLensFacing(lensFacing.value?:CameraSelector.LENS_FACING_BACK).build(),
-        previewUseCase,videoCapture)
-    zoomState = camera!!.cameraInfo.zoomState
-    cameraControl = camera?.cameraControl
-    cameraControl?.enableTorch(_torchOn.value)
+    try {
+        camera = cameraProvider!!.bindToLifecycle(lifecycleOwner = lifecycleOwner,CameraSelector.Builder().requireLensFacing(lensFacing.value?:CameraSelector.LENS_FACING_BACK).build(),
+            previewUseCase,videoCapture)
+        zoomState = camera!!.cameraInfo.zoomState
+        cameraControl = camera?.cameraControl
+        cameraControl?.enableTorch(_torchOn.value)
+    } catch (ex:Exception){
+        Timber.e("Binding failed")
+    }
+
     /*try {
         awaitCancellation()
     } finally {
@@ -525,7 +533,7 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
     }
 
 
-    fun sendLocalCameraEvent(newMediaFile: Uri, cameraEventType: CameraEventType) {
+    private fun sendLocalCameraEvent(newMediaFile: Uri, cameraEventType: CameraEventType) {
         if (cameraEventType == CameraEventType.NEW_VIDEO) {
             val intent = Intent(NEW_MEDIA_EVENT).apply { data = newMediaFile }
             LocalBroadcastManager.getInstance(app).sendBroadcast(intent)
@@ -551,13 +559,6 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
 
     }
 
-    fun toggleLensFacing() {
-        lensFacing.value = if (lensFacing.value == CameraSelector.LENS_FACING_BACK) {
-            CameraSelector.LENS_FACING_FRONT
-        } else {
-            CameraSelector.LENS_FACING_BACK
-        }
-    }
 
     suspend fun switchLensFacing(lifecycleOwner: LifecycleOwner,cameraMode: CameraMode) {
         lensFacing.value = if (lensFacing.value == CameraSelector.LENS_FACING_BACK) {
@@ -594,12 +595,12 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
         }
     }
 
-    fun stopTimer() {
+    private fun stopTimer() {
         handler.removeCallbacks(timerRunnable)
         _elapsedTime.value = "" // Reset the timer
         _recordTime.update { "" }
     }
-    fun startTimer() {
+    private fun startTimer() {
         startTime = System.currentTimeMillis()
         timerRunnable = object : Runnable {
             override fun run() {

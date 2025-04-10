@@ -91,7 +91,6 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                 onNavigateToVideo: () -> Unit,
                 onNavigateToPreview: () -> Unit) {
 
-    val latestMediaFile by cameraViewModel.lastCapturedMedia.collectAsStateWithLifecycle()
     val thumbPreviewUri by cameraViewModel.thumbPreviewUri.collectAsStateWithLifecycle()
     val surfaceRequest by cameraViewModel.surfaceRequest.collectAsStateWithLifecycle()
     var showGridLines:Boolean by remember {

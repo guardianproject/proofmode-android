@@ -4,11 +4,9 @@ import android.Manifest
 import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.camera.compose.CameraXViewfinder
-import androidx.camera.core.CameraSelector
 import androidx.camera.viewfinder.compose.MutableCoordinateTransformer
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -71,10 +69,10 @@ import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.geometry.takeOrElse
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.round
 import androidx.constraintlayout.compose.ConstraintLayout
@@ -115,24 +113,26 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     val permissionsState = rememberMultiplePermissionsState(permissions)
     if (permissionsState.allPermissionsGranted) {
         CameraNavigation(navController = navController, viewModel = viewModel, lifecycleOwner = lifecycleOwner)
-        //PhotoCamera(modifier = modifier)
     } else {
         Column(modifier = modifier
             .fillMaxSize()
             .wrapContentSize()
-            .widthIn(max = 480.dp) ) {
+            .widthIn(480.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally) {
 
             val textToShow = if(permissionsState.shouldShowRationale) {
-                "Grant permissions in order to be able to fully use ProofMode."
+                stringResource(R.string.permissions_rationale)
             } else {
                 stringResource(R.string.message_no_permissions)
 
             }
 
-            Text(textToShow)
+            Text(textToShow, style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center)
             Spacer(modifier = Modifier.height(10.dp))
             Button(onClick = { permissionsState.launchMultiplePermissionRequest() }) {
-                Text("Grant permissions")
+                Text(stringResource(R.string.grant_permissions))
             }
 
         }
@@ -280,14 +280,20 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                                     showGridLines = !showGridLines
                                 }) {
                                     Icon(imageVector = if (showGridLines) Icons.Outlined.GridOff else Icons.Outlined.GridOn,
-                                        tint = Color.White,contentDescription = if (showGridLines) "Hide grid lines" else "Show grid lines")
+                                        tint = Color.White,contentDescription = if (showGridLines) stringResource(
+                                            R.string.grid_lines_hide_description
+                                        ) else stringResource(R.string.show_grid_lines_description)
+                                    )
                                 }
                                 IconButton(onClick = {
                                     cameraViewModel.toggleTorchForVideo()
 
                                 }) {
                                     Icon(imageVector = if (torchOn) Icons.Outlined.FlashOn else Icons.Outlined.FlashOff,
-                                        tint = Color.White,contentDescription = if (torchOn) "Turn flash off" else "Turn flash on")
+                                        tint = Color.White,contentDescription = if (torchOn) stringResource(
+                                            R.string.turn_flash_off
+                                        ) else stringResource(R.string.turn_flash_on)
+                                    )
                                 }
                             }
                         }
@@ -340,7 +346,10 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                         Icon(
                             imageVector = if (recordingState == RecordingState.Idle || recordingState == RecordingState.Stopped) Icons.Filled.Videocam else Icons.Filled.Stop,
                             tint = Color.White,
-                            contentDescription = if (recordingState == RecordingState.Idle) "Record video" else "Stop recording")
+                            contentDescription = if (recordingState == RecordingState.Idle) stringResource(
+                                R.string.record_video
+                            ) else stringResource(R.string.stop_recording)
+                        )
                     }
 
                     AnimatedVisibility(visible = recordingState != RecordingState.Recording,
@@ -421,10 +430,10 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                             top.linkTo(recordButton.bottom, margin = 8.dp)
 
                         }) {
-                        Text("Video")
+                        Text(stringResource(R.string.video))
                     }
 
-                    Text(text = "Camera",
+                    Text(text = stringResource(R.string.camera),
                         modifier = Modifier
                             .constrainAs(cameraText) {
                                 end.linkTo(videoText.start)
@@ -502,16 +511,16 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                     showBSettingsBottomSheet = false
                 }, sheetState = settingsSheetState) {
 
-                    Text("Video Settings", style = MaterialTheme.typography.headlineMedium)
+                    Text(stringResource(R.string.video_settings), style = MaterialTheme.typography.headlineMedium)
                     Spacer(modifier = Modifier.height(10.dp))
 
                     Row(modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Box(){
+                        Box{
                             Column{
-                                Text("Resolution", style = MaterialTheme.typography.bodySmall)
+                                Text(stringResource(R.string.resolution), style = MaterialTheme.typography.bodySmall)
                                 Text(selectedQuality.getName(), style = MaterialTheme.typography.labelMedium)
                             }
 
@@ -537,7 +546,6 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                     }
 
                     Spacer(modifier = Modifier.height(40.dp))
-                    Text(ranges.toString())
                 }
             }
         }

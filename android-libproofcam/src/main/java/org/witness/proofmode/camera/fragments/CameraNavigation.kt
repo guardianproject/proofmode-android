@@ -12,11 +12,9 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
 
 @Composable
-fun CameraNavigation(
-    navController:NavHostController,
+fun CameraNavigation(navController:NavHostController,
                      viewModel: CameraViewModel,
                      lifecycleOwner: LifecycleOwner
 ) {
@@ -89,7 +87,7 @@ fun CameraNavigation(
 }
 
 object CameraDestinations {
-    val PHOTO = "photo"
-    val VIDEO = "video"
-    val PREVIEW = "preview"
+    const val PHOTO = "photo"
+   const val VIDEO = "video"
+   const val PREVIEW = "preview"
 }

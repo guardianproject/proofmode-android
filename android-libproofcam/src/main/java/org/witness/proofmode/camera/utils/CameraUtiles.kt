@@ -42,16 +42,24 @@ fun getSupportedQualities(
     cameraSelector: CameraSelector,
     cameraProvider: CameraProvider): List<Quality> {
     val cameraMetadataLens = if (cameraSelector == CameraSelector.DEFAULT_FRONT_CAMERA) CameraMetadata.LENS_FACING_FRONT else CameraMetadata.LENS_FACING_BACK
-    val cameraInfo = cameraProvider.availableCameraInfos.filter {
+
+    val cameraInfo = cameraProvider.availableCameraInfos.firstOrNull {
         Camera2CameraInfo
             .from(it)
             .getCameraCharacteristic(CameraCharacteristics.LENS_FACING) == cameraMetadataLens
-    }
+    }?: return emptyList()
 
-    val videoCapabilities = Recorder.getVideoCapabilities(cameraInfo[0])
+    val videoCapabilities = Recorder.getVideoCapabilities(cameraInfo)
     val supportedDynamicRanges = videoCapabilities.supportedDynamicRanges
     val dynamicRange = if (supportedDynamicRanges.contains(DynamicRange.HDR10_10_BIT)) DynamicRange.HDR10_10_BIT else DynamicRange.SDR
     return videoCapabilities.getSupportedQualities(dynamicRange)
+        .filter { quality ->
+            try {
+                videoCapabilities.isQualitySupported(quality,dynamicRange)
+            }catch (ex:Exception) {
+                false
+            }
+        }
 }
 
 fun isUltraHdrSupported(cameraSelector: CameraSelector, cameraProvider: CameraProvider): Boolean {
