@@ -16,7 +16,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 @Composable
 fun CameraNavigation(navController:NavHostController,
                      viewModel: CameraViewModel,
-                     lifecycleOwner: LifecycleOwner
+                     lifecycleOwner: LifecycleOwner,
+                     onClosed:()->Unit
 ) {
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = currentBackStackEntry?.destination?.route
@@ -50,7 +51,7 @@ fun CameraNavigation(navController:NavHostController,
                         inclusive = true
                     }
                 }
-            })
+            }, onClose = onClosed)
 
         }
         composable(CameraDestinations.VIDEO,
@@ -69,7 +70,7 @@ fun CameraNavigation(navController:NavHostController,
 
             }, onNavigateToPreview = {
                 navController.navigate(CameraDestinations.PREVIEW)
-            })
+            }, onClose = onClosed)
 
         }
         composable(CameraDestinations.PREVIEW,

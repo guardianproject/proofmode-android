@@ -1,7 +1,5 @@
 package org.witness.proofmode.camera.fragments
 
-import android.Manifest
-import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.camera.compose.CameraXViewfinder
 import androidx.camera.viewfinder.compose.MutableCoordinateTransformer
@@ -13,8 +11,9 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.forEachGesture
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,8 +27,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -69,10 +66,10 @@ import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.geometry.takeOrElse
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.round
 import androidx.constraintlayout.compose.ConstraintLayout
@@ -81,70 +78,24 @@ import androidx.lifecycle.asFlow
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.compose.rememberNavController
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.witness.proofmode.camera.R
 import org.witness.proofmode.camera.utils.getName
 import org.witness.proofmode.camera.utils.toIconRes
 import java.util.UUID
+import kotlin.coroutines.cancellation.CancellationException
+import kotlin.math.abs
 
-private val permissions = mutableListOf(
-    Manifest.permission.CAMERA,
-    Manifest.permission.RECORD_AUDIO,
-    Manifest.permission.READ_EXTERNAL_STORAGE,
-).apply {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-        add(Manifest.permission.ACCESS_MEDIA_LOCATION)
-    }
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        remove(Manifest.permission.READ_EXTERNAL_STORAGE)
-    }
-}
 
-@OptIn(ExperimentalPermissionsApi::class)
-@Composable
-fun CameraScreen(modifier: Modifier = Modifier) {
-    val lifecycleOwner = LocalLifecycleOwner.current
-    val viewModel: CameraViewModel = viewModel()
-    val navController = rememberNavController()
-    val permissionsState = rememberMultiplePermissionsState(permissions)
-    if (permissionsState.allPermissionsGranted) {
-        CameraNavigation(navController = navController, viewModel = viewModel, lifecycleOwner = lifecycleOwner)
-    } else {
-        Column(modifier = modifier
-            .fillMaxSize()
-            .wrapContentSize()
-            .widthIn(480.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally) {
-
-            val textToShow = if(permissionsState.shouldShowRationale) {
-                stringResource(R.string.permissions_rationale)
-            } else {
-                stringResource(R.string.message_no_permissions)
-
-            }
-
-            Text(textToShow, style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center)
-            Spacer(modifier = Modifier.height(10.dp))
-            Button(onClick = { permissionsState.launchMultiplePermissionRequest() }) {
-                Text(stringResource(R.string.grant_permissions))
-            }
-
-        }
-    }
-}
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel = viewModel(),
                 lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current,
                 onNavigateToPhotoCamera: () -> Unit,
                 onNavigateBack: (() -> Unit)? = null,
-                onNavigateToPreview: () -> Unit) {
+                onNavigateToPreview: () -> Unit,
+                onClose:()-> Unit = {}) {
     val surfaceRequest by cameraViewModel.surfaceRequest.collectAsStateWithLifecycle()
     var showGridLines:Boolean by remember {
         mutableStateOf(false)
@@ -184,8 +135,6 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
     }
     val elapsedTime by cameraViewModel.elapsedTime.asFlow().collectAsStateWithLifecycle("")
 
-    //var zoomScale by remember { mutableStateOf(1f) }
-
     surfaceRequest?.let { newRequest->
 
         val coordinateTransformer = remember {
@@ -210,24 +159,92 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                 .fillMaxSize()){
                 CameraXViewfinder(surfaceRequest = newRequest, modifier = Modifier
                     .fillMaxSize()
-                    .pointerInput(cameraViewModel, coordinateTransformer) {
-                        detectTapGestures { tapCoordinates ->
-                            with(coordinateTransformer) {
-                                cameraViewModel.tapToFocus(tapCoordinates.transform())
+                    .pointerInput(cameraViewModel, coordinateTransformer, zoom) {
+                    var currentZoom = zoom
+
+                    forEachGesture {
+                        awaitPointerEventScope {
+                            // Get the initial down event with at least one pointer
+                            val firstDown = awaitFirstDown(requireUnconsumed = false)
+
+                            // Track position for drag detection
+                            var drag = Offset.Zero
+                            var pastTouchSlop = false
+                            val touchSlop = viewConfiguration.touchSlop
+
+                            // Wait for additional pointer or movement
+                            do {
+                                val event = awaitPointerEvent()
+                                val currentPointers = event.changes.size
+
+                                // Check if we have multiple pointers for zoom gesture
+                                if (currentPointers >= 2) {
+                                    // Handle pinch-to-zoom
+                                    // Cancel drag detection
+                                    pastTouchSlop = false
+                                    drag = Offset.Zero
+
+                                    try {
+                                        // Handle the zoom gesture using the built-in transform detection
+                                        scope.launch {
+                                            detectTransformGestures(
+                                                onGesture = { _, _, gestureZoom, _ ->
+                                                    currentZoom *= gestureZoom
+                                                    cameraViewModel.pinchZoom(currentZoom)
+                                                }
+                                            )
+                                            // If we reach here, zoom completed successfully
+                                            return@launch
+                                        }
+                                    } catch (e: CancellationException) {
+                                        // Transform gesture got canceled, continue with detection
+                                    }
+                                } else if (currentPointers == 1) {
+                                    // Single pointer - could be tap or drag
+                                    val pointer = event.changes[0]
+
+                                    // Update accumulated drag
+                                    if (pointer.id == firstDown.id) {
+                                        drag += pointer.positionChange()
+
+                                        // Check if we've exceeded the touch slop threshold
+                                        if (!pastTouchSlop && abs(drag.x) > touchSlop) {
+                                            pastTouchSlop = true
+                                        }
+
+                                        // If we're in drag mode, consume the events
+                                        if (pastTouchSlop) {
+                                            pointer.consume()
+                                        }
+                                    }
+                                }
+                            } while (event.changes.any { it.pressed })
+
+                            // After all pointers are up, decide what gesture it was
+                            if (pastTouchSlop && abs(drag.x) > abs(drag.y)) {
+                                // This was a horizontal drag
+                                val dragAmount = drag.x
+                                if (dragAmount < 0) {
+                                    // Left swipe
+                                    // check if camera is still recording
+                                    if (recordingState == RecordingState.Recording) {
+                                        cameraViewModel.stopRecording()
+                                        onNavigateToPhotoCamera()
+                                    } else {
+                                        onNavigateToPhotoCamera()
+                                    }
+                                }
+                            } else if (!pastTouchSlop && drag.getDistance() < touchSlop) {
+                                // This was a tap (minimal movement)
+                                val tapCoordinates = firstDown.position
+                                with(coordinateTransformer) {
+                                    cameraViewModel.tapToFocus(tapCoordinates.transform())
+                                }
+                                autofocusRequest = UUID.randomUUID() to tapCoordinates
                             }
-                            autofocusRequest = UUID.randomUUID() to tapCoordinates
-
-                        }
-
-                    }
-                    .pointerInput(Unit) {
-                        detectTransformGestures { _, _, gestureZoom, _ ->
-                            //val oldScale = zoom
-                            val newScale = zoom * gestureZoom
-                            zoom = newScale
-                            cameraViewModel.pinchZoom(zoom)
                         }
                     }
+                }
                     .alpha(previewAlpha)
                 )
 
@@ -264,7 +281,9 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                                 .background(Color.Black.copy(alpha = 0.4f))
                                 .padding(horizontal = 16.dp),
                                 horizontalArrangement = Arrangement.SpaceEvenly) {
-                                IconButton(onClick = {}) {
+                                IconButton(onClick = {
+                                    onClose()
+                                }) {
                                     Icon(Icons.Filled.Close,
                                         tint = Color.White,
                                         contentDescription = null)
@@ -339,7 +358,7 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                                 end.linkTo(bottomBg.end)
                                 verticalBias = 0.3f
                             }
-                            .size(52.dp)
+                            .size(64.dp)
                             .background(Color.Red, CircleShape)
                             .clip(CircleShape)
                     ) {
@@ -446,7 +465,7 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                             .clickable {
                                 onNavigateToPhotoCamera()
                             },
-                        style = MaterialTheme.typography.labelMedium.copy(color = Color.White)
+                        style = MaterialTheme.typography.labelLarge.copy(color = Color.White)
                     )
 
                     // 1/3 vertical grid line
@@ -521,12 +540,14 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                         Box{
                             Column{
                                 Text(stringResource(R.string.resolution), style = MaterialTheme.typography.bodySmall)
-                                Text(selectedQuality.getName(), style = MaterialTheme.typography.labelMedium)
+                                selectedQuality?.let {
+                                    Text(it.getName(), style = MaterialTheme.typography.labelMedium)
+                                }
                             }
 
                         }
                         Spacer(modifier = Modifier.weight(1f))
-                        cameraQualities.forEach {
+                        cameraQualities.reversed().forEach {
                             IconButton(onClick = {
                                 scope.launch {
                                     cameraViewModel.changeQuality(quality = it, lifecycleOwner = lifecycleOwner)
@@ -552,6 +573,8 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
     }
 
 }
+
+
 
 
 

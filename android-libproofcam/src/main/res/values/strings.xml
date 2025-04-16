@@ -31,4 +31,5 @@
     <string name="stop_recording">Stop recording</string>
     <string name="video_settings">Video Settings</string>
     <string name="resolution">Resolution</string>
+    <string name="timer">Timer</string>
 </resources>

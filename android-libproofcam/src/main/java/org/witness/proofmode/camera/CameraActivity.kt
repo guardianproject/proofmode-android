@@ -4,12 +4,9 @@ import android.os.Bundle
 import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.LifecycleOwner
 import org.witness.proofmode.camera.fragments.CameraScreen
-import org.witness.proofmode.camera.fragments.CameraViewModel
 
 class CameraActivity : ComponentActivity(){
 
@@ -22,8 +19,6 @@ class CameraActivity : ComponentActivity(){
         var useCredentials = true
         var useAIFlag = true
     }
-
-    val cameraViewModel:CameraViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // If the Android version is lower than Jellybean, use this call to hide
@@ -33,7 +28,9 @@ class CameraActivity : ComponentActivity(){
 
         setContent {
 
-            CameraScreen(modifier = Modifier.fillMaxSize())
+            CameraScreen(modifier = Modifier.fillMaxSize(), onClose = {
+                finish()
+            })
         }
 
         //setContentView(R.layout.camera_main)

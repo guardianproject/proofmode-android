@@ -12,7 +12,6 @@ import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
-import android.util.Log
 import android.util.Range
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraControl
@@ -81,8 +80,6 @@ class CameraViewModel(private val app: Application) : AndroidViewModel(app) {
     }
     private var _mediaFiles:MutableStateFlow<List<Media>> = MutableStateFlow(emptyList())
     val mediaFiles: StateFlow<List<Media>> = _mediaFiles
-    private val _currentDestination = MutableStateFlow(CameraDestinations.PHOTO)
-    val currentDestination: StateFlow<String> = _currentDestination
     private val mExec = Executors.newSingleThreadExecutor()
     private var surfaceOrientedMeteringPointFactory:SurfaceOrientedMeteringPointFactory? = null
     private val _surfaceRequest = MutableStateFlow<SurfaceRequest?>(null)
@@ -100,6 +97,8 @@ class CameraViewModel(private val app: Application) : AndroidViewModel(app) {
 
     private var _exposureState:MutableStateFlow<ExposureState?> = MutableStateFlow(null)
     val exposureState: StateFlow<ExposureState?> = _exposureState
+    private var _cameraDelay:MutableStateFlow<CameraDelay> = MutableStateFlow(CameraDelay.Zero)
+    val cameraDelay: StateFlow<CameraDelay> = _cameraDelay
     private val previewUseCase = Preview.Builder()
         .build().apply {
         setSurfaceProvider { newSurfaceRequest->
@@ -126,6 +125,10 @@ class CameraViewModel(private val app: Application) : AndroidViewModel(app) {
                     _lastCapturedMedia.value = media.firstOrNull()
                 }
         }
+    }
+
+    fun updateCameraDelay(delay: CameraDelay) {
+        _cameraDelay.update { delay }
     }
 
     fun deleteMedia(media: Media?) {
@@ -193,11 +196,8 @@ class CameraViewModel(private val app: Application) : AndroidViewModel(app) {
         private set
 
     // Selected quality
-    private val _selectedQuality = MutableStateFlow(Quality.FHD) // Default to FHD (1080p)
-    val selectedQuality: StateFlow<Quality> get() = _selectedQuality
-
-    private var _videoCapabilities = MutableStateFlow<List<VideoCapability>>(emptyList())
-    val videoCapabilities: StateFlow<List<VideoCapability>> = _videoCapabilities
+    private val _selectedQuality = MutableStateFlow<Quality?>(null) // Default to FHD (1080p)
+    val selectedQuality: StateFlow<Quality?> get() = _selectedQuality
 
     private var _ultraHdr = MutableStateFlow(UltraHDRAvailabilityState.OFF)
     val ultraHdr: StateFlow<UltraHDRAvailabilityState> = _ultraHdr
@@ -255,8 +255,9 @@ class CameraViewModel(private val app: Application) : AndroidViewModel(app) {
         videoCapture = null
         recorder = null
         recorder = Recorder.Builder()
-            .setQualitySelector(QualitySelector.from(_selectedQuality.value, FallbackStrategy.lowerQualityThan(
-                _selectedQuality.value)))
+
+            .setQualitySelector(QualitySelector.from(_selectedQuality.value!!, FallbackStrategy.lowerQualityThan(
+                _selectedQuality.value!!)))
             .build()
         videoCapture = VideoCapture.withOutput(recorder!!)
         camera = cameraProvider!!.bindToLifecycle(lifecycleOwner = lifecycleOwner,CameraSelector.Builder().requireLensFacing(lensFacing.value?:CameraSelector.LENS_FACING_BACK).build(),
@@ -282,8 +283,11 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
     }
     //cameraProvider?.unbindAll()
     recorder = Recorder.Builder()
-        .setQualitySelector(QualitySelector.from(_selectedQuality.value, FallbackStrategy.lowerQualityThan(
-            _selectedQuality.value)))
+        .apply {
+            selectedQuality.value?.let {
+                setQualitySelector(QualitySelector.from(it, FallbackStrategy.lowerQualityThan(it)))
+            }
+        }
         .build()
     videoCapture = VideoCapture
         .withOutput(recorder!!)
@@ -297,11 +301,6 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
         Timber.e("Binding failed")
     }
 
-    /*try {
-        awaitCancellation()
-    } finally {
-        cameraProvider?.unbindAll()
-    }*/
 
 }
     suspend fun bindUseCasesForImage(lifecycleOwner: LifecycleOwner) {
@@ -324,11 +323,6 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
         }
         zoomState = camera!!.cameraInfo.zoomState
         cameraControl = camera?.cameraControl
-        /*try {
-            awaitCancellation()
-        } finally {
-            cameraProvider?.unbindAll()
-        }*/
     }
 
     suspend fun toggleUltraHdr(lifecycleOwner: LifecycleOwner) {
@@ -656,13 +650,7 @@ object CameraConstants {
     const val NEW_MEDIA_EVENT = "org.witness.proofmode.NEW_MEDIA"
 }
 
-sealed class RecordingState {
-    object Idle : RecordingState()
-    object Recording : RecordingState()
-    object Paused : RecordingState()
-    object Stopped: RecordingState()
-    data class Error(val message: String) : RecordingState()
-}
+
 
 enum class CameraMode{
     VIDEO,
@@ -674,3 +662,5 @@ enum class UltraHDRAvailabilityState(val description: String) {
     OFF("Off"),
     NOT_SUPPORTED("Not supported")
 }
+
+

@@ -11,8 +11,9 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.forEachGesture
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,7 +34,6 @@ import androidx.compose.material.icons.filled.FlashAuto
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Photo
-import androidx.compose.material.icons.outlined.Camera
 import androidx.compose.material.icons.outlined.Cameraswitch
 import androidx.compose.material.icons.outlined.Exposure
 import androidx.compose.material.icons.outlined.GridOff
@@ -69,8 +69,12 @@ import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.geometry.takeOrElse
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.round
 import androidx.constraintlayout.compose.ConstraintLayout
@@ -83,13 +87,16 @@ import kotlinx.coroutines.launch
 import org.witness.proofmode.camera.R
 import org.witness.proofmode.camera.utils.flashModeToIconRes
 import java.util.UUID
+import kotlin.coroutines.cancellation.CancellationException
+import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel = viewModel(),
                 lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current,
                 onNavigateToVideo: () -> Unit,
-                onNavigateToPreview: () -> Unit) {
+                onNavigateToPreview: () -> Unit,
+                onClose:()-> Unit = {}) {
 
     val thumbPreviewUri by cameraViewModel.thumbPreviewUri.collectAsStateWithLifecycle()
     val surfaceRequest by cameraViewModel.surfaceRequest.collectAsStateWithLifecycle()
@@ -128,6 +135,9 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
         mutableStateOf(currentExposureIndex)
     }
 
+    var countDownState:CountDownState by remember { mutableStateOf(CountDownState.Idle) }
+    val cameraDelay by cameraViewModel.cameraDelay.collectAsStateWithLifecycle()
+
     // Queue hiding the request for each unique autofocus tap
     if (showAutoFocusIndicator){
         LaunchedEffect(autoRequestId) {
@@ -146,39 +156,10 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
         }
 
         Scaffold(modifier = modifier.fillMaxSize()){ paddingValues->
-            Box(modifier = Modifier
-                .padding(paddingValues)
-                .fillMaxSize()){
-                CameraXViewfinder(surfaceRequest = newRequest, modifier = Modifier
-                    .fillMaxSize()
-                    .pointerInput(cameraViewModel, coordinateTransformer) {
-                        detectTapGestures { tapCoordinates ->
-                            //Toast.makeText(context, tapCoordinates.toString(),Toast.LENGTH_SHORT).show()
-                            with(coordinateTransformer) {
-                                cameraViewModel.tapToFocus(tapCoordinates.transform())
-                            }
-                            autofocusRequest = UUID.randomUUID() to tapCoordinates
-
-                        }
-
-                    }
-                    .pointerInput(Unit) {
-                        detectTransformGestures { _, _, gestureZoom, _ ->
-                            //val oldScale = zoom
-                            val newScale = zoom * gestureZoom
-                            zoom = newScale
-                            cameraViewModel.pinchZoom(zoom)
-                        }
-                    }
-                    .alpha(previewAlpha)
-                )
-
-
-
                 ConstraintLayout(modifier = Modifier
                     .fillMaxSize()
                     .background(Color.Transparent)) {
-                    val (topBAr, bottomBg,captureButton,cameraSwitcher,galleryPreview,videoText,cameraText,
+                    val (viewFinder,topBAr, cancelButton,countDownStateView, bottomBg,captureButton,cameraSwitcher,galleryPreview,videoText,cameraText,
                         flashModeRow) = createRefs()
                     // Define guidelines for the grid (1/3 and 2/3 positions)
                     val vertical1 = createGuidelineFromStart(0.33f)
@@ -191,7 +172,106 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                         .alpha(if (showGridLines) 1f else 0f)
                         .background(Color.White.copy(alpha = 0.5f))
 
-                    AnimatedVisibility(visible = !showFlashModes,
+                    CameraXViewfinder(surfaceRequest = newRequest, modifier = Modifier
+                        .padding(paddingValues)
+                        .fillMaxSize()
+                        .constrainAs(viewFinder) {
+                            top.linkTo(parent.top)
+                            start.linkTo(parent.start)
+                            end.linkTo(parent.end)
+                            bottom.linkTo(parent.bottom)
+                        }
+                        .fillMaxSize()
+                        .pointerInput(cameraViewModel, coordinateTransformer, zoom) {
+                            var currentZoom = zoom
+
+                            forEachGesture {
+                                awaitPointerEventScope {
+                                    // Get the initial down event with at least one pointer
+                                    val firstDown = awaitFirstDown(requireUnconsumed = false)
+
+                                    // Track position for drag detection
+                                    var drag = Offset.Zero
+                                    var pastTouchSlop = false
+                                    val touchSlop = viewConfiguration.touchSlop
+
+                                    // Wait for additional pointer or movement
+                                    do {
+                                        val event = awaitPointerEvent()
+                                        val currentPointers = event.changes.size
+
+                                        // Check if we have multiple pointers for zoom gesture
+                                        if (currentPointers >= 2) {
+                                            // Handle pinch-to-zoom
+                                            // Cancel drag detection
+                                            pastTouchSlop = false
+                                            drag = Offset.Zero
+
+                                            try {
+                                                // Handle the zoom gesture using the built-in transform detection
+                                                scope.launch {
+                                                    detectTransformGestures(
+                                                        onGesture = { _, _, gestureZoom, _ ->
+                                                            currentZoom *= gestureZoom
+                                                            cameraViewModel.pinchZoom(currentZoom)
+                                                        }
+                                                    )
+                                                    // If we reach here, zoom completed successfully
+                                                    return@launch
+                                                }
+                                            } catch (e: CancellationException) {
+                                                // Transform gesture got canceled, continue with detection
+                                            }
+                                        } else if (currentPointers == 1) {
+                                            // Single pointer - could be tap or drag
+                                            val pointer = event.changes[0]
+
+                                            // Update accumulated drag
+                                            if (pointer.id == firstDown.id) {
+                                                drag += pointer.positionChange()
+
+                                                // Check if we've exceeded the touch slop threshold
+                                                if (!pastTouchSlop && abs(drag.x) > touchSlop) {
+                                                    pastTouchSlop = true
+                                                }
+
+                                                // If we're in drag mode, consume the events
+                                                if (pastTouchSlop) {
+                                                    pointer.consume()
+                                                }
+                                            }
+                                        }
+                                    } while (event.changes.any { it.pressed })
+
+                                    // After all pointers are up, decide what gesture it was
+                                    if (pastTouchSlop && abs(drag.x) > abs(drag.y)) {
+                                        // This was a horizontal drag
+                                        val dragAmount = drag.x
+                                        if (dragAmount < 0) {
+                                            // Left swipe
+                                            // Check if there is a count down state
+                                            if (countDownState == CountDownState.Running){
+                                                countDownState = CountDownState.Cancelled
+                                                onNavigateToVideo()
+                                            } else{
+                                                onNavigateToVideo()
+                                            }
+                                        }
+                                    } else if (!pastTouchSlop && drag.getDistance() < touchSlop) {
+                                        // This was a tap (minimal movement)
+                                        val tapCoordinates = firstDown.position
+                                        with(coordinateTransformer) {
+                                            cameraViewModel.tapToFocus(tapCoordinates.transform())
+                                        }
+                                        autofocusRequest = UUID.randomUUID() to tapCoordinates
+                                    }
+                                }
+                            }
+                        }
+                        .alpha(previewAlpha)
+                    )
+
+                    AnimatedVisibility(visible = !showFlashModes && countDownState != CountDownState.Running,
                         modifier = Modifier
                             .fillMaxWidth()
                             .constrainAs(topBAr) {
@@ -204,7 +284,7 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                             .background(Color.Black.copy(alpha = 0.4f))
                             .padding(horizontal = 16.dp),
                             horizontalArrangement = Arrangement.SpaceEvenly) {
-                            IconButton(onClick = {}) {
+                            IconButton(onClick = onClose) {
 
                                 Icon(
                                     Icons.Filled.Close,
@@ -307,88 +387,118 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                         .background(Color.Black.copy(alpha = 0.4f))
                     )
 
-                    IconButton(onClick = {
-                        cameraViewModel.captureImage()
-
-                    },
-                        modifier = Modifier
-                            .constrainAs(captureButton) {
-                                top.linkTo(bottomBg.top)
-                                bottom.linkTo(bottomBg.bottom)
-                                start.linkTo(bottomBg.start)
-                                end.linkTo(bottomBg.end)
-                                verticalBias = 0.3f
-                            }
-                            .size(48.dp)
-                            .background(Color.White, CircleShape)
-                            .clip(CircleShape)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Camera,
-                            tint = Color.White,
-                            contentDescription = stringResource(R.string.capture_image_description)
-                        )
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .constrainAs(galleryPreview) {
-                                top.linkTo(captureButton.top)
-                                bottom.linkTo(captureButton.bottom)
-                                start.linkTo(captureButton.end)
-                                end.linkTo(parent.end)
-                            }
-                            .size(48.dp)
-                            .background(Color(0xFF444444), CircleShape)
-                            .clip(CircleShape)
-                            .border(width = 2.dp, color = Color.White, shape = CircleShape)
-
-
-                    ) {
-                        AnimatedContent(targetState = thumbPreviewUri,
-                            transitionSpec = {
-                                fadeIn() togetherWith fadeOut()
-                            },
-                            modifier = Modifier.matchParentSize()) { media->
-                            if (media != null) {
-                                ItemPreview(modifier = Modifier
-                                    .matchParentSize()
-                                    .clickable {
-                                        onNavigateToPreview()
-                                    }
-                                    , media = media )
+                    AnimatedVisibility(modifier = Modifier.constrainAs(captureButton) {
+                        top.linkTo(bottomBg.top)
+                        bottom.linkTo(bottomBg.bottom)
+                        start.linkTo(bottomBg.start)
+                        end.linkTo(bottomBg.end)
+                        verticalBias = 0.2f
+                    }, visible = countDownState == CountDownState.Idle || countDownState == CountDownState.Completed){
+                        IconButton(onClick = {
+                            if(cameraDelay == CameraDelay.Zero){
+                                cameraViewModel.captureImage()
                             } else {
-                                Icon(
-                                    imageVector = Icons.Default.Photo,
-                                    contentDescription = "No media",
-                                    tint = Color.Gray,
-                                    modifier = Modifier
-                                        .align(Alignment.Center)
-                                )
+                                countDownState = CountDownState.Running
+                            }
+
+                        },
+                            modifier = Modifier
+                                .size(64.dp)
+                                .background(Color.White, CircleShape)
+                                .clip(CircleShape)
+                        ) {
+                            if (cameraDelay !=CameraDelay.Zero){
+                                Text(text = "${cameraDelay.value}", textAlign = TextAlign.Center, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
+                            }
+
+                        }
+                    }
+
+                    AnimatedVisibility(modifier = Modifier .constrainAs(galleryPreview) {
+                        top.linkTo(captureButton.top)
+                        bottom.linkTo(captureButton.bottom)
+                        start.linkTo(captureButton.end)
+                        end.linkTo(parent.end)
+                    }, visible = countDownState == CountDownState.Idle || countDownState == CountDownState.Completed){
+                        Box(
+                            modifier = Modifier
+
+                                .size(48.dp)
+                                .background(Color(0xFF444444), CircleShape)
+                                .clip(CircleShape)
+                                .border(width = 2.dp, color = Color.White, shape = CircleShape)
+
+
+                        ) {
+                            AnimatedContent(
+                                targetState = thumbPreviewUri,
+                                transitionSpec = {
+                                    fadeIn() togetherWith fadeOut()
+                                },
+                                modifier = Modifier.matchParentSize()
+                            ) { media ->
+                                if (media != null) {
+                                    ItemPreview(modifier = Modifier
+                                        .matchParentSize()
+                                        .clickable {
+                                            onNavigateToPreview()
+                                        }, media = media)
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.Photo,
+                                        contentDescription = "No media",
+                                        tint = Color.Gray,
+                                        modifier = Modifier
+                                            .align(Alignment.Center)
+                                    )
+                                }
                             }
                         }
                     }
 
-                    IconButton(onClick = {
-                        scope.launch {
-                            cameraViewModel.switchLensFacing(lifecycleOwner,CameraMode.IMAGE)
-                        }
-
-                    },
-                        modifier = Modifier
-                            .constrainAs(cameraSwitcher) {
-                                top.linkTo(captureButton.top)
-                                bottom.linkTo(captureButton.bottom)
-                                end.linkTo(captureButton.start)
-                                start.linkTo(parent.start)
+                    AnimatedVisibility(
+                        modifier = Modifier.constrainAs(cameraSwitcher) {
+                            top.linkTo(captureButton.top)
+                            bottom.linkTo(captureButton.bottom)
+                            end.linkTo(captureButton.start)
+                            start.linkTo(parent.start)
+                        }, visible = countDownState == CountDownState.Idle || countDownState == CountDownState.Completed) {
+                        IconButton(onClick = {
+                            scope.launch {
+                                cameraViewModel.switchLensFacing(lifecycleOwner,CameraMode.IMAGE)
                             }
-                            .size(48.dp)
-                            .background(Color(0xFF444444), CircleShape)
+
+                        },
+                            modifier = Modifier
+                                .size(48.dp)
+                                .background(Color(0xFF444444), CircleShape)
+                                .clip(CircleShape)
+                        ) {
+                            Icon(imageVector = Icons.Outlined.Cameraswitch,
+                                tint = Color.White,
+                                contentDescription = null)
+                        }
+                    }
+
+                    AnimatedVisibility(modifier = Modifier
+                        .constrainAs(cancelButton) {
+
+                            bottom.linkTo(bottomBg.top, margin = 16.dp)
+                            start.linkTo(bottomBg.start)
+                            end.linkTo(bottomBg.end)
+
+
+                        }
+                        .shadow(8.dp, CircleShape), visible = countDownState == CountDownState.Running) {
+                        IconButton(onClick = {
+                            countDownState = CountDownState.Cancelled
+                        }, modifier = Modifier
+                            .size(64.dp)
+                            .background(Color.Black, CircleShape)
                             .clip(CircleShape)
-                    ) {
-                        Icon(imageVector = Icons.Outlined.Cameraswitch,
-                            tint = Color.White,
-                            contentDescription = null)
+                        ) {
+                            Icon(Icons.Filled.Close, tint = Color.White, contentDescription = null)
+                        }
                     }
 
                     Button(onClick = {},modifier = Modifier
@@ -401,21 +511,27 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                         Text(stringResource(R.string.camera))
                     }
 
-                    Text(text = stringResource(R.string.video),
-                        modifier = Modifier
-                            .constrainAs(videoText) {
-                                end.linkTo(cameraText.start)
-                                top.linkTo(cameraText.top)
-                                bottom.linkTo(cameraText.bottom)
-                                start.linkTo(parent.start)
-                                horizontalBias = 0.6f
+                    AnimatedVisibility(visible = countDownState == CountDownState.Idle || countDownState == CountDownState.Completed,
+                        modifier = Modifier.
+                        constrainAs(videoText) {
+                            end.linkTo(cameraText.start)
+                            top.linkTo(cameraText.top)
+                            bottom.linkTo(cameraText.bottom)
+                            start.linkTo(parent.start)
+                            horizontalBias = 0.6f
 
-                            }
-                            .clickable {
-                                onNavigateToVideo()
-                            },
-                        style = MaterialTheme.typography.labelMedium.copy(color = Color.White)
-                    )
+                        }
+
+                    ){
+                        Text(text = stringResource(R.string.video),
+                            modifier = Modifier
+                                .clickable {
+                                    onNavigateToVideo()
+                                },
+                            style = MaterialTheme.typography.labelLarge.copy(color = Color.White),
+                            textAlign = TextAlign.Center
+                        )
+                    }
 
                     // 1/3 vertical grid line
                     Box(
@@ -456,10 +572,24 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                             }
                     )
 
+                    CountDownTimerUI(
+                        modifier = Modifier.constrainAs(countDownStateView){
+                            top.linkTo(parent.top)
+                            bottom.linkTo(parent.bottom)
+                            start.linkTo(parent.start)
+                            end.linkTo(parent.end)
+
+                        },
+                        initialDelay = cameraDelay.value, countDownState = countDownState,
+                        onStateChange = {countDownState = it}) {
+                        cameraViewModel.captureImage()
+                        countDownState = CountDownState.Idle // reset the UI
+                    }
+
 
 
                 }
-            }
+
 
             AnimatedVisibility(visible = showAutoFocusIndicator,
                 enter = fadeIn(),
@@ -502,6 +632,36 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
 
 
                     }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row (modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ){
+                            Column {
+                                Text(stringResource(R.string.timer),style = MaterialTheme.typography.bodyLarge)
+                                Text(cameraDelay.toSecondsString())
+                            }
+
+                        Spacer(Modifier.weight(1f))
+                        CameraDelay.entries.forEach { theDelay->
+                            IconButton(onClick = {
+                                cameraViewModel.updateCameraDelay(theDelay)
+                            }, modifier = Modifier
+                                .size(36.dp)
+                                .background(Color(0xFF444444), CircleShape)
+                                .clip(CircleShape)
+                            ){
+                                Icon(
+                                    theDelay.toVectorIcon(),
+                                    contentDescription = "${theDelay.value} seconds delay",
+                                    tint = if (cameraDelay == theDelay) Color.Red else Color.White,
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(40.dp))
 
@@ -530,6 +690,8 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                     }
                 }
             }
+
+
         }
     }
 

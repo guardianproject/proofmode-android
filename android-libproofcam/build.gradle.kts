@@ -41,6 +41,7 @@ android {
 dependencies {
 
 
+    implementation("androidx.compose.foundation:foundation-android:1.7.0")
     val cameraxVersion = "1.5.0-alpha06"
     val nav_version = "2.8.9"
     val accompanist =  "0.36.0"

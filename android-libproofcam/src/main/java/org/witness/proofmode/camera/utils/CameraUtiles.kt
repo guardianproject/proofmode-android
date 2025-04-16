@@ -62,6 +62,10 @@ fun getSupportedQualities(
         }
 }
 
+suspend fun getWorkingQualitiesForCameras(){
+
+}
+
 fun isUltraHdrSupported(cameraSelector: CameraSelector, cameraProvider: CameraProvider): Boolean {
     val cameraInfo = cameraProvider.getCameraInfo(cameraSelector)
     return ImageCapture.getImageCaptureCapabilities(cameraInfo)
