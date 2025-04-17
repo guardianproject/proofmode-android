@@ -79,7 +79,6 @@ public class PhotosContentJob extends JobService {
     }
 
     //private static HashMap<Uri,String> mUriStack = new HashMap<>();
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
     private void doWork ()
     {
@@ -110,14 +109,13 @@ public class PhotosContentJob extends JobService {
                         {
 
                             final Uri uriProcess = uri;
+                            MediaWatcher mw = MediaWatcher.getInstance(PhotosContentJob.this);
 
-                            executor.execute(() -> {
+                            mw.singleThreaded().execute(() -> {
                                 try {
 
                                     if (Objects.equals(uriProcess.getScheme(), "file"))
                                         C2paUtils.Companion.addContentCredentials(PhotosContentJob.this, uriProcess, true, true);
-
-                                    MediaWatcher mw = MediaWatcher.getInstance(PhotosContentJob.this);
                                     String resultProofHash = mw.processUri(uriProcess, true, null);
                                     Timber.d("generated hash via job: " + resultProofHash);
                                 } catch (RuntimeException e) {

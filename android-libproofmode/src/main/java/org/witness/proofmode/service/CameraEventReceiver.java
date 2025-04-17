@@ -16,10 +16,14 @@ public class CameraEventReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
 
         if (intent != null && intent.getData() != null) {
-            String resultProofHash = MediaWatcher.getInstance(context).processUri(intent.getData(), true, new Date());
-            Timber.d("generated hash via event: " + resultProofHash);
+            MediaWatcher.getInstance(context).queueMedia(intent.getData(), true, new Date(), new MediaWatcher.QueueMediaCallback() {
+                        @Override
+                        public void processUriDone(String resultProofHash) {
+                            Timber.d("generated hash via event: " + resultProofHash);
+                        }
+                    }
 
+            );
         }
-
     }
 }
