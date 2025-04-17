@@ -26,6 +26,8 @@ import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
 import android.preference.PreferenceManager;
 import android.provider.MediaStore;
 import android.text.TextUtils;
@@ -219,9 +221,29 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
         mProviders.add(provider);
     }
 
-    public void queueMedia(Uri uriMedia, boolean autogen, Date createdAt) {
+    public ExecutorService singleThreaded() {
+        return mExec;
+    }
+
+    public interface QueueMediaCallback {
+        void processUriDone(String hash);
+    }
+
+    public void queueMedia(Uri uriMedia, boolean autogen, Date createdAt, QueueMediaCallback callback) {
+        var looper = Looper.myLooper();
+        if (looper == null) {
+            looper = mContext.getMainLooper();
+        }
+        Handler handler = new Handler(looper);
         mExec.submit(() -> {
-            processUri(uriMedia, autogen, createdAt);
+            var hash = processUri(uriMedia, autogen, createdAt);
+            Runnable myRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    callback.processUriDone(hash);
+                }
+            };
+            handler.post(myRunnable);
         });
     }
 

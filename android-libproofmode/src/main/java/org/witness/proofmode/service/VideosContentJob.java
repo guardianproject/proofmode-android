@@ -100,8 +100,6 @@ public class VideosContentJob extends JobService {
         return true;
     }
 
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
-
     private void doWork ()
     {
 
@@ -129,10 +127,10 @@ public class VideosContentJob extends JobService {
                 {
 
                     final Uri uriProcess = uri;
+                    MediaWatcher mw = MediaWatcher.getInstance(VideosContentJob.this);
 
-                    executor.execute(() -> {
+                    mw.singleThreaded().execute(() -> {
                         try {
-                            MediaWatcher mw = MediaWatcher.getInstance(VideosContentJob.this);
                             String resultProofHash = mw.processUri(uriProcess, true, null);
                             Timber.d("generated hash via job: " + resultProofHash);
 

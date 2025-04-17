@@ -440,12 +440,12 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
         val mw: MediaWatcher = MediaWatcher.getInstance(app.applicationContext)
 
         if (finalUri != null) {
-            val resultProofHash: String? =
-                mw.processUri(finalUri, isDirectCapture, dateSaved)
-            Timber.tag("CameraViewModel")
-                .d("Proof generated: %s", resultProofHash)
-            if (resultProofHash != null)
-               sendLocalCameraEvent(finalUri,cameraEventType)
+            mw.queueMedia(finalUri, isDirectCapture, dateSaved) { resultProofHash: String? ->
+                Timber.tag("CameraViewModel")
+                    .d("Proof generated: %s", resultProofHash)
+                if (resultProofHash != null)
+                    sendLocalCameraEvent(finalUri,cameraEventType)
+            }
         }
         else
         {
