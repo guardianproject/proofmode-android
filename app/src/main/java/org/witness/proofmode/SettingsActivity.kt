@@ -21,6 +21,7 @@ import org.witness.proofmode.c2pa.C2paUtils
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.databinding.ActivitySettingsBinding
 import org.witness.proofmode.util.GPSTracker
+import androidx.core.content.edit
 
 
 class SettingsActivity : AppCompatActivity() {
@@ -184,29 +185,31 @@ class SettingsActivity : AppCompatActivity() {
         when (requestCode) {
             REQUEST_CODE_LOCATION -> {
                 if (hasPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))) {
-                    mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_LOCATION, true).commit()
+                    mPrefs.edit(commit = true) { putBoolean(ProofMode.PREF_OPTION_LOCATION, true) }
                     refreshLocation()
                 }
                 updateUI()
             }
             REQUEST_CODE_NETWORK_STATE -> {
                 if (hasPermissions(this, arrayOf(Manifest.permission.ACCESS_NETWORK_STATE))) {
-                    mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_NETWORK, true).commit()
+                    mPrefs.edit(commit = true) { putBoolean(ProofMode.PREF_OPTION_NETWORK, true) }
                 }
                 updateUI()
             }
             REQUEST_CODE_READ_PHONE_STATE -> {
                 if (hasPermissions(this, arrayOf(Manifest.permission.READ_PHONE_STATE))) {
-                    mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_PHONE, true).commit()
+                    mPrefs.edit(commit = true) { putBoolean(ProofMode.PREF_OPTION_PHONE, true) }
                 }
                 updateUI()
             }
             REQ_ACCOUNT_CHOOSER -> {
-                var accountName = data?.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
+                val accountName = data?.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
 
-                mPrefs.edit().putString(PREF_CREDENTIALS_PRIMARY, accountName).commit()
-
-                initContentCredentials(accountName)
+                //only if the account is changed, should we change the credentials
+                if (!mPrefs.getString(PREF_CREDENTIALS_PRIMARY,"").equals(accountName)) {
+                    mPrefs.edit(commit = true) { putString(PREF_CREDENTIALS_PRIMARY, accountName) }
+                    initContentCredentials(accountName)
+                }
 
             }
 
@@ -230,6 +233,7 @@ class SettingsActivity : AppCompatActivity() {
 
         C2paUtils.setC2PAIdentity(display, uri, email, key)
         if (email != null && key != null) {
+            C2paUtils.backupCredentials(this)
             C2paUtils.resetCredentials(this)
             C2paUtils.initCredentials(this, email, key)
         }

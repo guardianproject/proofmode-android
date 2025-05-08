@@ -9,12 +9,18 @@ import android.os.Build
 import android.preference.PreferenceManager
 import android.provider.MediaStore
 import android.system.Os
+import android.widget.Toast
 import info.guardianproject.simple_c2pa.*
+import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
+import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Locale
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 
 class C2paUtils {
 
@@ -25,6 +31,8 @@ class C2paUtils {
 
         private const val C2PA_CERT_PATH_PARENT = "crp.cert"
         private const val C2PA_KEY_PATH_PARENT = "crp.key"
+
+        private const val ID_BACKUP_FOLDER = "certbak"
 
         private const val CERT_VALIDITY_DAYS = 1825U //5 years
 
@@ -52,16 +60,16 @@ class C2paUtils {
         fun setC2PAIdentity (identityName: String?, identityUri: String?, identityEmail: String?, identityKey: String?)
         {
             if (identityName?.isNotEmpty() == true)
-                _identityName = identityName
+                _identityName = identityName.toString()
 
             if (identityUri?.isNotEmpty() == true)
-                _identityUri = identityUri
+                _identityUri = identityUri.toString()
 
             if (identityEmail?.isNotEmpty() == true)
-                _identityEmail = identityEmail
+                _identityEmail = identityEmail.toString()
 
             if (identityKey?.isNotEmpty() == true)
-                _identityKey = identityKey
+                _identityKey = identityKey.toString()
 
         }
 
@@ -118,16 +126,24 @@ class C2paUtils {
 
         }
 
+        fun backupCredentials (mContext: Context) {
+            val fileExistingCert = File(mContext.filesDir, C2PA_CERT_PATH)
+            val fileExistingKey = File(mContext.filesDir, C2PA_KEY_PATH)
+
+            if ((fileExistingCert.exists()) || (fileExistingKey.exists())) {
+                backupIdentity (mContext, File(mContext.filesDir,ID_BACKUP_FOLDER), fileExistingCert, fileExistingKey)
+            }
+        }
         /**
          * Reset all variables and delete all local credential files
          */
         fun resetCredentials (mContext : Context) {
 
-            var fileUserCert = File(mContext.filesDir, C2PA_CERT_PATH)
-            var fileUserKey = File(mContext.filesDir, C2PA_KEY_PATH)
+            val fileUserCert = File(mContext.filesDir, C2PA_CERT_PATH)
+            val fileUserKey = File(mContext.filesDir, C2PA_KEY_PATH)
 
-            var fileParentCert = File(mContext.filesDir, C2PA_CERT_PATH_PARENT)
-            var fileParentKey = File(mContext.filesDir,C2PA_KEY_PATH_PARENT)
+            val fileParentCert = File(mContext.filesDir, C2PA_CERT_PATH_PARENT)
+            val fileParentKey = File(mContext.filesDir,C2PA_KEY_PATH_PARENT)
 
             fileUserKey.delete()
             fileUserCert.delete()
@@ -138,8 +154,45 @@ class C2paUtils {
             userCert = null
         }
 
-        fun importCredentials (mContext : Context, fileKey : File, fileCert : File) {
+        fun importCredentials (mContext : Context, fileImportKey : File, fileImportCert : File) {
 
+            val fileExistingCert = File(mContext.filesDir, C2PA_CERT_PATH)
+            val fileExistingKey = File(mContext.filesDir, C2PA_KEY_PATH)
+
+            backupCredentials(mContext)
+
+            fileImportKey.copyTo(fileExistingKey,true,4096)
+            fileImportCert.copyTo(fileExistingCert,true,4096)
+
+            val userPrivateKey = FileData(fileImportKey.absolutePath,fileImportKey.readBytes(),fileImportKey.name)
+            userCert = Certificate(FileData(fileImportCert.absolutePath,fileImportCert.readBytes(),fileImportCert.name), userPrivateKey, null)
+
+            Toast.makeText(mContext,"New certificate installed",Toast.LENGTH_LONG).show()
+        }
+
+        fun backupIdentity(context: Context, fileOutputDir: File, file1: File, file2: File): File? {
+            // Create ZIP filename with timestamp
+            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+            val zipFileName = "c2pa_key_archive_$timestamp.zip"
+            val zipFile = File(fileOutputDir, zipFileName)
+
+            zipFile.parentFile?.mkdirs()
+
+            try {
+                ZipOutputStream(BufferedOutputStream(FileOutputStream(zipFile))).use { zos ->
+                    listOf(file1, file2).forEach { file ->
+                        FileInputStream(file).use { fis ->
+                            val entry = ZipEntry(file.name)
+                            zos.putNextEntry(entry)
+                            fis.copyTo(zos, bufferSize = 1024)
+                        }
+                    }
+                }
+                return zipFile
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+            return null
         }
 
         fun getUserCertificate (mContext : Context) : File {
@@ -160,11 +213,11 @@ class C2paUtils {
             var fileUserCert = File(mContext.filesDir, C2PA_CERT_PATH)
             var fileUserKey = File(mContext.filesDir, C2PA_KEY_PATH)
 
-            var fileParentCert = File(mContext.filesDir, C2PA_CERT_PATH_PARENT)
-            var fileParentKey = File(mContext.filesDir,C2PA_KEY_PATH_PARENT)
 
             if ((!fileUserKey.exists()) || (!fileUserCert.exists())) {
 
+                var fileParentCert = File(mContext.filesDir, C2PA_CERT_PATH_PARENT)
+                var fileParentKey = File(mContext.filesDir,C2PA_KEY_PATH_PARENT)
 
                 var parentKey = createPrivateKey();
                 fileParentKey.writeBytes(parentKey.getBytes())
@@ -202,10 +255,8 @@ class C2paUtils {
             }
             else
             {
-                var userPrivateKey = FileData(fileUserKey.absolutePath,fileUserKey.readBytes(),fileUserKey.name)
-                var parentPrivateKey = FileData(fileParentKey.absolutePath,fileParentKey.readBytes(),fileParentKey.name)
-                var parentCert = Certificate(FileData(fileParentCert.absolutePath,fileParentCert.readBytes(),fileParentCert.name), parentPrivateKey, null)
-                userCert = Certificate(FileData(fileUserCert.absolutePath,fileUserCert.readBytes(),fileUserKey.name), userPrivateKey, parentCert)
+                val userPrivateKey = FileData(fileUserKey.absolutePath,fileUserKey.readBytes(),fileUserKey.name)
+                userCert = Certificate(FileData(fileUserCert.absolutePath,fileUserCert.readBytes(),fileUserKey.name), userPrivateKey, null)
             }
         }
 
