@@ -16,6 +16,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
+import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -164,8 +165,24 @@ class C2paUtils {
             fileImportKey.copyTo(fileExistingKey,true,4096)
             fileImportCert.copyTo(fileExistingCert,true,4096)
 
-            val userPrivateKey = FileData(fileImportKey.absolutePath,fileImportKey.readBytes(),fileImportKey.name)
-            userCert = Certificate(FileData(fileImportCert.absolutePath,fileImportCert.readBytes(),fileImportCert.name), userPrivateKey, null)
+            val userPrivateKey = FileData(fileExistingKey.absolutePath,fileExistingKey.readBytes(),fileImportKey.name)
+            userCert = Certificate(FileData(fileExistingCert.absolutePath,fileExistingCert.readBytes(),fileExistingCert.name), userPrivateKey, null)
+
+            Toast.makeText(mContext,"New certificate installed",Toast.LENGTH_LONG).show()
+        }
+
+        fun importCredentials (mContext : Context, fileImportKey : InputStream?, fileImportCert : InputStream?) {
+
+            val fileExistingCert = File(mContext.filesDir, C2PA_CERT_PATH)
+            val fileExistingKey = File(mContext.filesDir, C2PA_KEY_PATH)
+
+            backupCredentials(mContext)
+
+            fileImportKey?.copyTo(FileOutputStream(fileExistingKey))
+            fileImportCert?.copyTo(FileOutputStream(fileExistingCert))
+
+            val userPrivateKey = FileData(fileExistingKey.absolutePath,fileExistingKey.readBytes(),fileExistingKey.name)
+            userCert = Certificate(FileData(fileExistingCert.absolutePath,fileExistingCert.readBytes(),fileExistingCert.name), userPrivateKey, null)
 
             Toast.makeText(mContext,"New certificate installed",Toast.LENGTH_LONG).show()
         }
