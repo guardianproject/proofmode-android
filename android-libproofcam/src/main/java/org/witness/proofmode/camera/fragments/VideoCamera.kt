@@ -16,6 +16,7 @@ import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.forEachGesture
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -52,14 +53,18 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.movableContentOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.isSpecified
@@ -67,12 +72,15 @@ import androidx.compose.ui.geometry.takeOrElse
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.layout.layoutId
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.round
 import androidx.constraintlayout.compose.ConstraintLayout
+import androidx.constraintlayout.compose.ConstraintSet
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.asFlow
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -97,7 +105,7 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                 onNavigateToPreview: () -> Unit,
                 onClose:()-> Unit = {}) {
     val surfaceRequest by cameraViewModel.surfaceRequest.collectAsStateWithLifecycle()
-    var showGridLines:Boolean by remember {
+    var showGridLines:Boolean by rememberSaveable {
         mutableStateOf(false)
     }
     val recordingState by cameraViewModel.recordingState.collectAsStateWithLifecycle()
@@ -108,7 +116,7 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
     val cameraQualities by cameraViewModel.cameraQualities.collectAsStateWithLifecycle()
     val selectedQuality by cameraViewModel.selectedQuality.collectAsStateWithLifecycle()
     val previewAlpha by cameraViewModel.previewAlpha.collectAsStateWithLifecycle()
-   var zoom by remember { mutableStateOf(1f) }
+   var zoom by remember { mutableFloatStateOf(1f) }
 
     val ranges by cameraViewModel.supportedFrameRates.collectAsStateWithLifecycle()
 
@@ -124,6 +132,7 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
         autofocusRequest.second
     }
     val thumbPreviewUri by cameraViewModel.thumbPreviewUri.collectAsStateWithLifecycle()
+    val config  = LocalConfiguration.current
 
     // Queue hiding the request for each unique autofocus tap
     if (showAutoFocusIndicator){
@@ -160,354 +169,336 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                 CameraXViewfinder(surfaceRequest = newRequest, modifier = Modifier
                     .fillMaxSize()
                     .pointerInput(cameraViewModel, coordinateTransformer, zoom) {
-                    var currentZoom = zoom
+                        var currentZoom = zoom
 
-                    forEachGesture {
-                        awaitPointerEventScope {
-                            // Get the initial down event with at least one pointer
-                            val firstDown = awaitFirstDown(requireUnconsumed = false)
+                        forEachGesture {
+                            awaitPointerEventScope {
+                                // Get the initial down event with at least one pointer
+                                val firstDown = awaitFirstDown(requireUnconsumed = false)
 
-                            // Track position for drag detection
-                            var drag = Offset.Zero
-                            var pastTouchSlop = false
-                            val touchSlop = viewConfiguration.touchSlop
+                                // Track position for drag detection
+                                var drag = Offset.Zero
+                                var pastTouchSlop = false
+                                val touchSlop = viewConfiguration.touchSlop
 
-                            // Wait for additional pointer or movement
-                            do {
-                                val event = awaitPointerEvent()
-                                val currentPointers = event.changes.size
+                                // Wait for additional pointer or movement
+                                do {
+                                    val event = awaitPointerEvent()
+                                    val currentPointers = event.changes.size
 
-                                // Check if we have multiple pointers for zoom gesture
-                                if (currentPointers >= 2) {
-                                    // Handle pinch-to-zoom
-                                    // Cancel drag detection
-                                    pastTouchSlop = false
-                                    drag = Offset.Zero
+                                    // Check if we have multiple pointers for zoom gesture
+                                    if (currentPointers >= 2) {
+                                        // Handle pinch-to-zoom
+                                        // Cancel drag detection
+                                        pastTouchSlop = false
+                                        drag = Offset.Zero
 
-                                    try {
-                                        // Handle the zoom gesture using the built-in transform detection
-                                        scope.launch {
-                                            detectTransformGestures(
-                                                onGesture = { _, _, gestureZoom, _ ->
-                                                    currentZoom *= gestureZoom
-                                                    cameraViewModel.pinchZoom(currentZoom)
-                                                }
-                                            )
-                                            // If we reach here, zoom completed successfully
-                                            return@launch
+                                        try {
+                                            // Handle the zoom gesture using the built-in transform detection
+                                            scope.launch {
+                                                detectTransformGestures(
+                                                    onGesture = { _, _, gestureZoom, _ ->
+                                                        currentZoom *= gestureZoom
+                                                        cameraViewModel.pinchZoom(currentZoom)
+                                                    }
+                                                )
+                                                // If we reach here, zoom completed successfully
+                                                return@launch
+                                            }
+                                        } catch (e: CancellationException) {
+                                            // Transform gesture got canceled, continue with detection
                                         }
-                                    } catch (e: CancellationException) {
-                                        // Transform gesture got canceled, continue with detection
-                                    }
-                                } else if (currentPointers == 1) {
-                                    // Single pointer - could be tap or drag
-                                    val pointer = event.changes[0]
+                                    } else if (currentPointers == 1) {
+                                        // Single pointer - could be tap or drag
+                                        val pointer = event.changes[0]
 
-                                    // Update accumulated drag
-                                    if (pointer.id == firstDown.id) {
-                                        drag += pointer.positionChange()
+                                        // Update accumulated drag
+                                        if (pointer.id == firstDown.id) {
+                                            drag += pointer.positionChange()
 
-                                        // Check if we've exceeded the touch slop threshold
-                                        if (!pastTouchSlop && abs(drag.x) > touchSlop) {
-                                            pastTouchSlop = true
-                                        }
+                                            // Check if we've exceeded the touch slop threshold
+                                            if (!pastTouchSlop && abs(drag.x) > touchSlop) {
+                                                pastTouchSlop = true
+                                            }
 
-                                        // If we're in drag mode, consume the events
-                                        if (pastTouchSlop) {
-                                            pointer.consume()
+                                            // If we're in drag mode, consume the events
+                                            if (pastTouchSlop) {
+                                                pointer.consume()
+                                            }
                                         }
                                     }
-                                }
-                            } while (event.changes.any { it.pressed })
+                                } while (event.changes.any { it.pressed })
 
-                            // After all pointers are up, decide what gesture it was
-                            if (pastTouchSlop && abs(drag.x) > abs(drag.y)) {
-                                // This was a horizontal drag
-                                val dragAmount = drag.x
-                                if (dragAmount < 0) {
-                                    // Left swipe
-                                    // check if camera is still recording
-                                    if (recordingState == RecordingState.Recording) {
-                                        cameraViewModel.stopRecording()
-                                        onNavigateToPhotoCamera()
-                                    } else {
-                                        onNavigateToPhotoCamera()
+                                // After all pointers are up, decide what gesture it was
+                                if (pastTouchSlop && abs(drag.x) > abs(drag.y)) {
+                                    // This was a horizontal drag
+                                    val dragAmount = drag.x
+                                    if (dragAmount < 0) {
+                                        // Left swipe
+                                        // check if camera is still recording
+                                        if (recordingState == RecordingState.Recording) {
+                                            cameraViewModel.stopRecording()
+                                            onNavigateToPhotoCamera()
+                                        } else {
+                                            onNavigateToPhotoCamera()
+                                        }
                                     }
+                                } else if (!pastTouchSlop && drag.getDistance() < touchSlop) {
+                                    // This was a tap (minimal movement)
+                                    val tapCoordinates = firstDown.position
+                                    with(coordinateTransformer) {
+                                        cameraViewModel.tapToFocus(tapCoordinates.transform())
+                                    }
+                                    autofocusRequest = UUID.randomUUID() to tapCoordinates
                                 }
-                            } else if (!pastTouchSlop && drag.getDistance() < touchSlop) {
-                                // This was a tap (minimal movement)
-                                val tapCoordinates = firstDown.position
-                                with(coordinateTransformer) {
-                                    cameraViewModel.tapToFocus(tapCoordinates.transform())
-                                }
-                                autofocusRequest = UUID.randomUUID() to tapCoordinates
                             }
                         }
                     }
-                }
                     .alpha(previewAlpha)
                 )
+                // Meant for responsive design but activity has been restricted to portrait,
 
+                BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                    val isPortrait = minWidth < minHeight
+                    val constraints = if (isPortrait) portraitConstraints() else landscapeConstraints()
 
-
-                ConstraintLayout(modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Transparent)) {
-                    val (topBAr, bottomBg,recordButton,cameraSwitcher,galleryPreview,videoText,cameraText,chipTimer) = createRefs()
-                    // Define guidelines for the grid (1/3 and 2/3 positions)
-                    val vertical1 = createGuidelineFromStart(0.33f)
-                    val vertical2 = createGuidelineFromStart(0.66f)
-                    val horizontal1 = createGuidelineFromTop(0.33f)
-                    val horizontal2 = createGuidelineFromTop(0.66f)
-
-                    // Common modifier for grid lines
-                    val lineModifier = Modifier
-                        .alpha(if (showGridLines) 1f else 0f)
-                        .background(Color.White.copy(alpha = 0.5f))
-
-                        AnimatedVisibility(visible = (recordingState == RecordingState.Idle || recordingState == RecordingState.Stopped),
-                            enter = fadeIn(),
-                            exit = fadeOut(),
-                            modifier = Modifier
-                                .constrainAs(topBAr) {
-                                    top.linkTo(parent.top)
-                                    start.linkTo(parent.start)
-                                    end.linkTo(parent.end)
+                    val topBarButtons = remember {
+                        movableContentOf{
+                            IconButton(onClick = {
+                                onClose()
+                            }) {
+                                Icon(Icons.Filled.Close,
+                                    tint = Color.White,
+                                    contentDescription = null)
+                            }
+                            IconButton(onClick = {
+                                scope.launch {
+                                    showBSettingsBottomSheet = !showBSettingsBottomSheet
                                 }
-                                .fillMaxWidth()
-                        ){
-                            Row(modifier = Modifier
-                                .fillMaxWidth()
+                            }) {
+                                Icon(Icons.Outlined.VideoSettings, contentDescription = null, tint = Color.White)
+                            }
+                            IconButton(onClick = {
+                                showGridLines = !showGridLines
+                            }) {
+                                Icon(imageVector = if (showGridLines) Icons.Outlined.GridOff else Icons.Outlined.GridOn,
+                                    tint = Color.White,contentDescription = if (showGridLines) stringResource(
+                                        R.string.grid_lines_hide_description
+                                    ) else stringResource(R.string.show_grid_lines_description)
+                                )
+                            }
+                            IconButton(onClick = {
+                                cameraViewModel.toggleTorchForVideo()
+
+                            }) {
+                                Icon(imageVector = if (torchOn) Icons.Outlined.FlashOn else Icons.Outlined.FlashOff,
+                                    tint = Color.White,contentDescription = if (torchOn) stringResource(
+                                        R.string.turn_flash_off
+                                    ) else stringResource(R.string.turn_flash_on)
+                                )
+                            }
+                        }
+                    }
+                    // remember bottom bg to be able
+
+                        ConstraintLayout(modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Transparent),
+                            constraintSet = constraints
+                        ) {
+                            // Common modifier for grid lines
+                            val lineModifier = Modifier
+                                .alpha(if (showGridLines) 1f else 0f)
+                                .background(Color.White.copy(alpha = 0.5f))
+
+                            AnimatedVisibility(visible = (recordingState == RecordingState.Idle || recordingState == RecordingState.Stopped),
+                                enter = fadeIn(),
+                                exit = fadeOut(),
+                                modifier = Modifier
+                                    .layoutId("topBar")
+                                    .then(
+                                        if (isPortrait) Modifier.fillMaxWidth()
+                                        else Modifier.fillMaxHeight()
+                                    )
+                            ){
+                                if(isPortrait){
+                                    Row(modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(Color.Black.copy(alpha = 0.4f))
+                                        .padding(horizontal = 16.dp),
+                                        horizontalArrangement = Arrangement.SpaceEvenly) {
+                                        topBarButtons()
+                                    }
+                                } else {
+                                    Column(modifier = Modifier
+                                        .fillMaxHeight()
+                                        .background(Color.Black.copy(alpha = 0.4f))
+                                        .padding(horizontal = 16.dp),
+                                        verticalArrangement = Arrangement.SpaceEvenly
+                                    ) {
+                                        topBarButtons()
+                                    }
+                                }
+
+                            }
+
+                            AnimatedVisibility(visible = elapsedTime.isNotEmpty(),
+                                enter = fadeIn(),
+                                exit = fadeOut(),
+                                modifier = Modifier.layoutId("chipTimer")) {
+                                ElevatedAssistChip(onClick = {}, label = { Text(elapsedTime) })
+                            }
+
+                            Box(modifier = Modifier
+                                .layoutId("bottomBg")
+                                then(
+                                    if (isPortrait) Modifier.fillMaxWidth().height(dimensionResource(R.dimen.transparent_view_height))
+                                    else Modifier.fillMaxHeight().width(dimensionResource(R.dimen.transparent_view_height))
+                                )
                                 .background(Color.Black.copy(alpha = 0.4f))
-                                .padding(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.SpaceEvenly) {
+                            )
+
+
+
+                            IconButton(onClick = {
+                                if (recordingState == RecordingState.Idle || recordingState == RecordingState.Stopped){
+                                    cameraViewModel.startRecording()
+                                } else {
+                                    cameraViewModel.stopRecording()
+                                }
+
+                            },
+                                modifier = Modifier
+                                    .layoutId("recordButton")
+                                    .size(64.dp)
+                                    .background(Color.Red, CircleShape)
+                                    .clip(CircleShape)
+                            ) {
+                                Icon(
+                                    imageVector = if (recordingState == RecordingState.Idle || recordingState == RecordingState.Stopped) Icons.Filled.Videocam else Icons.Filled.Stop,
+                                    tint = Color.White,
+                                    contentDescription = if (recordingState == RecordingState.Idle) stringResource(
+                                        R.string.record_video
+                                    ) else stringResource(R.string.stop_recording)
+                                )
+                            }
+
+                            AnimatedVisibility(visible = recordingState != RecordingState.Recording,
+                                enter = fadeIn(),
+                                exit = fadeOut(),
+                                modifier = Modifier.layoutId("galleryPreview")){
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .background(Color(0xFF444444), CircleShape)
+                                        .clip(CircleShape)
+                                        .border(
+                                            width = 2.dp,
+                                            color = Color.White,
+                                            shape = CircleShape
+                                        )
+
+                                ) {
+                                    AnimatedContent(targetState = thumbPreviewUri,
+                                        transitionSpec = {
+                                            fadeIn() togetherWith fadeOut()
+                                        },
+                                        modifier = Modifier.matchParentSize()) { media->
+
+                                        if (media != null) {
+                                            ItemPreview(modifier = Modifier
+                                                .matchParentSize()
+                                                .clickable {
+                                                    onNavigateToPreview()
+                                                }
+                                                , media = media )
+                                        } else {
+                                            Icon(
+                                                imageVector = Icons.Default.Photo,
+                                                contentDescription = "No media",
+                                                tint = Color.Gray,
+                                                modifier = Modifier
+                                                    .align(Alignment.Center)
+                                            )
+                                        }
+                                    }
+
+                                }
+                            }
+
+                            AnimatedVisibility(visible = recordingState != RecordingState.Recording,
+                                enter = fadeIn(),
+                                exit = fadeOut(),
+                                modifier = Modifier.layoutId("cameraSwitcher")
+                            ){
                                 IconButton(onClick = {
-                                    onClose()
-                                }) {
-                                    Icon(Icons.Filled.Close,
+                                    scope.launch {
+                                        cameraViewModel.switchLensFacing(lifecycleOwner,CameraMode.VIDEO)
+                                    }
+
+                                },
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .background(Color(0xFF444444), CircleShape)
+                                        .clip(CircleShape)
+                                ) {
+                                    Icon(imageVector = Icons.Outlined.Cameraswitch,
                                         tint = Color.White,
                                         contentDescription = null)
                                 }
-                                IconButton(onClick = {
-                                    scope.launch {
-                                        showBSettingsBottomSheet = !showBSettingsBottomSheet
-                                    }
-                                }) {
-                                    Icon(Icons.Outlined.VideoSettings, contentDescription = null, tint = Color.White)
-                                }
-                                IconButton(onClick = {
-                                    showGridLines = !showGridLines
-                                }) {
-                                    Icon(imageVector = if (showGridLines) Icons.Outlined.GridOff else Icons.Outlined.GridOn,
-                                        tint = Color.White,contentDescription = if (showGridLines) stringResource(
-                                            R.string.grid_lines_hide_description
-                                        ) else stringResource(R.string.show_grid_lines_description)
-                                    )
-                                }
-                                IconButton(onClick = {
-                                    cameraViewModel.toggleTorchForVideo()
-
-                                }) {
-                                    Icon(imageVector = if (torchOn) Icons.Outlined.FlashOn else Icons.Outlined.FlashOff,
-                                        tint = Color.White,contentDescription = if (torchOn) stringResource(
-                                            R.string.turn_flash_off
-                                        ) else stringResource(R.string.turn_flash_on)
-                                    )
-                                }
                             }
-                        }
 
-                    AnimatedVisibility(visible = elapsedTime.isNotEmpty(),
-                        enter = fadeIn(),
-                        exit = fadeOut(),
-                        modifier = Modifier.constrainAs(chipTimer){
-                            bottom.linkTo(bottomBg.top, margin = 8.dp)
-                            start.linkTo(parent.start)
-                            end.linkTo(parent.end)
-                        }) {
-                        ElevatedAssistChip(onClick = {}, label = { Text(elapsedTime) })
-                    }
-
-                    Box(modifier = Modifier
-                        .fillMaxWidth()
-                        .height(dimensionResource(R.dimen.transparent_view_height))
-                        .constrainAs(bottomBg) {
-                            bottom.linkTo(parent.bottom)
-                            start.linkTo(parent.start)
-                            end.linkTo(parent.end)
-
-                        }
-                        .background(Color.Black.copy(alpha = 0.4f))
-                    )
-
-
-
-                    IconButton(onClick = {
-                        if (recordingState == RecordingState.Idle || recordingState == RecordingState.Stopped){
-                            cameraViewModel.startRecording()
-                        } else {
-                            cameraViewModel.stopRecording()
-                        }
-
-                    },
-                        modifier = Modifier
-                            .constrainAs(recordButton) {
-                                top.linkTo(bottomBg.top)
-                                bottom.linkTo(bottomBg.bottom)
-                                start.linkTo(bottomBg.start)
-                                end.linkTo(bottomBg.end)
-                                verticalBias = 0.3f
+                            Button(onClick = {},modifier = Modifier
+                                .layoutId("videoText")
+                                .rotate(if (isPortrait) 0f else -90f)
+                            ) {
+                                Text(stringResource(R.string.video))
                             }
-                            .size(64.dp)
-                            .background(Color.Red, CircleShape)
-                            .clip(CircleShape)
-                    ) {
-                        Icon(
-                            imageVector = if (recordingState == RecordingState.Idle || recordingState == RecordingState.Stopped) Icons.Filled.Videocam else Icons.Filled.Stop,
-                            tint = Color.White,
-                            contentDescription = if (recordingState == RecordingState.Idle) stringResource(
-                                R.string.record_video
-                            ) else stringResource(R.string.stop_recording)
-                        )
-                    }
 
-                    AnimatedVisibility(visible = recordingState != RecordingState.Recording,
-                        enter = fadeIn(),
-                        exit = fadeOut(),
-                        modifier = Modifier.constrainAs(galleryPreview) {
-                            top.linkTo(recordButton.top)
-                            bottom.linkTo(recordButton.bottom)
-                            start.linkTo(recordButton.end)
-                            end.linkTo(parent.end)
-                        } ){
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .background(Color(0xFF444444), CircleShape)
-                                .clip(CircleShape)
-                                .border(width = 2.dp, color = Color.White, shape = CircleShape)
+                            Text(text = stringResource(R.string.camera),
+                                modifier = Modifier
+                                    .layoutId("cameraText")
+                                    .rotate(if (isPortrait) 0f else -90f)
+                                    .clickable {
+                                        onNavigateToPhotoCamera()
+                                    },
+                                style = MaterialTheme.typography.labelLarge.copy(color = Color.White)
+                            )
 
-                        ) {
-                            AnimatedContent(targetState = thumbPreviewUri,
-                                transitionSpec = {
-                                    fadeIn() togetherWith fadeOut()
-                                },
-                                modifier = Modifier.matchParentSize()) { media->
+                            // 1/3 vertical grid line
+                            Box(
+                                modifier = lineModifier
+                                    .fillMaxHeight()
+                                    .width(1.dp)
+                                    .layoutId("verticalLine1")
+                            )
+                            // 2/3 vertical grid line
+                            Box(
+                                modifier = lineModifier
+                                    .fillMaxHeight()
+                                    .width(1.dp)
+                                    .layoutId("verticalLine2")
+                            )
 
-                                if (media != null) {
-                                    ItemPreview(modifier = Modifier
-                                        .matchParentSize()
-                                        .clickable {
-                                            onNavigateToPreview()
-                                        }
-                                        , media = media )
-                                } else {
-                                    Icon(
-                                        imageVector = Icons.Default.Photo,
-                                        contentDescription = "No media",
-                                        tint = Color.Gray,
-                                        modifier = Modifier
-                                            .align(Alignment.Center)
-                                    )
-                                }
-                            }
+                            // Horizontal grid lines
+                            // 1/3 horizontal grid line
+                            Box(
+                                modifier = lineModifier
+                                    .fillMaxWidth()
+                                    .height(1.dp)
+                                    .layoutId("horizontalLine1")
+                            )
+                            // 2/3 horizontal grid line
+                            Box(
+                                modifier = lineModifier
+                                    .fillMaxWidth()
+                                    .height(1.dp)
+                                    .layoutId("horizontalLine2")
+                            )
+
+
 
                         }
-                    }
-
-                    AnimatedVisibility(visible = recordingState != RecordingState.Recording,
-                        enter = fadeIn(),
-                        exit = fadeOut(),
-                        modifier = Modifier.constrainAs(cameraSwitcher) {
-                            top.linkTo(recordButton.top)
-                            bottom.linkTo(recordButton.bottom)
-                            end.linkTo(recordButton.start)
-                            start.linkTo(parent.start)
-                        }
-                    ){
-                        IconButton(onClick = {
-                            scope.launch {
-                                cameraViewModel.switchLensFacing(lifecycleOwner,CameraMode.VIDEO)
-                            }
-
-                        },
-                            modifier = Modifier
-                                .size(48.dp)
-                                .background(Color(0xFF444444), CircleShape)
-                                .clip(CircleShape)
-                        ) {
-                            Icon(imageVector = Icons.Outlined.Cameraswitch,
-                                tint = Color.White,
-                                contentDescription = null)
-                        }
-                    }
-
-                    Button(onClick = {},modifier = Modifier
-                        .constrainAs(videoText){
-                            start.linkTo(recordButton.start)
-                            end.linkTo(recordButton.end)
-                            top.linkTo(recordButton.bottom, margin = 8.dp)
-
-                        }) {
-                        Text(stringResource(R.string.video))
-                    }
-
-                    Text(text = stringResource(R.string.camera),
-                        modifier = Modifier
-                            .constrainAs(cameraText) {
-                                end.linkTo(videoText.start)
-                                top.linkTo(videoText.top)
-                                bottom.linkTo(videoText.bottom)
-                                start.linkTo(parent.start)
-                                horizontalBias = 0.6f
-
-                            }
-                            .clickable {
-                                onNavigateToPhotoCamera()
-                            },
-                        style = MaterialTheme.typography.labelLarge.copy(color = Color.White)
-                    )
-
-                    // 1/3 vertical grid line
-                    Box(
-                        modifier = lineModifier
-                            .fillMaxHeight()
-                            .width(1.dp)
-                            .constrainAs(createRef()) {
-                                start.linkTo(vertical1)
-                            }
-                    )
-                    // 2/3 vertical grid line
-                    Box(
-                        modifier = lineModifier
-                            .fillMaxHeight()
-                            .width(1.dp)
-                            .constrainAs(createRef()) {
-                                start.linkTo(vertical2)
-                            }
-                    )
-
-                    // Horizontal grid lines
-                    // 1/3 horizontal grid line
-                    Box(
-                        modifier = lineModifier
-                            .fillMaxWidth()
-                            .height(1.dp)
-                            .constrainAs(createRef()) {
-                                top.linkTo(horizontal1)
-                            }
-                    )
-                    // 2/3 horizontal grid line
-                    Box(
-                        modifier = lineModifier
-                            .fillMaxWidth()
-                            .height(1.dp)
-                            .constrainAs(createRef()) {
-                                top.linkTo(horizontal2)
-                            }
-                    )
-
-
 
                 }
             }
@@ -562,8 +553,6 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                             Spacer(modifier = Modifier.width(5.dp))
                         }
 
-
-
                     }
 
                     Spacer(modifier = Modifier.height(40.dp))
@@ -572,6 +561,204 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
         }
     }
 
+}
+
+
+private fun portraitConstraints(): ConstraintSet {
+    return ConstraintSet {
+        val topBar = createRefFor("topBar")
+        val bottomBg = createRefFor("bottomBg")
+        val recordButton = createRefFor("recordButton")
+        val cameraSwitcher = createRefFor("cameraSwitcher")
+        val galleryPreview = createRefFor("galleryPreview")
+        val videoText = createRefFor("videoText")
+        val cameraText = createRefFor("cameraText")
+        val chipTimer = createRefFor("chipTimer")
+
+        // Guidelines
+        val vertical1 = createGuidelineFromStart(0.33f)
+        val vertical2 = createGuidelineFromStart(0.66f)
+        val horizontal1 = createGuidelineFromTop(0.33f)
+        val horizontal2 = createGuidelineFromTop(0.66f)
+
+        // Constraints
+        constrain(topBar) {
+            top.linkTo(parent.top)
+            start.linkTo(parent.start)
+            end.linkTo(parent.end)
+        }
+
+        constrain(bottomBg) {
+            bottom.linkTo(parent.bottom)
+            start.linkTo(parent.start)
+            end.linkTo(parent.end)
+        }
+
+        constrain(recordButton) {
+            top.linkTo(bottomBg.top)
+            bottom.linkTo(bottomBg.bottom)
+            start.linkTo(bottomBg.start)
+            end.linkTo(bottomBg.end)
+            verticalBias = 0.3f
+        }
+
+        constrain(chipTimer) {
+            bottom.linkTo(bottomBg.top, 8.dp)
+            start.linkTo(parent.start)
+            end.linkTo(parent.end)
+        }
+
+        constrain(galleryPreview) {
+            top.linkTo(recordButton.top)
+            bottom.linkTo(recordButton.bottom)
+            start.linkTo(recordButton.end)
+            end.linkTo(parent.end)
+        }
+
+        constrain(cameraSwitcher) {
+            top.linkTo(recordButton.top)
+            bottom.linkTo(recordButton.bottom)
+            end.linkTo(recordButton.start)
+            start.linkTo(parent.start)
+        }
+
+        constrain(videoText) {
+            start.linkTo(recordButton.start)
+            end.linkTo(recordButton.end)
+            top.linkTo(recordButton.bottom, 8.dp)
+        }
+
+        constrain(cameraText) {
+            end.linkTo(videoText.start)
+            top.linkTo(videoText.top)
+            bottom.linkTo(videoText.bottom)
+            start.linkTo(parent.start)
+            horizontalBias = 0.6f
+        }
+
+        // Grid lines (optional, since they're visibility controlled)
+        val verticalLine1 = createRefFor("verticalLine1")
+        val verticalLine2 = createRefFor("verticalLine2")
+        val horizontalLine1 = createRefFor("horizontalLine1")
+        val horizontalLine2 = createRefFor("horizontalLine2")
+
+        constrain(verticalLine1) {
+            start.linkTo(vertical1)
+        }
+
+        constrain(verticalLine2) {
+            start.linkTo(vertical2)
+        }
+
+        constrain(horizontalLine1) {
+            top.linkTo(horizontal1)
+        }
+
+        constrain(horizontalLine2) {
+            top.linkTo(horizontal2)
+        }
+    }
+}
+
+
+private fun landscapeConstraints(): ConstraintSet {
+    return ConstraintSet {
+        val topBar = createRefFor("topBar")
+        val bottomBg = createRefFor("bottomBg")
+        val recordButton = createRefFor("recordButton")
+        val cameraSwitcher = createRefFor("cameraSwitcher")
+        val galleryPreview = createRefFor("galleryPreview")
+        val videoText = createRefFor("videoText")
+        val cameraText = createRefFor("cameraText")
+        val chipTimer = createRefFor("chipTimer")
+
+        // Guidelines
+        val vertical1 = createGuidelineFromStart(0.33f)
+        val vertical2 = createGuidelineFromStart(0.66f)
+        val horizontal1 = createGuidelineFromTop(0.33f)
+        val horizontal2 = createGuidelineFromTop(0.66f)
+
+        // Constraints
+        constrain(topBar) {
+            top.linkTo(parent.top)
+            bottom.linkTo(parent.bottom)
+            start.linkTo(parent.start)
+        }
+
+        constrain(bottomBg) {
+            bottom.linkTo(parent.bottom)
+            bottom.linkTo(parent.bottom)
+            end.linkTo(parent.end)
+        }
+
+        constrain(recordButton) {
+            start.linkTo(bottomBg.start)
+            bottom.linkTo(parent.bottom)
+            top.linkTo(parent.top)
+            end.linkTo(bottomBg.end)
+            horizontalBias = 0.3f
+        }
+
+        constrain(galleryPreview) {
+            top.linkTo(parent.top)
+            bottom.linkTo(recordButton.top)
+            start.linkTo(recordButton.start)
+            end.linkTo(recordButton.end)
+        }
+
+
+
+        constrain(chipTimer) {
+            bottom.linkTo(bottomBg.top, 8.dp)
+            start.linkTo(parent.start)
+            end.linkTo(parent.end)
+        }
+
+
+
+        constrain(cameraSwitcher) {
+            top.linkTo(recordButton.bottom)
+            bottom.linkTo(bottomBg.bottom)
+            end.linkTo(recordButton.end)
+            start.linkTo(recordButton.start)
+
+        }
+
+        constrain(videoText) {
+            start.linkTo(recordButton.end, margin = 8.dp)
+            top.linkTo(recordButton.top)
+            bottom.linkTo(recordButton.bottom)
+        }
+
+        constrain(cameraText) {
+            end.linkTo(videoText.start)
+            top.linkTo(videoText.bottom)
+            bottom.linkTo(bottomBg.bottom)
+            start.linkTo(videoText.end)
+        }
+
+        // Grid lines (optional, since they're visibility controlled)
+        val verticalLine1 = createRefFor("verticalLine1")
+        val verticalLine2 = createRefFor("verticalLine2")
+        val horizontalLine1 = createRefFor("horizontalLine1")
+        val horizontalLine2 = createRefFor("horizontalLine2")
+
+        constrain(verticalLine1) {
+            start.linkTo(vertical1)
+        }
+
+        constrain(verticalLine2) {
+            start.linkTo(vertical2)
+        }
+
+        constrain(horizontalLine1) {
+            top.linkTo(horizontal1)
+        }
+
+        constrain(horizontalLine2) {
+            top.linkTo(horizontal2)
+        }
+    }
 }
 
 
