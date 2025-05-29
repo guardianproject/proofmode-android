@@ -26,6 +26,7 @@
             android:exported="true"
             android:label="@string/app_name"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+            android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustNothing"
             android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>
