@@ -2,6 +2,7 @@ package org.witness.proofmode
 
 import android.Manifest
 import android.content.BroadcastReceiver
+import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -9,6 +10,7 @@ import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.OpenableColumns
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
@@ -41,6 +43,7 @@ import org.witness.proofmode.ProofMode.PREF_OPTION_CREDENTIALS
 import org.witness.proofmode.ProofMode.PREF_OPTION_CREDENTIALS_DEFAULT
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
+import org.witness.proofmode.c2pa.C2paUtils
 import org.witness.proofmode.camera.CameraActivity
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.databinding.ActivityMainBinding
@@ -48,6 +51,7 @@ import org.witness.proofmode.onboarding.OnboardingActivity
 import org.witness.proofmode.service.MediaWatcher
 import org.witness.proofmode.util.GPSTracker
 import timber.log.Timber
+import java.io.File
 import java.io.IOException
 import java.util.Date
 import java.util.UUID
@@ -166,7 +170,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             popupMenu.menuInflater.inflate(R.menu.menu_share_proof, popupMenu.menu)
             popupMenu.setOnMenuItemClickListener { menuItem ->
                 if (menuItem.itemId == R.id.menu_photo) showMediaPicker()
-                else if (menuItem.itemId == R.id.menu_files) showDocumentPicker()
                 true
             }
             // Showing the popup menu
@@ -266,8 +269,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
         intent.action = Intent.ACTION_GET_CONTENT
         startActivityForResult(
-            Intent.createChooser(intent, getString(R.string.share_proof_action)),
-            REQUEST_CODE_CHOOSE_MEDIA
+            Intent.createChooser(intent, "Choose Key and Certificate"),
+            REQUEST_CODE_CHOOSE_CREDS
         )
     }
 
@@ -369,6 +372,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         else if (id == R.id.menu_settings) {
             drawer.closeDrawer(GravityCompat.START)
             openSettings()
+	}
+        else if (id == R.id.action_import_creds) {
+            showDocumentPicker();
         }
         return super.onOptionsItemSelected(item)
     }
@@ -540,13 +546,61 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             startActivity(intentShare)
 
 
-        } else if (requestCode == REQUEST_CODE_CAMERA) {
+        }
+        else if (requestCode == REQUEST_CODE_CHOOSE_CREDS) {
+
+            if (resultCode == RESULT_OK) {
+                if (null != data) {
+                    if (null !=data.clipData) {
+
+                        var importKey: Uri? = null
+                        var importCert: Uri? = null
+
+                        for (i in 0 until data.clipData!!.itemCount) {
+                            val uri = data.clipData!!.getItemAt(i).uri
+                            val fileName = getFileName(uri)
+                            //  Log.d("Import","uri: " + uri.toString())
+                            if (fileName?.endsWith(".pem") == true)
+                                importKey = uri
+
+                            if (fileName?.endsWith(".pub") == true)
+                                importCert = uri
+
+
+                        }
+
+                        if (importKey != null && importCert != null)
+                        C2paUtils.importCredentials(this,
+                            contentResolver.openInputStream(importKey),
+                            contentResolver.openInputStream(importCert))
+
+
+                    } else {
+                        val uri = data.data
+                    }
+                }
+            }
+
+        }
+        else if (requestCode == REQUEST_CODE_CAMERA) {
             if (!activitiesLoaded) {
                 Activities.load(this)
                 activitiesLoaded = true
             }
         }
     }
+
+    fun Context.getFileName(uri: Uri): String? = when(uri.scheme) {
+        ContentResolver.SCHEME_CONTENT -> getContentFileName(uri)
+        else -> uri.path?.let(::File)?.name
+    }
+
+    private fun Context.getContentFileName(uri: Uri): String? = runCatching {
+        contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            cursor.moveToFirst()
+            return@use cursor.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME).let(cursor::getString)
+        }
+    }.getOrNull()
 
     private fun askForOptionals() {
         if (!askForPermissions(optionalPermissions, REQUEST_CODE_OPTIONAL_PERMISSIONS)) {
@@ -644,6 +698,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         private const val REQUEST_CODE_OPTIONAL_PERMISSIONS = 9997
         private const val REQUEST_CODE_CHOOSE_MEDIA = 9996
         private const val REQUEST_CODE_CAMERA = 9995
+        private const val REQUEST_CODE_CHOOSE_CREDS = 9994
 
         /**
          * The permissions needed for "base" ProofMode to work, without extra options.
