@@ -575,6 +575,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         startActivity(intent)
     }
 
+    private fun openVerify() {
+        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://check.proofmode.org"))
+        startActivity(browserIntent)
+    }
+
     override fun onNavigationItemSelected(menuItem: MenuItem): Boolean {
         when (menuItem.itemId) {
             R.id.menu_how_it_works -> {
@@ -603,6 +608,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 return true
             }
 
+            R.id.menu_verify -> {
+                drawer.closeDrawer(GravityCompat.START)
+                openVerify()
+                return true
+            }
         }
         return false
     }

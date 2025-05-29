@@ -327,7 +327,7 @@
                                 <PersistentState>
                                   <option name="values">
                                     <map>
-                                      <entry key="url" value="file:/Volumes/minimi/dev/android/Android/sdk/icons/material/materialicons/close/baseline_close_24.xml" />
+                                      <entry key="url" value="file:$USER_HOME$/Android/Sdk/icons/material/materialiconsoutlined/assignment_turned_in/outline_assignment_turned_in_24.xml" />
                                     </map>
                                   </option>
                                 </PersistentState>
@@ -337,8 +337,7 @@
                         </option>
                         <option name="values">
                           <map>
-                            <entry key="color" value="ffffff" />
-                            <entry key="outputName" value="baseline_close_24" />
+                            <entry key="outputName" value="outline_check" />
                             <entry key="sourceFile" value="$USER_HOME$/Documents/CONFIDENTIAL Content Credentials Assets and Usage Guideline 2/SVG/white outline transparent.svg" />
                           </map>
                         </option>

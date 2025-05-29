@@ -227,5 +227,6 @@
     <string name="filebase_save_settings">Save Settings</string>
     <string name="please_fill_in_all_required_fields">Please fill in all required fields</string>
     <string name="background_mode">Background Mode</string>
+    <string name="proofcheck_verifier">ProofCheck Verifier</string>
 
 </resources>
