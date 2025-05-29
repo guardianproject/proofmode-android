@@ -62,6 +62,7 @@ class ProofModeApp : MultiDexApplication() {
         GlobalScope.launch(Dispatchers.IO) {
             initPgpKey()
         }
+
     }
 
     fun initPgpKey () {

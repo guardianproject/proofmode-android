@@ -77,7 +77,7 @@ class ShareProofActivity : AppCompatActivity() {
     private var mPrefs : SharedPreferences? = null
     private var mAllowMachineLearning : Boolean? = false
 
-    private var mStorageProvider : StorageProvider? = null
+    private var mStorageProvider : DefaultStorageProvider? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

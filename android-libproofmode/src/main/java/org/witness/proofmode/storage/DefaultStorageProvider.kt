@@ -2,9 +2,7 @@ package org.witness.proofmode.storage
 
 import android.content.Context
 import android.net.Uri
-import androidx.core.net.toFile
 import org.witness.proofmode.ProofMode
-import org.witness.proofmode.service.MediaWatcher
 import timber.log.Timber
 import java.io.File
 import java.io.FileInputStream
@@ -66,7 +64,8 @@ public class DefaultStorageProvider (context : Context) : StorageProvider {
             return null
     }
 
-    override fun getOutputStream(hash: String?, identifier: String?): OutputStream {
+
+    fun getOutputStream(hash: String?, identifier: String?): OutputStream {
         val file = File(
             getHashStorageDir(
                 hash!!
@@ -143,7 +142,7 @@ public class DefaultStorageProvider (context : Context) : StorageProvider {
 
     override fun getProofItem(uri: Uri?): InputStream? {
         return if (uri?.scheme.equals("file")) {
-            val fileProofItem = uri?.toFile()
+            val fileProofItem = File(uri?.path)//uri?.toFile()
             FileInputStream(fileProofItem)
         } else
             null

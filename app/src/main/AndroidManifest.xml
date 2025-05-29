@@ -112,6 +112,11 @@
             android:label="@string/menu_digital_signatures"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name=".FilebaseSettingsActivity"
+            android:label="Filebase Settings"
+            android:screenOrientation="portrait"
+            android:theme="@style/AppTheme.NoActionBar" />
 
         <receiver
             android:name=".OnBootReceiver"

@@ -20,7 +20,10 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.graphics.Bitmap;
 import android.location.Location;
+import android.media.MediaMetadataRetriever;
+import android.media.ThumbnailUtils;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
@@ -38,6 +41,9 @@ import org.witness.proofmode.ProofMode;
 import org.witness.proofmode.crypto.HashUtils;
 import org.witness.proofmode.crypto.pgp.PgpUtils;
 import org.witness.proofmode.storage.DefaultStorageProvider;
+import org.witness.proofmode.storage.CompositeStorageProvider;
+import org.witness.proofmode.storage.FilebaseStorageProvider;
+import org.witness.proofmode.storage.FilebaseConfig;
 import org.witness.proofmode.notarization.NotarizationListener;
 import org.witness.proofmode.notarization.NotarizationProvider;
 import org.witness.proofmode.storage.StorageListener;
@@ -46,6 +52,7 @@ import org.witness.proofmode.util.DeviceInfo;
 import org.witness.proofmode.util.GPSTracker;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
@@ -98,7 +105,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
         if (storageProvider != null)
             mStorageProvider = storageProvider;
         else
-            mStorageProvider = new DefaultStorageProvider(mContext);
+            mStorageProvider = createCompositeStorageProvider(mContext);
 
         mPassphrase = mPrefs.getString(PREFS_KEY_PASSPHRASE, PREFS_KEY_PASSPHRASE_DEFAULT);
 
@@ -107,6 +114,38 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
     public void setStorageProvider (StorageProvider storageProvider)
     {
         mStorageProvider = storageProvider;
+    }
+    
+    private StorageProvider createCompositeStorageProvider(Context context) {
+        DefaultStorageProvider primaryProvider = new DefaultStorageProvider(context);
+        
+        // Check if Filebase is configured and enabled
+        FilebaseConfig config = getFilebaseConfig();
+        if (config.getEnabled() && config.isValid()) {
+            try {
+                FilebaseStorageProvider filebaseProvider = new FilebaseStorageProvider(
+                    config.getAccessKey(),
+                    config.getSecretKey(), 
+                    config.getBucketName(),
+                    config.getEndpoint()
+                );
+                return new CompositeStorageProvider(primaryProvider, filebaseProvider);
+            } catch (Exception e) {
+                android.util.Log.e("MediaWatcher", "Failed to initialize Filebase provider", e);
+            }
+        }
+        
+        return primaryProvider;
+    }
+    
+    private FilebaseConfig getFilebaseConfig() {
+        boolean enabled = mPrefs.getBoolean(FilebaseConfig.PREF_FILEBASE_ENABLED, false);
+        String accessKey = mPrefs.getString(FilebaseConfig.PREF_FILEBASE_ACCESS_KEY, "");
+        String secretKey = mPrefs.getString(FilebaseConfig.PREF_FILEBASE_SECRET_KEY, "");
+        String bucketName = mPrefs.getString(FilebaseConfig.PREF_FILEBASE_BUCKET_NAME, "");
+        String endpoint = mPrefs.getString(FilebaseConfig.PREF_FILEBASE_ENDPOINT, "https://s3.filebase.com");
+        
+        return new FilebaseConfig(accessKey, secretKey, bucketName, endpoint, enabled);
     }
 
     public static synchronized MediaWatcher getInstance(Context context) {
@@ -696,7 +735,6 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
         return netInfo != null && netInfo.isConnected();
     }
 
-    // TODO : Writing involed
     private void writeProof(Context context, Uri uriMedia, InputStream is, String mediaHash, boolean showDeviceIds, boolean showLocation, boolean showMobileNetwork, String notes, Date createdAt) throws PGPException, IOException {
 
         boolean usePgpArmor = true;
@@ -717,21 +755,25 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
 
         PgpUtils pu = PgpUtils.getInstance();
 
-        //sign the proof file again
+        //sign the proof csv file
         InputStream isProof = mStorageProvider.getInputStream(mediaHash, mediaHash + PROOF_FILE_TAG);
-        OutputStream osProofSig = mStorageProvider.getOutputStream(mediaHash, mediaHash + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
+//        OutputStream osProofSig = mStorageProvider.getOutputStream(mediaHash, mediaHash + PROOF_FILE_TAG + OPENPGP_FILE_TAG);
+        ByteArrayOutputStream osProofSig = new ByteArrayOutputStream();
         pu.createDetachedSignature(isProof, osProofSig, mPassphrase, usePgpArmor);
+        mStorageProvider.saveBytes(mediaHash, mediaHash + PROOF_FILE_TAG + OPENPGP_FILE_TAG, osProofSig.toByteArray(), null);
 
-        //sign the proof file again
+        //sign the proof json file
         InputStream isProofJson = mStorageProvider.getInputStream(mediaHash, mediaHash + PROOF_FILE_JSON_TAG);
-        OutputStream osProofJsonSig = mStorageProvider.getOutputStream(mediaHash, mediaHash + PROOF_FILE_JSON_TAG + OPENPGP_FILE_TAG);
+        //OutputStream osProofJsonSig = mStorageProvider.getOutputStream(mediaHash, mediaHash + PROOF_FILE_JSON_TAG + OPENPGP_FILE_TAG);
+        ByteArrayOutputStream osProofJsonSig = new ByteArrayOutputStream();
         pu.createDetachedSignature(isProofJson, osProofJsonSig, mPassphrase, usePgpArmor);
+        mStorageProvider.saveBytes(mediaHash, mediaHash + PROOF_FILE_JSON_TAG + OPENPGP_FILE_TAG, osProofSig.toByteArray(), null);
 
         //sign the media file
-        //File fileMediaSig = new File(fileFolder, mediaHash + OPENPGP_FILE_TAG);
-        //if ((!fileMediaSig.exists()) || fileMediaSig.length() == 0)
-        OutputStream osMediaSig = mStorageProvider.getOutputStream(mediaHash, mediaHash + OPENPGP_FILE_TAG);
+        //OutputStream osMediaSig = mStorageProvider.getOutputStream(mediaHash, mediaHash + OPENPGP_FILE_TAG);
+        ByteArrayOutputStream osMediaSig = new ByteArrayOutputStream();
         pu.createDetachedSignature(is, osMediaSig, mPassphrase, usePgpArmor);
+        mStorageProvider.saveBytes(mediaHash, mediaHash + OPENPGP_FILE_TAG, osProofSig.toByteArray(), null);
 
         Timber.d("Proof written/updated for uri %s and hash %s", uriMedia, mediaHash);
 

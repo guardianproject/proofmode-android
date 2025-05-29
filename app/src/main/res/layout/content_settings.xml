@@ -218,5 +218,16 @@
             </LinearLayout>
         </TableRow>
     </TableLayout>
+
+    <Button
+        android:id="@+id/buttonFilebaseSettings"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="Filebase IPFS Storage Settings"
+        android:drawableStart="@drawable/ic_settings"
+        android:drawablePadding="8dp" />
+
 </LinearLayout>
 </ScrollView>

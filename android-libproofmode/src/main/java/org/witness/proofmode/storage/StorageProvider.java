@@ -17,7 +17,7 @@ public interface StorageProvider {
 
     public InputStream getInputStream (String hash, String identifier);
 
-    public OutputStream getOutputStream (String hash, String identifier);
+   // public OutputStream getOutputStream (String hash, String identifier);
 
     public boolean proofExists (String hash);
 

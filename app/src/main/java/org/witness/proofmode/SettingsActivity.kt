@@ -50,6 +50,13 @@ class SettingsActivity : AppCompatActivity() {
         switchNotarize = binding.contentSettings.switchNotarize
         switchCredentials = binding.contentSettings.switchCR
         switchAI = binding.contentSettings.switchAI
+        
+        // Setup Filebase settings button
+        binding.contentSettings.buttonFilebaseSettings.setOnClickListener {
+            val intent = Intent(this, FilebaseSettingsActivity::class.java)
+            startActivity(intent)
+        }
+        
         updateUI()
         switchLocation.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
             if (isChecked) {

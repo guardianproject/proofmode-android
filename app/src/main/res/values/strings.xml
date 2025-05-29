@@ -214,5 +214,17 @@
     <string name="share_content_credentials_info">Shares image or video directly with proof metadata directly embedded in the file itself, verified and signed by ProofMode.org</string>
     <string name="optional_filename">Optional Filename</string>
     <string name="set_a_custom_name_for_the_proof_zip">Set a custom name for the proof zip</string>
+    <string name="filebase_ipfs_storage">Filebase IPFS Storage</string>
+    <string name="filebase_ipfs_storage_description">Configure automatic upload of proof to Filebase. They will be automatically published to IPFS.</string>
+    <string name="enable_filebase_upload">Enable Filebase Upload</string>
+    <string name="access_key">Access Key</string>
+    <string name="secret_key">Secret Key</string>
+    <string name="bucket_name">Bucket Name</string>
+    <string name="endpoint_url">Endpoint URL</string>
+    <string name="instructions">Instructions:</string>
+    <string name="filebase_instructions_info">1. Create a free account at filebase.com\n2. Create a new bucket to store proof\n3. Generate access keys in your Filebase dashboard\n4. Enter the keys above and test connection.</string>
+    <string name="filebase_test_connection">Test Connection</string>
+    <string name="filebase_save_settings">Save Settings</string>
+    <string name="please_fill_in_all_required_fields">Please fill in all required fields</string>
 
 </resources>
