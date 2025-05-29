@@ -80,8 +80,8 @@
                                             <option name="values">
                                               <map>
                                                 <entry key="color" value="000000" />
-                                                <entry key="imagePath" value="$USER_HOME$/Downloads/proofmodefadeicon.png" />
-                                                <entry key="scalingPercent" value="43" />
+                                                <entry key="imagePath" value="$PROJECT_DIR$/../proofmode-www/images/newbrand/icon.png" />
+                                                <entry key="scalingPercent" value="65" />
                                               </map>
                                             </option>
                                           </PersistentState>
