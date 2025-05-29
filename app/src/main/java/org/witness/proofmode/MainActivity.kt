@@ -127,7 +127,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         setContentView(mainBinding.root)
         val toolbar = mainBinding.toolbar
         setSupportActionBar(toolbar)
-        supportActionBar?.title = ""
+        supportActionBar?.title = getString(R.string.app_name)
         layoutOn = mainBinding.contentMain.layoutOn
         layoutOff = mainBinding.contentMain.layoutOff
         if (mPrefs.getBoolean("firsttime", true)) {
@@ -355,11 +355,18 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         val id = item.itemId
+        /**
         if (id == R.id.action_share_key) {
             shareCurrentPublicKey()
             return true
-        } else if (id == R.id.action_share_photos) {
+        } else **/
+
+        if (id == R.id.action_share_photos) {
             showMediaPicker();
+        }
+        else if (id == R.id.menu_settings) {
+            drawer.closeDrawer(GravityCompat.START)
+            openSettings()
         }
         return super.onOptionsItemSelected(item)
     }

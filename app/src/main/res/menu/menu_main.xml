@@ -19,18 +19,24 @@
         app:showAsAction="never"
         android:visible="false"
         />
--->
+
     <item
         android:id="@+id/action_share_key"
         android:orderInCategory="100"
         android:title="@string/action_share_key"
         app:showAsAction="never" />
+-->
 
     <item
         android:id="@+id/action_share_photos"
         android:orderInCategory="100"
         android:title="@string/menu_import_photos"
         app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_settings"
+        android:icon="@drawable/ic_settings"
+        android:title="@string/menu_settings" />
     <!--
     <item
         android:id="@+id/action_share_documents"

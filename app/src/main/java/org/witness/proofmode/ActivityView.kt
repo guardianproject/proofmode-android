@@ -532,32 +532,8 @@ fun ActivitiesView(onAnyItemSelected: ((Boolean) -> Unit)? = null) {
                             .weight(1f),
                         verticalArrangement = Arrangement.spacedBy(ASSETS_GUTTER_SIZE.dp)
                     ) {
-                        item {
-                            val context = LocalContext.current
 
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = stringResource(id = R.string.title_activity),
-                                    style = MaterialTheme.typography.headlineLarge,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.weight(1.0f))
-                                /**
-                                IconButton(
-                                modifier =
-                                Modifier
-                                .width(32.dp)
-                                .height(32.dp),
-                                onClick = {
-                                (context as? ActivitiesViewDelegate)?.openCamera()
-                                }) {
-                                Icon(
-                                painter = painterResource(id = R.drawable.ic_camera),
-                                contentDescription = "Open camera"
-                                )
-                                }**/
-                            }
-                        }
+
                         Activities.activities.reversed().forEach { activity ->
                             stickyHeader {
                                 ActivityDateView(
