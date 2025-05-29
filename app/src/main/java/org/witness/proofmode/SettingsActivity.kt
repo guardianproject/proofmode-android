@@ -20,6 +20,7 @@ import org.witness.proofmode.ProofMode.PREF_OPTION_AI_DEFAULT
 import org.witness.proofmode.c2pa.C2paUtils
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.databinding.ActivitySettingsBinding
+import org.witness.proofmode.storage.FilebaseConfig
 import org.witness.proofmode.util.GPSTracker
 
 
@@ -31,6 +32,9 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var switchNotarize: CheckBox
     private lateinit var switchCredentials: CheckBox
     private lateinit var switchAI: CheckBox
+    private lateinit var switchAutoImport: CheckBox
+    private lateinit var switchAutoSync: CheckBox
+
     private lateinit var binding:ActivitySettingsBinding
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,12 +54,10 @@ class SettingsActivity : AppCompatActivity() {
         switchNotarize = binding.contentSettings.switchNotarize
         switchCredentials = binding.contentSettings.switchCR
         switchAI = binding.contentSettings.switchAI
-        
-        // Setup Filebase settings button
-        binding.contentSettings.buttonFilebaseSettings.setOnClickListener {
-            val intent = Intent(this, FilebaseSettingsActivity::class.java)
-            startActivity(intent)
-        }
+        switchAutoImport = binding.contentSettings.switchAutoImport
+        switchAutoSync = binding.contentSettings.switchAutoSync
+
+
         
         updateUI()
         switchLocation.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
@@ -143,6 +145,34 @@ class SettingsActivity : AppCompatActivity() {
             updateUI()
         }
 
+        // Setup Filebase settings button
+        switchAutoSync.setOnCheckedChangeListener {_: CompoundButton?, isChecked: Boolean ->
+
+            mPrefs.edit().putBoolean(FilebaseConfig.PREF_FILEBASE_ENABLED, isChecked).commit()
+
+            if (isChecked) {
+                val intent = Intent(this, FilebaseSettingsActivity::class.java)
+                startActivity(intent)
+            }
+            else {
+
+            }
+
+
+        }
+
+        switchAutoImport.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
+
+            mPrefs.edit().putBoolean(ProofMode.PREFS_DOPROOF, isChecked).commit()
+
+            if (isChecked)
+                (application as ProofModeApp).init(this)
+            else
+                (application as ProofModeApp).cancel(this)
+
+
+        }
+
     }
 
     private val REQ_ACCOUNT_CHOOSER = 9999;
@@ -179,6 +209,13 @@ class SettingsActivity : AppCompatActivity() {
 
         switchAI.isChecked =
             mPrefs.getBoolean(ProofMode.PREF_OPTION_AI, ProofMode.PREF_OPTION_AI_DEFAULT)
+
+        switchAutoSync.isChecked =
+            mPrefs.getBoolean(FilebaseConfig.PREF_FILEBASE_ENABLED, false)
+
+        switchAutoImport.isChecked =
+            mPrefs.getBoolean(ProofMode.PREFS_DOPROOF, false)
+
     }
 
     override fun onResume() {

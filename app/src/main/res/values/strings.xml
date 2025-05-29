@@ -62,12 +62,12 @@
     <string name="onboarding_intro_content">Proofmode captures information that makes your media more trustworthy.</string>
 
     <string name="onboarding_step1">Step 1</string>
-    <string name="onboarding_step1_title">Getting proof is easy. Once Proofmode is on, use your camera as usual.</string>
+    <string name="onboarding_step1_title">Getting proof is easy with the Proofmode camera!</string>
     <string name="onboarding_step1_content">Proofmode works in the background to generate and save proof. You don\'t have to do anything special!</string>
 
     <string name="onboarding_step2">Step 2</string>
-    <string name="onboarding_step2_title">Once you’ve taken a photo or video, find it in your camera gallery to share it.</string>
-    <string name="onboarding_step2_content">Select a photo, tap the share icon and choose ‘Share Proof’.</string>
+    <string name="onboarding_step2_title">Once you’ve taken a photo or video, find it in in the Proofmode home screen.</string>
+    <string name="onboarding_step2_content">Open a photo or video, then tap the share icon and choose ‘Share Proof’.</string>
 
     <string name="onboarding_step3">Step 3</string>
     <string name="onboarding_step3_title">Before you send, choose what level of proof to share.</string>
@@ -199,7 +199,7 @@
     <string name="camera">Camera</string>
     <string name="video">Video</string>
     <string name="settings_credentials">Credentials</string>
-    <string name="settings_credentials_desc">Add Content Credentials (C2PA) to photos and videos</string>
+    <string name="settings_credentials_desc">Add Content Credentials (C2PA) to photos &amp; videos</string>
     <string name="settings_ai">Block AI</string>
     <string name="settings_ai_desc">Flag to not be used for machine learning training</string>
 
@@ -214,7 +214,7 @@
     <string name="share_content_credentials_info">Shares image or video directly with proof metadata directly embedded in the file itself, verified and signed by Proofmode.org</string>
     <string name="optional_filename">Optional Filename</string>
     <string name="set_a_custom_name_for_the_proof_zip">Set a custom name for the proof zip</string>
-    <string name="filebase_ipfs_storage">Filebase IPFS Storage</string>
+    <string name="filebase_ipfs_storage">Filebase IPFS AutoSync (BETA)</string>
     <string name="filebase_ipfs_storage_description">Configure automatic upload of proof to Filebase. They will be automatically published to IPFS.</string>
     <string name="enable_filebase_upload">Enable Filebase Upload</string>
     <string name="access_key">Access Key</string>
@@ -228,5 +228,8 @@
     <string name="please_fill_in_all_required_fields">Please fill in all required fields</string>
     <string name="background_mode">Background Mode</string>
     <string name="proofcheck_verifier">ProofCheck Verifier</string>
+    <string name="background_mode_info">Add proof to all new photos &amp; videos on this device</string>
+    <string name="auto_sync_title">Auto Sync</string>
+    <string name="auto_sync_desc">Back-up proof data to the Filebase IPFS cloud service</string>
 
 </resources>

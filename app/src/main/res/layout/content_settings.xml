@@ -217,17 +217,66 @@
                     android:text="@string/settings_ai_desc" />
             </LinearLayout>
         </TableRow>
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="0.5"
+            android:paddingTop="20dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.5"
+                android:gravity="center_horizontal"
+                android:orientation="vertical">
+
+                <CheckBox
+                    android:id="@+id/switchAutoImport"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:button="@drawable/option_credentials_selector" />
+
+                <TextView
+                    style="@style/SettingsOptionStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/background_mode" />
+
+                <TextView
+                    style="@style/SettingsOptionDescStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/background_mode_info"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.5"
+                android:gravity="center_horizontal"
+                android:orientation="vertical">
+
+                <CheckBox
+                    android:id="@+id/switchAutoSync"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:button="@drawable/option_network_selector" />
+
+                <TextView
+                    style="@style/SettingsOptionStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/auto_sync_title" />
+
+                <TextView
+                    style="@style/SettingsOptionDescStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/auto_sync_desc" />
+            </LinearLayout>
+        </TableRow>
     </TableLayout>
 
-    <Button
-        android:id="@+id/buttonFilebaseSettings"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:text="Filebase IPFS Storage Settings"
-        android:drawableStart="@drawable/ic_settings"
-        android:drawablePadding="8dp" />
 
 </LinearLayout>
 </ScrollView>

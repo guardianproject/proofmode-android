@@ -25,12 +25,13 @@
             android:icon="@drawable/outline_check"
             android:title="@string/proofcheck_verifier" />
 
+        <!--
         <item
             android:id="@+id/menu_background_service"
             android:icon="@drawable/ic_digital_signatures"
             android:title="@string/background_mode"
             android:checkable="true"
             app:actionLayout="@layout/widget_check"
-            />
+            />-->
     </group>
 </menu>

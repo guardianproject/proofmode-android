@@ -144,6 +144,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         val navigationView = mainBinding.navView
         navigationView.setNavigationItemSelectedListener(this)
 
+        /**
         var switchItem = navigationView.menu.findItem(R.id.menu_background_service);
         var switchView = MenuItemCompat.getActionView(switchItem) as CompoundButton
 
@@ -151,7 +152,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         switchView.setOnCheckedChangeListener { buttonView, isChecked ->
             setProofModeOn(isChecked)
-        }
+        }**/
 
         val btnSettings = mainBinding.contentMain.btnSettings
         btnSettings.setOnClickListener { openSettings() }
@@ -309,13 +310,14 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         startActivity(intentShare)
     }
 
+    /**
     fun toggleOnClicked(view: View?) {
         setProofModeOn(true)
     }
 
     fun toggleOffClicked(view: View?) {
         setProofModeOn(false)
-    }
+    }**/
 
     private fun setProofModeOn(isOn: Boolean) {
         if (isOn) {
