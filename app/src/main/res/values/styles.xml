@@ -73,9 +73,9 @@
     </style>
 
     <style name="MainToolBarStyle" parent="Theme.AppCompat">
-        <item name="android:textColorPrimary">#a0a0a0</item>
-        <item name="android:textColorSecondary">#a0a0a0</item>
-        <item name="actionMenuTextColor">#a0a0a0</item>
+        <item name="android:textColorPrimary">#dddddd</item>
+        <item name="android:textColorSecondary">#dddddd</item>
+        <item name="actionMenuTextColor">#dddddd</item>
     </style>
 
     <style name="SettingsToolBarStyle" parent="Theme.AppCompat">
