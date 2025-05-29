@@ -373,9 +373,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             drawer.closeDrawer(GravityCompat.START)
             openSettings()
 	}
+        /**
         else if (id == R.id.action_import_creds) {
             showDocumentPicker();
-        }
+        }**/
         return super.onOptionsItemSelected(item)
     }
 
