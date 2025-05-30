@@ -466,6 +466,8 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
     }
     @SuppressLint("MissingPermission")
     fun startRecording() {
+        videoCapture?.targetRotation = activity.getScreenOrientation()
+
         if (recordingState.value != RecordingState.Idle && recordingState.value != RecordingState.Stopped) return
         val contentValues = ContentValues().apply {
             put(MediaStore.Video.Media.DISPLAY_NAME, SimpleDateFormat("yyyy-MM-dd HH-mm:ss", Locale.US)
