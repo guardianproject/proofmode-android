@@ -117,12 +117,14 @@ public class PhotosContentJob extends JobService {
                                 try {
 
                                     //generate external C2PA file
-                                    var fileC2paSidecar = C2paUtils.Companion.addContentCredentials(PhotosContentJob.this,
-                                            uriProcess, false, true);
+
+                                  //  var fileC2paSidecar = C2paUtils.Companion.addContentCredentials(PhotosContentJob.this,
+                                    //        uriProcess, false, true);
 
                                     String resultProofHash = mw.processUri(uriProcess, true, null);
                                     Timber.d("generated hash via job: " + resultProofHash);
 
+                                    /**
                                     if (fileC2paSidecar.exists())
                                     {
                                         try {
@@ -135,7 +137,7 @@ public class PhotosContentJob extends JobService {
                                             Timber.d("error saving c2pa file to hash: " + ioe.getLocalizedMessage());
 
                                         }
-                                    }
+                                    }**/
 
                                 } catch (RuntimeException e) {
                                     Timber.d(e, "Error generating hash from proof URI");

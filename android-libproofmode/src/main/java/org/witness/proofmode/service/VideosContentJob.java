@@ -137,11 +137,13 @@ public class VideosContentJob extends JobService {
                     mw.singleThreaded().execute(() -> {
                         try {
 
+
+                            String resultProofHash = mw.processUri(uriProcess, true, null);
+
+                            /**
                             //generate external C2PA file
                             var fileC2paSidecar = C2paUtils.Companion.addContentCredentials(VideosContentJob.this,
                                     uriProcess, false, true);
-
-                            String resultProofHash = mw.processUri(uriProcess, true, null);
 
                             if (fileC2paSidecar.exists())
                             {
@@ -156,7 +158,7 @@ public class VideosContentJob extends JobService {
                                     Timber.d("error saving c2pa file to hash: " + ioe.getLocalizedMessage());
 
                                 }
-                            }
+                            }**/
 
                             Timber.d("generated hash via job: " + resultProofHash);
 
