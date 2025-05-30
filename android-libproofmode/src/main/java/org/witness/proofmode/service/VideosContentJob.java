@@ -17,6 +17,11 @@ import android.os.Handler;
 import android.provider.MediaStore;
 import android.text.TextUtils;
 
+import org.witness.proofmode.ProofMode;
+import org.witness.proofmode.c2pa.C2paUtils;
+
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -131,7 +136,28 @@ public class VideosContentJob extends JobService {
 
                     mw.singleThreaded().execute(() -> {
                         try {
+
+                            //generate external C2PA file
+                            var fileC2paSidecar = C2paUtils.Companion.addContentCredentials(VideosContentJob.this,
+                                    uriProcess, false, true);
+
                             String resultProofHash = mw.processUri(uriProcess, true, null);
+
+                            if (fileC2paSidecar.exists())
+                            {
+                                //add it to the proof hash directory
+                                try {
+                                    mw.getStorageProvider().saveStream(resultProofHash,
+                                            fileC2paSidecar.getName(),
+                                            new FileInputStream(fileC2paSidecar), null);
+                                }
+                                catch (IOException ioe)
+                                {
+                                    Timber.d("error saving c2pa file to hash: " + ioe.getLocalizedMessage());
+
+                                }
+                            }
+
                             Timber.d("generated hash via job: " + resultProofHash);
 
                         } catch (RuntimeException e) {

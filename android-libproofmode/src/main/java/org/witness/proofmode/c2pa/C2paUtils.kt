@@ -79,7 +79,7 @@ class C2paUtils {
         /**
          * Add content credentials to media from an external URI, and specify the output directory of where to stare the new file
          */
-        fun   addContentCredentials (_context: Context, _uri: Uri?, isDirectCapture: Boolean, allowMachineLearning: Boolean) : File {
+        fun   addContentCredentials (_context: Context, _uri: Uri?, embedManifest: Boolean, allowMachineLearning: Boolean) : File {
 
             var filePath: String? = null
             if (_uri != null && "content" == _uri.scheme) {
@@ -99,9 +99,14 @@ class C2paUtils {
 
             val fileMedia = File(filePath!!)
             var fileName = fileMedia.name;
+            var fileOut = File(filePath!!)
 
-            fileName = "c2pa-$fileName"
-            val fileOut = File(_context.cacheDir, fileName);
+            if (!embedManifest) {
+                //create a temporary place for the external C2PA manifest
+                val ts = Date().time
+                fileName = "$fileName-$ts.c2pa"
+                fileOut = File(_context.cacheDir, fileName);
+            }
 
             if (fileMedia.exists()) {
 
@@ -111,15 +116,11 @@ class C2paUtils {
                     _identityKey,
                     _identityName,
                     _identityUri,
-                    isDirectCapture,
+                    embedManifest,
                     allowMachineLearning,
                     fileMedia,
                     fileOut
                 )
-
-                //if it is direct, we want to copy the output over the input
-                if (isDirectCapture)
-                    fileOut.copyTo(fileMedia, true)
 
             }
 
@@ -292,13 +293,12 @@ class C2paUtils {
                 false
             )
 
-
             val appLabel = getAppName(mContext)
             val appVersion = getAppVersionName(mContext)
 
-            var appInfo = ApplicationInfo(appLabel,appVersion,APP_ICON_URI)
-            var mediaFile = FileData(fileImageIn.absolutePath, null, fileImageIn.name)
-            var contentCreds = userCert?.let { ContentCredentials(it,mediaFile, appInfo) }
+            val appInfo = ApplicationInfo(appLabel,appVersion,APP_ICON_URI)
+            val mediaFile = FileData(fileImageIn.absolutePath, null, fileImageIn.name)
+            val contentCreds = userCert?.let { ContentCredentials(it,mediaFile, appInfo) }
 
             if (isDirectCapture)
                 contentCreds?.addCreatedAssertion()
@@ -326,22 +326,22 @@ class C2paUtils {
             contentCreds?.addPgpAssertion(pgpFingerprint, pgpFingerprint)
             contentCreds?.addWebsiteAssertion(webLink)
 
-            var exifMake = Build.MANUFACTURER
-            var exifModel = Build.MODEL
-            var exifTimestamp = Date().toGMTString()
+            val exifMake = Build.MANUFACTURER
+            val exifModel = Build.MODEL
+            val exifTimestamp = Date().toGMTString()
 
-            var exifGpsVersion = "2.2.0.0"
+            val exifGpsVersion = "2.2.0.0"
             var exifLat: String? = null
             var exifLong: String? = null
             var exifAlt: String? = null
             var exifSpeed: String? = null
             var exifBearing: String? = null
 
-            var gpsTracker = GPSTracker(mContext)
+            val gpsTracker = GPSTracker(mContext)
             if (showLocation == true && gpsTracker.canGetLocation()) {
 
                 gpsTracker.updateLocation()
-                var location = gpsTracker.getLocation()
+                val location = gpsTracker.getLocation()
                 location?.let {
                     exifLat = GPSTracker.getLatitudeAsDMS(location, 3)
                     exifLong = GPSTracker.getLongitudeAsDMS(location, 3)
@@ -364,7 +364,7 @@ class C2paUtils {
             if (isDirectCapture)
                 contentCreds?.embedManifest(fileImageOut.absolutePath)
             else
-                contentCreds?.exportManifest(fileImageIn.absolutePath, fileImageOut.absolutePath)
+                contentCreds?.exportManifest(fileImageOut.absolutePath)
 
         }
 

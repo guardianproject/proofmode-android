@@ -115,6 +115,11 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
     {
         mStorageProvider = storageProvider;
     }
+
+    public StorageProvider getStorageProvider ()
+    {
+        return mStorageProvider;
+    }
     
     private StorageProvider createCompositeStorageProvider(Context context) {
         DefaultStorageProvider primaryProvider = new DefaultStorageProvider(context);
