@@ -45,7 +45,7 @@ class C2paUtils {
         private var userCert : Certificate? = null
         private var mPrefs : SharedPreferences? = null
 
-        private const val APP_ICON_URI = "https://proofmode.org/images/avatar.jpg"
+        private const val APP_ICON_URI = "https://proofmode.org/images/avatar.png"
 
         const val PREF_OPTION_LOCATION = "trackLocation"
 
@@ -98,13 +98,10 @@ class C2paUtils {
             }
 
             val fileMedia = File(filePath!!)
-            var fileOut = fileMedia
             var fileName = fileMedia.name;
 
-            if (!isDirectCapture) {
-                fileName = "c2pa-$fileName"
-                fileOut = File(_context.cacheDir, fileName);
-            }
+            fileName = "c2pa-$fileName"
+            val fileOut = File(_context.cacheDir, fileName);
 
             if (fileMedia.exists()) {
 
@@ -120,6 +117,9 @@ class C2paUtils {
                     fileOut
                 )
 
+                //if it is direct, we want to copy the output over the input
+                if (isDirectCapture)
+                    fileOut.copyTo(fileMedia, true)
 
             }
 
@@ -295,9 +295,8 @@ class C2paUtils {
 
             val appLabel = getAppName(mContext)
             val appVersion = getAppVersionName(mContext)
-            var appIconUri = APP_ICON_URI
 
-            var appInfo = ApplicationInfo(appLabel,appVersion,appIconUri)
+            var appInfo = ApplicationInfo(appLabel,appVersion,APP_ICON_URI)
             var mediaFile = FileData(fileImageIn.absolutePath, null, fileImageIn.name)
             var contentCreds = userCert?.let { ContentCredentials(it,mediaFile, appInfo) }
 
@@ -336,6 +335,7 @@ class C2paUtils {
             var exifLong: String? = null
             var exifAlt: String? = null
             var exifSpeed: String? = null
+            var exifBearing: String? = null
 
             var gpsTracker = GPSTracker(mContext)
             if (showLocation == true && gpsTracker.canGetLocation()) {
@@ -351,17 +351,20 @@ class C2paUtils {
                     location.speed?.let {
                         exifSpeed = location.speed.toString()
                     }
+                    location.bearing?.let {
+                        exifBearing = location.bearing.toString()
+                    }
                 }
 
             }
 
-            var exifData = ExifData(exifGpsVersion, exifLat, exifLong, null, exifAlt, exifTimestamp, null, null, null, null, null, null, null, null, null, null, null, exifMake, exifModel, null, null, null)
+            val exifData = ExifData(exifGpsVersion, exifLat, exifLong, null, exifAlt, exifTimestamp, null, exifSpeed, null, null, null, exifBearing, null, null, null, null, null, exifMake, exifModel, null, null, null)
             contentCreds?.addExifAssertion(exifData)
 
             if (isDirectCapture)
                 contentCreds?.embedManifest(fileImageOut.absolutePath)
             else
-                contentCreds?.exportManifest(fileImageOut.absolutePath)
+                contentCreds?.exportManifest(fileImageIn.absolutePath, fileImageOut.absolutePath)
 
         }
 
