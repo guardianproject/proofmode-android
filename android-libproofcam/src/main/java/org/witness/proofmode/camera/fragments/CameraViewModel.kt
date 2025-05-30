@@ -429,6 +429,7 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
         val isDirectCapture = true
         val dateSaved = Date()
 
+        //add C2PA
         if (CameraActivity.useCredentials) {
             //this is from our camera
             val allowMachineLearning = CameraActivity.useAIFlag; //by default, we flag to not allow
@@ -444,6 +445,7 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
 
         }
 
+        //generate Proofmode package
         val mw: MediaWatcher = MediaWatcher.getInstance(app.applicationContext)
 
         if (finalUri != null) {
