@@ -772,13 +772,13 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
         //OutputStream osProofJsonSig = mStorageProvider.getOutputStream(mediaHash, mediaHash + PROOF_FILE_JSON_TAG + OPENPGP_FILE_TAG);
         ByteArrayOutputStream osProofJsonSig = new ByteArrayOutputStream();
         pu.createDetachedSignature(isProofJson, osProofJsonSig, mPassphrase, usePgpArmor);
-        mStorageProvider.saveBytes(mediaHash, mediaHash + PROOF_FILE_JSON_TAG + OPENPGP_FILE_TAG, osProofSig.toByteArray(), null);
+        mStorageProvider.saveBytes(mediaHash, mediaHash + PROOF_FILE_JSON_TAG + OPENPGP_FILE_TAG, osProofJsonSig.toByteArray(), null);
 
         //sign the media file
         //OutputStream osMediaSig = mStorageProvider.getOutputStream(mediaHash, mediaHash + OPENPGP_FILE_TAG);
         ByteArrayOutputStream osMediaSig = new ByteArrayOutputStream();
         pu.createDetachedSignature(is, osMediaSig, mPassphrase, usePgpArmor);
-        mStorageProvider.saveBytes(mediaHash, mediaHash + OPENPGP_FILE_TAG, osProofSig.toByteArray(), null);
+        mStorageProvider.saveBytes(mediaHash, mediaHash + OPENPGP_FILE_TAG, osMediaSig.toByteArray(), null);
 
         Timber.d("Proof written/updated for uri %s and hash %s", uriMedia, mediaHash);
 
