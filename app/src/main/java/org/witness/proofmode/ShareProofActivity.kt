@@ -229,11 +229,11 @@ class ShareProofActivity : AppCompatActivity() {
             .setView(inputEditTextField)
             .setPositiveButton(getString(android.R.string.ok)) { _, _ ->
                 val editTextInput = inputEditTextField .text.toString()
-                shareProof(editTextInput, sendMedia, true)
-                saveProof(sendMedia, true)
+               // shareProof(editTextInput, sendMedia, true)
+                saveProof(editTextInput, sendMedia, true)
             }
             .setNegativeButton(getString(android.R.string.cancel))  { _, _ ->
-                shareProof("", sendMedia, true)
+                saveProof("", sendMedia, true)
             }
             .create()
         dialog.show()
@@ -292,10 +292,10 @@ class ShareProofActivity : AppCompatActivity() {
         }
     }
 
-    private fun saveProof(shareMedia: Boolean, shareProof: Boolean) {
+    private fun saveProof(fileName: String, shareMedia: Boolean, shareProof: Boolean) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             try {
-                generateProofZipName()
+                generateProofZipName(fileName)
                 showSaveDirectoryPicker(proofZipName)
             } catch (e: PGPException) {
                 e.printStackTrace()
@@ -305,7 +305,7 @@ class ShareProofActivity : AppCompatActivity() {
         } else {
             if (!askForWritePermissions()) {
                 displayProgress(getString(R.string.progress_building_proof))
-                SaveProofTask(this).execute(shareMedia, shareProof)
+                SaveProofTask(this, fileName).execute(shareMedia, shareProof)
             }
         }
     }
@@ -323,7 +323,7 @@ class ShareProofActivity : AppCompatActivity() {
 
             // take persistable Uri Permission for future use
             contentResolver.takePersistableUriPermission(result.data!!.data!!, takeFlags)
-            SaveProofTask(this@ShareProofActivity).execute(true, true)
+            SaveProofTask(this@ShareProofActivity,"").execute(true, true)
         }
     }
 
@@ -334,16 +334,20 @@ class ShareProofActivity : AppCompatActivity() {
 
     private var proofZipName = ""
     @Throws(PGPException::class, IOException::class)
-    private fun generateProofZipName() {
+    private fun generateProofZipName(fileName: String) {
         val sdf = SimpleDateFormat(ZIP_FILE_DATETIME_FORMAT)
         val dateString = sdf.format(Date())
         val userId = pgpUtils.publicKeyFingerprint
-        proofZipName = "proofmode-0x$userId-$dateString.zip"
+
+        if (fileName.isEmpty())
+            proofZipName = "proofmode-0x$userId-$dateString.zip"
+        else
+            proofZipName = "$fileName-proofmode-0x$userId-$dateString.zip"
     }
 
     @Synchronized
     @Throws(IOException::class, PGPException::class)
-    private fun saveProofAsync(shareMedia: Boolean, shareProof: Boolean): File? {
+    private fun saveProofAsync(fileName: String, shareMedia: Boolean, shareProof: Boolean): File? {
 
         // Get intent, action and MIME type
         val intent = intent
@@ -410,7 +414,7 @@ class ShareProofActivity : AppCompatActivity() {
             if (!shareProof) shareNotarization(shareText.toString()) else {
                 val fileCacheFolder = File(cacheDir, "zips")
                 fileCacheFolder.mkdir()
-                generateProofZipName()
+                generateProofZipName(fileName)
                 var fileZip = File(fileCacheFolder, proofZipName)
                 Timber.d("Preparing proof bundle zip: " + fileZip.absolutePath)
                 try {
@@ -933,14 +937,14 @@ class ShareProofActivity : AppCompatActivity() {
     }
 
     private class SaveProofTask  // only retain a weak reference to the activity
-        (private val activity: ShareProofActivity) :
+        (private val activity: ShareProofActivity, val fileName: String) :
         AsyncTask<Boolean?, Void?, File?>() {
          override fun doInBackground(vararg params: Boolean?): File? {
             var result: File? = null
             return try {
 
                 params.let {
-                    result = activity.saveProofAsync(params[0]!!, params[1]!!)
+                    result = activity.saveProofAsync(fileName, params[0]!!, params[1]!!)
                 }
                 return result
             } catch (e: IOException) {
