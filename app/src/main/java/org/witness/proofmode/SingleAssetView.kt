@@ -70,6 +70,8 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -328,6 +330,13 @@ fun updateMetadata (itemUri : Uri, context : Context) {
         var hmap: HashMap<String, String>? =
             ProofModeUtil.getProofHashMap(storageProvider, hash)
 
+        if (hmap?.contains(ProofModeV1Constants.PROOF_GENERATED) == true)
+            addRow(
+                ProofModeV1Constants.PROOF_GENERATED,
+                df.format(dfParse.parse(hmap?.get(ProofModeV1Constants.PROOF_GENERATED)))
+            )
+
+
         addRow(ProofModeV1Constants.FILE_HASH_SHA_256, hmap)
         if (hmap?.contains(ProofModeV1Constants.FILE_CREATED) == true)
             addRow(
@@ -339,11 +348,7 @@ fun updateMetadata (itemUri : Uri, context : Context) {
                 ProofModeV1Constants.FILE_MODIFIED,
                 df.format(dfParse.parse(hmap?.get(ProofModeV1Constants.FILE_MODIFIED)))
             )
-        if (hmap?.contains(ProofModeV1Constants.PROOF_GENERATED) == true)
-            addRow(
-                ProofModeV1Constants.PROOF_GENERATED,
-                df.format(dfParse.parse(hmap?.get(ProofModeV1Constants.PROOF_GENERATED)))
-            )
+
 
         if (hmap?.contains(ProofModeV1Constants.LOCATION_LATITUDE) == true) {
             var lat = hmap?.get(ProofModeV1Constants.LOCATION_LATITUDE)?.toDouble()
@@ -370,14 +375,13 @@ fun addRow (key : String,  hmap: HashMap<String,String>?) {
 
     hmap?.get(key)?.let { it1 ->
         Row {
-            Text(modifier = Modifier.padding(3.dp, 3.dp), text = "$key")
-
+            Text(modifier = Modifier.padding(3.dp, 3.dp), text = "$key", fontWeight = FontWeight.Bold)
         }
         Row {
             SelectionContainer() { Text(modifier = Modifier.padding(3.dp, 3.dp), text = "${it1}") }
         }
         Row {
-            Text(modifier = Modifier.padding(3.dp, 3.dp), text = "")
+            Text(modifier = Modifier.padding(2.dp, 2.dp), text = "")
 
         }
     }
@@ -423,7 +427,7 @@ private fun convertDegMinsSecs(latitude: Double, longitude: Double): String? {
 fun addRow (key : String,  value: String) {
 
     Row {
-        Text(modifier = Modifier.padding(3.dp, 3.dp), text = "$key")
+        Text(modifier = Modifier.padding(3.dp, 3.dp), text = "$key", fontWeight = FontWeight.Bold)
 
     }
     Row {
