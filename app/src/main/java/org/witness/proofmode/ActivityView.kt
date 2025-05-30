@@ -7,6 +7,7 @@ import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -25,7 +26,9 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
@@ -34,6 +37,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -58,10 +63,12 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.decode.VideoFrameDecoder
 import coil.request.ImageRequest
@@ -112,49 +119,72 @@ fun ProofableItemView(
         }
 
     }
+    
+    Box {
+        AsyncImage(
+            model = ImageRequest.Builder(context)
+                .data(item.uri).apply {
+                    if (isVideo) {
+                        decoderFactory { result, options, _ -> VideoFrameDecoder(result.source, options) }
+                    }
+                    size(Size.ORIGINAL)
+                }.build(),
+            contentDescription = "Asset view",
+            alignment = Alignment.Center,
+            contentScale = if (contain) ContentScale.Fit else ContentScale.Crop,
+            modifier = Modifier
+                .combinedClickable(
+                    onClick = {
+                        selectionHandler.onProofableItemClick(item)
+                    },
+                    onLongClick = {
+                        selectionHandler.onProofableItemLongClick(item)
+                    }
+                )
+                .clip(
+                    RoundedCornerShape(
+                        corners.left.dp,
+                        corners.top.dp,
+                        corners.right.dp,
+                        corners.bottom.dp
+                    )
 
-    AsyncImage(
-        model = ImageRequest.Builder(context)
-            .data(item.uri).apply {
-                if (isVideo) {
-                    decoderFactory { result, options, _ -> VideoFrameDecoder(result.source, options) }
-                }
-                size(Size.ORIGINAL)
-            }.build(),
-        contentDescription = "Asset view",
-        alignment = Alignment.Center,
-        contentScale = if (contain) ContentScale.Fit else ContentScale.Crop,
-        modifier = Modifier
-            .combinedClickable(
-                onClick = {
-                    selectionHandler.onProofableItemClick(item)
-                },
-                onLongClick = {
-                    selectionHandler.onProofableItemLongClick(item)
-                }
-            )
-            .clip(
-                RoundedCornerShape(
-                    corners.left.dp,
-                    corners.top.dp,
-                    corners.right.dp,
-                    corners.bottom.dp
+                )
+                //.background(ASSETS_BACKGROUND)
+                .border(
+                    width = 4.dp,
+                    color = if (showSelectionBorder && selectionHandler.isSelected(item)) Color.Blue else Color.Transparent,
+                    shape = RoundedCornerShape(
+                        corners.left.dp,
+                        corners.top.dp,
+                        corners.right.dp,
+                        corners.bottom.dp
+                    )
                 )
 
+                .then(modifier)
+        )
+        
+        if (isVideo) {
+            Icon(
+                imageVector = Icons.Default.Videocam,
+                contentDescription = "Video",
+                tint = Color.White,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(2.dp)
+                    .background(
+                        color = Color.Black.copy(alpha = 0.6f),
+                        shape = RoundedCornerShape(2.dp)
+                    )
+                    .padding(1.dp)
+                    .size(24.dp)
             )
-            //.background(ASSETS_BACKGROUND)
-            .border(
-                width = 4.dp,
-                color = if (showSelectionBorder && selectionHandler.isSelected(item)) Color.Blue else Color.Transparent,
-                shape = RoundedCornerShape(
-                    corners.left.dp,
-                    corners.top.dp,
-                    corners.right.dp,
-                    corners.bottom.dp
-                )
-            )
-            .then(modifier)
-    )
+        }
+    }
+
+
+
 }
 
 // Custom extension
@@ -169,29 +199,25 @@ fun OneItemAssetRowView(asset: ProofableItem) {
 
 @Composable
 fun TwoItemsAssetRowView(assets: List<ProofableItem>) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .height(IntrinsicSize.Min),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        ProofableItemView(
-            item = assets[0],
-            modifier = Modifier
-                .weight(0.5F)
-                .aspectRatio(ratio = 1f),
-        )
-        Spacer(
-            modifier = Modifier
-                .width(ASSETS_GUTTER_SIZE.dp)
-                .fillMaxHeight()
-        )
-        ProofableItemView(
-            item = assets[1],
-            modifier = Modifier
-                .weight(0.5F)
-                .aspectRatio(ratio = 1f),
-        )
+    Layout(
+        modifier = Modifier.fillMaxWidth(),
+        content = {
+            ProofableItemView(item = assets[0])
+            ProofableItemView(item = assets[1])
+        }
+    ) { measurables, constraints ->
+        val w = constraints.maxWidth
+        val column2Width = (w - 2 * ASSETS_GUTTER_SIZE.dp.roundToPx()) / 3
+        val column2Height = 2 * column2Width + ASSETS_GUTTER_SIZE.dp.roundToPx()
+        val column1 = w - column2Width - ASSETS_GUTTER_SIZE.dp.roundToPx()
+
+        val placeable1 = measurables[0].measure(constraints.exact(column1, column2Height))
+        val placeable2 = measurables[1].measure(constraints.exact(column2Width, column2Width))
+
+        layout(w, column2Height) {
+            placeable1.place(x = 0, y = 0)
+            placeable2.place(x = w - column2Width, y = 0)
+        }
     }
 }
 
