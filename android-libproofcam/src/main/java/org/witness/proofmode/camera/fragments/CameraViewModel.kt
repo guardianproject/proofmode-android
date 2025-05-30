@@ -3,9 +3,11 @@
 package org.witness.proofmode.camera.fragments
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.app.Application
 import android.content.ContentValues
 import android.content.Intent
+import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -13,6 +15,7 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
 import android.util.Range
+import android.view.Display
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraControl
 import androidx.camera.core.CameraSelector
@@ -57,7 +60,6 @@ import org.witness.proofmode.c2pa.C2paUtils
 import org.witness.proofmode.camera.CameraActivity
 import org.witness.proofmode.camera.adapter.Media
 import org.witness.proofmode.camera.fragments.CameraConstants.NEW_MEDIA_EVENT
-import org.witness.proofmode.camera.utils.VideoCapability
 import org.witness.proofmode.camera.utils.getMediaFlow
 import org.witness.proofmode.camera.utils.getSupportedQualities
 import org.witness.proofmode.camera.utils.isUltraHdrSupported
@@ -70,7 +72,7 @@ import java.util.Date
 import java.util.Locale
 import java.util.concurrent.Executors
 
-class CameraViewModel(private val app: Application) : AndroidViewModel(app) {
+class CameraViewModel(private val activity: CameraActivity, private val app: Application) : AndroidViewModel(app) {
     private val outputDirectory: String by lazy {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             "${Environment.DIRECTORY_DCIM}/ProofMode/"
@@ -315,6 +317,7 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
         } else {
             _ultraHdr.update { UltraHDRAvailabilityState.NOT_SUPPORTED }
         }
+
         imageCapture = imageCaptureBuilder
             .build()
         camera = cameraProvider!!.bindToLifecycle(lifecycleOwner = lifecycleOwner,cameraSelector,
@@ -361,6 +364,8 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
 
     }
 
+
+
     fun captureImage() {
         val metadata = Metadata().apply {
             // Mirror image when using the front camera
@@ -390,6 +395,9 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
             val fileMedia = File(outputDirectory, "${System.currentTimeMillis()}.jpg")
             OutputFileOptions.Builder(fileMedia)
         }.setMetadata(metadata).build()
+
+        imageCapture?.setTargetRotation(activity.getScreenOrientation())
+
         imageCapture?.takePicture(
             outputOptions,
             mExec,
@@ -420,6 +428,7 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
         var finalUri = proofUri
         val isDirectCapture = true
         val dateSaved = Date()
+
         if (CameraActivity.useCredentials) {
             //this is from our camera
             val allowMachineLearning = CameraActivity.useAIFlag; //by default, we flag to not allow
@@ -430,10 +439,8 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
                 allowMachineLearning
             )
 
-            val proofUriC2pa = Uri.fromFile(fileOut)
-
-            if (proofUriC2pa != null)
-                finalUri = proofUriC2pa
+            if (fileOut.exists())
+                finalUri = Uri.fromFile(fileOut)
 
         }
 

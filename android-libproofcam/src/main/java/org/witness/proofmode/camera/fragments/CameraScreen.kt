@@ -1,6 +1,7 @@
 package org.witness.proofmode.camera.fragments
 
 import android.Manifest
+import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -23,6 +24,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import org.witness.proofmode.camera.CameraActivity
 import org.witness.proofmode.camera.R
 
 private val permissions = mutableListOf(
@@ -40,9 +42,9 @@ private val permissions = mutableListOf(
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun CameraScreen(modifier: Modifier = Modifier, onClose: () -> Unit) {
+fun CameraScreen(activity: CameraActivity, modifier: Modifier = Modifier, onClose: () -> Unit) {
     val lifecycleOwner = LocalLifecycleOwner.current
-    val viewModel: CameraViewModel = viewModel()
+    val viewModel: CameraViewModel = CameraViewModel(activity, activity.application)
     val navController = rememberNavController()
     val permissionsState = rememberMultiplePermissionsState(permissions)
     if (permissionsState.allPermissionsGranted) {
