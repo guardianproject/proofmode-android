@@ -432,7 +432,7 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
         //add C2PA
         if (CameraActivity.useCredentials) {
             //this is from our camera
-            val allowMachineLearning = CameraActivity.useAIFlag; //by default, we flag to not allow
+            val allowMachineLearning = !CameraActivity.useBlockAIFlag; //by default, we flag to not allow
             val fileOut = C2paUtils.addContentCredentials(
                 app.applicationContext,
                 finalUri,

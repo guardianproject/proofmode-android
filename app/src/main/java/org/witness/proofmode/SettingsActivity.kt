@@ -128,10 +128,6 @@ class SettingsActivity : AppCompatActivity() {
             mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_CREDENTIALS, isChecked)
                 .commit()
 
-            if (!isChecked)
-                mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_AI, PREF_OPTION_AI_DEFAULT)
-                    .commit()
-
             switchAI.isEnabled = isChecked
 
             if (isChecked)
@@ -141,7 +137,7 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         switchAI.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
-            mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_AI, isChecked)
+            mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_BLOCK_AI, isChecked)
                 .commit()
             updateUI()
         }
@@ -209,7 +205,7 @@ class SettingsActivity : AppCompatActivity() {
 
 
         switchAI.isChecked =
-            mPrefs.getBoolean(ProofMode.PREF_OPTION_AI, ProofMode.PREF_OPTION_AI_DEFAULT)
+            mPrefs.getBoolean(ProofMode.PREF_OPTION_BLOCK_AI, ProofMode.PREF_OPTION_AI_DEFAULT)
 
         switchAutoSync.isChecked =
             mPrefs.getBoolean(FilebaseConfig.PREF_FILEBASE_ENABLED, false)

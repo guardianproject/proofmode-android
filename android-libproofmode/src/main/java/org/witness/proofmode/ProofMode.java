@@ -49,7 +49,7 @@ public class ProofMode {
     public final static String PREF_OPTION_PHONE = "trackDeviceId";
     public final static String PREF_OPTION_NETWORK = "trackMobileNetwork";
 
-    public final static String PREF_OPTION_AI = "blockAI";
+    public final static String PREF_OPTION_BLOCK_AI = "blockAI";
 
     public final static String PREF_OPTION_CREDENTIALS = "addCR";
 

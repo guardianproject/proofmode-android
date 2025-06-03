@@ -42,10 +42,8 @@ import org.witness.proofmode.ActivityConstants.EXTRA_FILE_NAME
 import org.witness.proofmode.ActivityConstants.EXTRA_SHARE_TEXT
 import org.witness.proofmode.ActivityConstants.INTENT_ACTIVITY_ITEMS_SHARED
 import org.witness.proofmode.PermissionActivity.Companion.hasPermissions
-import org.witness.proofmode.ProofMode.PREF_OPTION_AI
 import org.witness.proofmode.ProofMode.PREF_OPTION_AI_DEFAULT
-import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
-import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
+import org.witness.proofmode.ProofMode.PREF_OPTION_BLOCK_AI
 import org.witness.proofmode.c2pa.C2paUtils
 import org.witness.proofmode.c2pa.C2paUtils.Companion.C2PA_CERT_PATH
 import org.witness.proofmode.crypto.HashUtils
@@ -75,7 +73,7 @@ class ShareProofActivity : AppCompatActivity() {
     private lateinit var pgpUtils : PgpUtils
 
     private var mPrefs : SharedPreferences? = null
-    private var mAllowMachineLearning : Boolean? = false
+    private var mBlockAI : Boolean? = false
 
     private var mStorageProvider : DefaultStorageProvider? = null
 
@@ -84,7 +82,7 @@ class ShareProofActivity : AppCompatActivity() {
         binding = ActivityShareBinding.inflate(layoutInflater)
         mPrefs = PreferenceManager.getDefaultSharedPreferences(this)
         pgpUtils = PgpUtils.getInstance()
-        mAllowMachineLearning = mPrefs?.getBoolean(PREF_OPTION_AI, PREF_OPTION_AI_DEFAULT)
+        mBlockAI = mPrefs?.getBoolean(PREF_OPTION_BLOCK_AI, PREF_OPTION_AI_DEFAULT) == false
         setContentView(binding.root)
         mStorageProvider = DefaultStorageProvider(applicationContext)
     }
@@ -172,7 +170,7 @@ class ShareProofActivity : AppCompatActivity() {
         if (Intent.ACTION_SEND_MULTIPLE == action) {
             val mediaUris = intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM) ?: emptyList()
 
-            GenerateMultiProofTask (this, mediaUris, mAllowMachineLearning == true, mStorageProvider).execute();
+            GenerateMultiProofTask (this, mediaUris, mBlockAI == false, mStorageProvider).execute();
 
 
         } else if (Intent.ACTION_SEND == action || action!!.endsWith("SHARE_PROOF")) {
@@ -1043,7 +1041,7 @@ class ShareProofActivity : AppCompatActivity() {
 
     private fun generateProof(mediaUri: Uri?, proofHash: String?) {
         displayProgress(getString(R.string.progress_generating_proof))
-        GenerateProofTask(this, proofHash, mAllowMachineLearning == true).execute(mediaUri)
+        GenerateProofTask(this, proofHash, mBlockAI == false).execute(mediaUri)
     }
 
     private fun showProofError() {

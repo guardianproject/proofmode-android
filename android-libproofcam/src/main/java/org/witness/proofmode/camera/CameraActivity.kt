@@ -14,18 +14,19 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
+import org.witness.proofmode.ProofMode.PREF_OPTION_BLOCK_AI
 import org.witness.proofmode.camera.fragments.CameraScreen
 
 
 class CameraActivity : ComponentActivity(), SensorEventListener {
 
 
-    private val PREF_OPTION_AI = "blockAI"
+ //   private val PREF_OPTION_AI = "blockAI"
     private val PREF_OPTION_CREDENTIALS = "addCR"
 
     companion object {
         var useCredentials = true
-        var useAIFlag = true
+        var useBlockAIFlag = true
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,7 +45,7 @@ class CameraActivity : ComponentActivity(), SensorEventListener {
 
         //setContentView(R.layout.camera_main)
         useCredentials = intent.getBooleanExtra(PREF_OPTION_CREDENTIALS, true)
-        useAIFlag = intent.getBooleanExtra(PREF_OPTION_AI, true)
+        useBlockAIFlag = intent.getBooleanExtra(PREF_OPTION_BLOCK_AI, true)
 
     }
 
