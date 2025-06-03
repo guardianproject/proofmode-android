@@ -321,7 +321,7 @@ class ShareProofActivity : AppCompatActivity() {
 
             // take persistable Uri Permission for future use
             contentResolver.takePersistableUriPermission(result.data!!.data!!, takeFlags)
-            SaveProofTask(this@ShareProofActivity,"").execute(true, true)
+            SaveProofTask(this@ShareProofActivity,proofZipName).execute(true, true)
         }
     }
 
@@ -345,7 +345,7 @@ class ShareProofActivity : AppCompatActivity() {
 
     @Synchronized
     @Throws(IOException::class, PGPException::class)
-    private fun saveProofAsync(fileName: String, shareMedia: Boolean, shareProof: Boolean): File? {
+    private fun saveProofAsync(fileName: String, shareMedia: Boolean, shareProof: Boolean): String? {
 
         // Get intent, action and MIME type
         val intent = intent
@@ -471,6 +471,7 @@ class ShareProofActivity : AppCompatActivity() {
                                 return null
                             }
                             fos.close()
+                            return fileZip.name
                         } catch (e: IOException) {
                             Timber.e(e)
                         }
@@ -490,6 +491,7 @@ class ShareProofActivity : AppCompatActivity() {
                             }
                             fis.close()
                             fos.close()
+                            return fileZip.name
                         } catch (e: Exception) {
                             Timber.e(
                                 e,
@@ -508,7 +510,7 @@ class ShareProofActivity : AppCompatActivity() {
         } else {
             return null
         }
-        return fileProofDownloads
+        return null
     }
 
     private fun shareProof(fileName: String, shareMedia: Boolean, shareProof: Boolean) {
@@ -936,9 +938,9 @@ class ShareProofActivity : AppCompatActivity() {
 
     private class SaveProofTask  // only retain a weak reference to the activity
         (private val activity: ShareProofActivity, val fileName: String) :
-        AsyncTask<Boolean?, Void?, File?>() {
-         override fun doInBackground(vararg params: Boolean?): File? {
-            var result: File? = null
+        AsyncTask<Boolean?, Void?, String?>() {
+         override fun doInBackground(vararg params: Boolean?): String? {
+            var result: String? = ""
             return try {
 
                 params.let {
@@ -954,8 +956,8 @@ class ShareProofActivity : AppCompatActivity() {
             }
         }
 
-        override fun onPostExecute(result: File?) {
-            if (result == null) {
+        override fun onPostExecute(result: String?) {
+            if (result?.isEmpty() == true) {
                 //do something
                 Timber.d("unable to shareProofAsync")
                 activity.showProofError()
@@ -1052,7 +1054,7 @@ class ShareProofActivity : AppCompatActivity() {
         findViewById<View>(R.id.view_proof_failed).visibility = View.VISIBLE
     }
 
-    private fun showProofSaved(fileProof: File) {
+    private fun showProofSaved(fileName: String?) {
         findViewById<View>(R.id.view_proof).visibility = View.GONE
         findViewById<View>(R.id.view_no_proof).visibility = View.GONE
         findViewById<View>(R.id.view_proof_progress).visibility = View.GONE
@@ -1062,8 +1064,10 @@ class ShareProofActivity : AppCompatActivity() {
         tv.text = """
             ${getString(R.string.share_save_downloads)}
             
-            ${fileProof.absolutePath}
+            ${fileName}
             """.trimIndent()
+
+        finish()
     }
 
     private fun showProofUploaded(fileProof: String) {
