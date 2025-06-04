@@ -1,15 +1,15 @@
 <resources>
-    <string name="app_name">ProofMode</string>
+    <string name="app_name">Proofmode</string>
 
     <string name="action_settings">Settings</string>
     <string name="action_share_key">Share Public Key...</string>
     <string name="action_publish_key">Publish Public Key...</string>
 
-    <string name="action_about">About ProofMode</string>
+    <string name="action_about">About Proofmode</string>
 
     <string name="switch_include_device">Include Device Identity</string>
     <string name="switch_include_location">Include GPS Location</string>
-    <string name="switch_enable_proofmode">Enable ProofMode</string>
+    <string name="switch_enable_proofmode">Enable Proofmode</string>
     <string name="settings_notary">Notary</string>
     <string name="settings_notary_desc">Registration with a third party that your media exists</string>
     <string name="settings_location">Location</string>
@@ -21,7 +21,7 @@
 
     <string name="proofmode_is_on">PROOFMODE IS ON AND CAPTURING DATA</string>
     <string name="tap_hold_turn_off">Tap hold to turn off</string>
-    <string name="proofmode_is_capturing">ProofMode is capturing a strong set of metadata by default. Strengthen your media´s verifiability by adding more.</string>
+    <string name="proofmode_is_capturing">Proofmode is capturing a strong set of metadata by default. Strengthen your media´s verifiability by adding more.</string>
     <string name="proofmode_is_off">PROOFMODE IS OFF AND NOT CAPTURING DATA</string>
     <string name="tap_hold_turn_on">Tap hold to turn on</string>
     <string name="share_notarization">SHARE NOTARIZATION TO...</string>
@@ -34,8 +34,8 @@
     <string name="share_proof_only">Share Proof Metadata</string>
     <string name="share_proof_with_media">Share Proof with Media</string>
     <string name="open_public_key_page">Opening public key page</string>
-    <string name="no_external_storage">WARNING: ProofMode enabled, but there is no external storage available!</string>
-    <string name="no_hash_generated">ProofMode Alert: Unable to access media files</string>
+    <string name="no_external_storage">WARNING: Proofmode enabled, but there is no external storage available!</string>
+    <string name="no_hash_generated">Proofmode Alert: Unable to access media files</string>
     <string name="generating_proof_notify">Generating proof...</string>
     <string name="waiting_proof_notify">Ready to add proof</string>
     <string name="inspect_photos">Inspecting photos</string>
@@ -59,11 +59,11 @@
     <string name="onboarding_get_started">Get Started</string>
 
     <string name="onboarding_intro_title">A picture may be worth a thousand words, but proof that it’s real is priceless.</string>
-    <string name="onboarding_intro_content">ProofMode captures information that makes your media more trustworthy.</string>
+    <string name="onboarding_intro_content">Proofmode captures information that makes your media more trustworthy.</string>
 
     <string name="onboarding_step1">Step 1</string>
-    <string name="onboarding_step1_title">Getting proof is easy. Once ProofMode is on, use your camera as usual.</string>
-    <string name="onboarding_step1_content">ProofMode works in the background to generate and save proof. You don\'t have to do anything special!</string>
+    <string name="onboarding_step1_title">Getting proof is easy. Once Proofmode is on, use your camera as usual.</string>
+    <string name="onboarding_step1_content">Proofmode works in the background to generate and save proof. You don\'t have to do anything special!</string>
 
     <string name="onboarding_step2">Step 2</string>
     <string name="onboarding_step2_title">Once you’ve taken a photo or video, find it in your camera gallery to share it.</string>
@@ -77,10 +77,10 @@
     <string name="onboarding_step4_title">Then choose how to send it.</string>
     <string name="onboarding_step4_content">You can share lots of ways, from email to messaging services like WhatsApp!</string>
 
-    <string name="onboarding_privacy_title">ProofMode activates multiple sensors on your phone to generate proof.</string>
-    <string name="onboarding_privacy_content">Learn about what ProofMode captures in our Data Legend.</string>
+    <string name="onboarding_privacy_title">Proofmode activates multiple sensors on your phone to generate proof.</string>
+    <string name="onboarding_privacy_content">Learn about what Proofmode captures in our Data Legend.</string>
     <string name="onboarding_privacy_subtitle">WE CARE ABOUT YOUR PRIVACY</string>
-    <string name="onboarding_privacy_info">ProofMode captures your phone’s identity by default. If you’re not comfortable with this, go to settings to turn it off.</string>
+    <string name="onboarding_privacy_info">Proofmode captures your phone’s identity by default. If you’re not comfortable with this, go to settings to turn it off.</string>
     <string name="onboarding_privacy_continue">Continue</string>
     <string name="onboarding_privacy_options">Privacy Options</string>
 
@@ -104,7 +104,7 @@
     <string name="share_mode_basic_info">Shares a fingerprint of your media to establish that it exists.</string>
     <string name="share_share_basic">Share basic</string>
     <string name="share_mode_robust">Robust</string>
-    <string name="share_mode_robust_info">Shares everything that you\'ve enabled ProofMode to capture in a single zip file.</string>
+    <string name="share_mode_robust_info">Shares everything that you\'ve enabled Proofmode to capture in a single zip file.</string>
     <string name="share_share_robust">Share</string>
     <string name="share_save_robust">Save</string>
     <string name="share_upload_robust">Upload</string>
@@ -113,14 +113,14 @@
 
     <string name="share_info_basic_title">Shares a fingerprint of your media to establish that it exists.</string>
     <string name="share_info_basic_message">• Doesn’t include personal info\n• No trust is needed\n• Short enough to send in a text</string>
-    <string name="share_info_robust_title">Shares everything that you\'ve enabled ProofMode to capture in a cryptographically signed file.</string>
+    <string name="share_info_robust_title">Shares everything that you\'ve enabled Proofmode to capture in a cryptographically signed file.</string>
     <string name="share_info_robust_message">• Reveals personal identifying info\n• Share with someone you trust\n• Requires internet access\n• Shares .csv file with data, PGP, and unique fingerprint</string>
     <string name="share_info_robust_send_media">Share media with proof</string>
 
     <string name="digital_signatures_title">When you share proof, you will see digital signatures and your public key attached as “.asc” files.</string>
     <string name="digital_signatures_info">Here is some more information on what those are.</string>
     <string name="digital_signatures_whatis_title">What is my digital signature and public key?</string>
-    <string name="digital_signatures_whatis_info">Every time you install ProofMode, a unique digital identity, consisting of secret and public PGP keys is created. This is powered by the OpenPGP standard. It is used to cryptographically sign your media and supporting proof files. If the PGP signatures match the digital identity (PGP key) of your current ProofMode instance, then the signature was created by that instance of ProofMode.</string>
+    <string name="digital_signatures_whatis_info">Every time you install Proofmode, a unique digital identity, consisting of secret and public PGP keys is created. This is powered by the OpenPGP standard. It is used to cryptographically sign your media and supporting proof files. If the PGP signatures match the digital identity (PGP key) of your current Proofmode instance, then the signature was created by that instance of Proofmode.</string>
     <string name="digital_signatures_whattodo_title">What do I do with it?</string>
     <string name="digital_signatures_whattodo_info">A public version of your PGP key will be shared along with your media and proof.csv files. This allows a third party to verify the PGP “.asc” signature files that come with the proof data. Including your public PGP key with the proof ensures that it will be preserved in case your device is compromised or you reinstall the app. Remember each time you re-install the app, it will create a new digital identity (PGP key).</string>
     <string name="publish_key_to">\"Publishing key to: \"</string>
@@ -211,7 +211,7 @@
     <string name="next">Next</string>
     <string name="previous">Previous</string>
     <string name="content_credentials">Content Credentials</string>
-    <string name="share_content_credentials_info">Shares image or video directly with proof metadata directly embedded in the file itself, verified and signed by ProofMode.org</string>
+    <string name="share_content_credentials_info">Shares image or video directly with proof metadata directly embedded in the file itself, verified and signed by proofmode.org</string>
     <string name="optional_filename">Optional Filename</string>
     <string name="set_a_custom_name_for_the_proof_zip">Set a custom name for the proof zip</string>
 
