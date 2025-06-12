@@ -424,7 +424,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                                 try {
                                     mStorageProvider.saveBytes(hash, hash + provider.getNotarizationFileExtension(), result.getBytes(StandardCharsets.UTF_8), new StorageListener() {
                                         @Override
-                                        public void saveSuccessful(String hash) {}
+                                        public void saveSuccessful(String hash, String uri) {}
 
                                         @Override
                                         public void saveFailed(Exception exception) {}
@@ -444,7 +444,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                                 try {
                                     mStorageProvider.saveStream(hash, hash + '.' + ext, new FileInputStream(fileTmp), new StorageListener() {
                                         @Override
-                                        public void saveSuccessful(String hash) {}
+                                        public void saveSuccessful(String hash, String uri) {}
 
                                         @Override
                                         public void saveFailed(Exception exception) {}
@@ -460,7 +460,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                                 Timber.d("Got notarization success response for %s, timestamp: %s", provider.getNotarizationFileExtension(), result);
                                 mStorageProvider.saveBytes(hash, hash + provider.getNotarizationFileExtension(), result, new StorageListener() {
                                     @Override
-                                    public void saveSuccessful(String hash) {}
+                                    public void saveSuccessful(String hash, String uri) {}
 
                                     @Override
                                     public void saveFailed(Exception exception) {}
@@ -542,7 +542,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                             try {
                                 mStorageProvider.saveBytes(hash, hash + provider.getNotarizationFileExtension(), result.getBytes(StandardCharsets.UTF_8), new StorageListener() {
                                     @Override
-                                    public void saveSuccessful(String hash) {}
+                                    public void saveSuccessful(String hash, String uri) {}
 
                                     @Override
                                     public void saveFailed(Exception exception) {}
@@ -563,7 +563,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                             try {
                                 mStorageProvider.saveStream(hash, hash + '.' + ext, new FileInputStream(fileTmp), new StorageListener() {
                                     @Override
-                                    public void saveSuccessful(String hash) {}
+                                    public void saveSuccessful(String hash, String uri) {}
 
                                     @Override
                                     public void saveFailed(Exception exception) {}
@@ -578,7 +578,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                             Timber.d("Got notarization success response for %s, timestamp: %s", provider.getNotarizationFileExtension(), result);
                             mStorageProvider.saveBytes(hash, hash + provider.getNotarizationFileExtension(), result, new StorageListener() {
                                 @Override
-                                public void saveSuccessful(String hash) {}
+                                public void saveSuccessful(String hash, String uri) {}
 
                                 @Override
                                 public void saveFailed(Exception exception) {}
@@ -657,7 +657,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                             try {
                                 mStorageProvider.saveBytes(hash, hash + provider.getNotarizationFileExtension(), result.getBytes(StandardCharsets.UTF_8), new StorageListener() {
                                     @Override
-                                    public void saveSuccessful(String hash) {}
+                                    public void saveSuccessful(String hash, String uri) {}
 
                                     @Override
                                     public void saveFailed(Exception exception) {}
@@ -678,7 +678,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                             try {
                                 mStorageProvider.saveStream(hash, hash + '.' + ext, new FileInputStream(fileTmp), new StorageListener() {
                                     @Override
-                                    public void saveSuccessful(String hash) {}
+                                    public void saveSuccessful(String hash, String uri) {}
 
                                     @Override
                                     public void saveFailed(Exception exception) {}
@@ -693,7 +693,7 @@ public class MediaWatcher extends BroadcastReceiver implements ProofModeV1Consta
                             Timber.d("Got notarization success response for %s, timestamp: %s", provider.getNotarizationFileExtension(), result);
                             mStorageProvider.saveBytes(hash, hash + provider.getNotarizationFileExtension(), result, new StorageListener() {
                                 @Override
-                                public void saveSuccessful(String hash) {}
+                                public void saveSuccessful(String hash, String uri) {}
 
                                 @Override
                                 public void saveFailed(Exception exception) {}

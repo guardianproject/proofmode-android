@@ -6,6 +6,7 @@ import org.witness.proofmode.ProofMode
 import timber.log.Timber
 import java.io.File
 import java.io.FileInputStream
+import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
@@ -31,6 +32,11 @@ public class DefaultStorageProvider (context : Context) : StorageProvider {
         )
         if (stream != null) {
             copyStreamToFile(stream, file)
+
+            if (file.exists())
+                listener?.saveSuccessful(hash, file.path)
+            else
+                listener?.saveFailed(FileNotFoundException())
         }
     }
 
@@ -48,6 +54,11 @@ public class DefaultStorageProvider (context : Context) : StorageProvider {
         )
         if (data != null) {
             writeTextToFile(file, data)
+
+            if (file.exists())
+                listener?.saveSuccessful(hash, file.path)
+            else
+                listener?.saveFailed(FileNotFoundException())
         }
 
     }
@@ -92,6 +103,11 @@ public class DefaultStorageProvider (context : Context) : StorageProvider {
                 writeBytesToFile(
                     file, data
                 )
+
+                if (file.exists())
+                    listener?.saveSuccessful(hash, file.path)
+                else
+                    listener?.saveFailed(FileNotFoundException())
             }
         }
 

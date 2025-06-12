@@ -30,8 +30,9 @@ class CompositeStorageProvider(
                 }
                 
                 secondary.saveStream(hash, identifier, stream, object : StorageListener {
-                    override fun saveSuccessful(hash: String?) {
-                        Log.d(TAG, "Successfully saved $identifier to secondary storage")
+                    override fun saveSuccessful(hash: String?, uri: String?) {
+                        Log.d(TAG, "Successfully saved $identifier to secondary storage at: $uri")
+                        primaryProvider.saveText(hash, "$identifier.uri", uri, null)
                     }
                     
                     override fun saveFailed(exception: Exception?) {
@@ -50,8 +51,9 @@ class CompositeStorageProvider(
         
         // Save to secondary provider if available (non-blocking)
         secondaryProvider?.saveBytes(hash, identifier, data, object : StorageListener {
-            override fun saveSuccessful(hash: String?) {
-                Log.d(TAG, "Successfully saved $identifier to secondary storage")
+            override fun saveSuccessful(hash: String?, uri: String?) {
+                Log.d(TAG, "Successfully saved $identifier to secondary storage at: $uri")
+                primaryProvider.saveText(hash, "$identifier.uri", uri, null)
             }
             
             override fun saveFailed(exception: Exception?) {
@@ -66,8 +68,9 @@ class CompositeStorageProvider(
         
         // Save to secondary provider if available (non-blocking)
         secondaryProvider?.saveText(hash, identifier, data, object : StorageListener {
-            override fun saveSuccessful(hash: String?) {
-                Log.d(TAG, "Successfully saved text $identifier to secondary storage")
+            override fun saveSuccessful(hash: String?, uri: String?) {
+                Log.d(TAG, "Successfully saved text $identifier to secondary storage at: $uri")
+                primaryProvider.saveText(hash, "$identifier.uri", uri, null)
             }
             
             override fun saveFailed(exception: Exception?) {

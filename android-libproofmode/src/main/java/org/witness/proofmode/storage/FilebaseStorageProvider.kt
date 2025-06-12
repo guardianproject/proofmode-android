@@ -132,7 +132,7 @@ class FilebaseStorageProvider(
                     // Extract IPFS CID from response headers if available
                     val ipfsCid = response.header("x-amz-meta-cid")
                     Log.d(TAG, "IPFS CID: $ipfsCid")
-                    listener?.saveSuccessful(hash)
+                    listener?.saveSuccessful(hash, "https://ipfs.filebase.io/ipfs/$ipfsCid")
                 } else {
                     val error = IOException("Upload failed: ${response.code} ${response.message}")
                     Log.e(TAG, "Upload failed", error)
