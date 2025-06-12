@@ -225,7 +225,7 @@
     <string name="filebase_test_connection">Test Connection</string>
     <string name="filebase_save_settings">Save Settings</string>
     <string name="please_fill_in_all_required_fields">Please fill in all required fields</string>
-    <string name="background_mode">Background Mode</string>
+    <string name="background_mode">Auto Import</string>
     <string name="proofcheck_verifier">ProofCheck Verifier</string>
     <string name="background_mode_info">Add proof to all new photos &amp; videos on this device</string>
     <string name="auto_sync_title">Auto Sync</string>

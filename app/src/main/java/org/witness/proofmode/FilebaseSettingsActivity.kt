@@ -123,6 +123,10 @@ class FilebaseSettingsActivity : AppCompatActivity() {
                 getString(R.string.please_fill_in_all_required_fields), Toast.LENGTH_SHORT).show()
             return
         }
+        else
+        {
+
+        }
 
         // TODO: Implement test upload to verify credentials
         //Toast.makeText(this, "Connection test not yet implemented", Toast.LENGTH_SHORT).show()
