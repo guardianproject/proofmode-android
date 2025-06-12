@@ -74,7 +74,7 @@ class StorageProviderManager private constructor() {
         
         // Also save to Filebase if available
         filebaseStorageProvider?.saveBytes(hash, identifier, data, object : StorageListener {
-            override fun saveSuccessful(hash: String?) {
+            override fun saveSuccessful(hash: String?, url: String?) {
                 Log.d(TAG, "Successfully uploaded $identifier to Filebase")
             }
             
@@ -90,7 +90,7 @@ class StorageProviderManager private constructor() {
         
         // Also save to Filebase if available
         filebaseStorageProvider?.saveText(hash, identifier, data, object : StorageListener {
-            override fun saveSuccessful(hash: String?) {
+            override fun saveSuccessful(hash: String?, uri: String?) {
                 Log.d(TAG, "Successfully uploaded text $identifier to Filebase")
             }
             
