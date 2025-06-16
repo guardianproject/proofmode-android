@@ -52,7 +52,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     ActivitiesViewDelegate {
     private lateinit var mPrefs: SharedPreferences
     private lateinit var layoutOn: View
-    private lateinit var layoutOff: View
+    //private lateinit var layoutOff: View
     private lateinit var drawer: DrawerLayout
     private lateinit var drawerToggle: ActionBarDrawerToggle
     private lateinit var mainBinding: ActivityMainBinding
@@ -125,7 +125,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         setSupportActionBar(toolbar)
         supportActionBar?.title = getString(R.string.app_name)
         layoutOn = mainBinding.contentMain.layoutOn
-        layoutOff = mainBinding.contentMain.layoutOff
+       // layoutOff = mainBinding.contentMain.layoutOff
         if (mPrefs.getBoolean("firsttime", true)) {
             startActivityForResult(Intent(this, OnboardingActivity::class.java), REQUEST_CODE_INTRO)
         }
@@ -150,6 +150,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             setProofModeOn(isChecked)
         }**/
 
+        /**
         val btnSettings = mainBinding.contentMain.btnSettings
         btnSettings.setOnClickListener { openSettings() }
         val btnShareProof = mainBinding.contentMain.btnShareProof
@@ -166,7 +167,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             }
             // Showing the popup menu
             popupMenu.show()
-        }
+        }**/
 
         //updateOnOffState(false)
 
