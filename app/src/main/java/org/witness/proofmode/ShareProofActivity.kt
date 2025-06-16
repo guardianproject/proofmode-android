@@ -856,7 +856,9 @@ class ShareProofActivity : AppCompatActivity() {
         override fun doInBackground(vararg params: Uri?): String? {
 
             var isDirectCapture = false; //this is from an import, and we are manually generating proof
-            C2paUtils.addContentCredentials(activity, params[0], isDirectCapture, allowMachineLearning)
+
+            if ((activity.application as ProofModeApp).useContentCredentials())
+                C2paUtils.addContentCredentials(activity, params[0], isDirectCapture, allowMachineLearning)
 
             return ProofMode.generateProof(activity, params[0], proofHash)
         }
@@ -886,11 +888,24 @@ class ShareProofActivity : AppCompatActivity() {
                     )
                     if (genProofHash != null && genProofHash == proofHash) {
 
-                        val isDirectCapture = false; //this is from an import, and we are manually generating proof
-                        Looper.prepare()
-                        var fileC2PA = C2paUtils.addContentCredentials(activity, mediaUri, isDirectCapture, allowMachineLearning)
-                        //now add fileC2PA to proof folder
-                        storageProvider?.saveStream(proofHash, fileC2PA.name, FileInputStream(fileC2PA), null)
+                        if ((activity.application as ProofModeApp).useContentCredentials()) {
+                            val isDirectCapture =
+                                false; //this is from an import, and we are manually generating proof
+                            Looper.prepare()
+                            var fileC2PA = C2paUtils.addContentCredentials(
+                                activity,
+                                mediaUri,
+                                isDirectCapture,
+                                allowMachineLearning
+                            )
+                            //now add fileC2PA to proof folder
+                            storageProvider?.saveStream(
+                                proofHash,
+                                fileC2PA.name,
+                                FileInputStream(fileC2PA),
+                                null
+                            )
+                        }
                         //all good
                     } else {
                         //error occured

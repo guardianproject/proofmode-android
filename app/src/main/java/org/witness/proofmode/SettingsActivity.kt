@@ -4,6 +4,7 @@ import android.Manifest
 import android.accounts.AccountManager
 import android.content.Intent
 import android.content.SharedPreferences
+import android.os.Build
 import android.os.Bundle
 import android.view.MenuItem
 import android.widget.CheckBox
@@ -124,22 +125,29 @@ class SettingsActivity : AppCompatActivity() {
             updateUI()
         }
 
-        switchCredentials.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
-            mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_CREDENTIALS, isChecked)
-                .commit()
+        if (Build.SUPPORTED_64_BIT_ABIS.isNotEmpty()) {
+            switchCredentials.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
+                mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_CREDENTIALS, isChecked)
+                    .commit()
 
-            switchAI.isEnabled = isChecked
+                switchAI.isEnabled = isChecked
 
-            if (isChecked)
-                showIdentityChooser()
+                if (isChecked)
+                    showIdentityChooser()
 
-            updateUI()
+                updateUI()
+            }
+
+            switchAI.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
+                mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_BLOCK_AI, isChecked)
+                    .commit()
+                updateUI()
+            }
         }
-
-        switchAI.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
-            mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_BLOCK_AI, isChecked)
-                .commit()
-            updateUI()
+        else
+        {
+            switchCredentials.isEnabled = false
+            switchAI.isEnabled = false
         }
 
         // Setup Filebase settings button

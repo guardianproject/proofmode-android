@@ -3,6 +3,7 @@ package org.witness.proofmode
 import android.R.attr.tag
 import android.content.Context
 import android.content.SharedPreferences
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.preference.PreferenceManager
@@ -72,14 +73,23 @@ class ProofModeApp : MultiDexApplication() {
             PgpUtils.init(this, mPrefs.getString(PREFS_KEY_PASSPHRASE, PREFS_KEY_PASSPHRASE_DEFAULT))
             mPgpUtils = PgpUtils.getInstance()
 
-            var useCredentials = mPrefs.getBoolean(
-                ProofMode.PREF_OPTION_CREDENTIALS,
-                ProofMode.PREF_OPTION_CREDENTIALS_DEFAULT
-            );
 
-            if (useCredentials)
-                initContentCredentials()
+            if(useContentCredentials())
+                    initContentCredentials()
+
+
         }
+
+    }
+
+    public fun useContentCredentials () : Boolean {
+
+        var useCredentials = mPrefs.getBoolean(
+            ProofMode.PREF_OPTION_CREDENTIALS,
+            ProofMode.PREF_OPTION_CREDENTIALS_DEFAULT
+        );
+
+        return Build.SUPPORTED_64_BIT_ABIS.isNotEmpty() && useCredentials
 
     }
 

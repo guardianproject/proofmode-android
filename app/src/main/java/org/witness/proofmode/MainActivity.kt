@@ -670,16 +670,14 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     fun startCamera(view: View?) {
         val intentCam = Intent(this, CameraActivity::class.java)
 
-        val useCredentials = mPrefs.getBoolean(
-            ProofMode.PREF_OPTION_CREDENTIALS,
-            ProofMode.PREF_OPTION_CREDENTIALS_DEFAULT
-        );
-
-        intentCam.putExtra(PREF_OPTION_CREDENTIALS, useCredentials);
-        intentCam.putExtra(PREF_OPTION_BLOCK_AI, mPrefs.getBoolean(PREF_OPTION_BLOCK_AI, PREF_OPTION_AI_DEFAULT));
-
-        if (useCredentials)
+        if ((application as ProofModeApp).useContentCredentials()) {
+            intentCam.putExtra(PREF_OPTION_CREDENTIALS, true);
             (application as ProofModeApp).initContentCredentials()
+        }
+        else
+            intentCam.putExtra(PREF_OPTION_CREDENTIALS, false);
+
+        intentCam.putExtra(PREF_OPTION_BLOCK_AI, mPrefs.getBoolean(PREF_OPTION_BLOCK_AI, PREF_OPTION_AI_DEFAULT));
 
         startActivityForResult(intentCam,REQUEST_CODE_CAMERA)
     }
