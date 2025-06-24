@@ -1,4 +1,4 @@
-package org.witness.proofmode
+package org.witness.proofmode.org.witness.proofmode.ui
 
 import android.content.Context
 import android.net.Uri
@@ -16,7 +16,6 @@ import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Delete
-import androidx.room.DeleteTable
 import androidx.room.Entity
 import androidx.room.Insert
 import androidx.room.PrimaryKey
@@ -33,7 +32,6 @@ import kotlinx.serialization.SerialName
 import java.util.Date
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
@@ -197,12 +195,12 @@ object Activities: ViewModel()
 
     fun getDB(context: Context): AppDatabase {
         if (!this::db.isInitialized) {
-            this.db = Room.databaseBuilder(
+            db = Room.databaseBuilder(
                 context.applicationContext,
                 AppDatabase::class.java, "activities-db"
             ).build()
         }
-        return this.db
+        return db
     }
 
     fun load(context: Context) {
@@ -222,7 +220,7 @@ object Activities: ViewModel()
     fun addActivity(activity: Activity, context: Context) {
         val db = getDB(context)
 
-        val lastActivity = this.activities.lastOrNull()
+        val lastActivity = activities.lastOrNull()
         if (activity.type is ActivityType.MediaCaptured && lastActivity != null && lastActivity.type is ActivityType.MediaCaptured && (lastActivity.startTime.time + timeBatchWindow) >= activity.startTime.time) {
             // If within the same minute, add it to the same "batch" as the previous one.
 
@@ -240,7 +238,7 @@ object Activities: ViewModel()
                     db.activitiesDao().update(lastActivity)
             }
         } else {
-            this.activities.add(activity)
+            activities.add(activity)
             viewModelScope.launch {
                 if (db.activitiesDao().activityFromProofableItemId(activity.id) == null)
                     db.activitiesDao().insert(activity)
@@ -277,9 +275,9 @@ object Activities: ViewModel()
 
         viewModelScope.launch {
             var activity =
-                Activities.getDB(context).activitiesDao().activityFromProofableItemId(selectId)
+                getDB(context).activitiesDao().activityFromProofableItemId(selectId)
             if (activity != null) {
-                var proofItems = Activities.getActivityProofableItems(activity)
+                var proofItems = getActivityProofableItems(activity)
                 for (proofItem in proofItems)
                     if (!listItems.contains(proofItem))
                         listItems.add(proofItem)

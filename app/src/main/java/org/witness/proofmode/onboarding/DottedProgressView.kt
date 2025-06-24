@@ -8,7 +8,7 @@ import android.util.AttributeSet
 import android.view.Gravity
 import android.view.View
 import org.witness.proofmode.R
-import org.witness.proofmode.UIHelpers
+import org.witness.proofmode.ui.UIHelpers
 
 class DottedProgressView : View {
     private var mPaint: Paint? = null

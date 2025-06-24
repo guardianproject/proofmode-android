@@ -9,21 +9,19 @@ import android.os.Bundle
 import android.view.MenuItem
 import android.widget.CheckBox
 import android.widget.CompoundButton
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.PreferenceManager
 import com.google.android.gms.common.AccountPicker
 import com.google.android.gms.common.AccountPicker.AccountChooserOptions
-import org.witness.proofmode.PermissionActivity
 import org.witness.proofmode.PermissionActivity.Companion.hasPermissions
 import org.witness.proofmode.ProofMode.PREF_CREDENTIALS_PRIMARY
-import org.witness.proofmode.ProofMode.PREF_OPTION_AI_DEFAULT
 import org.witness.proofmode.c2pa.C2paUtils
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.databinding.ActivitySettingsBinding
 import org.witness.proofmode.storage.FilebaseConfig
 import org.witness.proofmode.util.GPSTracker
 import androidx.core.content.edit
+import org.witness.proofmode.org.witness.proofmode.share.FilebaseSettingsActivity
 
 
 class SettingsActivity : AppCompatActivity() {

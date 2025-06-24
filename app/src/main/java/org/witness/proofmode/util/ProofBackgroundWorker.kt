@@ -1,4 +1,4 @@
-package org.witness.proofmode.org.witness.proofmode
+package org.witness.proofmode.org.witness.proofmode.util
 
 import android.content.Context
 import android.provider.MediaStore
@@ -8,7 +8,6 @@ import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkManager
 import androidx.work.Worker
 import androidx.work.WorkerParameters
-import org.witness.proofmode.service.MediaWatcher
 
 class ProofBackgroundWorker (appContext: Context, workerParams: WorkerParameters):
     Worker(appContext, workerParams) {

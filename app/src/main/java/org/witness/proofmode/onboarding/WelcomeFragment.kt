@@ -6,7 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
-import org.witness.proofmode.DataLegendActivity
+import org.witness.proofmode.org.witness.proofmode.ui.DataLegendActivity
 import org.witness.proofmode.databinding.OnboardingWelcomeBinding
 
 class WelcomeFragment : Fragment() {

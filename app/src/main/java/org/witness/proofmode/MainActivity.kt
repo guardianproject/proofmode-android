@@ -18,7 +18,6 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.PopupMenu
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.platform.ComposeView
@@ -29,9 +28,9 @@ import androidx.preference.PreferenceManager
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.navigation.NavigationView
 import gun0912.tedimagepicker.builder.TedImagePicker
-import org.witness.proofmode.ActivityConstants.EXTRA_FILE_NAME
-import org.witness.proofmode.ActivityConstants.EXTRA_SHARE_TEXT
-import org.witness.proofmode.ActivityConstants.INTENT_ACTIVITY_ITEMS_SHARED
+import org.witness.proofmode.org.witness.proofmode.ui.ActivityConstants.EXTRA_FILE_NAME
+import org.witness.proofmode.org.witness.proofmode.ui.ActivityConstants.EXTRA_SHARE_TEXT
+import org.witness.proofmode.org.witness.proofmode.ui.ActivityConstants.INTENT_ACTIVITY_ITEMS_SHARED
 import org.witness.proofmode.ProofMode.EVENT_PROOF_GENERATED
 import org.witness.proofmode.ProofMode.PREF_OPTION_AI_DEFAULT
 import org.witness.proofmode.ProofMode.PREF_OPTION_BLOCK_AI
@@ -41,6 +40,15 @@ import org.witness.proofmode.camera.CameraActivity
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.databinding.ActivityMainBinding
 import org.witness.proofmode.onboarding.OnboardingActivity
+import org.witness.proofmode.org.witness.proofmode.share.ShareProofActivity
+import org.witness.proofmode.org.witness.proofmode.ui.Activities
+import org.witness.proofmode.org.witness.proofmode.ui.ActivitiesView
+import org.witness.proofmode.org.witness.proofmode.ui.ActivitiesViewDelegate
+import org.witness.proofmode.org.witness.proofmode.ui.Activity
+import org.witness.proofmode.org.witness.proofmode.ui.ActivityType
+import org.witness.proofmode.org.witness.proofmode.ui.DataLegendActivity
+import org.witness.proofmode.org.witness.proofmode.ui.DigitalSignaturesActivity
+import org.witness.proofmode.org.witness.proofmode.ui.ProofableItem
 import org.witness.proofmode.util.GPSTracker
 import timber.log.Timber
 import java.io.File

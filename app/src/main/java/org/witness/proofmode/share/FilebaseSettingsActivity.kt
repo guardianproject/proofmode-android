@@ -1,4 +1,4 @@
-package org.witness.proofmode
+package org.witness.proofmode.org.witness.proofmode.share
 
 import android.os.Bundle
 import android.view.MenuItem
@@ -8,6 +8,7 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.PreferenceManager
+import org.witness.proofmode.R
 import org.witness.proofmode.storage.FilebaseConfig
 
 class FilebaseSettingsActivity : AppCompatActivity() {

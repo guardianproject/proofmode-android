@@ -1,4 +1,4 @@
-package org.witness.proofmode
+package org.witness.proofmode.org.witness.proofmode.share
 
 import android.Manifest
 import android.app.Dialog
@@ -8,7 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.LabeledIntent
-import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
@@ -19,7 +18,6 @@ import android.text.TextUtils
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.webkit.MimeTypeMap
 import android.widget.CheckBox
 import android.widget.CompoundButton
 import android.widget.EditText
@@ -27,8 +25,6 @@ import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.documentfile.provider.DocumentFile
 import androidx.preference.PreferenceManager
@@ -38,18 +34,24 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
 import org.bouncycastle.openpgp.PGPException
-import org.witness.proofmode.ActivityConstants.EXTRA_FILE_NAME
-import org.witness.proofmode.ActivityConstants.EXTRA_SHARE_TEXT
-import org.witness.proofmode.ActivityConstants.INTENT_ACTIVITY_ITEMS_SHARED
+import org.witness.proofmode.org.witness.proofmode.ui.ActivityConstants.EXTRA_FILE_NAME
+import org.witness.proofmode.org.witness.proofmode.ui.ActivityConstants.EXTRA_SHARE_TEXT
+import org.witness.proofmode.org.witness.proofmode.ui.ActivityConstants.INTENT_ACTIVITY_ITEMS_SHARED
+import org.witness.proofmode.PermissionActivity
 import org.witness.proofmode.PermissionActivity.Companion.hasPermissions
+import org.witness.proofmode.ProofMode
 import org.witness.proofmode.ProofMode.PREF_OPTION_AI_DEFAULT
 import org.witness.proofmode.ProofMode.PREF_OPTION_BLOCK_AI
+import org.witness.proofmode.ProofModeApp
+import org.witness.proofmode.org.witness.proofmode.ui.ProofableItem
+import org.witness.proofmode.R
 import org.witness.proofmode.c2pa.C2paUtils
 import org.witness.proofmode.c2pa.C2paUtils.Companion.C2PA_CERT_PATH
 import org.witness.proofmode.crypto.HashUtils
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.databinding.ActivityShareBinding
-import org.witness.proofmode.service.MediaWatcher
+import org.witness.proofmode.getFileNameFromUri
+import org.witness.proofmode.getRealUri
 import org.witness.proofmode.storage.DefaultStorageProvider
 import org.witness.proofmode.storage.StorageProvider
 import timber.log.Timber
@@ -617,76 +619,8 @@ class ShareProofActivity : AppCompatActivity() {
                 }
 
                 if (fileZip.length() > 0) {
-                    Timber.d("Proof zip completed. Size:" + fileZip.length())
 
-                    var proofSignEndpoint = URL("https://proofsign.gpfs.link/upload")
-
-                    val fileRequestBody = fileZip.asRequestBody("application/zip".toMediaType())
-                    val requestBody = MultipartBody.Builder()
-                        .setType(MultipartBody.FORM)
-                        .addFormDataPart("file", fileZip.name, fileRequestBody)
-                        .build()
-
-                    val request = Request.Builder().url(proofSignEndpoint)
-                        .post(requestBody)
-                        .build()
-
-                    var cBuilder = OkHttpClient.Builder();
-                    cBuilder.connectTimeout(120, TimeUnit.SECONDS)
-                    cBuilder.readTimeout(120, TimeUnit.SECONDS)
-                    cBuilder.writeTimeout(120, TimeUnit.SECONDS)
-
-                    val client = cBuilder.build()
-                    client.newCall(request).execute().use { response ->
-
-                        Timber.d("proofsign response: " + response.code)
-
-                        if (response.code == 200) {
-                            var rs = response.body?.byteStream()
-
-                            var contentType = response.body?.contentType().toString()
-
-                            Timber.d("response from proofsign: type=$contentType path=$fileZip.absolutePath");
-
-                            displayProgressAsync(getString(R.string.status_download_content_credentials))
-
-                            var fileZipC2PA = File(fileZip.absolutePath + "-c2pa.zip")
-                            response.use { input ->
-                                fileZipC2PA.outputStream().use { output ->
-                                    rs?.copyTo(output)
-                                }
-                            }
-
-                            Timber.d("saved proofsigned zip to: " + fileZipC2PA.absolutePath)
-
-                            //unzip C2PA download zip and add to the proper local hash directory
-                            val zipFile = ZipFile(fileZipC2PA)
-                            val entries = zipFile.entries()
-
-                            while (entries.hasMoreElements()) {
-                                val zipEntry = entries.nextElement()
-                                println(zipEntry.name)
-                                var mediaHash = zipEntry.name.split(".")[0]
-                                var identifier = zipEntry.name+"-c2pa.jpg"
-
-                                //var fileImageC2PA = File(fileFolder,)
-                                //shareUris.add(Uri.fromFile(fileImageC2PA)) //TODO STORAGE
-                                mStorageProvider?.getOutputStream(mediaHash, identifier)
-                                    ?.let { zipFile.getInputStream(zipEntry).copyTo(it) }
-
-                            }
-                            zipFile.close()
-
-                            return fileZipC2PA
-                        }
-                        else{
-                            Timber.d("proofsign err: " + response.body?.string())
-
-                            displayProgressAsync(getString(R.string.err_content_credentials))
-
-                            return null
-                        }
-                    }
+                        return uploadToProofSign (fileZip)
 
 
                 } else {
@@ -696,6 +630,79 @@ class ShareProofActivity : AppCompatActivity() {
             }
         }
         return null
+    }
+
+    private fun uploadToProofSign (fileZip: File): File? {
+        Timber.d("Proof zip completed. Size:" + fileZip.length())
+
+        var proofSignEndpoint = URL("https://proofsign.gpfs.link/upload")
+
+        val fileRequestBody = fileZip.asRequestBody("application/zip".toMediaType())
+        val requestBody = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("file", fileZip.name, fileRequestBody)
+            .build()
+
+        val request = Request.Builder().url(proofSignEndpoint)
+            .post(requestBody)
+            .build()
+
+        var cBuilder = OkHttpClient.Builder();
+        cBuilder.connectTimeout(120, TimeUnit.SECONDS)
+        cBuilder.readTimeout(120, TimeUnit.SECONDS)
+        cBuilder.writeTimeout(120, TimeUnit.SECONDS)
+
+        val client = cBuilder.build()
+        client.newCall(request).execute().use { response ->
+
+            Timber.d("proofsign response: " + response.code)
+
+            if (response.code == 200) {
+                var rs = response.body?.byteStream()
+
+                var contentType = response.body?.contentType().toString()
+
+                Timber.d("response from proofsign: type=$contentType path=$fileZip.absolutePath");
+
+                displayProgressAsync(getString(R.string.status_download_content_credentials))
+
+                var fileZipC2PA = File(fileZip.absolutePath + "-c2pa.zip")
+                response.use { input ->
+                    fileZipC2PA.outputStream().use { output ->
+                        rs?.copyTo(output)
+                    }
+                }
+
+                Timber.d("saved proofsigned zip to: " + fileZipC2PA.absolutePath)
+
+                //unzip C2PA download zip and add to the proper local hash directory
+                val zipFile = ZipFile(fileZipC2PA)
+                val entries = zipFile.entries()
+
+                while (entries.hasMoreElements()) {
+                    val zipEntry = entries.nextElement()
+                    println(zipEntry.name)
+                    var mediaHash = zipEntry.name.split(".")[0]
+                    var identifier = zipEntry.name+"-c2pa.jpg"
+
+                    //var fileImageC2PA = File(fileFolder,)
+                    //shareUris.add(Uri.fromFile(fileImageC2PA)) //TODO STORAGE
+                    mStorageProvider?.getOutputStream(mediaHash, identifier)
+                        ?.let { zipFile.getInputStream(zipEntry).copyTo(it) }
+
+                }
+                zipFile.close()
+
+                return fileZipC2PA
+            }
+            else{
+                Timber.d("proofsign err: " + response.body?.string())
+
+                displayProgressAsync(getString(R.string.err_content_credentials))
+
+                return null
+            }
+        }
     }
 
     @Synchronized

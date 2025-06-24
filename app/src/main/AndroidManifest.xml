@@ -103,23 +103,23 @@
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
-            android:name=".DataLegendActivity"
+            android:name=".org.witness.proofmode.ui.DataLegendActivity"
             android:label="@string/activity_datalegend_title"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
-            android:name=".DigitalSignaturesActivity"
+            android:name=".org.witness.proofmode.ui.DigitalSignaturesActivity"
             android:label="@string/menu_digital_signatures"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
-            android:name=".FilebaseSettingsActivity"
+            android:name=".org.witness.proofmode.share.FilebaseSettingsActivity"
             android:label="Filebase Settings"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
 
         <receiver
-            android:name=".OnBootReceiver"
+            android:name=".org.witness.proofmode.util.OnBootReceiver"
             android:enabled="true"
             android:exported="true">
             <intent-filter>
@@ -139,7 +139,7 @@
         </receiver>
 
         <activity
-            android:name=".ShareProofActivity"
+            android:name=".org.witness.proofmode.share.ShareProofActivity"
             android:exported="true"
             android:label="@string/share_proof_action"
             android:theme="@style/AppTheme.NoActionBar">
@@ -236,7 +236,7 @@
             </intent-filter>
         </receiver>
         <receiver
-            android:name=".ProofEventReceiver"
+            android:name=".org.witness.proofmode.util.ProofEventReceiver"
             android:enabled="true"
             android:exported="true">
             <intent-filter android:priority="10000">

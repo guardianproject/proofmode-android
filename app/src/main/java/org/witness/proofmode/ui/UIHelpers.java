@@ -1,4 +1,4 @@
-package org.witness.proofmode;
+package org.witness.proofmode.ui;
 
 import android.app.Activity;
 import android.content.Context;

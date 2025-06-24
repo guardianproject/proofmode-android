@@ -1,4 +1,4 @@
-package org.witness.proofmode
+package org.witness.proofmode.org.witness.proofmode.ui
 
 import android.annotation.SuppressLint
 import android.os.Bundle

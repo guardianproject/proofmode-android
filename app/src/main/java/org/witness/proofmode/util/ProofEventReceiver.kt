@@ -1,10 +1,15 @@
-package org.witness.proofmode
+package org.witness.proofmode.org.witness.proofmode.util
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.runtime.mutableStateListOf
+import org.witness.proofmode.org.witness.proofmode.ui.Activities
+import org.witness.proofmode.org.witness.proofmode.ui.Activity
+import org.witness.proofmode.org.witness.proofmode.ui.ActivityType
+import org.witness.proofmode.ProofMode
+import org.witness.proofmode.org.witness.proofmode.ui.ProofableItem
 import timber.log.Timber
 import java.util.Date
 

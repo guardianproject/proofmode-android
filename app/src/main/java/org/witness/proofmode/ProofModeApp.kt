@@ -1,33 +1,22 @@
 package org.witness.proofmode
 
-import android.R.attr.tag
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.preference.PreferenceManager
-import android.provider.MediaStore
 import android.widget.Toast
 import androidx.multidex.BuildConfig
 import androidx.multidex.MultiDexApplication
-import androidx.work.Constraints
-import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.ExistingWorkPolicy
-import androidx.work.OneTimeWorkRequest
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
-import androidx.work.WorkRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.acra.config.dialog
 import org.acra.config.mailSender
 import org.acra.data.StringFormat
 import org.acra.ktx.initAcra
 import org.bouncycastle.openpgp.PGPException
-import org.bouncycastle.openpgp.PGPUtil
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
 import org.witness.proofmode.c2pa.C2paUtils
@@ -36,13 +25,10 @@ import org.witness.proofmode.notaries.GoogleSafetyNetNotarizationProvider
 import org.witness.proofmode.notaries.OpenTimestampsNotarizationProvider
 import org.witness.proofmode.notaries.SafetyNetCheck
 import org.witness.proofmode.notarization.NotarizationProvider
-import org.witness.proofmode.org.witness.proofmode.ProofBackgroundWorker
-import org.witness.proofmode.org.witness.proofmode.share.p2p.P2PNotarizationProvider
 import timber.log.Timber
 import java.io.IOException
 import java.util.concurrent.Executors
 import kotlin.random.Random
-import java.util.concurrent.CompletableFuture.runAsync
 
 private var mPgpUtils: PgpUtils? = null
 private lateinit var mPrefs: SharedPreferences
