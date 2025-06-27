@@ -7,6 +7,9 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.*
 import java.net.URLEncoder
+import java.nio.file.CopyOption
+import java.nio.file.Files
+import java.nio.file.Paths
 import java.security.MessageDigest
 import java.text.SimpleDateFormat
 import java.util.*
@@ -40,8 +43,11 @@ class FilebaseStorageProvider(
     override fun saveStream(hash: String, identifier: String, stream: InputStream, listener: StorageListener?) {
         try {
             val tempFile = File.createTempFile("filebase_upload", ".tmp")
-            tempFile.outputStream().use { output ->
-                stream.copyTo(output)
+
+            stream.use { input ->
+                tempFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
             }
 
             uploadFile(hash, identifier, tempFile, listener)

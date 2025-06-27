@@ -126,7 +126,7 @@ class FilebaseSettingsActivity : AppCompatActivity() {
         }
         else
         {
-
+            Toast.makeText(this,"All good!" ,Toast.LENGTH_SHORT).show()
         }
 
         // TODO: Implement test upload to verify credentials
