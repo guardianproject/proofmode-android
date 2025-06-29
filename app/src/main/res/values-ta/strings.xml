@@ -89,7 +89,7 @@
     <string name="share_mode_basic_info">உங்கள் ஊடகத்தின் கைரேகையைப் பகிர்ந்து கொள்கிறது.</string>
     <string name="share_share_basic">அடிப்படை பகிர்வு</string>
     <string name="share_mode_robust">வலுவான</string>
-    <string name="share_mode_robust_info">கிரிப்டோகிராஃபிக்காக கையொப்பமிடப்பட்ட கோப்பில் பிடிக்க ப்ரூஃப்மோட் இயக்கிய அனைத்தையும் பகிர்ந்து கொள்கிறது.</string>
+    <string name="share_mode_robust_info">ஒரு சிப் கோப்பில் பிடிக்க நீங்கள் ப்ரூஃப்மோடை இயக்கிய அனைத்தையும் பகிர்ந்து கொள்கிறது.</string>
     <string name="share_share_robust">பங்கு</string>
     <string name="share_save_robust">சேமி</string>
     <string name="share_upload_robust">பதிவேற்றும்</string>
@@ -172,4 +172,13 @@
     <string name="settings_ai">உங்களிடம் உள்ள தொகுதி</string>
     <string name="settings_ai_desc">இயந்திர கற்றல் பயிற்சிக்கு பயன்படுத்தப்படக்கூடாது என்று கொடி</string>
     <string name="default_share_text">இது மீடியா கோப்புகள், மேனிலை தரவு மற்றும் டிசிட்டல் கையொப்பங்களைக் கொண்ட ஒரு ப்ரூஃப் பேக் ஆகும். இதை https://proofmode.org/verify இல் எவ்வாறு சரிபார்க்க வேண்டும் என்பதை அறிக</string>
+    <string name="title_activity_p2_pshare">P2pshareactivity</string>
+    <string name="first_fragment_label">முதல் துண்டு</string>
+    <string name="second_fragment_label">இரண்டாவது துண்டு</string>
+    <string name="next">அடுத்தது</string>
+    <string name="previous">முந்தைய</string>
+    <string name="content_credentials">உள்ளடக்க நற்சான்றிதழ்கள்</string>
+    <string name="share_content_credentials_info">படம் அல்லது வீடியோவை நேரடியாக சான்று மெட்டாடேட்டாவுடன் கோப்பில் நேரடியாக பதிக்கப்பட்டு, சரிபார்க்கப்பட்டு profmode.org ஆல் கையொப்பமிடப்படுகிறது</string>
+    <string name="optional_filename">விருப்ப கோப்பு பெயர்</string>
+    <string name="set_a_custom_name_for_the_proof_zip">சான்று சிப்பிற்கு தனிப்பயன் பெயரை அமைக்கவும்</string>
 </resources>
