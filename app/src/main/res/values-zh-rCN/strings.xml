@@ -176,6 +176,7 @@
     <string name="content_credentials">内容凭据</string>
     <string name="first_fragment_label">第一段</string>
     <string name="second_fragment_label">第二段</string>
-    <string name="share_content_credentials_info">直接分享图片或视频，证明元数据直接嵌入文件本身，由 ProofMode.org 验证和签名</string>
+    <string name="share_content_credentials_info">直接分享图片或视频，并将证明元数据直接嵌入文件本身，并由 Proofmode.org 验证和签名</string>
     <string name="menu_import_creds">导入凭据…</string>
+    <string name="filebase_ipfs_storage_description">配置自动将证据上传到 Filebase。它们将自动发布到 IPFS。</string>
 </resources>
