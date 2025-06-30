@@ -8,7 +8,7 @@
     <string name="menu_settings">设置</string>
     <string name="share_share_robust">分享</string>
     <string name="digital_signatures_title">当你分享认证文件时，你会看到电子签名，以及 “.asc” 文件的公钥附件。</string>
-    <string name="settings_credentials">证书</string>
+    <string name="settings_credentials">凭据</string>
     <string name="app_name">Proofmode</string>
     <string name="share_no_proof_info">如果还没有证据，你现在可以生成一个。生成的证据可能无法反映媒体文件创建的时间与地点。</string>
     <string name="share_info_robust_message">• 显示个人身份信息
@@ -39,7 +39,7 @@
         <item quantity="other">这%d个项目已被删除或无法访问</item>
     </plurals>
     <string name="digital_signatures_whattodo_info">你的 PGP 公钥会随原文件与 proof.csv 文件一起被分享。这让第三方可以验证认证数据中的 PGP “.asc” 签名文件。如果在认证数据中包含 PGP 公钥，就可以保证在设备损坏或重装应用时公钥受到保护。请注意，每次重新安装本应用时都会创建新的电子身份信息（PGP 密钥）。</string>
-    <string name="digital_signatures_whatis_info">每次安装 ProofMode 时，都会创建独特的电子身份信息，其中包含 PGP 私钥与公钥。此过程由 OpenPGP 标准提供支持。创建的身份信息用来给媒体文件与支持的证明文件加密签名。如果 PGP 签名与当前 ProofMode 实例的电子身份信息（PGP 密钥）匹配，则签名就是由对应实例创建的。</string>
+    <string name="digital_signatures_whatis_info">每次安装 Proofmode 时，都会创建一个由 PGP 私钥和公钥组成的唯一数字身份。此过程由 OpenPGP 标准提供支持。创建的身份信息用于媒体文件和支持的证明文件进行加密签名。如果 PGP 签名与当前 Proofmode 实例的数字身份（PGP 密钥）匹配，则签名由该 Proofmode 实例创建。</string>
     <string name="settings_notary">公证</string>
     <string name="settings_location_desc">创建媒体文件所在的位置坐标</string>
     <string name="settings_phone">设备</string>
@@ -105,10 +105,10 @@
     <string name="share_proof_found">找到证据了！请选择分享的证据等级。</string>
     <string name="permissions_needed_content">请在系统设置中启用所需权限。</string>
     <string name="share_mode_basic_info">分享媒体文件的指纹来证明其存在。</string>
-    <string name="share_mode_robust_info">将 ProofMode 获取的所有内容打包成单个 ZIP 文件分享。</string>
+    <string name="share_mode_robust_info">将 Proofmode 已捕获的所有内容打包成单个 ZIP 文件分享。</string>
     <string name="share_share_basic">分享基本信息</string>
     <string name="share_info_basic_title">分享媒体文件的指纹来证明其存在。</string>
-    <string name="share_info_robust_title">将 ProofMode 获取的所有信息打包成加密签名的文件分享。</string>
+    <string name="share_info_robust_title">将 Proofmode 已捕获的所有内容打包成加密签名的文件分享。</string>
     <string name="share_info_robust_send_media">分享带证据的媒体文件</string>
     <string name="digital_signatures_info">这里是关于上述内容的详细信息。</string>
     <string name="digital_signatures_whatis_title">什么是数字签名与公钥？</string>
@@ -146,7 +146,7 @@
     <string name="action_add_content_credentials_c2pa">发送到 ProofCheck</string>
     <string name="err_content_credentials">验证或生成内容凭据时出现问题。</string>
     <string name="status_download_content_credentials">正在下载带有内容凭据的图像…</string>
-    <string name="menu_import_photos">导入…</string>
+    <string name="menu_import_photos">导入媒体…</string>
     <string name="cd_take_picture">拍照</string>
     <string name="cb_open_gallery">转到相册</string>
     <string name="cb_switch">切换前后摄像头</string>
@@ -163,7 +163,7 @@
     <plurals name="you_imported_n_items">
         <item quantity="other">已导入%d项</item>
     </plurals>
-    <string name="settings_credentials_desc">向照片与视频添加内容凭据 (C2PA)</string>
+    <string name="settings_credentials_desc">向照片和视频添加内容凭据（C2PA）</string>
     <plurals name="clear_these_n_items">
         <item quantity="other">清除此%d项</item>
     </plurals>
@@ -177,4 +177,5 @@
     <string name="first_fragment_label">第一段</string>
     <string name="second_fragment_label">第二段</string>
     <string name="share_content_credentials_info">直接分享图片或视频，证明元数据直接嵌入文件本身，由 ProofMode.org 验证和签名</string>
+    <string name="menu_import_creds">导入凭据…</string>
 </resources>
