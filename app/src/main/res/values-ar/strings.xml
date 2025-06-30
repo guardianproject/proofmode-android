@@ -53,8 +53,8 @@
         <item quantity="zero">حصة هذه البنود %d</item>
         <item quantity="one">تقاسم هذا البند</item>
         <item quantity="two">حصة هذه البنود %d</item>
-        <item quantity="few"></item>
-        <item quantity="many"></item>
+        <item quantity="few"/>
+        <item quantity="many"/>
         <item quantity="other">حصة هذه البنود %d</item>
     </plurals>
     <string name="cb_timer">اختيار جهاز توقيت</string>
@@ -134,40 +134,40 @@
         <item quantity="zero">%d items selected</item>
         <item quantity="one">أحد البنود المختارة</item>
         <item quantity="two">%d items selected</item>
-        <item quantity="few"></item>
-        <item quantity="many"></item>
+        <item quantity="few"/>
+        <item quantity="many"/>
         <item quantity="other">%d items selected</item>
     </plurals>
     <plurals name="you_captured_n_items">
         <item quantity="zero">لقد قبضت على أشياء</item>
         <item quantity="one">لقد أمسكت ببند واحد</item>
         <item quantity="two">لقد قبضت على أشياء</item>
-        <item quantity="few"></item>
-        <item quantity="many"></item>
+        <item quantity="few"/>
+        <item quantity="many"/>
         <item quantity="other">لقد قبضت على أشياء</item>
     </plurals>
     <plurals name="you_imported_n_items">
         <item quantity="zero">أنت مستورد %d الأصناف</item>
         <item quantity="one">لقد استوردت قطعة واحدة</item>
         <item quantity="two">أنت مستورد %d الأصناف</item>
-        <item quantity="few"></item>
-        <item quantity="many"></item>
+        <item quantity="few"/>
+        <item quantity="many"/>
         <item quantity="other">أنت مستورد %d الأصناف</item>
     </plurals>
     <plurals name="you_shared_n_items">
         <item quantity="zero">لقد تشاطرتم (X11X) البنود</item>
         <item quantity="one">لقد تشاركت في شيء واحد</item>
         <item quantity="two">لقد تشاطرتم (X11X) البنود</item>
-        <item quantity="few"></item>
-        <item quantity="many"></item>
+        <item quantity="few"/>
+        <item quantity="many"/>
         <item quantity="other">لقد تشاطرتم (X11X) البنود</item>
     </plurals>
     <plurals name="n_items_have_been_deleted_or_are_not_accessible">
         <item quantity="zero">%d items have been removed or not accessible</item>
         <item quantity="one">حذف بند واحد أو غير متاح</item>
         <item quantity="two">%d items have been removed or not accessible</item>
-        <item quantity="few"></item>
-        <item quantity="many"></item>
+        <item quantity="few"/>
+        <item quantity="many"/>
         <item quantity="other">%d items have been removed or not accessible</item>
     </plurals>
     <string name="date_display_days_since_today">اليوم</string>
@@ -178,8 +178,8 @@
         <item quantity="zero">إزالة هذه البنود %d</item>
         <item quantity="one">نظف هذا البند</item>
         <item quantity="two">إزالة هذه البنود %d</item>
-        <item quantity="few"></item>
-        <item quantity="many"></item>
+        <item quantity="few"/>
+        <item quantity="many"/>
         <item quantity="other">إزالة هذه البنود %d</item>
     </plurals>
     <string name="you_shared_your_public_key">لقد شاركتم مفتاحكم العام</string>
@@ -191,8 +191,6 @@
     <string name="err_content_credentials">وهناك مشكلة في التحقق من وثائق تفويض المحتوى أو توليدها.</string>
     <string name="status_download_content_credentials">تحميل الصور بوثائق تفويض المحتوى.</string>
     <string name="menu_import_photos">استيراد...</string>
-    <string name="menu_import_videos">فيديو استيراد...</string>
-    <string name="menu_import_documents">وثائق استيراد...</string>
     <string name="title_activity">Proof Log</string>
     <string name="cd_take_picture">صورة</string>
     <string name="cb_open_gallery">Navigate to Gallery</string>

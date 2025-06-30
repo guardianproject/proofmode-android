@@ -158,8 +158,6 @@
     <string name="err_content_credentials">உள்ளடக்க சான்றுகளை சரிபார்க்க அல்லது உருவாக்குவதில் சிக்கல் இருந்தது.</string>
     <string name="status_download_content_credentials">உள்ளடக்க சான்றுகளுடன் படங்களை பதிவிறக்குகிறது ...</string>
     <string name="menu_import_photos">இறக்குமதி ...</string>
-    <string name="menu_import_videos">வீடியோக்களை இறக்குமதி செய்யுங்கள் ...</string>
-    <string name="menu_import_documents">இறக்குமதி ஆவணங்கள் ...</string>
     <string name="title_activity">ஆதார பதிவு</string>
     <string name="cd_take_picture">படம் எடுக்கவும்</string>
     <string name="cb_open_gallery">கேலரிக்கு செல்லவும்</string>

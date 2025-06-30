@@ -147,7 +147,6 @@
     <string name="err_content_credentials">验证或生成内容凭据时出现问题。</string>
     <string name="status_download_content_credentials">正在下载带有内容凭据的图像…</string>
     <string name="menu_import_photos">导入…</string>
-    <string name="menu_import_videos">导入视频…</string>
     <string name="cd_take_picture">拍照</string>
     <string name="cb_open_gallery">转到相册</string>
     <string name="cb_switch">切换前后摄像头</string>
@@ -164,7 +163,6 @@
     <plurals name="you_imported_n_items">
         <item quantity="other">已导入%d项</item>
     </plurals>
-    <string name="menu_import_documents">导入文档…</string>
     <string name="settings_credentials_desc">向照片与视频添加内容凭据 (C2PA)</string>
     <plurals name="clear_these_n_items">
         <item quantity="other">清除此%d项</item>

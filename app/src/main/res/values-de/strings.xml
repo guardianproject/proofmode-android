@@ -12,7 +12,6 @@
         <item quantity="one">Du hast ein Element geteilt</item>
         <item quantity="other">Du hast %d Elemente geteilt</item>
     </plurals>
-    <string name="menu_import_videos">Videos importieren...</string>
     <string name="menu_how_it_works">Wie es funktioniert</string>
     <string name="menu_settings">Einstellungen</string>
     <string name="menu_datalegend">Datenlegende</string>
@@ -35,7 +34,6 @@
     <string name="date_display_days_since_yesterday">\'Gestern \'HH:MM</string>
     <string name="re_share">Erneut teilen</string>
     <string name="menu_import_photos">Importieren...</string>
-    <string name="menu_import_documents">Dokumente importieren...</string>
     <string name="cd_take_picture">Bild aufnehmen</string>
     <string name="camera">Kamera</string>
     <string name="video">Video</string>

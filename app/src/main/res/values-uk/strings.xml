@@ -181,8 +181,6 @@
     <string name="err_content_credentials">Виникла проблема під час перевірки або створення облікових даних вмісту.</string>
     <string name="status_download_content_credentials">Завантаження зображень із обліковими даними вмісту...</string>
     <string name="menu_import_photos">Імпорт...</string>
-    <string name="menu_import_videos">Імпорт відео...</string>
-    <string name="menu_import_documents">Імпорт документів...</string>
     <string name="title_activity">Журнал доказів</string>
     <string name="cd_take_picture">Сфотографувати</string>
     <string name="cb_open_gallery">Перейдіть до галереї</string>
