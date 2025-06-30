@@ -39,7 +39,7 @@
         <item quantity="other">这%d个项目已被删除或无法访问</item>
     </plurals>
     <string name="digital_signatures_whattodo_info">你的 PGP 公钥会随原文件与 proof.csv 文件一起被分享。这让第三方可以验证认证数据中的 PGP “.asc” 签名文件。如果在认证数据中包含 PGP 公钥，就可以保证在设备损坏或重装应用时公钥受到保护。请注意，每次重新安装本应用时都会创建新的电子身份信息（PGP 密钥）。</string>
-    <string name="digital_signatures_whatis_info">每次安装 Proofmode 时，都会创建一个由 PGP 私钥和公钥组成的唯一数字身份。此过程由 OpenPGP 标准提供支持。创建的身份信息用于媒体文件和支持的证明文件进行加密签名。如果 PGP 签名与当前 Proofmode 实例的数字身份（PGP 密钥）匹配，则签名由该 Proofmode 实例创建。</string>
+    <string name="digital_signatures_whatis_info">每次安装 Proofmode 时，都会创建一个由 PGP 私钥和公钥组成的唯一数字身份。此过程由 OpenPGP 标准提供支持。创建的身份信息用于媒体文件和支持的证据文件进行加密签名。如果 PGP 签名与当前 Proofmode 实例的数字身份（PGP 密钥）匹配，则签名由该 Proofmode 实例创建。</string>
     <string name="settings_notary">公证</string>
     <string name="settings_location_desc">创建媒体文件所在的位置坐标</string>
     <string name="settings_phone">设备</string>
@@ -176,7 +176,23 @@
     <string name="content_credentials">内容凭据</string>
     <string name="first_fragment_label">第一段</string>
     <string name="second_fragment_label">第二段</string>
-    <string name="share_content_credentials_info">直接分享图片或视频，并将证明元数据直接嵌入文件本身，并由 Proofmode.org 验证和签名</string>
+    <string name="share_content_credentials_info">直接分享图片或视频，并将证据元数据直接嵌入文件本身，并由 Proofmode.org 验证和签名</string>
     <string name="menu_import_creds">导入凭据…</string>
     <string name="filebase_ipfs_storage_description">配置自动将证据上传到 Filebase。它们将自动发布到 IPFS。</string>
+    <string name="filebase_ipfs_storage">Filebase IPFS 自动同步（测试）</string>
+    <string name="enable_filebase_upload">启用 Filebase 上传</string>
+    <string name="access_key">访问密钥</string>
+    <string name="secret_key">密钥</string>
+    <string name="bucket_name">存储桶名称</string>
+    <string name="endpoint_url">端点 URL</string>
+    <string name="instructions">说明：</string>
+    <string name="filebase_instructions_info">1. 在 filebase.com 创建一个免费账号\n2. 创建一个用于存储证据的新存储桶\n3. 在 Filebase 控制面板中生成访问密钥\n4. 输入上方密钥并测试连接。</string>
+    <string name="filebase_test_connection">测试连接</string>
+    <string name="filebase_save_settings">保存设置</string>
+    <string name="please_fill_in_all_required_fields">请填写所有必填字段</string>
+    <string name="background_mode">自动导入</string>
+    <string name="proofcheck_verifier">ProofCheck 验证器</string>
+    <string name="background_mode_info">为此设备上的所有新照片和视频添加证据</string>
+    <string name="auto_sync_title">自动同步</string>
+    <string name="auto_sync_desc">将证据数据备份到 Filebase IPFS 云服务</string>
 </resources>
