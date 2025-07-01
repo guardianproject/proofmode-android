@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ProofMode</string>
+    <string name="app_name">Доказ</string>
     <string name="action_settings">Налаштування</string>
     <string name="action_share_key">Поділіться відкритим ключем...</string>
     <string name="action_publish_key">Публікація відкритого ключа...</string>
@@ -95,7 +95,7 @@
     <string name="switch_enable_proofmode">Увімкнути ProofMode</string>
     <string name="settings_notary">Нотаріус</string>
     <string name="settings_network_desc">Назва мережі (мереж), до якої (яких) ви підключені</string>
-    <string name="proofmode_is_capturing">ProofMode за замовчуванням збирає великий набір метаданих. Посильте можливість перевірки ваших медіа, додавши більше.</string>
+    <string name="proofmode_is_capturing">ProofMode за замовчуванням захоплює сильний набір метаданих. Посилити перевірку ваших медіа, додавши більше.</string>
     <string name="no_hash_generated">Попередження ProofMode: Неможливо отримати доступ до медіафайлів</string>
     <string name="proof_signed">Цей доказ підписано ключем PGP 0x</string>
     <string name="no_external_storage">ПОПЕРЕДЖЕННЯ: Режим ProofMode увімкнено, але зовнішній накопичувач недоступний!</string>
