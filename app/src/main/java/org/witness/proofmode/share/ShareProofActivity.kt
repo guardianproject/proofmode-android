@@ -40,6 +40,8 @@ import org.witness.proofmode.PermissionActivity.Companion.hasPermissions
 import org.witness.proofmode.ProofMode
 import org.witness.proofmode.ProofMode.PREF_OPTION_AI_DEFAULT
 import org.witness.proofmode.ProofMode.PREF_OPTION_BLOCK_AI
+import org.witness.proofmode.ProofMode.PREF_OPTION_CREDENTIALS
+import org.witness.proofmode.ProofMode.PREF_OPTION_CREDENTIALS_DEFAULT
 import org.witness.proofmode.ProofModeApp
 import org.witness.proofmode.R
 import org.witness.proofmode.c2pa.C2paUtils
@@ -81,6 +83,7 @@ class ShareProofActivity : AppCompatActivity() {
     private var mBlockAI : Boolean? = false
 
     private var mStorageProvider : DefaultStorageProvider? = null
+    private var mC2PAEnable : Boolean? = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -88,6 +91,7 @@ class ShareProofActivity : AppCompatActivity() {
         mPrefs = PreferenceManager.getDefaultSharedPreferences(this)
         pgpUtils = PgpUtils.getInstance()
         mBlockAI = mPrefs?.getBoolean(PREF_OPTION_BLOCK_AI, PREF_OPTION_AI_DEFAULT) == false
+        mC2PAEnable = mPrefs?.getBoolean(PREF_OPTION_CREDENTIALS, PREF_OPTION_CREDENTIALS_DEFAULT) == true
         setContentView(binding.root)
         mStorageProvider = DefaultStorageProvider(applicationContext)
     }
@@ -230,7 +234,6 @@ class ShareProofActivity : AppCompatActivity() {
             }
             .create()
         dialog.show()
-
 
 
 
@@ -411,10 +414,36 @@ class ShareProofActivity : AppCompatActivity() {
                             lastMediaUri?.let { it1 -> contentResolver.openInputStream(it1) }
                         )
 
+                        val publicIs =
+                            spm.getPrimaryStorageProvider()?.getInputStream(hash, "$hash.public")
+                        if (publicIs != null) {
+                            val uri = publicIs.bufferedReader().use(BufferedReader::readText)
+                            val verifyUri = "https://check.proofmode.org/#$uri"
+                            shareString = getString(R.string.verify_this_media_at) + "$verifyUri #proofmode #c2pa"
+
+                            if (lastMediaUri != null) {
+                                var uriShareImage = SocialImageUtil().createImageCard(this@ShareProofActivity,lastMediaUri, verifyUri)
+                                shareUris.clear()
+                                shareUris.add(cleanUri(uriShareImage))
+                            }
+
+                            shareMedia(
+                                this@ShareProofActivity,
+                                shareString,
+                                shareUris
+                            )
+
+                            return true
+                        }
+
                         hash.let {
                             var isMedia = contentResolver.openInputStream(lastMediaUri!!)
                             fp?.saveStream(hash, "public",isMedia!!, object : StorageListener {
                                 override fun saveSuccessful(hash: String?, uri: String?) {
+
+                                    spm.getPrimaryStorageProvider()?.saveText(hash,
+                                        "$hash.public", uri, null)
+
                                     //Log.d(TAG, "Successfully saved $identifier to secondary storage at: $uri")
                                     val verifyUri = "https://check.proofmode.org/#$uri"
                                     shareString = getString(R.string.verify_this_media_at) + "$verifyUri #proofmode #c2pa"
