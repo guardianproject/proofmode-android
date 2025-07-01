@@ -25,6 +25,7 @@ import org.witness.proofmode.notaries.GoogleSafetyNetNotarizationProvider
 import org.witness.proofmode.notaries.OpenTimestampsNotarizationProvider
 import org.witness.proofmode.notaries.SafetyNetCheck
 import org.witness.proofmode.notarization.NotarizationProvider
+import org.witness.proofmode.storage.StorageProviderManager
 import timber.log.Timber
 import java.io.IOException
 import java.util.concurrent.Executors
@@ -49,6 +50,8 @@ class ProofModeApp : MultiDexApplication() {
         GlobalScope.launch(Dispatchers.IO) {
             initPgpKey()
         }
+
+        StorageProviderManager.getInstance().initializeStorageProviders(this)
 
     }
 

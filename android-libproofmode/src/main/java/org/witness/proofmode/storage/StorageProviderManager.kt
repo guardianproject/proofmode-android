@@ -107,4 +107,8 @@ class StorageProviderManager private constructor() {
     fun isFilebaseEnabled(): Boolean {
         return filebaseStorageProvider != null
     }
+
+    fun getFilebaseProvider (): FilebaseStorageProvider? {
+        return filebaseStorageProvider
+    }
 }

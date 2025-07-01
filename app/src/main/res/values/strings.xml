@@ -230,5 +230,10 @@
     <string name="background_mode_info">Add proof to all new photos &amp; videos on this device</string>
     <string name="auto_sync_title">Auto Sync</string>
     <string name="auto_sync_desc">Back-up proof data to the Filebase IPFS cloud service</string>
+    <string name="social">social</string>
+    <string name="share_social">Shares just the media file with C2PA and a verify link for social networks</string>
+    <string name="share_media">Share Media</string>
+    <string name="share_using">Share using</string>
+    <string name="verify_this_media_at">"Verify this media at: "</string>
 
 </resources>

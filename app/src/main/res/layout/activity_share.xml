@@ -85,21 +85,28 @@
         android:paddingEnd="10dp"
         android:paddingRight="10dp"
         >
+
         <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/share_proof_found"
-            android:layout_margin="10dp"
-            style="@style/OnboardingStepTitleStyle"
-            />
+                   android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/share_proof_found"
+                    android:layout_margin="10dp"
+                    style="@style/OnboardingStepTitleStyle"
+                    />
+
+
 
         <com.caverock.androidsvg.SVGImageView
             android:layout_width="50dp"
             android:layout_height="50dp"
             app:svg="ic_basic.svg"
             android:visibility="gone"
-
             />
+
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal">
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -107,6 +114,8 @@
             android:layout_margin="10dp"
             android:textAllCaps="true"
             style="@style/OnboardingStepContentStyle"
+            android:textStyle="bold"
+
             />
 
         <TextView
@@ -116,9 +125,10 @@
             android:drawableEnd="@drawable/ic_info"
             android:drawableRight="@drawable/ic_info"
             android:text="@string/share_mode_basic_info"
+            android:gravity="left"
             style="@style/OnboardingStepContentStyle"
             />
-
+</LinearLayout>
         <Button
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -134,6 +144,12 @@
             app:svg="ic_robust.svg"
             android:visibility="gone"
             />
+
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -141,6 +157,8 @@
             android:layout_margin="10dp"
             android:textAllCaps="true"
             style="@style/OnboardingStepContentStyle"
+            android:textStyle="bold"
+
             />
 
         <TextView
@@ -151,8 +169,10 @@
             android:drawableRight="@drawable/ic_info"
             android:text="@string/share_mode_robust_info"
             style="@style/OnboardingStepContentStyle"
+            android:gravity="left"
             />
 
+        </LinearLayout>
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -162,71 +182,52 @@
             android:layout_width="160dp"
             android:layout_height="wrap_content"
             android:layout_margin="10dp"
-            android:text="@string/share_share_robust"
+            android:text="SHARE ZIP"
             android:onClick="clickAll"
             />
             <Button
                 android:layout_width="160dp"
                 android:layout_height="wrap_content"
                 android:layout_margin="10dp"
-                android:text="@string/share_save_robust"
+                android:text="SAVE ZIP"
                 android:onClick="saveAll"
                 />
-            <Button
-                android:layout_width="160dp"
-                android:layout_height="wrap_content"
-                android:layout_margin="10dp"
-                android:text="@string/share_sign_robust"
-                android:onClick="signAll"
-                android:visibility="gone"
-                />
+
 
         </LinearLayout>
 
-        <com.caverock.androidsvg.SVGImageView
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            app:svg="ic_robust.svg"
-            android:visibility="gone"
-
-            />
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/content_credentials"
-            android:layout_margin="10dp"
-            android:textAllCaps="true"
-            style="@style/OnboardingStepContentStyle"
-            android:visibility="gone"
-            />
-
-        <TextView
-            android:id="@+id/tvInfoContentCredentials"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:drawableEnd="@drawable/ic_info"
-            android:drawableRight="@drawable/ic_info"
-            android:text="@string/share_content_credentials_info"
-            style="@style/OnboardingStepContentStyle"
-            android:visibility="gone"
-            />
 
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:visibility="gone"
-            >
-            <Button
-                android:layout_width="160dp"
+            android:orientation="horizontal">
+            <TextView
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:text="@string/social"
                 android:layout_margin="10dp"
-                android:text="@string/share_sign_robust"
-                android:onClick="signAll"
+                android:textAllCaps="true"
+                style="@style/OnboardingStepContentStyle"
+                android:textStyle="bold"
                 />
 
-
+            <TextView
+                android:id="@+id/tvInfoSocial"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/share_social"
+                android:gravity="left"
+                style="@style/OnboardingStepContentStyle"
+                />
         </LinearLayout>
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="20dp"
+            android:text="@string/share_media"
+            android:onClick="clickShareSocial"
+            />
 
 
     </LinearLayout>

@@ -3,11 +3,11 @@ package org.witness.proofmode.org.witness.proofmode.share
 import android.Manifest
 import android.app.Dialog
 import android.app.PendingIntent
-import android.content.ComponentName
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
-import android.content.pm.LabeledIntent
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
@@ -26,6 +26,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
+import androidx.core.net.toFile
 import androidx.documentfile.provider.DocumentFile
 import androidx.preference.PreferenceManager
 import okhttp3.MediaType.Companion.toMediaType
@@ -34,16 +35,12 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
 import org.bouncycastle.openpgp.PGPException
-import org.witness.proofmode.org.witness.proofmode.ui.ActivityConstants.EXTRA_FILE_NAME
-import org.witness.proofmode.org.witness.proofmode.ui.ActivityConstants.EXTRA_SHARE_TEXT
-import org.witness.proofmode.org.witness.proofmode.ui.ActivityConstants.INTENT_ACTIVITY_ITEMS_SHARED
 import org.witness.proofmode.PermissionActivity
 import org.witness.proofmode.PermissionActivity.Companion.hasPermissions
 import org.witness.proofmode.ProofMode
 import org.witness.proofmode.ProofMode.PREF_OPTION_AI_DEFAULT
 import org.witness.proofmode.ProofMode.PREF_OPTION_BLOCK_AI
 import org.witness.proofmode.ProofModeApp
-import org.witness.proofmode.org.witness.proofmode.ui.ProofableItem
 import org.witness.proofmode.R
 import org.witness.proofmode.c2pa.C2paUtils
 import org.witness.proofmode.c2pa.C2paUtils.Companion.C2PA_CERT_PATH
@@ -52,8 +49,14 @@ import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.databinding.ActivityShareBinding
 import org.witness.proofmode.getFileNameFromUri
 import org.witness.proofmode.getRealUri
+import org.witness.proofmode.org.witness.proofmode.ui.ActivityConstants.EXTRA_FILE_NAME
+import org.witness.proofmode.org.witness.proofmode.ui.ActivityConstants.EXTRA_SHARE_TEXT
+import org.witness.proofmode.org.witness.proofmode.ui.ActivityConstants.INTENT_ACTIVITY_ITEMS_SHARED
+import org.witness.proofmode.org.witness.proofmode.ui.ProofableItem
 import org.witness.proofmode.storage.DefaultStorageProvider
+import org.witness.proofmode.storage.StorageListener
 import org.witness.proofmode.storage.StorageProvider
+import org.witness.proofmode.storage.StorageProviderManager
 import timber.log.Timber
 import java.io.*
 import java.net.URL
@@ -142,6 +145,12 @@ class ShareProofActivity : AppCompatActivity() {
                 }
             }
         }
+
+        if (resultUri.scheme.equals("file"))
+        {
+            resultUri = FileProvider.getUriForFile(getApplication(), getApplication().getPackageName() + ".provider", resultUri.toFile());
+        }
+
         return resultUri
     }
 
@@ -191,6 +200,13 @@ class ShareProofActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    fun clickShareSocial (button: View?) {
+
+        displayProgress("Preparing media for social share...")
+        ShareSocialTask(this).execute()
+
     }
 
     fun clickNotarize(button: View?) {
@@ -345,7 +361,106 @@ class ShareProofActivity : AppCompatActivity() {
             proofZipName = "$fileName-proofmode-0x$userId-$dateString.zip"
     }
 
-    @Synchronized
+    private fun shareSocial() : Boolean {
+
+        // Get intent, action and MIME type
+        val intent = intent
+        val action = intent.action
+        val shareUris = ArrayList<Uri?>()
+        var lastMediaUri : Uri? = null
+
+        if (Intent.ACTION_SEND_MULTIPLE == action) {
+            val mediaUris =
+                intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM) ?: emptyList()
+
+            for (mediaUri in mediaUris) {
+
+                shareUris.add(cleanUri(mediaUri))
+                lastMediaUri = mediaUri
+            }
+
+        } else if (Intent.ACTION_SEND == action) {
+            lastMediaUri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+
+            if (lastMediaUri == null) lastMediaUri = intent.data
+
+
+        }
+
+        var mediaPublicUri = ""
+        var shareString = ""
+
+        if (shareUris.size > 1) {
+            shareMedia(
+                this,
+                shareString,
+                shareUris
+            )
+        }
+        else
+        {
+
+
+
+              var spm = StorageProviderManager.getInstance()
+              if (spm.isFilebaseEnabled())
+              {
+                    spm.getFilebaseProvider().let { fp ->
+
+                        val hash = HashUtils.getSHA256FromFileContent(
+                            lastMediaUri?.let { it1 -> contentResolver.openInputStream(it1) }
+                        )
+
+                        hash.let {
+                            var isMedia = contentResolver.openInputStream(lastMediaUri!!)
+                            fp?.saveStream(hash, "public",isMedia!!, object : StorageListener {
+                                override fun saveSuccessful(hash: String?, uri: String?) {
+                                    //Log.d(TAG, "Successfully saved $identifier to secondary storage at: $uri")
+                                    val verifyUri = "https://check.proofmode.org/#$uri"
+                                    shareString = getString(R.string.verify_this_media_at) + "$verifyUri #proofmode #c2pa"
+
+                                    if (lastMediaUri != null) {
+                                        var uriShareImage = SocialImageUtil().createImageCard(this@ShareProofActivity,lastMediaUri, verifyUri)
+                                        shareUris.clear()
+                                        shareUris.add(cleanUri(uriShareImage))
+                                    }
+
+                                    shareMedia(
+                                        this@ShareProofActivity,
+                                        shareString,
+                                        shareUris
+                                    )
+                                }
+
+                                override fun saveFailed(exception: Exception?) {
+                                //    Log.w(TAG, "Failed to save $identifier to secondary storage: ${exception?.message}")
+                                }
+                            })
+                        }
+                    }
+              }
+              else
+              {
+                  if (lastMediaUri != null) {
+                      var uriShareImage = SocialImageUtil().createImageCard(this,lastMediaUri, null)
+                      shareUris.clear()
+                      shareUris.add(cleanUri(uriShareImage))
+                  }
+
+                  shareMedia(
+                      this,
+                      shareString,
+                      shareUris
+                  )
+              }
+
+            return true
+        }
+
+        return true
+    }
+
+        @Synchronized
     @Throws(IOException::class, PGPException::class)
     private fun saveProofAsync(fileName: String, shareMedia: Boolean, shareProof: Boolean): String? {
 
@@ -989,6 +1104,34 @@ class ShareProofActivity : AppCompatActivity() {
         }
     }
 
+    private class ShareSocialTask  // only retain a weak reference to the activity
+    internal constructor(private val activity: ShareProofActivity) :
+        AsyncTask<Boolean?, Void?, Boolean>() {
+        override fun doInBackground(vararg params: Boolean?): Boolean {
+            var result = false
+            return try {
+                result = activity.shareSocial()
+                result
+            } catch (e: IOException) {
+                Timber.e(e, "error sharing social")
+                false
+            } catch (e: PGPException) {
+                Timber.e(e, "error sharing social")
+                false
+            }
+        }
+
+        override fun onPostExecute(result: Boolean) {
+            if (!result) {
+                //do something
+                Timber.d("unable to shareSocial")
+                activity.showProofError()
+            } else {
+                //    activity.finish();
+            }
+        }
+    }
+
     private class ShareProofTask  // only retain a weak reference to the activity
     internal constructor(private val activity: ShareProofActivity, val fileName: String) :
         AsyncTask<Boolean?, Void?, Boolean>() {
@@ -1278,172 +1421,6 @@ class ShareProofActivity : AppCompatActivity() {
         startActivity(Intent.createChooser(shareIntent, getString(R.string.share_notarization)))
     }
 
-    private fun shareFilteredSingle(
-        shareMessage: String,
-        shareText: String,
-        shareUri: Uri,
-        shareMimeType: String
-    ) {
-        val pm = packageManager
-        val sendIntent = Intent(Intent.ACTION_SEND)
-        sendIntent.type = "*/*"
-        val resInfo = pm.queryIntentActivities(sendIntent, 0)
-        val intentList = ArrayList<LabeledIntent>()
-        for (i in resInfo.indices) {
-            // Extract the label, append it, and repackage it in a LabeledIntent
-            val ri = resInfo[i]
-            val packageName = ri.activityInfo.packageName
-            if (packageName.contains("android.email")) {
-                val intent = Intent()
-                intent.setPackage(packageName)
-                intent.setDataAndType(shareUri, shareMimeType)
-                intent.putExtra(Intent.EXTRA_STREAM, shareUri)
-                intent.putExtra(Intent.EXTRA_TITLE, shareUri.lastPathSegment)
-                intent.putExtra(Intent.EXTRA_SUBJECT, shareUri.lastPathSegment)
-                intentList.add(
-                    LabeledIntent(
-                        intent, packageName, ri
-                            .loadLabel(pm), ri.icon
-                    )
-                )
-            } else if (packageName.contains("com.whatsapp")) {
-                val intent = Intent()
-                intent.component = ComponentName(
-                    packageName,
-                    ri.activityInfo.name
-                )
-                intent.action = Intent.ACTION_SEND
-                intent.setDataAndType(shareUri, shareMimeType)
-                intent.putExtra(Intent.EXTRA_TEXT, shareText)
-                intent.putExtra(Intent.EXTRA_STREAM, shareUri)
-                intentList.add(
-                    LabeledIntent(
-                        intent, packageName, ri
-                            .loadLabel(pm), ri.icon
-                    )
-                )
-            } else if (packageName.contains("com.google.android.gm")) {
-                val intent = Intent()
-                intent.component = ComponentName(
-                    packageName,
-                    ri.activityInfo.name
-                )
-                intent.action = Intent.ACTION_SEND
-                //       intent.setDataAndType(shareUri, shareMimeType);
-                intent.putExtra(Intent.EXTRA_EMAIL, arrayOf(""))
-                intent.putExtra(Intent.EXTRA_TEXT, shareText)
-                intent.putExtra(Intent.EXTRA_STREAM, shareUri)
-                intent.putExtra(Intent.EXTRA_TITLE, shareUri.lastPathSegment)
-                intent.putExtra(Intent.EXTRA_SUBJECT, shareUri.lastPathSegment)
-                intentList.add(
-                    LabeledIntent(
-                        intent, packageName, ri
-                            .loadLabel(pm), ri.icon
-                    )
-                )
-            } else if (packageName.contains("com.google.android.apps.docs")) {
-                val intent = Intent()
-                intent.component = ComponentName(
-                    packageName,
-                    ri.activityInfo.name
-                )
-                intent.action = Intent.ACTION_SEND
-                //     intent.setDataAndType(shareUri, shareMimeType);
-                intent.putExtra(Intent.EXTRA_TEXT, shareText)
-                intent.putExtra(Intent.EXTRA_STREAM, shareUri)
-                intent.putExtra(Intent.EXTRA_TITLE, shareUri.lastPathSegment)
-                intent.putExtra(Intent.EXTRA_SUBJECT, shareUri.lastPathSegment)
-                intentList.add(
-                    LabeledIntent(
-                        intent, packageName, ri
-                            .loadLabel(pm), ri.icon
-                    )
-                )
-            } else if (packageName.contains("com.dropbox")) {
-                val intent = Intent()
-                intent.component = ComponentName(
-                    packageName,
-                    ri.activityInfo.name
-                )
-                intent.action = Intent.ACTION_SEND
-                //    intent.setDataAndType(shareUri, shareMimeType);
-                intent.putExtra(Intent.EXTRA_TEXT, shareText)
-                intent.putExtra(Intent.EXTRA_STREAM, shareUri)
-                intent.putExtra(Intent.EXTRA_TITLE, shareUri.lastPathSegment)
-                intent.putExtra(Intent.EXTRA_SUBJECT, shareUri.lastPathSegment)
-                intentList.add(
-                    LabeledIntent(
-                        intent, packageName, ri
-                            .loadLabel(pm), ri.icon
-                    )
-                )
-            } else if (packageName.contains("org.thoughtcrime")) {
-                val intent = Intent()
-                intent.component = ComponentName(
-                    packageName,
-                    ri.activityInfo.name
-                )
-                intent.action = Intent.ACTION_SEND
-                //     intent.setDataAndType(shareUri, shareMimeType);
-                intent.putExtra(Intent.EXTRA_TEXT, shareText)
-                intent.putExtra(Intent.EXTRA_STREAM, shareUri)
-                intent.putExtra(Intent.EXTRA_TITLE, shareUri.lastPathSegment)
-                intent.putExtra(Intent.EXTRA_SUBJECT, shareUri.lastPathSegment)
-                intentList.add(
-                    LabeledIntent(
-                        intent, packageName, ri
-                            .loadLabel(pm), ri.icon
-                    )
-                )
-            } else if (packageName.contains("conversations")) {
-                val intent = Intent()
-                intent.component = ComponentName(
-                    packageName,
-                    ri.activityInfo.name
-                )
-                intent.action = Intent.ACTION_SEND
-                intent.setDataAndType(shareUri, shareMimeType)
-                intent.putExtra(Intent.EXTRA_TEXT, shareText)
-                intent.putExtra(Intent.EXTRA_STREAM, shareUri)
-                intent.putExtra(Intent.EXTRA_TITLE, shareUri.lastPathSegment)
-                intent.putExtra(Intent.EXTRA_SUBJECT, shareUri.lastPathSegment)
-                intentList.add(
-                    LabeledIntent(
-                        intent, packageName, ri
-                            .loadLabel(pm), ri.icon
-                    )
-                )
-            } else if (packageName.contains("org.awesomeapp") || packageName.contains("im.zom")) {
-                val intent = Intent()
-                intent.component = ComponentName(
-                    packageName,
-                    ri.activityInfo.name
-                )
-                intent.action = Intent.ACTION_SEND
-                intent.setDataAndType(shareUri, shareMimeType)
-                intent.putExtra(Intent.EXTRA_TEXT, shareText)
-                intent.putExtra(Intent.EXTRA_STREAM, shareUri)
-                intent.putExtra(Intent.EXTRA_TITLE, shareUri.lastPathSegment)
-                intent.putExtra(Intent.EXTRA_SUBJECT, shareUri.lastPathSegment)
-                intentList.add(
-                    LabeledIntent(
-                        intent, packageName, ri
-                            .loadLabel(pm), ri.icon
-                    )
-                )
-            }
-        }
-        val baseIntent = Intent()
-        baseIntent.action = Intent.ACTION_SEND
-
-        // convert intentList to array
-        val extraIntents = intentList
-            .toTypedArray()
-        val openInChooser = Intent.createChooser(baseIntent, shareMessage)
-        openInChooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, extraIntents)
-        startActivity(openInChooser)
-    }
-
     @Throws(IOException::class, PGPException::class)
     fun zipProof(uris: ArrayList<Uri?>, fileZip: File?) {
         var origin: BufferedInputStream
@@ -1611,6 +1588,44 @@ class ShareProofActivity : AppCompatActivity() {
             }
             context.startActivity(openInChooser)
         }
+
+        fun shareMedia(
+            context: Context,
+            shareText: String,
+            shareUris: ArrayList<Uri?>?
+        ) {
+
+            val shareIntent = Intent()
+            shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+            if (shareUris?.size!! > 1)
+            {
+                shareIntent.action = Intent.ACTION_SEND_MULTIPLE
+                shareIntent.setType("*/*")
+                shareIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, shareUris)
+            }
+            else
+            {
+                shareIntent.action = Intent.ACTION_SEND
+                shareIntent.setDataAndType(shareUris[0],"image/*")
+                shareIntent.putExtra(Intent.EXTRA_STREAM, shareUris[0])
+            }
+
+            //some apps don't take an image AND the text, so put it in the buffer
+            val clipboard = context.getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+            val clip = ClipData.newPlainText("proofmode", shareText)
+            clipboard.setPrimaryClip(clip)
+
+            shareIntent.putExtra(Intent.EXTRA_TEXT, shareText)
+         //   shareIntent.putExtra(Intent.EXTRA_TITLE, shareText)
+
+
+            context.startActivity(Intent.createChooser(shareIntent,
+                context.getString(R.string.share_using)));
+
+        }
+
+
     }
 
 
