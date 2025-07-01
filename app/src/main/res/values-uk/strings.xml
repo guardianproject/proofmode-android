@@ -212,5 +212,8 @@
     <string name="filebase_save_settings">Зберегти налаштування</string>
     <string name="please_fill_in_all_required_fields">Будь ласка, заповніть усі необхідні поля</string>
     <string name="background_mode">Автоматичний імпорт</string>
-    <string name="proofcheck_verifier">Перевірка перевірки</string>
+    <string name="proofcheck_verifier">ProofCheck Перевірок</string>
+    <string name="background_mode_info">Додайте доказ до всіх нових фотографій та відео на цьому пристрої</string>
+    <string name="auto_sync_title">Автоматична синхронізація</string>
+    <string name="auto_sync_desc">Дані про підтвердження резервного копіювання до хмарної служби IPFS IPFS</string>
 </resources>
