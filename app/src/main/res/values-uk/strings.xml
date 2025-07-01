@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Доказ</string>
+    <string name="app_name">Proofmode</string>
     <string name="action_settings">Налаштування</string>
     <string name="action_share_key">Поділіться відкритим ключем...</string>
     <string name="action_publish_key">Публікація відкритого ключа...</string>
@@ -96,9 +96,9 @@
     <string name="settings_notary">Нотаріус</string>
     <string name="settings_network_desc">Назва мережі (мереж), до якої (яких) ви підключені</string>
     <string name="proofmode_is_capturing">ProofMode за замовчуванням захоплює сильний набір метаданих. Посилити перевірку ваших медіа, додавши більше.</string>
-    <string name="no_hash_generated">Попередження ProofMode: Неможливо отримати доступ до медіафайлів</string>
+    <string name="no_hash_generated">Proofmode Попередження: Неможливо отримати доступ до медіа -файлів</string>
     <string name="proof_signed">Цей доказ підписано ключем PGP 0x</string>
-    <string name="no_external_storage">ПОПЕРЕДЖЕННЯ: Режим ProofMode увімкнено, але зовнішній накопичувач недоступний!</string>
+    <string name="no_external_storage">ПОПЕРЕДЖЕННЯ: Увімкнено Proofmode, але зовнішнього сховища немає!</string>
     <string name="independent_notary">Незалежне нотаріальне засвідчення Enigio TimeBeat за адресою:</string>
     <string name="onboarding_step4_content">Ви можете ділитися різними способами, від електронної пошти до сервісів обміну повідомленнями, такими як WhatsApp!</string>
     <string name="onboarding_privacy_continue">Продовжити</string>
