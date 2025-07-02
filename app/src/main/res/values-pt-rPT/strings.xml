@@ -165,8 +165,6 @@
     <string name="err_content_credentials">Houve um problema ao verificar ou ao gerar as credenciais de conteúdo.</string>
     <string name="status_download_content_credentials">A descarregar as imagens com credenciais de conteúdo...</string>
     <string name="menu_import_photos">Importar...</string>
-    <string name="menu_import_videos">Importar vídeos...</string>
-    <string name="menu_import_documents">Importar documentos...</string>
     <string name="title_activity">Registo de provas</string>
     <string name="cd_take_picture">Tirar uma foto</string>
     <string name="cb_open_gallery">Navegar até a galeria</string>

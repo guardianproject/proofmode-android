@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ProofMode</string>
+    <string name="app_name">Proofmode</string>
     <string name="action_settings">Налаштування</string>
     <string name="action_share_key">Поділіться відкритим ключем...</string>
     <string name="action_publish_key">Публікація відкритого ключа...</string>
@@ -45,19 +45,19 @@
     <string name="onboarding_learn_more">Докладніше</string>
     <string name="onboarding_get_started">Почати роботу</string>
     <string name="onboarding_intro_title">Картина може бути варта тисячі слів, але доказ того, що вона справжня, безцінний.</string>
-    <string name="onboarding_intro_content">ProofMode збирає інформацію, яка робить ваші медіа більш достовірними.</string>
-    <string name="onboarding_step1_title">Отримати доказ легко. Увімкнувши режим ProofMode, використовуйте камеру як зазвичай.</string>
-    <string name="onboarding_step1_content">ProofMode працює у фоновому режимі для створення та збереження доказів. Вам не потрібно робити нічого особливого!</string>
+    <string name="onboarding_intro_content">Proofmode Захоплює інформацію, яка робить ваші ЗМІ більш надійними.</string>
+    <string name="onboarding_step1_title">Отримати докази легко за допомогою камери Proofmode!</string>
+    <string name="onboarding_step1_content">Proofmode Працює на задньому плані, щоб генерувати та зберегти доказ. Вам не потрібно робити нічого особливого!</string>
     <string name="onboarding_step2">Крок 2</string>
-    <string name="onboarding_step2_title">Зробивши фото або відео, знайдіть їх у галереї камери, щоб поділитися ними.</string>
-    <string name="onboarding_step2_content">Виберіть фотографію, торкніться іконки \"Поділитися\" і виберіть \"Підтвердити\".</string>
+    <string name="onboarding_step2_title">Після того, як ви зробите фотографію чи відео, знайдіть його на головному екрані Proofmode.</string>
+    <string name="onboarding_step2_content">Відкрийте фотографію чи відео, а потім торкніться значка поділитися та виберіть \"Поділитися доказом\".</string>
     <string name="onboarding_step3">Крок 3</string>
     <string name="onboarding_step3_title">Перш ніж надсилати, оберіть, яким рівнем доказів ви хочете поділитися.</string>
     <string name="onboarding_step3_content">Ви завжди контролюєте ситуацію. Базовий публікує мінімальну інформацію, щоб довести, що ваше медіа існує. Надійний ділиться всім відзнятим.</string>
     <string name="onboarding_step4">Крок 4</string>
     <string name="onboarding_step4_title">Потім виберіть, як його відправити.</string>
-    <string name="onboarding_privacy_title">ProofMode активує кілька датчиків на вашому телефоні для створення доказів.</string>
-    <string name="onboarding_privacy_content">Дізнайтеся про те, що фіксує ProofMode, в нашій Легенді даних.</string>
+    <string name="onboarding_privacy_title">Proofmode Активує кілька датчиків на вашому телефоні, щоб генерувати доказ.</string>
+    <string name="onboarding_privacy_content">Дізнайтеся про те, що Proofmode фіксує в нашій легенді про дані.</string>
     <string name="onboarding_privacy_subtitle">МИ ДБАЄМО ПРО ВАШУ КОНФІДЕНЦІЙНІСТЬ</string>
     <string name="permission_location_info">Якщо ви не хочете збирати ці дані в цілях безпеки або конфіденційності, не надавайте дозвіл.</string>
     <string name="menu_home">Головна</string>
@@ -81,7 +81,7 @@
     <string name="digital_signatures_whattodo_title">Що мені з ним робити\?</string>
     <string name="publish_key_to">\"Ключ публікації для: \"</string>
     <string name="progress_checking_proof">Перевіряю докази...</string>
-    <string name="digital_signatures_whatis_info">Кожного разу, коли ви встановлюєте ProofMode, створюється унікальний цифровий ідентифікатор, що складається з секретного та відкритого ключів PGP. Це працює на основі стандарту OpenPGP. Він використовується для криптографічного підпису ваших медіафайлів та файлів доказів. Якщо підписи PGP збігаються з цифровою ідентифікацією (ключем PGP) вашого поточного екземпляра ProofMode, то підпис було створено цим екземпляром ProofMode.</string>
+    <string name="digital_signatures_whatis_info">Кожного разу, коли ви встановлюєте Proofmode, створюється унікальна цифрова ідентичність, що складається з секретних і публічних ключів PGP. Це працює за стандартом OpenPGP. Він використовується для криптографічного підписання ваших медіа та підтримки файлів доказу. Якщо підписи PGP відповідають цифровому ідентичненню (ключу PGP) поточної інстанції Proofmode, то підпис був створений цією інстанцією Proofmade.</string>
     <string name="progress_building_proof">Збір доказової бази...</string>
     <string name="progress_generating_proof">Створення доказів...</string>
     <string name="share_save_downloads">Доказ збережено в папці \"Завантаження\"</string>
@@ -95,25 +95,25 @@
     <string name="switch_enable_proofmode">Увімкнути ProofMode</string>
     <string name="settings_notary">Нотаріус</string>
     <string name="settings_network_desc">Назва мережі (мереж), до якої (яких) ви підключені</string>
-    <string name="proofmode_is_capturing">ProofMode за замовчуванням збирає великий набір метаданих. Посильте можливість перевірки ваших медіа, додавши більше.</string>
-    <string name="no_hash_generated">Попередження ProofMode: Неможливо отримати доступ до медіафайлів</string>
+    <string name="proofmode_is_capturing">ProofMode за замовчуванням захоплює сильний набір метаданих. Посилити перевірку ваших медіа, додавши більше.</string>
+    <string name="no_hash_generated">Proofmode Alert: Неможливо отримати доступ до медіа -файлів</string>
     <string name="proof_signed">Цей доказ підписано ключем PGP 0x</string>
-    <string name="no_external_storage">ПОПЕРЕДЖЕННЯ: Режим ProofMode увімкнено, але зовнішній накопичувач недоступний!</string>
+    <string name="no_external_storage">ПОПЕРЕДЖЕННЯ: Увімкнено Proofmode, але зовнішнього сховища немає!</string>
     <string name="independent_notary">Незалежне нотаріальне засвідчення Enigio TimeBeat за адресою:</string>
     <string name="onboarding_step4_content">Ви можете ділитися різними способами, від електронної пошти до сервісів обміну повідомленнями, такими як WhatsApp!</string>
     <string name="onboarding_privacy_continue">Продовжити</string>
     <string name="onboarding_privacy_options">Параметри конфіденційності</string>
-    <string name="onboarding_privacy_info">За замовчуванням ProofMode фіксує ідентифікаційні дані вашого телефону. Якщо вас це не влаштовує, перейдіть до налаштувань і вимкніть його.</string>
+    <string name="onboarding_privacy_info">Proofmode За замовчуванням фіксує особу вашого телефону. Якщо вам не зручно з цим, перейдіть до налаштувань, щоб вимкнути його.</string>
     <string name="permission_location_content">Надання дозволу дозволяє нам документувати ваші gps-координати. Ми не будемо відстежувати вас або зберігати ваше місцезнаходження в будь-який інший спосіб.</string>
     <string name="permission_location_title">Нам потрібне ваше місцезнаходження, щоб задокументувати, де відбувається зйомка вашого медіа.</string>
     <string name="menu_how_it_works">Як це працює</string>
     <string name="menu_digital_signatures">Цифрові підписи</string>
     <string name="permissions_needed_title">Необхідний дозвіл</string>
     <string name="permissions_needed_content">Будь ласка, увімкніть необхідні дозволи в налаштуваннях системи.</string>
-    <string name="share_mode_robust_info">Надає спільний доступ до всього, що ви ввімкнули для запису ProofMode, в одному файлі zip.</string>
+    <string name="share_mode_robust_info">Ділиться всім, що ви дозволили Proofmode захопити в одному Zip -файлі.</string>
     <string name="share_info_basic_title">Поділитися відбитком вашого медіа, щоб підтвердити, що воно існує.</string>
     <string name="digital_signatures_title">Коли ви опублікуєте докази, ви побачите цифрові підписи і ваш відкритий ключ, прикріплені у вигляді файлів з розширенням \".asc\".</string>
-    <string name="share_info_robust_title">Зберігає все, що ви увімкнули ProofMode, у файлі з криптографічним підписом.</string>
+    <string name="share_info_robust_title">Ділиться всім, що ви дозволили Proofmode захопити у криптографічно підписаному файлі.</string>
     <string name="share_info_robust_message">• Розкриває особисту інформацію
 \n• Поділіться з кимось, кому довіряєте
 \n• Потрібен доступ до Інтернету
@@ -145,7 +145,7 @@
     <string name="action_share_proof_zip">Поділитися доказом Zip</string>
     <string name="action_add_content_credentials_c2pa">Надіслати в ProofCheck</string>
     <string name="settings_credentials">Облікові дані</string>
-    <string name="settings_credentials_desc">Додайте облікові дані вмісту (C2PA) до фотографій і відео</string>
+    <string name="settings_credentials_desc">Додайте облікові дані вмісту (C2PA) до фотографій та відеороликів</string>
     <string name="settings_ai">Блокувати AI</string>
     <string name="default_share_text">Це ProofPack, який містить мультимедійні файли, метадані та цифрові підписи. Дізнайтеся, як це перевірити, на https://proofmode.org/verify</string>
     <plurals name="n_items_selected">
@@ -180,9 +180,7 @@
     <string name="share_sign_robust">Знак</string>
     <string name="err_content_credentials">Виникла проблема під час перевірки або створення облікових даних вмісту.</string>
     <string name="status_download_content_credentials">Завантаження зображень із обліковими даними вмісту...</string>
-    <string name="menu_import_photos">Імпорт...</string>
-    <string name="menu_import_videos">Імпорт відео...</string>
-    <string name="menu_import_documents">Імпорт документів...</string>
+    <string name="menu_import_photos">Імпортувати медіа ...</string>
     <string name="title_activity">Журнал доказів</string>
     <string name="cd_take_picture">Сфотографувати</string>
     <string name="cb_open_gallery">Перейдіть до галереї</string>
@@ -199,5 +197,23 @@
     <string name="optional_filename">Додаткове ім\'я файлу</string>
     <string name="next">Далі</string>
     <string name="content_credentials">Облікові дані вмісту</string>
-    <string name="share_content_credentials_info">Надає спільний доступ до зображення або відео безпосередньо з метаданими доказів, вбудованими безпосередньо в сам файл, перевіреними та підписаними ProofMode.org</string>
+    <string name="share_content_credentials_info">Ділиться зображенням або відео безпосередньо з доказовими метаданими, безпосередньо вбудованими у сам файл, перевірений та підписаний privermode.org</string>
+    <string name="menu_import_creds">Імпорт облікових даних ...</string>
+    <string name="filebase_ipfs_storage">FileBase IPFS AutoSync (бета)</string>
+    <string name="filebase_ipfs_storage_description">Налаштуйте автоматичне завантаження доказів у файлову базу. Вони будуть автоматично опубліковані в IPFS.</string>
+    <string name="enable_filebase_upload">Увімкнути завантаження файлів</string>
+    <string name="access_key">Ключ доступу</string>
+    <string name="secret_key">Таємний ключ</string>
+    <string name="bucket_name">Назва відра</string>
+    <string name="endpoint_url">URL -адреса кінцевої точки</string>
+    <string name="instructions">Інструкції:</string>
+    <string name="filebase_instructions_info">1. Створіть безкоштовний обліковий запис на FileBase.com\n2. Створіть нове відро для зберігання доказів\n3. Створіть клавіші доступу на приладній панелі FileBase\n4. Введіть клавіші вище та тестове з\'єднання.</string>
+    <string name="filebase_test_connection">Тестове з\'єднання</string>
+    <string name="filebase_save_settings">Зберегти налаштування</string>
+    <string name="please_fill_in_all_required_fields">Будь ласка, заповніть усі необхідні поля</string>
+    <string name="background_mode">Автоматичний імпорт</string>
+    <string name="proofcheck_verifier">ProofCheck Перевірок</string>
+    <string name="background_mode_info">Додайте доказ до всіх нових фотографій та відео на цьому пристрої</string>
+    <string name="auto_sync_title">Автоматична синхронізація</string>
+    <string name="auto_sync_desc">Дані про підтвердження резервного копіювання до хмарної служби IPFS</string>
 </resources>

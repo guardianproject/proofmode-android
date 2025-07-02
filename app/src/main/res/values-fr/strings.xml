@@ -58,7 +58,7 @@
     <string name="onboarding_step1_content">ProofMode fonctionne en arrière-plan pour générer et enregistrer une preuve. Vous n\'avez rien de plus à faire!</string>
     <string name="onboarding_step2">Étape 2</string>
     <string name="onboarding_step2_title">Une fois que vous avez pris une photo ou une vidéo, trouvez-la dans l\'album photos de votre appareil pour la faire partager.</string>
-    <string name="onboarding_step2_content">Sélectionnez une photo, appuyez sur l\'icône de partage et choisissez "Partager la preuve".</string>
+    <string name="onboarding_step2_content">Sélectionnez une photo, appuyez sur l\'icône de partage et choisissez Partager la preuve.</string>
     <string name="onboarding_step3">Étape 3</string>
     <string name="onboarding_step3_title">Avant de l\'envoyer, choisissez le niveau de preuve à partager.</string>
     <string name="onboarding_step3_content">Vous gardez toujours le contrôle. Les actions de base partage un minimum d\'information pour prouver que votre support numérique existe. Le robuste partage tout ce qui est capturé.</string>
