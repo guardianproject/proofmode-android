@@ -28,7 +28,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import androidx.core.net.toFile
 import androidx.documentfile.provider.DocumentFile
+import androidx.lifecycle.lifecycleScope
 import androidx.preference.PreferenceManager
+import kotlinx.coroutines.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
@@ -119,7 +121,7 @@ class ShareProofActivity : AppCompatActivity() {
             //just check the first file
             if (mediaUris.isNotEmpty()) {
                 displayProgress(getString(R.string.progress_checking_proof))
-                CheckProofTasks(this).execute(mediaUris[0])
+                checkProof(mediaUris[0])
             }
         } else if (Intent.ACTION_SEND == action || action!!.endsWith("SHARE_PROOF")) {
             intent.action = Intent.ACTION_SEND
@@ -128,7 +130,7 @@ class ShareProofActivity : AppCompatActivity() {
             if (mediaUri != null) {
                 mediaUri = cleanUri(mediaUri)
                 displayProgress(getString(R.string.progress_checking_proof))
-                CheckProofTasks(this).execute(mediaUri)
+                checkProof(mediaUri)
             }
         } else finish()
     }
@@ -150,9 +152,8 @@ class ShareProofActivity : AppCompatActivity() {
             }
         }
 
-        if (resultUri.scheme.equals("file"))
-        {
-            resultUri = FileProvider.getUriForFile(getApplication(), getApplication().getPackageName() + ".provider", resultUri.toFile());
+        if (resultUri.scheme == "file") {
+            resultUri = FileProvider.getUriForFile(application, "${application.packageName}.provider", resultUri.toFile())
         }
 
         return resultUri
@@ -175,8 +176,8 @@ class ShareProofActivity : AppCompatActivity() {
 
     @Throws(FileNotFoundException::class)
     fun generateProof(button: View?) {
-        findViewById<View>(R.id.view_proof_progress).visibility = View.VISIBLE
-        findViewById<View>(R.id.view_no_proof).visibility = View.GONE
+        binding.viewProofProgress.visibility = View.VISIBLE
+        binding.viewNoProof.visibility = View.GONE
 
         // Get intent, action and MIME type
         val intent = intent
@@ -185,7 +186,7 @@ class ShareProofActivity : AppCompatActivity() {
         if (Intent.ACTION_SEND_MULTIPLE == action) {
             val mediaUris = intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM) ?: emptyList()
 
-            GenerateMultiProofTask (this, mediaUris, mBlockAI == false, mStorageProvider).execute();
+            generateMultiProof(mediaUris, mBlockAI == false, mStorageProvider)
 
 
         } else if (Intent.ACTION_SEND == action || action!!.endsWith("SHARE_PROOF")) {
@@ -209,12 +210,12 @@ class ShareProofActivity : AppCompatActivity() {
     fun clickShareSocial (button: View?) {
 
         displayProgress("Preparing media for social share...")
-        ShareSocialTask(this).execute()
+        shareSocialAsync()
 
     }
 
     fun clickNotarize(button: View?) {
-        shareProof("", false, false)
+        shareProofWithProgress("", false, false)
     }
 
     fun clickAll(button: View?) {
@@ -227,10 +228,10 @@ class ShareProofActivity : AppCompatActivity() {
             .setView(inputEditTextField)
             .setPositiveButton(getString(android.R.string.ok)) { _, _ ->
                 val editTextInput = inputEditTextField .text.toString()
-                shareProof(editTextInput, sendMedia, true)
+                shareProofWithProgress(editTextInput, sendMedia, true)
             }
             .setNegativeButton(getString(android.R.string.cancel))  { _, _ ->
-                shareProof("", sendMedia, true)
+                shareProofWithProgress("", sendMedia, true)
             }
             .create()
         dialog.show()
@@ -260,27 +261,34 @@ class ShareProofActivity : AppCompatActivity() {
 
     }
 
-    fun signAll(button: View?) {
-        signProof(sendMedia, true)
-    }
-
-
-    private val mHandler = object : Handler() {
-
-        override fun handleMessage(msg: Message) {
-            // Your logic code here.
-
-            msg.data.getString("progress")?.let { displayProgress(it) }
+    private fun displayProgressAsync(progressText: String) {
+        lifecycleScope.launch(Dispatchers.Main) {
+            displayProgress(progressText)
         }
     }
 
-    private fun displayProgressAsync (progressText: String) {
-        var msg = Message()
-        msg.data.putString("progress", progressText)
-        mHandler.post {
-            mHandler.dispatchMessage(msg)
+
+    private fun shareProof(fileName: String, shareMedia: Boolean, shareProof: Boolean) {
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                try {
+                    shareProofInternal(fileName, shareMedia, shareProof)
+                } catch (e: IOException) {
+                    Timber.e(e, "error sharing proof")
+                    false
+                } catch (e: PGPException) {
+                    Timber.e(e, "error sharing proof")
+                    false
+                }
+            }
+            
+            if (!result) {
+                Timber.d("unable to shareProofInternal")
+                showProofError()
+            }
         }
     }
+
     private fun displayProgress(text: String) {
         binding.apply {
             viewProofProgress.visibility = View.VISIBLE
@@ -324,7 +332,7 @@ class ShareProofActivity : AppCompatActivity() {
         } else {
             if (!askForWritePermissions()) {
                 displayProgress(getString(R.string.progress_building_proof))
-                SaveProofTask(this, fileName).execute(shareMedia, shareProof)
+                saveProofInternal(fileName, shareMedia, shareProof)
             }
         }
     }
@@ -342,7 +350,7 @@ class ShareProofActivity : AppCompatActivity() {
 
             // take persistable Uri Permission for future use
             contentResolver.takePersistableUriPermission(result.data!!.data!!, takeFlags)
-            SaveProofTask(this@ShareProofActivity,proofZipName).execute(true, true)
+            saveProofInternal(proofZipName, true, true)
         }
     }
 
@@ -421,8 +429,8 @@ class ShareProofActivity : AppCompatActivity() {
                             val verifyUri = "https://check.proofmode.org/#$uri"
                             shareString = getString(R.string.verify_this_media_at) + "$verifyUri #proofmode #c2pa"
 
-                            if (lastMediaUri != null) {
-                                var uriShareImage = SocialImageUtil().createImageCard(this@ShareProofActivity,lastMediaUri, verifyUri)
+                            lastMediaUri?.let { uri ->
+                                val uriShareImage = SocialImageUtil().createImageCard(this@ShareProofActivity, uri, verifyUri)
                                 shareUris.clear()
                                 shareUris.add(cleanUri(uriShareImage))
                             }
@@ -448,8 +456,8 @@ class ShareProofActivity : AppCompatActivity() {
                                     val verifyUri = "https://check.proofmode.org/#$uri"
                                     shareString = getString(R.string.verify_this_media_at) + "$verifyUri #proofmode #c2pa"
 
-                                    if (lastMediaUri != null) {
-                                        var uriShareImage = SocialImageUtil().createImageCard(this@ShareProofActivity,lastMediaUri, verifyUri)
+                                    lastMediaUri?.let { uri ->
+                                        val uriShareImage = SocialImageUtil().createImageCard(this@ShareProofActivity, uri, verifyUri)
                                         shareUris.clear()
                                         shareUris.add(cleanUri(uriShareImage))
                                     }
@@ -470,8 +478,8 @@ class ShareProofActivity : AppCompatActivity() {
               }
               else
               {
-                  if (lastMediaUri != null) {
-                      var uriShareImage = SocialImageUtil().createImageCard(this,lastMediaUri, null)
+                  lastMediaUri?.let { uri ->
+                      val uriShareImage = SocialImageUtil().createImageCard(this, uri, null)
                       shareUris.clear()
                       shareUris.add(cleanUri(uriShareImage))
                   }
@@ -491,7 +499,30 @@ class ShareProofActivity : AppCompatActivity() {
 
         @Synchronized
     @Throws(IOException::class, PGPException::class)
-    private fun saveProofAsync(fileName: String, shareMedia: Boolean, shareProof: Boolean): String? {
+    private fun saveProofInternal(fileName: String, shareMedia: Boolean, shareProof: Boolean) {
+
+        /**
+            lifecycleScope.launch {
+                val result = withContext(Dispatchers.IO) {
+                    try {
+                        saveProofInternal(fileName, shareMedia, shareProof)
+                    } catch (e: IOException) {
+                        Timber.e(e, "error saving proof")
+                        null
+                    } catch (e: PGPException) {
+                        Timber.e(e, "error saving proof")
+                        null
+                    }
+                }
+
+                if (result?.isEmpty() == true) {
+                    Timber.d("unable to saveProofInternal")
+                    showProofError()
+                } else {
+                    showProofSaved(result)
+                }
+            }**/
+
 
         // Get intent, action and MIME type
         val intent = intent
@@ -500,16 +531,14 @@ class ShareProofActivity : AppCompatActivity() {
         val shareItems = ArrayList<ProofableItem>()
         val shareText = StringBuffer()
         var fileProofDownloads: File? = null
+
         if (Intent.ACTION_SEND_MULTIPLE == action) {
             val mediaUris = intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM) ?: emptyList()
             val fileBatchProof: File
             val fBatchProofOut: PrintWriter
-            try {
-                fileBatchProof = File(cacheDir, Date().time.toString() + "batchproof.csv")
-                fBatchProofOut = PrintWriter(FileWriter(fileBatchProof, true))
-            } catch (ioe: IOException) {
-                return null //unable to open batch proof
-            }
+            fileBatchProof = File(cacheDir, Date().time.toString() + "batchproof.csv")
+            fBatchProofOut = PrintWriter(FileWriter(fileBatchProof, true))
+
             var successProof = 0
             var isFirstProof = true
             for (mediaUri in mediaUris) {
@@ -534,26 +563,28 @@ class ShareProofActivity : AppCompatActivity() {
             fBatchProofOut.flush()
             fBatchProofOut.close()
             shareUris.add(Uri.fromFile(fileBatchProof)) // Add your image URIs here
-        } else if (Intent.ACTION_SEND == action || action!!.endsWith("SHARE_PROOF")) {
+        }
+
+        else if (Intent.ACTION_SEND == action || action!!.endsWith("SHARE_PROOF")) {
             var mediaUri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
             if (mediaUri == null) mediaUri = intent.data
-            if (mediaUri != null) {
-                mediaUri = cleanUri(mediaUri)
-                shareUris.add(mediaUri)
-                val mediaHash = hashCache[mediaUri.toString()]
-                if (!processUri(
-                        mediaHash,
-                        mediaUri,
-                        shareUris,
-                        shareItems,
-                        shareText,
-                        null,
-                        shareMedia,
-                        true
-                    )
-                ) return null
-            }
+
+            mediaUri = cleanUri(mediaUri!!)
+            shareUris.add(mediaUri)
+            val mediaHash = hashCache[mediaUri.toString()]
+            processUri(
+                    mediaHash,
+                    mediaUri,
+                    shareUris,
+                    shareItems,
+                    shareText,
+                    null,
+                    shareMedia,
+                    true
+                )
+
         }
+
         if (shareUris.size > 0) {
             if (!shareProof) shareNotarization(shareText.toString()) else {
                 val fileCacheFolder = File(cacheDir, "zips")
@@ -565,7 +596,7 @@ class ShareProofActivity : AppCompatActivity() {
                     zipProof(shareUris, fileZip)
                 } catch (e: IOException) {
                     Timber.e(e, "Error generating proof Zip")
-                    return null
+
                 }
                 if (fileZip.length() > 0) {
                     Timber.d("Proof zip completed. Size:%s", fileZip.length())
@@ -590,37 +621,29 @@ class ShareProofActivity : AppCompatActivity() {
                      * shareFiltered(getString(R.string.select_app), shareText.toString(), shareUris, uriZip);
                      */
                     if (baseDocumentTreeUri != null) {
-                        try {
-                            val fis = FileInputStream(fileZip)
-                            val directory = DocumentFile.fromTreeUri(
-                                this@ShareProofActivity,
-                                baseDocumentTreeUri!!
-                            )
-                            val file = directory!!.createFile("application/zip", fileZip.name)
-                            val pfd = contentResolver.openFileDescriptor(
-                                file!!.uri, "w"
-                            )
-                            val fos = FileOutputStream(pfd!!.fileDescriptor)
-                            try {
-                                var count: Int
-                                val data = ByteArray(BUFFER)
-                                while (fis.read(data, 0, BUFFER).also { count = it } != -1) {
-                                    fos.write(data, 0, count)
-                                }
-                                fis.close()
-                                fos.close()
-                            } catch (e: Exception) {
-                                Timber.e(
-                                    e,
-                                    "Proof zip failed due to file copy:" + fileProofDownloads!!.absolutePath
-                                )
-                                return null
+
+                        val fis = FileInputStream(fileZip)
+                        val directory = DocumentFile.fromTreeUri(
+                            this@ShareProofActivity,
+                            baseDocumentTreeUri!!
+                        )
+                        val file = directory!!.createFile("application/zip", fileZip.name)
+                        val pfd = contentResolver.openFileDescriptor(
+                            file!!.uri, "w"
+                        )
+                        val fos = FileOutputStream(pfd!!.fileDescriptor)
+
+                            var count: Int
+                            val data = ByteArray(BUFFER)
+                            while (fis.read(data, 0, BUFFER).also { count = it } != -1) {
+                                fos.write(data, 0, count)
                             }
+                            fis.close()
                             fos.close()
-                            return fileZip.name
-                        } catch (e: IOException) {
-                            Timber.e(e)
-                        }
+
+                        fos.close()
+
+
                     } else {
                         fileProofDownloads = File(
                             Environment.getExternalStoragePublicDirectory(
@@ -629,229 +652,34 @@ class ShareProofActivity : AppCompatActivity() {
                         )
                         val fos = FileOutputStream(fileProofDownloads)
                         val fis = FileInputStream(fileZip)
-                        try {
-                            var count: Int
-                            val data = ByteArray(BUFFER)
-                            while (fis.read(data, 0, BUFFER).also { count = it } != -1) {
-                                fos.write(data, 0, count)
-                            }
-                            fis.close()
-                            fos.close()
-                            return fileZip.name
-                        } catch (e: Exception) {
-                            Timber.e(
-                                e,
-                                "Proof zip failed due to file copy:" + fileProofDownloads.absolutePath
-                            )
-                            return null
+
+                        var count: Int
+                        val data = ByteArray(BUFFER)
+                        while (fis.read(data, 0, BUFFER).also { count = it } != -1) {
+                            fos.write(data, 0, count)
                         }
+                        fis.close()
+                        fos.close()
+
+
                     }
 
                     //copy IO utils
                 } else {
                     Timber.d("Proof zip failed due to empty size:" + fileZip.length())
-                    return null
                 }
             }
-        } else {
-            return null
         }
-        return null
     }
 
-    private fun shareProof(fileName: String, shareMedia: Boolean, shareProof: Boolean) {
+    private fun shareProofWithProgress(fileName: String, shareMedia: Boolean, shareProof: Boolean) {
         displayProgress(getString(R.string.progress_building_proof))
-        ShareProofTask(this, fileName).execute(shareMedia, shareProof)
-    }
-
-    private fun signProof(shareMedia: Boolean, shareProof: Boolean) {
-
-        val builder = AlertDialog.Builder(this)
-        builder.setMessage(R.string.share_with_proofsign)
-            .setCancelable(false)
-            .setPositiveButton(android.R.string.yes) { dialog, id ->
-
-                displayProgress(getString(R.string.progress_signing_proof))
-                SignProofTask(this).execute(shareMedia, shareProof)
-            }
-            .setNegativeButton(android.R.string.no) { dialog, id ->
-                // Dismiss the dialog
-                dialog.dismiss()
-            }
-        val alert = builder.create()
-        alert.show()
-
+        shareProof(fileName, shareMedia, shareProof)
     }
 
     @Synchronized
     @Throws(IOException::class, PGPException::class)
-    private fun signProofAsync(shareMedia: Boolean, shareProof: Boolean): File? {
-
-        // Get intent, action and MIME type
-        val intent = intent
-        val action = intent.action
-        val shareUris = ArrayList<Uri?>()
-        val shareItems = ArrayList<ProofableItem>()
-
-        val shareText = StringBuffer()
-        if (Intent.ACTION_SEND_MULTIPLE == action) {
-            val mediaUris = intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM) ?: emptyList()
-            val fileBatchProof: File
-            val fBatchProofOut: PrintWriter
-            try {
-                fileBatchProof = File(cacheDir, Date().time.toString() + "batchproof.csv")
-                fBatchProofOut = PrintWriter(FileWriter(fileBatchProof, true))
-            } catch (ioe: IOException) {
-                return null //unable to open batch proof
-            }
-            var successProof = 0
-            var isFirstProof = true
-            for (mediaUri in mediaUris) {
-                if (processUri(
-                        null,
-                        mediaUri,
-                        shareUris,
-                        shareItems,
-                        shareText,
-                        fBatchProofOut,
-                        shareMedia,
-                        isFirstProof
-                    )
-                ) {
-                    successProof++
-                    isFirstProof = false
-                } else {
-                    Timber.d("share proof failed for: $mediaUri")
-                }
-            }
-            fBatchProofOut.flush()
-            fBatchProofOut.close()
-            shareUris.add(Uri.fromFile(fileBatchProof)) // Add your image URIs here
-        } else if (Intent.ACTION_SEND == action || action!!.endsWith("SHARE_PROOF")) {
-            var mediaUri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
-            if (mediaUri == null) mediaUri = intent.data
-            if (mediaUri != null) {
-                mediaUri = cleanUri(mediaUri)
-                val mediaHash = hashCache[mediaUri.toString()]
-                if (!processUri(
-                        mediaHash,
-                        mediaUri,
-                        shareUris,
-                        shareItems,
-                        shareText,
-                        null,
-                        shareMedia,
-                        true
-                    )
-                ) return null
-            }
-        }
-        if (shareUris.size > 0) {
-            if (!shareProof) shareNotarization(shareText.toString()) else {
-                val fileCacheFolder = File(cacheDir, "zips")
-                fileCacheFolder.mkdir()
-                val sdf = SimpleDateFormat(ZIP_FILE_DATETIME_FORMAT)
-                val dateString = sdf.format(Date())
-                val userId = pgpUtils.publicKeyFingerprint
-                val fileZip = File(fileCacheFolder, "proofmode-0x$userId-$dateString.zip")
-                Timber.d("Preparing proof bundle zip: " + fileZip.absolutePath)
-                try {
-                    zipProof(shareUris, fileZip)
-                } catch (e: IOException) {
-                    Timber.e(e, "Error generating proof Zip")
-                    return null
-                }
-
-                if (fileZip.length() > 0) {
-
-                        return uploadToProofSign (fileZip)
-
-
-                } else {
-                    Timber.d("Proof zip failed due to empty size:" + fileZip.length())
-                    return null
-                }
-            }
-        }
-        return null
-    }
-
-    private fun uploadToProofSign (fileZip: File): File? {
-        Timber.d("Proof zip completed. Size:" + fileZip.length())
-
-        var proofSignEndpoint = URL("https://proofsign.gpfs.link/upload")
-
-        val fileRequestBody = fileZip.asRequestBody("application/zip".toMediaType())
-        val requestBody = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart("file", fileZip.name, fileRequestBody)
-            .build()
-
-        val request = Request.Builder().url(proofSignEndpoint)
-            .post(requestBody)
-            .build()
-
-        var cBuilder = OkHttpClient.Builder();
-        cBuilder.connectTimeout(120, TimeUnit.SECONDS)
-        cBuilder.readTimeout(120, TimeUnit.SECONDS)
-        cBuilder.writeTimeout(120, TimeUnit.SECONDS)
-
-        val client = cBuilder.build()
-        client.newCall(request).execute().use { response ->
-
-            Timber.d("proofsign response: " + response.code)
-
-            if (response.code == 200) {
-                var rs = response.body?.byteStream()
-
-                var contentType = response.body?.contentType().toString()
-
-                Timber.d("response from proofsign: type=$contentType path=$fileZip.absolutePath");
-
-                displayProgressAsync(getString(R.string.status_download_content_credentials))
-
-                var fileZipC2PA = File(fileZip.absolutePath + "-c2pa.zip")
-                response.use { input ->
-                    fileZipC2PA.outputStream().use { output ->
-                        rs?.copyTo(output)
-                    }
-                }
-
-                Timber.d("saved proofsigned zip to: " + fileZipC2PA.absolutePath)
-
-                //unzip C2PA download zip and add to the proper local hash directory
-                val zipFile = ZipFile(fileZipC2PA)
-                val entries = zipFile.entries()
-
-                while (entries.hasMoreElements()) {
-                    val zipEntry = entries.nextElement()
-                    println(zipEntry.name)
-                    var mediaHash = zipEntry.name.split(".")[0]
-                    var identifier = zipEntry.name+"-c2pa.jpg"
-
-                    //var fileImageC2PA = File(fileFolder,)
-                    //shareUris.add(Uri.fromFile(fileImageC2PA)) //TODO STORAGE
-                    mStorageProvider?.getOutputStream(mediaHash, identifier)
-                        ?.let { zipFile.getInputStream(zipEntry).copyTo(it) }
-
-                }
-                zipFile.close()
-
-                return fileZipC2PA
-            }
-            else{
-                Timber.d("proofsign err: " + response.body?.string())
-
-                displayProgressAsync(getString(R.string.err_content_credentials))
-
-                return null
-            }
-        }
-    }
-
-    @Synchronized
-    @Throws(IOException::class, PGPException::class)
-    private fun shareProofAsync(fileNameOrig: String, shareMedia: Boolean, shareProof: Boolean): Boolean {
+    private fun shareProofInternal(fileNameOrig: String, shareMedia: Boolean, shareProof: Boolean): Boolean {
 
         // Get intent, action and MIME type
         val intent = intent
@@ -1001,276 +829,179 @@ class ShareProofActivity : AppCompatActivity() {
         return null
     }
 
-    private class GenerateProofTask  // only retain a weak reference to the activity
-        (private val activity: ShareProofActivity, private val proofHash: String?, private val allowMachineLearning: Boolean) :
-        AsyncTask<Uri?, Void?, String?>() {
-        override fun doInBackground(vararg params: Uri?): String? {
-
-            var isDirectCapture = false; //this is from an import, and we are manually generating proof
-
-            if ((activity.application as ProofModeApp).useContentCredentials())
-                C2paUtils.addContentCredentials(activity, params[0], isDirectCapture, allowMachineLearning)
-
-            return ProofMode.generateProof(activity, params[0], proofHash)
-        }
-
-        override fun onPostExecute(proofMediaHash: String?) {
-            if (proofMediaHash != null) activity.displaySharePrompt() else {
-                activity.showProofError()
-            }
-        }
-    }
-
-    private class GenerateMultiProofTask (private val activity: ShareProofActivity, private val mediaUris :List<Uri>, private val allowMachineLearning: Boolean, private val storageProvider: StorageProvider?) : AsyncTask<Void?, Void?, String?>() {
-        override fun doInBackground(vararg voids: Void?): String? {
-            var proofHash: String? = null
-            for (mediaUri in mediaUris!!) {
+    private fun generateProof(mediaUri: Uri?, proofHash: String?, allowMachineLearning: Boolean) {
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
                 try {
-                    proofHash = HashUtils.getSHA256FromFileContent(
-                        activity.contentResolver.openInputStream(mediaUri)
-                    )
-                    activity.hashCache[mediaUri.toString()] = proofHash
-
-
-                    val genProofHash = ProofMode.generateProof(
-                        activity,
-                        mediaUri,
-                        proofHash
-                    )
-                    if (genProofHash != null && genProofHash == proofHash) {
-
-                        if ((activity.application as ProofModeApp).useContentCredentials()) {
-                            val isDirectCapture =
-                                false; //this is from an import, and we are manually generating proof
-                            Looper.prepare()
-                            var fileC2PA = C2paUtils.addContentCredentials(
-                                activity,
-                                mediaUri,
-                                isDirectCapture,
-                                allowMachineLearning
-                            )
-                            //now add fileC2PA to proof folder
-                            storageProvider?.saveStream(
-                                proofHash,
-                                fileC2PA.name,
-                                FileInputStream(fileC2PA),
-                                null
-                            )
-                        }
-                        //all good
-                    } else {
-                        //error occured
+                    val isDirectCapture = false // this is from an import, and we are manually generating proof
+                    
+                    if ((application as ProofModeApp).useContentCredentials()) {
+                        C2paUtils.addContentCredentials(this@ShareProofActivity, mediaUri, isDirectCapture, allowMachineLearning)
                     }
-                } catch (fe: FileNotFoundException) {
-                    Timber.d("FileNotFound: %s", mediaUri)
+                    
+                    ProofMode.generateProof(this@ShareProofActivity, mediaUri, proofHash)
+                } catch (e: Exception) {
+                    Timber.e(e, "Error generating proof")
+                    null
                 }
             }
-            return proofHash
+            
+            if (result != null) {
+                displaySharePrompt()
+            } else {
+                showProofError()
+            }
         }
-
-        override fun onPostExecute(proofHash: String?) {
-            super.onPostExecute(proofHash)
-            if (proofHash != null) activity.displaySharePrompt() else activity.showProofError()
-        }
-
-
     }
 
-    private class CheckProofTasks(private val activity: ShareProofActivity) :
-        AsyncTask<Uri?, Void?, String?>() {
-        override fun doInBackground(vararg params: Uri?): String? {
-            val mediaUri = params[0]
-            var proofHash: String? = null
-            if (mediaUri != null) {
-                //mediaUri = activity.cleanUri (mediaUri);
-                proofHash = try {
-                    activity.proofExists(mediaUri)
+    private fun generateMultiProof(mediaUris: List<Uri>, allowMachineLearning: Boolean, storageProvider: StorageProvider?) {
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                var proofHash: String? = null
+                for (mediaUri in mediaUris) {
+                    try {
+                        proofHash = HashUtils.getSHA256FromFileContent(
+                            contentResolver.openInputStream(mediaUri)
+                        )
+                        hashCache[mediaUri.toString()] = proofHash
+
+                        val genProofHash = ProofMode.generateProof(
+                            this@ShareProofActivity,
+                            mediaUri,
+                            proofHash
+                        )
+                        if (genProofHash != null && genProofHash == proofHash) {
+                            if ((application as ProofModeApp).useContentCredentials()) {
+                                val isDirectCapture = false // this is from an import, and we are manually generating proof
+                                val fileC2PA = C2paUtils.addContentCredentials(
+                                    this@ShareProofActivity,
+                                    mediaUri,
+                                    isDirectCapture,
+                                    allowMachineLearning
+                                )
+                                // now add fileC2PA to proof folder
+                                storageProvider?.saveStream(
+                                    proofHash,
+                                    fileC2PA.name,
+                                    FileInputStream(fileC2PA),
+                                    null
+                                )
+                            }
+                        }
+                    } catch (fe: FileNotFoundException) {
+                        Timber.d("FileNotFound: %s", mediaUri)
+                    }
+                }
+                proofHash
+            }
+            
+            if (result != null) {
+                displaySharePrompt()
+            } else {
+                showProofError()
+            }
+        }
+    }
+
+    private fun checkProof(mediaUri: Uri) {
+        lifecycleScope.launch {
+            val proofHash = withContext(Dispatchers.IO) {
+                try {
+                    proofExists(mediaUri)
                 } catch (e: FileNotFoundException) {
                     Timber.w(e)
                     null
                 }
             }
-            return proofHash
-        }
-
-        override fun onPostExecute(proofHash: String?) {
+            
             if (proofHash != null) {
-                activity.displaySharePrompt()
+                displaySharePrompt()
             } else {
-                activity.displayGeneratePrompt()
+                displayGeneratePrompt()
             }
         }
     }
 
-    private class SaveProofTask  // only retain a weak reference to the activity
-        (private val activity: ShareProofActivity, val fileName: String) :
-        AsyncTask<Boolean?, Void?, String?>() {
-         override fun doInBackground(vararg params: Boolean?): String? {
-            var result: String? = ""
-            return try {
-
-                params.let {
-                    result = activity.saveProofAsync(fileName, params[0]!!, params[1]!!)
+    private fun shareSocialAsync() {
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                try {
+                    shareSocial()
+                } catch (e: IOException) {
+                    Timber.e(e, "error sharing social")
+                    false
+                } catch (e: PGPException) {
+                    Timber.e(e, "error sharing social")
+                    false
                 }
-                return result
-            } catch (e: IOException) {
-                Timber.e(e, "error saving proof")
-                null
-            } catch (e: PGPException) {
-                Timber.e(e, "error saving proof")
-                null
             }
-        }
-
-        override fun onPostExecute(result: String?) {
-            if (result?.isEmpty() == true) {
-                //do something
-                Timber.d("unable to shareProofAsync")
-                activity.showProofError()
-            } else {
-                activity.showProofSaved(result)
-            }
-        }
-    }
-
-    private class ShareSocialTask  // only retain a weak reference to the activity
-    internal constructor(private val activity: ShareProofActivity) :
-        AsyncTask<Boolean?, Void?, Boolean>() {
-        override fun doInBackground(vararg params: Boolean?): Boolean {
-            var result = false
-            return try {
-                result = activity.shareSocial()
-                result
-            } catch (e: IOException) {
-                Timber.e(e, "error sharing social")
-                false
-            } catch (e: PGPException) {
-                Timber.e(e, "error sharing social")
-                false
-            }
-        }
-
-        override fun onPostExecute(result: Boolean) {
+            
             if (!result) {
-                //do something
                 Timber.d("unable to shareSocial")
-                activity.showProofError()
-            } else {
-                //    activity.finish();
+                showProofError()
             }
         }
     }
 
-    private class ShareProofTask  // only retain a weak reference to the activity
-    internal constructor(private val activity: ShareProofActivity, val fileName: String) :
-        AsyncTask<Boolean?, Void?, Boolean>() {
-        override fun doInBackground(vararg params: Boolean?): Boolean {
-            var result = false
-            return try {
-                result = activity.shareProofAsync(fileName, params[0]!!, params[1]!!)
-                result
-            } catch (e: IOException) {
-                Timber.e(e, "error sharing proof")
-                false
-            } catch (e: PGPException) {
-                Timber.e(e, "error sharing proof")
-                false
-            }
-        }
+    private fun shareProofAsync(fileName: String, shareMedia: Boolean, shareProof: Boolean) {
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                try {
+                    shareProofAsync(fileName, shareMedia, shareProof)
+                } catch (e: IOException) {
+                    Timber.e(e, "error sharing proof")
+                    showProofError()
 
-        override fun onPostExecute(result: Boolean) {
-            if (!result) {
-                //do something
-                Timber.d("unable to shareProofAsync")
-                activity.showProofError()
-            } else {
-                //    activity.finish();
-            }
-        }
-    }
+                    false
+                } catch (e: PGPException) {
+                    Timber.e(e, "error sharing proof")
+                    showProofError()
 
-    private class SignProofTask  // only retain a weak reference to the activity
-        (private val activity: ShareProofActivity) :
-        AsyncTask<Boolean?, Void?, File?>() {
-        override fun doInBackground(vararg params: Boolean?): File? {
-            var result: File? = null
-            return try {
-
-                params.let {
-                    result = activity.signProofAsync(params[0]!!, params[1]!!)
+                    false
                 }
-                return result
-            } catch (e: IOException) {
-                Timber.e(e, "error uploading proof")
-                null
-            } catch (e: PGPException) {
-                Timber.e(e, "error uploading proof")
-                null
             }
-        }
 
-        override fun onPostExecute(result: File?) {
-            if (result?.exists() == true) {
-                val uriZip = FileProvider.getUriForFile(
-                    activity,
-                    "$activity.packageName.provider",
-                    result
-                )
-                shareFiltered(
-                    activity,
-                    activity.getString(R.string.select_app),
-                    result.name,
-                    null,
-                    null,
-                    uriZip
-                )
-
-
-            } else {
-                //show link?
-                //do something
-                Timber.d("unable to uploadProofAsync")
-                activity.showProofError()
-            }
         }
     }
 
     private fun generateProof(mediaUri: Uri?, proofHash: String?) {
-        displayProgress(getString(R.string.progress_generating_proof))
-        GenerateProofTask(this, proofHash, mBlockAI == false).execute(mediaUri)
+        generateProof(mediaUri, proofHash, mBlockAI == false)
     }
 
     private fun showProofError() {
-        findViewById<View>(R.id.view_proof).visibility = View.GONE
-        findViewById<View>(R.id.view_no_proof).visibility = View.GONE
-        findViewById<View>(R.id.view_proof_progress).visibility = View.GONE
-        findViewById<View>(R.id.view_proof_saved).visibility = View.GONE
-        findViewById<View>(R.id.view_proof_failed).visibility = View.VISIBLE
+        binding.apply {
+            viewProof.visibility = View.GONE
+            viewNoProof.visibility = View.GONE
+            viewProofProgress.visibility = View.GONE
+            viewProofSaved.visibility = View.GONE
+            viewProofFailed.visibility = View.VISIBLE
+        }
     }
 
     private fun showProofSaved(fileName: String?) {
-        findViewById<View>(R.id.view_proof).visibility = View.GONE
-        findViewById<View>(R.id.view_no_proof).visibility = View.GONE
-        findViewById<View>(R.id.view_proof_progress).visibility = View.GONE
-        findViewById<View>(R.id.view_proof_failed).visibility = View.GONE
-        findViewById<View>(R.id.view_proof_saved).visibility = View.VISIBLE
-        val tv = findViewById<TextView>(R.id.view_proof_saved_message)
-        tv.text = """
-            ${getString(R.string.share_save_downloads)}
-            
-            ${fileName}
-            """.trimIndent()
-
+        binding.apply {
+            viewProof.visibility = View.GONE
+            viewNoProof.visibility = View.GONE
+            viewProofProgress.visibility = View.GONE
+            viewProofFailed.visibility = View.GONE
+            viewProofSaved.visibility = View.VISIBLE
+            viewProofSavedMessage.text = """
+                ${getString(R.string.share_save_downloads)}
+                
+                ${fileName}
+                """.trimIndent()
+        }
         finish()
     }
 
     private fun showProofUploaded(fileProof: String) {
-        findViewById<View>(R.id.view_proof).visibility = View.GONE
-        findViewById<View>(R.id.view_no_proof).visibility = View.GONE
-        findViewById<View>(R.id.view_proof_progress).visibility = View.GONE
-        findViewById<View>(R.id.view_proof_failed).visibility = View.GONE
-        findViewById<View>(R.id.view_proof_saved).visibility = View.VISIBLE
-
+        binding.apply {
+            viewProof.visibility = View.GONE
+            viewNoProof.visibility = View.GONE
+            viewProofProgress.visibility = View.GONE
+            viewProofFailed.visibility = View.GONE
+            viewProofSaved.visibility = View.VISIBLE
+        }
     }
 
 
