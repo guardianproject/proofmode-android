@@ -398,88 +398,34 @@ class ShareProofActivity : AppCompatActivity() {
 
         }
 
-        var mediaPublicUri = ""
-        var shareString = ""
-
         if (shareUris.size > 1) {
+            /**
             shareMedia(
                 this,
                 shareString,
                 shareUris
             )
+            **/
+
         }
         else
         {
 
-
+            val hash = HashUtils.getSHA256FromFileContent(
+                lastMediaUri?.let { it1 -> contentResolver.openInputStream(it1) }
+            )
 
               var spm = StorageProviderManager.getInstance()
               if (spm.isFilebaseEnabled())
               {
-                    spm.getFilebaseProvider().let { fp ->
-
-                        val hash = HashUtils.getSHA256FromFileContent(
-                            lastMediaUri?.let { it1 -> contentResolver.openInputStream(it1) }
-                        )
-
-                        val publicIs =
-                            spm.getPrimaryStorageProvider()?.getInputStream(hash, "$hash.public")
-                        if (publicIs != null) {
-                            val uri = publicIs.bufferedReader().use(BufferedReader::readText)
-                            val verifyUri = "https://check.proofmode.org/#$uri"
-                            shareString = getString(R.string.verify_this_media_at) + "$verifyUri #proofmode #c2pa"
-
-                            lastMediaUri?.let { uri ->
-                                val uriShareImage = SocialImageUtil().createImageCard(this@ShareProofActivity, uri, verifyUri)
-                                shareUris.clear()
-                                shareUris.add(cleanUri(uriShareImage))
-                            }
-
-                            shareMedia(
-                                this@ShareProofActivity,
-                                shareString,
-                                shareUris
-                            )
-
-                            return true
-                        }
-
-                        hash.let {
-                            var isMedia = contentResolver.openInputStream(lastMediaUri!!)
-                            fp?.saveStream(hash, "public",isMedia!!, object : StorageListener {
-                                override fun saveSuccessful(hash: String?, uri: String?) {
-
-                                    spm.getPrimaryStorageProvider()?.saveText(hash,
-                                        "$hash.public", uri, null)
-
-                                    //Log.d(TAG, "Successfully saved $identifier to secondary storage at: $uri")
-                                    val verifyUri = "https://check.proofmode.org/#$uri"
-                                    shareString = getString(R.string.verify_this_media_at) + "$verifyUri #proofmode #c2pa"
-
-                                    lastMediaUri?.let { uri ->
-                                        val uriShareImage = SocialImageUtil().createImageCard(this@ShareProofActivity, uri, verifyUri)
-                                        shareUris.clear()
-                                        shareUris.add(cleanUri(uriShareImage))
-                                    }
-
-                                    shareMedia(
-                                        this@ShareProofActivity,
-                                        shareString,
-                                        shareUris
-                                    )
-                                }
-
-                                override fun saveFailed(exception: Exception?) {
-                                //    Log.w(TAG, "Failed to save $identifier to secondary storage: ${exception?.message}")
-                                }
-                            })
-                        }
-                    }
+                  uploadToFilebase(hash, shareUris)
               }
               else
               {
+
+                  var shareString = hash
                   lastMediaUri?.let { uri ->
-                      val uriShareImage = SocialImageUtil().createImageCard(this, uri, null)
+                      val uriShareImage = SocialImageUtil().createImageCard(this, uri, "hash:" + shareString)
                       shareUris.clear()
                       shareUris.add(cleanUri(uriShareImage))
                   }
@@ -497,32 +443,72 @@ class ShareProofActivity : AppCompatActivity() {
         return true
     }
 
+    private fun uploadToFilebase (hash: String, shareUris: ArrayList<Uri?>?)  {
+
+            val spm = StorageProviderManager.getInstance()
+            val finalShareUris : ArrayList<Uri?>? = ArrayList<Uri?>()
+            val lastMediaUri = shareUris?.get(0)
+
+            spm.getFilebaseProvider().let { fp ->
+
+                val publicIs =
+                    spm.getPrimaryStorageProvider()?.getInputStream(hash, "$hash.public")
+                if (publicIs != null) {
+                    val uri = publicIs.bufferedReader().use(BufferedReader::readText)
+                    val verifyUri = "https://check.proofmode.org/#$uri"
+                    val shareString = getString(R.string.verify_this_media_at) + "$verifyUri #proofmode #c2pa"
+
+                    lastMediaUri?.let { uri ->
+                        val uriShareImage = SocialImageUtil().createImageCard(this@ShareProofActivity, uri, verifyUri)
+
+                        finalShareUris?.add(cleanUri(uriShareImage))
+                    }
+
+                    shareMedia(
+                        this@ShareProofActivity,
+                        shareString,
+                        finalShareUris
+                    )
+
+                }
+
+                hash.let {
+                    var isMedia = contentResolver.openInputStream(lastMediaUri!!)
+                    fp?.saveStream(hash, "public",isMedia!!, object : StorageListener {
+                        override fun saveSuccessful(hash: String?, uri: String?) {
+
+                            spm.getPrimaryStorageProvider()?.saveText(hash,
+                                "$hash.public", uri, null)
+
+                            //Log.d(TAG, "Successfully saved $identifier to secondary storage at: $uri")
+                            val verifyUri = "https://check.proofmode.org/#$uri"
+                            var shareString = getString(R.string.verify_this_media_at) + "$verifyUri #proofmode #c2pa"
+
+                            lastMediaUri?.let { uri ->
+                                val uriShareImage = SocialImageUtil().createImageCard(this@ShareProofActivity, uri, verifyUri)
+                                finalShareUris?.add(cleanUri(uriShareImage))
+                            }
+
+                            shareMedia(
+                                this@ShareProofActivity,
+                                shareString,
+                                finalShareUris
+                            )
+                        }
+
+                        override fun saveFailed(exception: Exception?) {
+                            //    Log.w(TAG, "Failed to save $identifier to secondary storage: ${exception?.message}")
+                            exception?.printStackTrace()
+                        }
+                    })
+                }
+            }
+
+    }
+
         @Synchronized
     @Throws(IOException::class, PGPException::class)
     private fun saveProofInternal(fileName: String, shareMedia: Boolean, shareProof: Boolean) {
-
-        /**
-            lifecycleScope.launch {
-                val result = withContext(Dispatchers.IO) {
-                    try {
-                        saveProofInternal(fileName, shareMedia, shareProof)
-                    } catch (e: IOException) {
-                        Timber.e(e, "error saving proof")
-                        null
-                    } catch (e: PGPException) {
-                        Timber.e(e, "error saving proof")
-                        null
-                    }
-                }
-
-                if (result?.isEmpty() == true) {
-                    Timber.d("unable to saveProofInternal")
-                    showProofError()
-                } else {
-                    showProofSaved(result)
-                }
-            }**/
-
 
         // Get intent, action and MIME type
         val intent = intent
@@ -765,22 +751,6 @@ class ShareProofActivity : AppCompatActivity() {
                 }
                 if (fileZip.length() > 0) {
                     Timber.d("Proof zip completed. Size:" + fileZip.length())
-                    val encryptZip = false //we never do this
-                    if (encryptZip) {
-                        val fileZipEnc =
-                            File(fileCacheFolder, fileZip.name + ".gpg")
-                        try {
-                            pgpUtils.encrypt(
-                                FileInputStream(fileZip),
-                                fileZip.length(),
-                                FileOutputStream(fileZipEnc)
-                            )
-                        } catch (e: IOException) {
-                            e.printStackTrace()
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
-                    }
 
                     val uriZip = FileProvider.getUriForFile(
                         this,
