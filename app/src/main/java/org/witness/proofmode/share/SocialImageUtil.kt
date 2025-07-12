@@ -43,7 +43,7 @@ class SocialImageUtil {
 
     }
 
-    fun addWaterMark(context: Context, src: Bitmap, waterMark: Bitmap, qrcode: Bitmap?, waterText: String?): Bitmap {
+    private fun addWaterMark(context: Context, src: Bitmap, waterMark: Bitmap, qrcode: Bitmap?, waterText: String?): Bitmap {
         val w = src.width
         val h = src.height
         val result = Bitmap.createBitmap(
