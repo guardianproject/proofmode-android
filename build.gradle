@@ -31,10 +31,19 @@ allprojects {
     repositories {
         mavenCentral()
         google()
-        maven { url "https://raw.githubusercontent.com/guardianproject/gpmaven/master" }
-        maven { url 'https://jitpack.io' }
+       maven { url "https://raw.githubusercontent.com/guardianproject/gpmaven/master" }
+    //    maven { url 'https://jitpack.io' }
+        /**
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/contenauth/c2pa-android")
+            credentials {
+                username = System.getenv("gpr.user") ?: project.findProperty("gpr.user")
+                password = System.getenv("gpr.key") ?: project.findProperty("gpr.key")
+            }
+        }**/
+
         maven { url 'https://gitlab.com/api/v4/projects/51891540/packages/maven'  }
-        maven { url "https://dl.cloudsmith.io/public/libp2p/jvm-libp2p/maven/" }
         maven { url "https://artifacts.consensys.net/public/maven/maven/" }
 
 }

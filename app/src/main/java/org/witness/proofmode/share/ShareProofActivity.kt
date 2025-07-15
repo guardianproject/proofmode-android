@@ -418,7 +418,7 @@ class ShareProofActivity : AppCompatActivity() {
               var spm = StorageProviderManager.getInstance()
               if (spm.isFilebaseEnabled())
               {
-                  uploadToFilebase(hash, shareUris)
+                  uploadToFilebase(hash, shareUris, lastMediaUri)
               }
               else
               {
@@ -443,11 +443,10 @@ class ShareProofActivity : AppCompatActivity() {
         return true
     }
 
-    private fun uploadToFilebase (hash: String, shareUris: ArrayList<Uri?>?)  {
+    private fun uploadToFilebase (hash: String, shareUris: ArrayList<Uri?>?, lastMediaUri: Uri?)  {
 
             val spm = StorageProviderManager.getInstance()
             val finalShareUris : ArrayList<Uri?>? = ArrayList<Uri?>()
-            val lastMediaUri = shareUris?.get(0)
 
             spm.getFilebaseProvider().let { fp ->
 
@@ -734,7 +733,7 @@ class ShareProofActivity : AppCompatActivity() {
                 ) return false
             }
         }
-        if (shareUris.size > 0) {
+        if (shareUris.isNotEmpty()) {
             if (!shareProof) shareNotarization(shareText.toString()) else {
                 val fileCacheFolder = File(cacheDir, "zips")
                 fileCacheFolder.mkdir()
@@ -752,19 +751,30 @@ class ShareProofActivity : AppCompatActivity() {
                 if (fileZip.length() > 0) {
                     Timber.d("Proof zip completed. Size:" + fileZip.length())
 
-                    val uriZip = FileProvider.getUriForFile(
-                        this,
-                        "$packageName.provider",
-                        fileZip
-                    )
-                    shareFiltered(
-                        this,
-                        getString(R.string.select_app),
-                        shareText.toString(),
-                        shareUris,
-                        shareItems,
-                        uriZip
-                    )
+                    /**
+                    var spm = StorageProviderManager.getInstance()
+                    if (spm.isFilebaseEnabled())
+                    {
+                        uploadToFilebase("zips", shareUris, Uri.fromFile(fileZip))
+                    }
+                    else
+                    {**/
+                        val uriZip = FileProvider.getUriForFile(
+                            this,
+                            "$packageName.provider",
+                            fileZip
+                        )
+                        shareFiltered(
+                            this,
+                            getString(R.string.select_app),
+                            shareText.toString(),
+                            shareUris,
+                            shareItems,
+                            uriZip
+                        )
+                 //   }
+
+
                 } else {
                     Timber.d("Proof zip failed due to empty size:" + fileZip.length())
                     return false
@@ -913,26 +923,6 @@ class ShareProofActivity : AppCompatActivity() {
         }
     }
 
-    private fun shareProofAsync(fileName: String, shareMedia: Boolean, shareProof: Boolean) {
-        lifecycleScope.launch {
-            val result = withContext(Dispatchers.IO) {
-                try {
-                    shareProofAsync(fileName, shareMedia, shareProof)
-                } catch (e: IOException) {
-                    Timber.e(e, "error sharing proof")
-                    showProofError()
-
-                    false
-                } catch (e: PGPException) {
-                    Timber.e(e, "error sharing proof")
-                    showProofError()
-
-                    false
-                }
-            }
-
-        }
-    }
 
     private fun generateProof(mediaUri: Uri?, proofHash: String?) {
         generateProof(mediaUri, proofHash, mBlockAI == false)

@@ -2,6 +2,7 @@ package org.witness.proofmode.c2pa
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.database.Cursor
 import android.net.Uri
@@ -10,7 +11,6 @@ import android.preference.PreferenceManager
 import android.provider.MediaStore
 import android.system.Os
 import android.widget.Toast
-import info.guardianproject.simple_c2pa.*
 import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileInputStream
@@ -22,6 +22,10 @@ import java.util.Date
 import java.util.Locale
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+
+
+//import info.guardianproject.simple_c2pa.*
+import org.contentauth.c2pa.*
 
 class C2paUtils {
 
@@ -42,7 +46,7 @@ class C2paUtils {
         private var _identityEmail = "info@proofmode.org"
         private var _identityKey = "0x00000000"
 
-        private var userCert : Certificate? = null
+       // private var userCert : Certificate? = null
         private var mPrefs : SharedPreferences? = null
 
         private const val APP_ICON_URI = "https://proofmode.org/images/avatar.png"
@@ -153,7 +157,7 @@ class C2paUtils {
             fileParentCert.delete()
             fileParentKey.delete()
 
-            userCert = null
+          //  userCert = null
         }
 
         fun importCredentials (mContext : Context, fileImportKey : File, fileImportCert : File) {
@@ -166,8 +170,8 @@ class C2paUtils {
             fileImportKey.copyTo(fileExistingKey,true,4096)
             fileImportCert.copyTo(fileExistingCert,true,4096)
 
-            val userPrivateKey = FileData(fileExistingKey.absolutePath,fileExistingKey.readBytes(),fileImportKey.name)
-            userCert = Certificate(FileData(fileExistingCert.absolutePath,fileExistingCert.readBytes(),fileExistingCert.name), userPrivateKey, null)
+      //      val userPrivateKey = FileData(fileExistingKey.absolutePath,fileExistingKey.readBytes(),fileImportKey.name)
+        //    userCert = Certificate(FileData(fileExistingCert.absolutePath,fileExistingCert.readBytes(),fileExistingCert.name), userPrivateKey, null)
 
             Toast.makeText(mContext,"New certificate installed",Toast.LENGTH_LONG).show()
         }
@@ -182,8 +186,8 @@ class C2paUtils {
             fileImportKey?.copyTo(FileOutputStream(fileExistingKey))
             fileImportCert?.copyTo(FileOutputStream(fileExistingCert))
 
-            val userPrivateKey = FileData(fileExistingKey.absolutePath,fileExistingKey.readBytes(),fileExistingKey.name)
-            userCert = Certificate(FileData(fileExistingCert.absolutePath,fileExistingCert.readBytes(),fileExistingCert.name), userPrivateKey, null)
+       //     val userPrivateKey = FileData(fileExistingKey.absolutePath,fileExistingKey.readBytes(),fileExistingKey.name)
+     //       userCert = Certificate(FileData(fileExistingCert.absolutePath,fileExistingCert.readBytes(),fileExistingCert.name), userPrivateKey, null)
 
             Toast.makeText(mContext,"New certificate installed",Toast.LENGTH_LONG).show()
         }
@@ -221,6 +225,7 @@ class C2paUtils {
          */
         fun initCredentials (mContext : Context, emailAddress: String?, pgpFingerprint: String?) {
 
+            /**
             if (emailAddress?.isNotEmpty() == true)
                    _identityEmail = emailAddress
 
@@ -275,13 +280,14 @@ class C2paUtils {
             {
                 val userPrivateKey = FileData(fileUserKey.absolutePath,fileUserKey.readBytes(),fileUserKey.name)
                 userCert = Certificate(FileData(fileUserCert.absolutePath,fileUserCert.readBytes(),fileUserKey.name), userPrivateKey, null)
-            }
+            }**/
         }
 
         /**
          * add new C2PA Content Credential assertions and then embed and sign them
          */
-        private fun addContentCredentials(mContext : Context, emailAddress: String, pgpFingerprint: String, emailDisplay: String, webLink: String, isDirectCapture: Boolean, allowMachineLearning: Boolean, fileImageIn: File, fileImageOut: File) {
+        /**
+        private fun addContentCredentialsSimple(mContext : Context, emailAddress: String, pgpFingerprint: String, emailDisplay: String, webLink: String, isDirectCapture: Boolean, allowMachineLearning: Boolean, fileImageIn: File, fileImageOut: File) {
 
             if (userCert == null)
                 initCredentials(mContext, emailAddress, pgpFingerprint)
@@ -312,16 +318,7 @@ class C2paUtils {
 
            // contentCreds?.addEmailAssertion(emailAddress, emailDisplay) //not yet implemented
 
-            /**
-             * ///not yet working
-            contentCreds?.addJsonAssertion("stds.schema-org.CreativeWork","\n" +
-                    "\"@context\": \"http://schema.org/\"," +
-                    "\"@type\": \"CreativeWork\"," +
-                    "\"author\": [" +
-                    "\"@type\": \"Person\"," +
-                    "\"name\": \"$emailDisplay\"\n}]," +
-                    "\"copyrightNotice\": \"$emailDisplay 2023\"")
-                **/
+
 
             contentCreds?.addPgpAssertion(pgpFingerprint, pgpFingerprint)
             contentCreds?.addWebsiteAssertion(webLink)
@@ -365,6 +362,122 @@ class C2paUtils {
                 contentCreds?.embedManifest(fileImageOut.absolutePath)
             else
                 contentCreds?.exportManifest(fileImageOut.absolutePath)
+
+        }
+**/
+
+        private fun addContentCredentials(mContext : Context, emailAddress: String, pgpFingerprint: String, emailDisplay: String, webLink: String, isDirectCapture: Boolean, allowMachineLearning: Boolean, fileImageIn: File, fileImageOut: File) {
+
+          //  if (userCert == null)
+            //    initCredentials(mContext, emailAddress, pgpFingerprint)
+
+            val version = C2PA.version()
+
+            if (mPrefs == null) mPrefs = PreferenceManager.getDefaultSharedPreferences(mContext)
+
+            val showLocation = mPrefs?.getBoolean(
+                PREF_OPTION_LOCATION,
+                false
+            )
+
+            val appLabel = getAppName(mContext)
+            val appVersion = getAppVersionName(mContext)
+
+            //val appInfo = ApplicationInfo(appLabel, appVersion, APP_ICON_URI)
+
+          //  val mediaFile = FileData(fileImageIn.absolutePath, null, fileImageIn.name)
+            //val contentCreds = userCert?.let { ContentCredentials(it,mediaFile, appInfo) }
+
+            val exifMake = Build.MANUFACTURER
+            val exifModel = Build.MODEL
+            val exifTimestamp = Date().toGMTString()
+
+            val exifGpsVersion = "2.2.0.0"
+            var exifLat: String? = null
+            var exifLong: String? = null
+            var exifAlt: String? = null
+            var exifSpeed: String? = null
+            var exifBearing: String? = null
+
+            val gpsTracker = GPSTracker(mContext)
+            if (showLocation == true && gpsTracker.canGetLocation()) {
+
+                gpsTracker.updateLocation()
+                val location = gpsTracker.getLocation()
+                location?.let {
+                    exifLat = GPSTracker.getLatitudeAsDMS(location, 3)
+                    exifLong = GPSTracker.getLongitudeAsDMS(location, 3)
+                    location.altitude?.let {
+                        exifAlt = location.altitude.toString()
+                    }
+                    location.speed?.let {
+                        exifSpeed = location.speed.toString()
+                    }
+                    location.bearing?.let {
+                        exifBearing = location.bearing.toString()
+                    }
+                }
+
+            }
+
+            val manifestJson = """{
+                "claim_generator": "test_app/1.0",
+                "assertions": [{"label": "c2pa.test", "data": {"test": true}}]
+            }"""
+
+            try {
+                val builder = Builder.fromJson(manifestJson)
+                try {
+                    val sourceStream = FileStream(fileImageIn)
+             //       val fileTest = File.createTempFile("c2pa-callback-test", ".jpg")
+                    val destStream = FileStream(fileImageOut)
+
+                    var certPem = File(mContext.filesDir, C2PA_CERT_PATH).readText()
+                    var keyPem = File(mContext.filesDir, C2PA_KEY_PATH).readText()
+
+                    var signCallCount = 0
+
+                    val callbackSigner = Signer.withCallback(SigningAlgorithm.ES256, certPem, null) { data ->
+                        signCallCount++
+                        SigningHelper.signWithPEMKey(data, keyPem, "ES256")
+                    }
+
+                    try {
+                        val reserveSize = callbackSigner.reserveSize()
+                        val result = builder.sign("image/jpeg", sourceStream, destStream, callbackSigner)
+                        val signSucceeded = result.size > 0
+
+                        val (manifest, signatureVerified) = if (signSucceeded) {
+                            try {
+                                val manifestJson = C2PA.read(fileImageOut)
+                                if (manifestJson != null) {
+                                    Pair(manifestJson, true)
+                                } else {
+                                    Pair(null, false)
+                                }
+                            } catch (e: Exception) {
+                                Pair(null, false)
+                            }
+                        } else {
+                            Pair(null, false)
+                        }
+
+                        val success = signCallCount > 0 &&
+                                reserveSize > 0 &&
+                                signSucceeded &&
+                                signatureVerified
+
+                    } finally {
+                        callbackSigner.close()
+                        sourceStream.close()
+                        destStream.close()
+                    }
+                } finally {
+                    builder.close()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
 
         }
 

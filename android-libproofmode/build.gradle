@@ -12,7 +12,7 @@ android {
     namespace = "org.witness.proofmode.library"
 
     defaultConfig {
-        minSdkVersion 24
+        minSdkVersion 28
         targetSdkVersion 35
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         multiDexEnabled true
@@ -74,14 +74,15 @@ dependencies {
     androidTestImplementation 'junit:junit:4.13.2'
 
     //new C2PA content authenticity support
-    api ("info.guardianproject:simple_c2pa:0.0.15")
+   // api ("info.guardianproject:simple_c2pa:0.0.15")
     api ("net.java.dev.jna:jna:5.13.0@aar")
-
 
     // Testing-only dependencies
     androidTestImplementation 'androidx.test:core:' + rootProject.coreVersion;
     androidTestImplementation 'androidx.test.ext:junit:' + rootProject.extJUnitVersion;
     androidTestImplementation 'androidx.test:runner:' + rootProject.runnerVersion;
+
+    api project(":c2pa")
 
 
 }

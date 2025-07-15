@@ -1,1 +1,1 @@
-include ':app', ':android-libproofmode',  ':android-libproofcam', ':android-opentimestamps'
+include ':app', ':c2pa', ':android-libproofmode',  ':android-libproofcam', ':android-opentimestamps'

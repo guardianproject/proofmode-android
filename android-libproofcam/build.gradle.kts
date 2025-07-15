@@ -10,7 +10,7 @@ android {
     namespace = "org.witness.proofmode.camera"
 
     defaultConfig {
-        minSdk = 24
+        minSdk = 28
         targetSdk = 35
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -62,10 +62,6 @@ dependencies {
     implementation(kotlin("stdlib"))
 
     implementation(project(":android-libproofmode"))
-
-    //new C2PA content authenticity support
-    //api ("info.guardianproject:simple_c2pa:0.0.14")
-   // implementation ("net.java.dev.jna:jna:5.13.0@aar")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4")
 

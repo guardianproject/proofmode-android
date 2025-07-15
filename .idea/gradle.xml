@@ -14,9 +14,9 @@
             <option value="$PROJECT_DIR$/android-libproofmode" />
             <option value="$PROJECT_DIR$/android-opentimestamps" />
             <option value="$PROJECT_DIR$/app" />
+            <option value="$PROJECT_DIR$/c2pa" />
           </set>
         </option>
-        <option name="resolveExternalAnnotations" value="false" />
       </GradleProjectSettings>
     </option>
   </component>
