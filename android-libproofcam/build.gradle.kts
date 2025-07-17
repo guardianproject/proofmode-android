@@ -11,7 +11,6 @@ android {
 
     defaultConfig {
         minSdk = 28
-        targetSdk = 35
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
@@ -96,6 +95,8 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.2.2"){
     }
 
+    // Kotlin + coroutines
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.3.9")
 
     //logging
     implementation ("com.jakewharton.timber:timber:5.0.1")

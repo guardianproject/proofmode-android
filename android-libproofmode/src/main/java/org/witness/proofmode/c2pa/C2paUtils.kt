@@ -2,14 +2,15 @@ package org.witness.proofmode.c2pa
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.database.Cursor
+import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.preference.PreferenceManager
 import android.provider.MediaStore
 import android.system.Os
+import android.util.Size
 import android.widget.Toast
 import java.io.BufferedOutputStream
 import java.io.File
@@ -26,6 +27,8 @@ import java.util.zip.ZipOutputStream
 
 //import info.guardianproject.simple_c2pa.*
 import org.contentauth.c2pa.*
+import org.witness.proofmode.c2pa.ThumbUtils.getThumbBitmapForMedia
+import java.io.ByteArrayOutputStream
 
 class C2paUtils {
 
@@ -53,11 +56,14 @@ class C2paUtils {
 
         const val PREF_OPTION_LOCATION = "trackLocation"
 
+        const val TIMESTAMP_AUTHORITY = "http://timestamp.digicert.com"
 
         fun init (context: Context)
         {
             //this needs to be set to
             Os.setenv("TMPDIR",context.cacheDir.absolutePath, true);
+
+            loadSettings()
         }
         /**
          * Set identity values for certificate and content credentials
@@ -83,11 +89,13 @@ class C2paUtils {
         /**
          * Add content credentials to media from an external URI, and specify the output directory of where to stare the new file
          */
-        fun   addContentCredentials (_context: Context, _uri: Uri?, embedManifest: Boolean, allowMachineLearning: Boolean) : File {
+        suspend fun   addContentCredentials (_context: Context, _uri: Uri?, embedManifest: Boolean, allowMachineLearning: Boolean) : File {
 
             var filePath: String? = null
+            var contentType: String = "image/jpeg"
+
             if (_uri != null && "content" == _uri.scheme) {
-                val cursor: Cursor? = _context?.getContentResolver()?.query(
+                val cursor: Cursor? = _context?.contentResolver?.query(
                     _uri,
                     arrayOf<String>(MediaStore.Images.ImageColumns.DATA),
                     null,
@@ -96,10 +104,17 @@ class C2paUtils {
                 )
                 cursor?.moveToFirst()
                 filePath = cursor?.getString(0)
+                var localType = _context?.contentResolver?.getType(_uri)
+                localType?.let {
+                    contentType = it
+                }
                 cursor?.close()
             } else {
                 filePath = _uri!!.path
             }
+
+            if (contentType.isEmpty())
+                contentType = "image/jpeg"
 
             val fileMedia = File(filePath!!)
             var fileName = fileMedia.name;
@@ -122,6 +137,7 @@ class C2paUtils {
                     _identityUri,
                     embedManifest,
                     allowMachineLearning,
+                    contentType,
                     fileMedia,
                     fileOut
                 )
@@ -366,7 +382,7 @@ class C2paUtils {
         }
 **/
 
-        private fun addContentCredentials(mContext : Context, emailAddress: String, pgpFingerprint: String, emailDisplay: String, webLink: String, isDirectCapture: Boolean, allowMachineLearning: Boolean, fileImageIn: File, fileImageOut: File) {
+        private suspend fun addContentCredentials(mContext: Context, emailAddress: String, pgpFingerprint: String, emailDisplay: String, webLink: String, isDirectCapture: Boolean, allowMachineLearning: Boolean, contentType: String, fileIn: File, fileOut: File) {
 
           //  if (userCert == null)
             //    initCredentials(mContext, emailAddress, pgpFingerprint)
@@ -421,35 +437,55 @@ class C2paUtils {
             }
 
             val manifestJson = """{
-                "claim_generator": "test_app/1.0",
+                "claim_generator": "$appLabel/$appVersion",
                 "assertions": [{"label": "c2pa.test", "data": {"test": true}}]
             }"""
 
             try {
+
+
+                if (isDirectCapture)
+                {
+                    //add created
+
+                }
+                else
+                {
+                    //add placed
+                }
+
                 val builder = Builder.fromJson(manifestJson)
+
                 try {
-                    val sourceStream = FileStream(fileImageIn)
-             //       val fileTest = File.createTempFile("c2pa-callback-test", ".jpg")
-                    val destStream = FileStream(fileImageOut)
+                    val sourceStream = FileStream(fileIn)
+                    val destStream = FileStream(fileOut)
 
                     var certPem = File(mContext.filesDir, C2PA_CERT_PATH).readText()
                     var keyPem = File(mContext.filesDir, C2PA_KEY_PATH).readText()
 
+                    var thumbnail = mContext.getThumbBitmapForMedia(Uri.fromFile(fileIn))
+                    thumbnail?.let {
+                        var baos = ByteArrayOutputStream()
+                        thumbnail.compress(Bitmap.CompressFormat.JPEG, 90, baos)
+                        var streamThumb = DataStream(baos.toByteArray())
+                        builder.addResource("thumbnail", streamThumb)
+                    }
+
                     var signCallCount = 0
 
-                    val callbackSigner = Signer.withCallback(SigningAlgorithm.ES256, certPem, null) { data ->
+                    val callbackSigner = Signer.withCallback(SigningAlgorithm.ES256, certPem, TIMESTAMP_AUTHORITY) { data ->
                         signCallCount++
                         SigningHelper.signWithPEMKey(data, keyPem, "ES256")
                     }
 
                     try {
                         val reserveSize = callbackSigner.reserveSize()
-                        val result = builder.sign("image/jpeg", sourceStream, destStream, callbackSigner)
+                        val result = builder.sign(contentType, sourceStream, destStream, callbackSigner)
                         val signSucceeded = result.size > 0
 
                         val (manifest, signatureVerified) = if (signSucceeded) {
                             try {
-                                val manifestJson = C2PA.read(fileImageOut)
+                                val manifestJson = C2PA.read(fileOut)
                                 if (manifestJson != null) {
                                     Pair(manifestJson, true)
                                 } else {
@@ -517,6 +553,48 @@ class C2paUtils {
             inChannel.transferTo(0, inChannel.size(), outChannel)
             inStream.close()
             outStream.close()
+        }
+
+        fun loadSettings () {
+            val settingsJson = """{
+                "version_major": 2,
+                "version_minor": 2,
+                "trust": {
+                    "private_anchors": null,
+                    "trust_anchors": null,
+                    "trust_config": null,
+                    "allowed_list": null
+                },
+                "Core": {
+                    "debug": true,
+                    "hash_alg": "sha256",
+                    "salt_jumbf_boxes": true,
+                    "prefer_box_hash": false,
+                    "prefer_bmff_merkle_tree": false,
+                    "compress_manifests": true,
+                    "max_memory_usage": null
+                },
+                "Verify": {
+                    "verify_after_reading": true,
+                    "verify_after_sign": true,
+                    "verify_trust": true,
+                    "ocsp_fetch": false,
+                    "remote_manifest_fetch": true,
+                    "check_ingredient_trust": true,
+                    "skip_ingredient_conflict_resolution": false,
+                    "strict_v1_validation": false
+                },
+                "Builder": {
+                    "auto_thumbnail": true
+                }
+            }"""
+
+            val success = try {
+                C2PA.loadSettings(settingsJson, "json")
+                true
+            } catch (e: Exception) {
+                false
+            }
         }
     }
 }

@@ -50,12 +50,14 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.witness.proofmode.c2pa.C2paUtils
 import org.witness.proofmode.camera.CameraActivity
 import org.witness.proofmode.camera.adapter.Media
@@ -407,11 +409,23 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
                     // Create a temporary image to immediately show in thumbnail.
                     savedUri?.let { _thumbPreviewUri.value = Media(it,false,System.currentTimeMillis()) }
                     val capturedTime = System.currentTimeMillis()
-                    val mediaWithContentCredentials = attachContentCredentialsAndProofData(savedUri,CameraEventType.NEW_IMAGE)
-                    val newMedia = mediaWithContentCredentials?:savedUri?.let { Media(it,false,capturedTime)  }
-                    newMedia?.let {
-                        _lastCapturedMedia.value = it
-                        _mediaFiles.value = listOf(it) + mediaFiles.value
+
+                    CoroutineScope(Dispatchers.IO).launch {
+                        val mediaWithContentCredentials = attachContentCredentialsAndProofData(
+                            savedUri,
+                            CameraEventType.NEW_IMAGE
+                        )
+                        val newMedia = mediaWithContentCredentials ?: savedUri?.let {
+                            Media(
+                                it,
+                                false,
+                                capturedTime
+                            )
+                        }
+                        newMedia?.let {
+                            _lastCapturedMedia.value = it
+                            _mediaFiles.value = listOf(it) + mediaFiles.value
+                        }
                     }
 
                 }
@@ -424,7 +438,7 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
         )
     }
 
-    private fun attachContentCredentialsAndProofData(proofUri: Uri?,cameraEventType: CameraEventType):Media? {
+    private suspend fun attachContentCredentialsAndProofData(proofUri: Uri?, cameraEventType: CameraEventType):Media? {
         var finalUri = proofUri
         val isDirectCapture = true
         val dateSaved = Date()
@@ -494,16 +508,34 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
                     is VideoRecordEvent.Finalize -> {
                         stopTimer()
                         if (!recordEvent.hasError()) {
-                            _recordingState.update {  RecordingState.Stopped}
-                            val savedUri:Uri? = recordEvent.outputResults.outputUri
-                            savedUri?.let { _thumbPreviewUri.value = Media(it,true,System.currentTimeMillis())  }
 
-                            val capturedTime = System.currentTimeMillis()
-                            val mediaWithContentCredentials = attachContentCredentialsAndProofData(savedUri,CameraEventType.NEW_VIDEO)
-                            val newMedia = mediaWithContentCredentials?:savedUri?.let { Media(it,true,capturedTime)  }
-                            newMedia?.let {
-                                _lastCapturedMedia.value = it
-                                _mediaFiles.value = listOf(it) + mediaFiles.value
+                            _recordingState.update {  RecordingState.Stopped}
+
+                            CoroutineScope(Dispatchers.IO).launch {
+
+                                val savedUri: Uri? = recordEvent.outputResults.outputUri
+                                savedUri?.let {
+                                    _thumbPreviewUri.value =
+                                        Media(it, true, System.currentTimeMillis())
+                                }
+
+                                val capturedTime = System.currentTimeMillis()
+                                val mediaWithContentCredentials =
+                                    attachContentCredentialsAndProofData(
+                                        savedUri,
+                                        CameraEventType.NEW_VIDEO
+                                    )
+                                val newMedia = mediaWithContentCredentials ?: savedUri?.let {
+                                    Media(
+                                        it,
+                                        true,
+                                        capturedTime
+                                    )
+                                }
+                                newMedia?.let {
+                                    _lastCapturedMedia.value = it
+                                    _mediaFiles.value = listOf(it) + mediaFiles.value
+                                }
                             }
                         } else {
                             _recordingState.update { RecordingState.Error("Recording finished with error") }
