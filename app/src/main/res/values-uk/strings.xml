@@ -36,7 +36,7 @@
     <string name="action_generate">Створити доказ</string>
     <string name="proof_error_message_final">Ми не змогли згенерувати докази для цього файлу.</string>
     <string name="choose_my_settings">Змінити мої налаштування</string>
-    <string name="got_it">Зрозуміло</string>
+    <string name="got_it">Зрозуміли</string>
     <string name="activity_settings_title">ОБЕРІТЬ СВОЇ НАЛАШТУВАННЯ</string>
     <string name="activity_datalegend_title">ЛЕГЕНДА ДАНИХ</string>
     <string name="settings_title">Посильте верифікованість ваших медіа, додавши дані до ваших доказів.</string>
@@ -71,7 +71,7 @@
     <string name="share_share_basic">Поділитися базовим</string>
     <string name="share_mode_robust">Надійний</string>
     <string name="share_share_robust">Поділіться</string>
-    <string name="share_save_robust">зберегти</string>
+    <string name="share_save_robust">Зберегти</string>
     <string name="share_info_basic_message">• Не містить особисту інформацію
 \n• Не потребує довіри
 \n• Досить короткий, щоб надіслати текстове повідомлення</string>
@@ -176,7 +176,7 @@
     <string name="date_display_days_since_yesterday">\'Вчора \'ГГ:ХХ</string>
     <string name="date_display_days_since_other">d MMM РРРР</string>
     <string name="date_display_single_item">d MMM РРРР</string>
-    <string name="share_upload_robust">завантажити</string>
+    <string name="share_upload_robust">Завантаження</string>
     <string name="share_sign_robust">Знак</string>
     <string name="err_content_credentials">Виникла проблема під час перевірки або створення облікових даних вмісту.</string>
     <string name="status_download_content_credentials">Завантаження зображень із обліковими даними вмісту...</string>
