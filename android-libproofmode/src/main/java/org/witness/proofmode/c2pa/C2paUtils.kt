@@ -10,6 +10,7 @@ import android.os.Build
 import android.preference.PreferenceManager
 import android.provider.MediaStore
 import android.system.Os
+import android.util.Log
 import android.util.Size
 import android.widget.Toast
 import java.io.BufferedOutputStream
@@ -27,8 +28,20 @@ import java.util.zip.ZipOutputStream
 
 //import info.guardianproject.simple_c2pa.*
 import org.contentauth.c2pa.*
+import org.contentauth.c2pa.manifest.Action
+import org.contentauth.c2pa.manifest.AttestationBuilder
+import org.contentauth.c2pa.manifest.C2PAActions
+import org.contentauth.c2pa.manifest.C2PAFormats
+import org.contentauth.c2pa.manifest.C2PARelationships
+import org.contentauth.c2pa.manifest.Ingredient
+import org.contentauth.c2pa.manifest.ManifestBuilder
+import org.contentauth.c2pa.manifest.ManifestHelpers
+import org.contentauth.c2pa.manifest.Thumbnail
+import org.contentauth.c2pa.manifest.TimestampAuthorities
+import org.json.JSONObject
 import org.witness.proofmode.c2pa.ThumbUtils.getThumbBitmapForMedia
 import java.io.ByteArrayOutputStream
+import java.util.TimeZone
 
 class C2paUtils {
 
@@ -382,10 +395,9 @@ class C2paUtils {
         }
 **/
 
-        private suspend fun addContentCredentials(mContext: Context, emailAddress: String, pgpFingerprint: String, emailDisplay: String, webLink: String, isDirectCapture: Boolean, allowMachineLearning: Boolean, contentType: String, fileIn: File, fileOut: File) {
-
-          //  if (userCert == null)
-            //    initCredentials(mContext, emailAddress, pgpFingerprint)
+        private suspend fun addContentCredentials(mContext: Context, emailAddress: String, pgpFingerprint: String,
+                                                  emailDisplay: String, webLink: String, isDirectCapture: Boolean,
+                                                  allowMachineLearning: Boolean, contentType: String, fileIn: File, fileOut: File) {
 
             val version = C2PA.version()
 
@@ -408,51 +420,123 @@ class C2paUtils {
             val exifModel = Build.MODEL
             val exifTimestamp = Date().toGMTString()
 
-            val exifGpsVersion = "2.2.0.0"
-            var exifLat: String? = null
-            var exifLong: String? = null
-            var exifAlt: String? = null
-            var exifSpeed: String? = null
-            var exifBearing: String? = null
 
-            val gpsTracker = GPSTracker(mContext)
-            if (showLocation == true && gpsTracker.canGetLocation()) {
 
-                gpsTracker.updateLocation()
-                val location = gpsTracker.getLocation()
-                location?.let {
-                    exifLat = GPSTracker.getLatitudeAsDMS(location, 3)
-                    exifLong = GPSTracker.getLongitudeAsDMS(location, 3)
-                    location.altitude?.let {
-                        exifAlt = location.altitude.toString()
-                    }
-                    location.speed?.let {
-                        exifSpeed = location.speed.toString()
-                    }
-                    location.bearing?.let {
-                        exifBearing = location.bearing.toString()
-                    }
-                }
 
+            val iso8601 = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
+                timeZone = TimeZone.getTimeZone("UTC")
             }
-
-            val manifestJson = """{
-                "claim_generator": "$appLabel/$appVersion",
-                "assertions": [{"label": "c2pa.test", "data": {"test": true}}]
-            }"""
-
+            val currentTs = iso8601.format(Date())
+            val thumbnailId = fileIn.name + "-thumb.jpg"
             try {
 
+                var mb = ManifestBuilder()
+                mb.claimGenerator(appLabel, version = appVersion)
+                mb.timestampAuthorityUrl(TimestampAuthorities.DIGICERT)
+
+                mb.title(fileIn.name)
+                mb.format(C2PAFormats.JPEG)
+             //   mb.addThumbnail(Thumbnail(C2PAFormats.JPEG, thumbnailId))
 
                 if (isDirectCapture)
                 {
                     //add created
-
+                    mb.addAction(Action(C2PAActions.CREATED, currentTs, appLabel))
                 }
                 else
                 {
                     //add placed
+                    mb.addAction(Action(C2PAActions.PLACED, currentTs, appLabel))
+
                 }
+
+                val ingredient = Ingredient(
+                    title = fileIn.name,
+                    format = C2PAFormats.JPEG,
+                    relationship = C2PARelationships.PARENT_OF,
+           //         thumbnail = Thumbnail(C2PAFormats.JPEG, thumbnailId)
+                )
+
+                mb.addIngredient(ingredient)
+
+                val attestationBuilder = AttestationBuilder()
+
+                attestationBuilder.addCreativeWork {
+                    addAuthor(emailDisplay)
+                    dateCreated(Date())
+                }
+
+                val gpsTracker = GPSTracker(mContext)
+                if (showLocation == true && gpsTracker.canGetLocation()) {
+
+                    val exifGpsVersion = "2.2.0.0"
+                    var exifLat: String? = null
+                    var exifLong: String? = null
+                    var exifAlt: String? = null
+                    var exifSpeed: String? = null
+                    var exifBearing: String? = null
+
+                    gpsTracker.updateLocation()
+                    val location = gpsTracker.getLocation()
+                    location?.let {
+                        exifLat = GPSTracker.getLatitudeAsDMS(location, 3)
+                        exifLong = GPSTracker.getLongitudeAsDMS(location, 3)
+                        location.altitude?.let {
+                            exifAlt = location.altitude.toString()
+                        }
+                        location.speed?.let {
+                            exifSpeed = location.speed.toString()
+                        }
+                        location.bearing?.let {
+                            exifBearing = location.bearing.toString()
+                        }
+
+                        val locationJson = JSONObject().apply {
+                            put("@type", "Place")
+                            put("latitude", exifLat)
+                            put("longitude", exifLong)
+                            put("name", "Somewhere")
+                        }
+
+                        attestationBuilder.addAssertionMetadata {
+                            dateTime(currentTs)
+                            device(pgpFingerprint)
+                            location(locationJson)
+                        }
+                    }
+
+
+                }
+                else {
+                    attestationBuilder.addAssertionMetadata {
+                        dateTime(currentTs)
+                        device(pgpFingerprint)
+                    }
+                }
+
+
+                /**
+                val customAttestationJson = JSONObject().apply {
+                    put("@type", "Integrity")
+                    put("nonce", "something")
+                    put("response", "b64encodedresponse")
+                }
+
+                attestationBuilder.addCustomAttestation("app.integrity", customAttestationJson)
+                **/
+
+                /**
+                attestationBuilder.addCAWGIdentity {
+                    validFromNow()
+                    addSocialMediaIdentity(pgpFingerprint, webLink, currentTs, appLabel, appLabel)
+                }
+
+                attestationBuilder.buildForManifest(mb)
+                **/
+
+                val manifestJson = mb.buildJson()
+
+                Log.d("C2PA", manifestJson)
 
                 val builder = Builder.fromJson(manifestJson)
 
@@ -468,7 +552,7 @@ class C2paUtils {
                         var baos = ByteArrayOutputStream()
                         thumbnail.compress(Bitmap.CompressFormat.JPEG, 90, baos)
                         var streamThumb = DataStream(baos.toByteArray())
-                        builder.addResource("thumbnail", streamThumb)
+                        builder.addResource(thumbnailId, streamThumb)
                     }
 
                     var signCallCount = 0
@@ -486,6 +570,7 @@ class C2paUtils {
                         val (manifest, signatureVerified) = if (signSucceeded) {
                             try {
                                 val manifestJson = C2PA.read(fileOut)
+                                Log.d("C2PA Signed",manifestJson)
                                 if (manifestJson != null) {
                                     Pair(manifestJson, true)
                                 } else {
