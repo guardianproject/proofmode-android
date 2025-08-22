@@ -1,0 +1,2 @@
+include:
+  - component: gitlab.com/components/sast/sast@main
