@@ -123,7 +123,6 @@
     <string name="action_add_content_credentials_c2pa">Enviar para ProofCheck</string>
     <string name="cb_open_gallery">Navegar até a galeria</string>
     <string name="re_share">Recompartilhar</string>
-    <string name="menu_import_documents">Importar documentos...</string>
     <plurals name="n_items_have_been_deleted_or_are_not_accessible">
         <item quantity="one">um item foi excluído ou não está acessível</item>
         <item quantity="many">%d itens foram excluídos ou não estão acessíveis</item>
@@ -149,7 +148,6 @@
     <string name="date_display_days_since_other">d MMM YYYY</string>
     <string name="date_display_single_item">d MMM YYYY</string>
     <string name="you_shared_your_public_key">Você compartilhou a sua chave pública</string>
-    <string name="menu_import_videos">Importar vídeos...</string>
     <string name="cb_switch">Alternar entre a câmera frontal e traseira</string>
     <plurals name="share_these_n_items">
         <item quantity="one">Compartilhar este item</item>

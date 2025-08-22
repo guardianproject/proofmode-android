@@ -2,9 +2,6 @@ package org.witness.proofmode.storage
 
 import android.net.Uri
 import android.util.Log
-import okhttp3.*
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.*
 import java.net.URLEncoder
 import java.nio.file.CopyOption
@@ -17,6 +14,14 @@ import java.util.concurrent.TimeUnit
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import kotlin.collections.ArrayList
+import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.asRequestBody
+
+interface TestConnectionCallback {
+    fun onTestSuccess()
+    fun onTestFailure(error: String)
+}
 
 class FilebaseStorageProvider(
     private val accessKey: String,
@@ -232,59 +237,89 @@ class FilebaseStorageProvider(
         return null
     }
 
-    fun testConnection () {
-        try {
-            val timestamp = getTimestamp()
-            val dateStamp = getDateStamp()
+    fun testConnection(callback: TestConnectionCallback) {
+        Thread {
+                    try {
+                        val timestamp = getTimestamp()
+                        val dateStamp = getDateStamp()
 
-            // Create canonical request
-            val canonicalHeaders = "host:${endpoint.removePrefix("https://")}\n" +
-                    "x-amz-date:$timestamp\n"
+                        // Create canonical request for a simple HEAD request to the bucket
+                        val canonicalHeaders =
+                                "host:${endpoint.removePrefix("https://")}\n" +
+                                        "x-amz-date:$timestamp\n"
 
-            val signedHeaders = "host;x-amz-content-sha256;x-amz-date"
-            val canonicalRequest = "GET\n" +
-                    "/ListBuckets\n" +
-                    "\n" +
-                    canonicalHeaders +
-                    "\n" +
-                    signedHeaders +
-                    "\n"
+                        val signedHeaders = "host;x-amz-date"
+                        val canonicalRequest =
+                                "HEAD\n" +
+                                        "/$bucketName/\n" +
+                                        "\n" +
+                                        canonicalHeaders +
+                                        "\n" +
+                                        signedHeaders +
+                                        "\n" +
+                                        "UNSIGNED-PAYLOAD"
 
-            // Create string to sign
-            val credentialScope = "$dateStamp/$REGION/$SERVICE/aws4_request"
-            val stringToSign = "$ALGORITHM\n" +
-                    timestamp + "\n" +
-                    credentialScope + "\n" +
-                    sha256(canonicalRequest)
+                        // Create string to sign
+                        val credentialScope = "$dateStamp/$REGION/$SERVICE/aws4_request"
+                        val stringToSign =
+                                "$ALGORITHM\n" +
+                                        timestamp +
+                                        "\n" +
+                                        credentialScope +
+                                        "\n" +
+                                        sha256(canonicalRequest)
 
-            // Calculate signature
-            val signature = calculateSignature(secretKey, dateStamp, REGION, SERVICE, stringToSign)
+                        // Calculate signature
+                        val signature =
+                                calculateSignature(
+                                        secretKey,
+                                        dateStamp,
+                                        REGION,
+                                        SERVICE,
+                                        stringToSign
+                                )
 
-            // Create authorization header
-            val authorization = "$ALGORITHM Credential=$accessKey/$credentialScope, " +
-                    "SignedHeaders=$signedHeaders, Signature=$signature"
+                        // Create authorization header
+                        val authorization =
+                                "$ALGORITHM Credential=$accessKey/$credentialScope, " +
+                                        "SignedHeaders=$signedHeaders, Signature=$signature"
 
-            val request = Request.Builder()
-                .url("$endpoint/$bucketName/")
-                .get()
-                .addHeader("Host", endpoint.removePrefix("https://"))
-                .addHeader("x-amz-date", timestamp)
-                .addHeader("Authorization", authorization)
-                .build()
+                        val request =
+                                Request.Builder()
+                                        .url("$endpoint/$bucketName/")
+                                        .head()
+                                        .addHeader("Host", endpoint.removePrefix("https://"))
+                                        .addHeader("x-amz-date", timestamp)
+                                        .addHeader("Authorization", authorization)
+                                        .build()
 
-            client.newCall(request).execute().use { response ->
-                if (response.isSuccessful) {
-                    Log.d(TAG, "Successfully connect to Filebase")
-
-                } else {
-                    val error = IOException("Connection failed: ${response.code} ${response.message}")
-                    Log.e(TAG, "Connection failed", error)
-
+                        client.newCall(request).execute().use { response ->
+                            if (response.isSuccessful) {
+                                Log.d(TAG, "Successfully connected to Filebase")
+                                callback.onTestSuccess()
+                            } else if (response.code == 403) {
+                                val errorMsg =
+                                        "Connection failed (${response.code} ${response.message}): Check your credentials"
+                                Log.e(TAG, errorMsg)
+                                callback.onTestFailure(errorMsg)
+                            } else if (response.code == 404) {
+                                val errorMsg =
+                                        "Connection failed (${response.code} ${response.message}): Bucket not found"
+                                Log.e(TAG, errorMsg)
+                                callback.onTestFailure(errorMsg)
+                            } else {
+                                val errorMsg =
+                                        "Connection failed: ${response.code} ${response.message}"
+                                Log.e(TAG, errorMsg)
+                                callback.onTestFailure(errorMsg)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        val errorMsg = "Error connecting to Filebase: ${e.message}"
+                        Log.e(TAG, errorMsg, e)
+                        callback.onTestFailure(errorMsg)
+                    }
                 }
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error connecting to Filebase", e)
-
-        }
+                .start()
     }
 }

@@ -119,7 +119,6 @@
     <string name="verify_proof">Comprobar la prueba</string>
     <string name="cb_open_gallery">Ir a la Galería</string>
     <string name="re_share">Volver a compartir</string>
-    <string name="menu_import_documents">Importar los documentos...</string>
     <string name="proof_integrity_verified_failed">¡Integridad de la prueba fallida!</string>
     <string name="share_upload_robust">Cargar</string>
     <plurals name="n_items_have_been_deleted_or_are_not_accessible">
@@ -149,7 +148,6 @@
     <string name="date_display_days_since_other">dd MM aaaa</string>
     <string name="date_display_single_item">dd-mmm-yyyy</string>
     <string name="you_shared_your_public_key">Compartiste tu clave pública</string>
-    <string name="menu_import_videos">Importar los vídeos...</string>
     <string name="pub_key_id">Identidad de clave pública generada:</string>
     <string name="video">Vídeo</string>
     <string name="cb_switch">Cambia entre las cámaras frontal y trasera</string>

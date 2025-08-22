@@ -10,6 +10,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.PreferenceManager
 import org.witness.proofmode.R
 import org.witness.proofmode.storage.FilebaseConfig
+import org.witness.proofmode.storage.FilebaseStorageProvider
+import org.witness.proofmode.storage.TestConnectionCallback
 
 class FilebaseSettingsActivity : AppCompatActivity() {
 
@@ -111,25 +113,72 @@ class FilebaseSettingsActivity : AppCompatActivity() {
     }
 
     private fun testConnection() {
-        val config = FilebaseConfig(
-            accessKey = editAccessKey.text.toString().trim(),
-            secretKey = editSecretKey.text.toString().trim(),
-            bucketName = editBucketName.text.toString().trim(),
-            endpoint = editEndpoint.text.toString().trim(),
-            enabled = true
-        )
+        val config =
+                FilebaseConfig(
+                        accessKey = editAccessKey.text.toString().trim(),
+                        secretKey = editSecretKey.text.toString().trim(),
+                        bucketName = editBucketName.text.toString().trim(),
+                        endpoint = editEndpoint.text.toString().trim(),
+                        enabled = true
+                )
 
         if (!config.isValid()) {
-            Toast.makeText(this,
-                getString(R.string.please_fill_in_all_required_fields), Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                            this,
+                            getString(R.string.please_fill_in_all_required_fields),
+                            Toast.LENGTH_SHORT
+                    )
+                    .show()
             return
         }
-        else
-        {
-            Toast.makeText(this,"All good!" ,Toast.LENGTH_SHORT).show()
-        }
 
-        // TODO: Implement test upload to verify credentials
-        //Toast.makeText(this, "Connection test not yet implemented", Toast.LENGTH_SHORT).show()
+        // Disable button during test
+        buttonTest.isEnabled = false
+        buttonTest.text = "Testing..."
+
+        try {
+            val filebaseProvider =
+                    FilebaseStorageProvider(
+                            accessKey = config.accessKey,
+                            secretKey = config.secretKey,
+                            bucketName = config.bucketName,
+                            endpoint = config.endpoint
+                    )
+
+            filebaseProvider.testConnection(
+                    object : TestConnectionCallback {
+                        override fun onTestSuccess() {
+                            runOnUiThread {
+                                buttonTest.isEnabled = true
+                                buttonTest.text = "TEST CONNECTION"
+                                Toast.makeText(
+                                                this@FilebaseSettingsActivity,
+                                                "Connection test successful!",
+                                                Toast.LENGTH_LONG
+                                        )
+                                        .show()
+                            }
+                        }
+
+                        override fun onTestFailure(error: String) {
+                            runOnUiThread {
+                                buttonTest.isEnabled = true
+                                buttonTest.text = "TEST CONNECTION"
+                                Toast.makeText(
+                                                this@FilebaseSettingsActivity,
+                                                "Connection test failed: $error",
+                                                Toast.LENGTH_LONG
+                                        )
+                                        .show()
+                            }
+                        }
+                    }
+            )
+        } catch (e: Exception) {
+            buttonTest.isEnabled = true
+            buttonTest.text = "TEST CONNECTION"
+            Toast.makeText(this, "Error creating test connection: ${e.message}", Toast.LENGTH_LONG)
+                    .show()
+        }
     }
 }

@@ -172,8 +172,6 @@
     <string name="action_add_content_credentials_c2pa">Отправить в ProofCheck</string>
     <string name="status_download_content_credentials">Загрузка изображений с помощью учетных данных содержимого...</string>
     <string name="menu_import_photos">Импорт...</string>
-    <string name="menu_import_videos">Импортируйте видео...</string>
-    <string name="menu_import_documents">Импортные документы...</string>
     <string name="title_activity">Журнал логов</string>
     <string name="cd_take_picture">Сделайте снимок</string>
     <string name="cb_open_gallery">Перейти в галерею</string>
