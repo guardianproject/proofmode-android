@@ -525,14 +525,14 @@ class C2paUtils {
                 attestationBuilder.addCustomAttestation("app.integrity", customAttestationJson)
                 **/
 
-                /**
+
                 attestationBuilder.addCAWGIdentity {
                     validFromNow()
                     addSocialMediaIdentity(pgpFingerprint, webLink, currentTs, appLabel, appLabel)
                 }
 
                 attestationBuilder.buildForManifest(mb)
-                **/
+
 
                 val manifestJson = mb.buildJson()
 
