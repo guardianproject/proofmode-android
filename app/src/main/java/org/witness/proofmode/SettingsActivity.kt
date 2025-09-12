@@ -10,6 +10,7 @@ import android.view.MenuItem
 import android.widget.CheckBox
 import android.widget.CompoundButton
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Observer
 import androidx.preference.PreferenceManager
 import com.google.android.gms.common.AccountPicker
 import com.google.android.gms.common.AccountPicker.AccountChooserOptions
@@ -17,6 +18,7 @@ import org.witness.proofmode.PermissionActivity.Companion.hasPermissions
 import org.witness.proofmode.ProofMode.PREF_CREDENTIALS_PRIMARY
 import org.witness.proofmode.c2pa.C2paUtils
 import org.witness.proofmode.crypto.pgp.PgpUtils
+import org.witness.proofmode.crypto.privy.PrivyManager
 import org.witness.proofmode.databinding.ActivitySettingsBinding
 import org.witness.proofmode.storage.FilebaseConfig
 import org.witness.proofmode.util.GPSTracker
@@ -34,6 +36,9 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var switchAI: CheckBox
     private lateinit var switchAutoImport: CheckBox
     private lateinit var switchAutoSync: CheckBox
+    private lateinit var switchWeb3Wallet: CheckBox
+    
+    private lateinit var privyManager: PrivyManager
 
     private lateinit var binding:ActivitySettingsBinding
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -48,6 +53,8 @@ class SettingsActivity : AppCompatActivity() {
         val title = binding.toolbarTitle
         title.text = getTitle()
         mPrefs = PreferenceManager.getDefaultSharedPreferences(this)
+        privyManager = PrivyManager.getInstance(this)
+        
         switchLocation = binding.contentSettings.switchLocation
         switchNetwork = binding.contentSettings.switchNetwork
         switchDevice = binding.contentSettings.switchDevice
@@ -56,6 +63,7 @@ class SettingsActivity : AppCompatActivity() {
         switchAI = binding.contentSettings.switchAI
         switchAutoImport = binding.contentSettings.switchAutoImport
         switchAutoSync = binding.contentSettings.switchAutoSync
+        switchWeb3Wallet = binding.contentSettings.switchWeb3Wallet
 
 
         
@@ -176,6 +184,31 @@ class SettingsActivity : AppCompatActivity() {
 
         }
 
+        // Setup Web3 wallet settings
+        switchWeb3Wallet.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
+            mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_WEB3_WALLET, isChecked).commit()
+            
+            if (isChecked) {
+                // Open Web3 wallet authentication activity
+                val intent = Intent(this, Web3WalletAuthActivity::class.java)
+                startActivity(intent)
+            } else {
+                // Disconnect wallet
+                privyManager.disconnectWallet()
+            }
+            
+            updateUI()
+        }
+        
+        // Observe Privy manager state changes
+        privyManager.isConnected.observe(this, Observer { isConnected ->
+            // Update the switch state based on connection status
+            if (switchWeb3Wallet.isChecked != isConnected) {
+                switchWeb3Wallet.isChecked = isConnected
+                mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_WEB3_WALLET, isConnected).apply()
+            }
+        })
+
     }
 
     private val REQ_ACCOUNT_CHOOSER = 9999;
@@ -218,6 +251,9 @@ class SettingsActivity : AppCompatActivity() {
 
         switchAutoImport.isChecked =
             mPrefs.getBoolean(ProofMode.PREFS_DOPROOF, false)
+
+        switchWeb3Wallet.isChecked =
+            mPrefs.getBoolean(ProofMode.PREF_OPTION_WEB3_WALLET, ProofMode.PREF_OPTION_WEB3_WALLET_DEFAULT)
 
     }
 

@@ -4,6 +4,50 @@ ProofMode is light, minimal "reboot" of our full encrypted, verified secure came
 
 While we are very proud of the work we did with the CameraV and InformaCam projects, the end results was a complex application and proprietary data format that required a great deal of investment by any user or community that wished to adopt it. Furthermore, it was an app that you had to decide and remember to use, in a moment of crisis. With ProofMode, we both wanted to simplify the adoption of the tool, and make it nearly invisible to the end-user, while making it the adoption of the tool by organizations painless through simple formats like CSV and known formats like PGP signatures.
 
+# ✨ NEW: Web3 Wallet Integration
+
+This version of ProofMode includes Web3 wallet authentication through Privy SDK integration, enabling users to securely authenticate and manage cryptographic wallets alongside their proof data.
+
+## Features
+
+- **SMS/Email OTP Authentication**: Secure phone number and email verification using Privy's authentication system
+- **Embedded Wallet Creation**: Automatic Ethereum wallet generation for authenticated users
+- **Cross-Platform Ready**: Implementation designed to match iOS patterns for future consistency
+- **Secure Key Management**: Wallet addresses and authentication state managed through encrypted storage
+
+## Setup
+
+To enable Web3 wallet functionality:
+
+1. **Configure Privy Credentials**: 
+   - Open `app/src/main/java/org/witness/proofmode/crypto/privy/PrivyConfig.kt`
+   - Add your Privy `APP_ID` and `APP_CLIENT_ID` from your Privy dashboard
+   
+2. **Dependencies**: 
+   - The required Privy SDK dependency is already included in `app/build.gradle`
+   - No additional setup required
+
+## Usage
+
+Users can access Web3 wallet features through the new "Web3 Wallet" option in the app, allowing them to:
+- Authenticate using phone number or email with OTP verification
+- Generate and manage embedded Ethereum wallets
+- View wallet addresses and connection status
+- Securely logout and disconnect wallets
+
+## Implementation Details
+
+- **PrivyManager.kt**: Core wallet management and authentication logic
+- **PrivyConfig.kt**: Configuration for Privy SDK credentials  
+- **Web3WalletAuthActivity.kt**: User interface for authentication flow
+- Full error handling and logging for debugging authentication issues
+
+For detailed documentation:
+- **[Web3 Wallet Setup Guide](docs/web3-wallet-setup.md)**: Step-by-step configuration and troubleshooting
+- **[Technical Documentation](docs/web3-wallet-integration.md)**: Architecture details and implementation notes
+
+This integration enhances ProofMode's cryptographic capabilities while maintaining the app's core principle of invisible, automatic operation.
+
 # Design Goals 
 
 * Run all of the time in the background without noticeable battery, storage or network impact

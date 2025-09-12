@@ -275,6 +275,49 @@
                     android:text="@string/auto_sync_desc" />
             </LinearLayout>
         </TableRow>
+        
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="0.5"
+            android:paddingTop="20dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.5"
+                android:gravity="center_horizontal"
+                android:orientation="vertical">
+
+                <CheckBox
+                    android:id="@+id/switchWeb3Wallet"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:button="@drawable/option_credentials_selector" />
+
+                <TextView
+                    style="@style/SettingsOptionStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/web3_wallet_title" />
+
+                <TextView
+                    style="@style/SettingsOptionDescStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/web3_wallet_desc" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.5"
+                android:gravity="center_horizontal"
+                android:orientation="vertical"
+                android:visibility="invisible">
+                <!-- Empty space to maintain layout balance -->
+            </LinearLayout>
+        </TableRow>
     </TableLayout>
 
 

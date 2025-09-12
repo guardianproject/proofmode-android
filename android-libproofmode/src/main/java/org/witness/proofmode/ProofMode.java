@@ -55,6 +55,8 @@ public class ProofMode {
 
     public final static String PREF_CREDENTIALS_PRIMARY = "prefCredsPrimary";
 
+    public final static String PREF_OPTION_WEB3_WALLET = "web3Wallet";
+
 
     public final static boolean PREF_OPTION_NOTARY_DEFAULT = true;
     public final static boolean PREF_OPTION_LOCATION_DEFAULT = true;
@@ -64,6 +66,8 @@ public class ProofMode {
     public final static boolean PREF_OPTION_CREDENTIALS_DEFAULT = true;
 
     public final static boolean PREF_OPTION_AI_DEFAULT = true;
+
+    public final static boolean PREF_OPTION_WEB3_WALLET_DEFAULT = false;
 
     public final static String PROOF_FILE_TAG = ".proof.csv";
     public final static String PROOF_FILE_JSON_TAG = ".proof.json";
