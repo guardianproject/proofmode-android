@@ -216,4 +216,9 @@
     <string name="background_mode_info">Додайте доказ до всіх нових фотографій та відео на цьому пристрої</string>
     <string name="auto_sync_title">Автоматична синхронізація</string>
     <string name="auto_sync_desc">Дані про підтвердження резервного копіювання до хмарної служби IPFS</string>
+    <string name="social">соціальний</string>
+    <string name="share_social">Надає доступ лише до медіафайлу C2PA та посилання для підтвердження в соціальних мережах</string>
+    <string name="share_media">Поділитися медіа</string>
+    <string name="share_using">Поділитися за допомогою</string>
+    <string name="verify_this_media_at">"Перевірте цей носій за адресою: "</string>
 </resources>
