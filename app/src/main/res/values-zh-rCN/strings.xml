@@ -195,4 +195,9 @@
     <string name="background_mode_info">为此设备上的所有新照片和视频添加证据</string>
     <string name="auto_sync_title">自动同步</string>
     <string name="auto_sync_desc">将证据数据备份到 Filebase IPFS 云服务</string>
+    <string name="social">社交</string>
+    <string name="share_social">仅分享包含 C2PA 的媒体文件和社交网络的验证链接</string>
+    <string name="share_media">分享媒体</string>
+    <string name="share_using">使用以下方式分享</string>
+    <string name="verify_this_media_at">"在以下位置验证此媒体： "</string>
 </resources>
