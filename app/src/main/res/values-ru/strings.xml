@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="menu_settings">Настройка</string>
+    <string name="menu_settings">настройки</string>
     <string name="app_name">Режим доказательств</string>
     <string name="action_settings">Настройки</string>
     <string name="action_share_key">Поделиться Открытый ключ...</string>
