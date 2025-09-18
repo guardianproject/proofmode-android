@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="menu_settings">Настройка</string>
+    <string name="menu_settings">настройки</string>
     <string name="app_name">Режим доказательств</string>
     <string name="action_settings">Настройки</string>
     <string name="action_share_key">Поделиться Открытый ключ...</string>
@@ -65,11 +65,11 @@
     <string name="menu_home">Дом</string>
     <string name="menu_how_it_works">Как это работает</string>
     <string name="menu_datalegend">Легенда данных</string>
-    <string name="onboarding_step1_title">Получить доказательства очень просто. После включения режима ProofMode используйте камеру как обычно.</string>
+    <string name="onboarding_step1_title">Получение доказательства легко с камерой Proofmode!</string>
     <string name="onboarding_intro_title">Фотография может стоить тысячи слов, но доказательство того, что она настоящая, бесценно.</string>
     <string name="onboarding_step1_content">ProofMode работает в фоновом режиме, генерируя и сохраняя доказательства. Вам не нужно делать ничего особенного!</string>
-    <string name="onboarding_step2_title">Сделав фото или видео, найдите его в галерее камеры, чтобы поделиться им.</string>
-    <string name="onboarding_step2_content">Выберите фотографию, нажмите на значок \"Поделиться\" и выберите \"Поделиться доказательством\".</string>
+    <string name="onboarding_step2_title">Как только вы ’ сделали фотографию или видео, найдите его в домашнем экране Proofmode.</string>
+    <string name="onboarding_step2_content">Откройте фотографию или видео, затем нажмите на значок акции и выберите ‘Share Proof’.</string>
     <string name="onboarding_step3_title">Перед отправкой выберите уровень доказательств.</string>
     <string name="onboarding_step3_content">Вы всегда контролируете ситуацию. Basic предоставляет минимальную информацию, подтверждающую существование вашего медиа. Robust делится всем отснятым.</string>
     <string name="onboarding_step4">Шаг 4</string>
@@ -108,7 +108,7 @@
     <string name="verify_proof">Проверить доказательство</string>
     <string name="proof_integrity_verified_success">Доказательство целостности Проверено</string>
     <string name="share_no_proof">Доказательств пока нет. Попробуйте еще раз через минуту.</string>
-    <string name="share_mode_robust_info">Передает все, что вы включили режим ProofMode для захвата, в файл с криптографической подписью.</string>
+    <string name="share_mode_robust_info">Поделится всем, что вы позволили Proofmode зафиксировать в одном файле zip.</string>
     <string name="share_info_basic_message">- Не содержит личной информации
 \n- Не требуется доверия
 \n- Достаточно короткое, чтобы отправить сообщение</string>
@@ -155,7 +155,7 @@
     <string name="share_with_proofsign">Поделиться с облачной службой ProofSign, чтобы добавить учетные данные содержимого (C2PA)?</string>
     <string name="err_content_credentials">Возникла проблема с проверкой или созданием учетных данных контента.</string>
     <string name="cb_switch">Переключение между фронтальной и задней камерами</string>
-    <string name="settings_credentials_desc">Добавление удостоверений содержания (C2PA) к фотографиям и видеозаписям</string>
+    <string name="settings_credentials_desc">Добавить проверку контента (C2PA) на фотографии и видео</string>
     <plurals name="share_these_n_items">
         <item quantity="one">%d Поделиться этим одним,двадцать одним,тридцать одним,сорок одним,пятьдесят одним,шестьдесят одним,семдесят одним,восемдисят одним,пунктом</item>
         <item quantity="few">Поделитесь этими %dдвумя,тремя,четырьмя,двадцатью двумя,двадцатью тремя,двадцатью четырьмя,тридцатью двумя,тридцатью тремя, предметами</item>
@@ -171,7 +171,7 @@
     <string name="action_share_proof_zip">Поделиться Доказательство Zip</string>
     <string name="action_add_content_credentials_c2pa">Отправить в ProofCheck</string>
     <string name="status_download_content_credentials">Загрузка изображений с помощью учетных данных содержимого...</string>
-    <string name="menu_import_photos">Импорт...</string>
+    <string name="menu_import_photos">Импорт медиа...</string>
     <string name="title_activity">Журнал логов</string>
     <string name="cd_take_picture">Сделайте снимок</string>
     <string name="cb_open_gallery">Перейти в галерею</string>
@@ -189,4 +189,31 @@
         <item quantity="many">Очистите эти ноль,пять,шесть,семь,восемь,девять,десять,одинадцать,двенадцать,тринадцать%d элементов</item>
         <item quantity="other">Очистите эти ноль,пять,шесть,семь,восемь,девять,десять,одинадцать,двенадцать,тринадцать%d элементов</item>
     </plurals>
+    <string name="menu_import_creds">Импорт полномочий...</string>
+    <string name="title_activity_p2_pshare">P2PShareActivity</string>
+    <string name="first_fragment_label">Первая Фрагментация</string>
+    <string name="second_fragment_label">Вторая Фрагмент</string>
+    <string name="next">Следующее</string>
+    <string name="previous">Предыдущее</string>
+    <string name="content_credentials">Полномочия</string>
+    <string name="share_content_credentials_info">Поделится изображением или видео непосредственно с доказательными метаданными, встроенными в сам файл, проверенными и подписанными Proofmode.org</string>
+    <string name="optional_filename">Имя файла</string>
+    <string name="set_a_custom_name_for_the_proof_zip">Настройка пользовательского имени для zip</string>
+    <string name="filebase_ipfs_storage">Автоматическая синхронизация файловой базы IPFS (БЕТА)</string>
+    <string name="filebase_ipfs_storage_description">Настроить автоматическую загрузку доказательств в Filebase. Они будут автоматически опубликованы в IPFS.</string>
+    <string name="enable_filebase_upload">Загрузка файловой базы</string>
+    <string name="access_key">Ключ доступа</string>
+    <string name="secret_key">Секретный ключ</string>
+    <string name="bucket_name">Название корзины</string>
+    <string name="endpoint_url">Конечный URL</string>
+    <string name="instructions">Инструкция:</string>
+    <string name="filebase_instructions_info">1. Создать бесплатную учетную запись на filebase.com\n2. Создать новое ведро для хранения доказательств\n3. Создание ключей доступа в панели панели файловой базы\n4. Введите ключи выше и тестовое соединение.</string>
+    <string name="filebase_test_connection">Проверить подключение</string>
+    <string name="filebase_save_settings">Сохранить настройки</string>
+    <string name="please_fill_in_all_required_fields">Пожалуйста, заполните все необходимые поля</string>
+    <string name="background_mode">Авто импорт</string>
+    <string name="proofcheck_verifier">Проверка подлинности</string>
+    <string name="background_mode_info">Добавить доказательства для всех новых фотографий и видео на этом устройстве</string>
+    <string name="auto_sync_title">Автоматическая синхронизация</string>
+    <string name="auto_sync_desc">Резервные данные для проверки облачного сервиса Filebase IPFS</string>
 </resources>
