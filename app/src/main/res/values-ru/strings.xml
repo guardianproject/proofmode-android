@@ -216,4 +216,9 @@
     <string name="background_mode_info">Добавить доказательства для всех новых фотографий и видео на этом устройстве</string>
     <string name="auto_sync_title">Автоматическая синхронизация</string>
     <string name="auto_sync_desc">Резервные данные для проверки облачного сервиса Filebase IPFS</string>
+    <string name="social">Социальность</string>
+    <string name="share_social">Поделится только медиа-файлом с C2PA и проверяющей ссылкой для социальных сетей</string>
+    <string name="share_media">Поделиться медиа</string>
+    <string name="share_using">Поделиться</string>
+    <string name="verify_this_media_at">"Проверить эти медиа: "</string>
 </resources>
