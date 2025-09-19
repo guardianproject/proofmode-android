@@ -254,62 +254,68 @@ class C2paUtils {
          */
         fun initCredentials (mContext : Context, emailAddress: String?, pgpFingerprint: String?) {
 
-            /**
-            if (emailAddress?.isNotEmpty() == true)
-                   _identityEmail = emailAddress
+            var certPemFile = File(mContext.filesDir, C2PA_CERT_PATH)
+            var keyPemFile = File(mContext.filesDir, C2PA_KEY_PATH)
 
-            if (pgpFingerprint?.isNotEmpty() == true)
-                _identityKey = pgpFingerprint
+            if (certPemFile.exists() && keyPemFile.exists())
+                return
 
+            // Test 1: Create a private key
+            println("\n1. Creating EC private key...")
+            val keyPair = CertificateSigningHelper.createPrivateKey()
+            println("✓ Successfully created ${keyPair.private.algorithm} key pair")
+            println("  Private key format: ${keyPair.private.format}")
+            println("  Public key format: ${keyPair.public.format}")
 
-            var fileUserCert = File(mContext.filesDir, C2PA_CERT_PATH)
-            var fileUserKey = File(mContext.filesDir, C2PA_KEY_PATH)
+            // Test 2: Create root certificate
+            println("\n2. Creating root certificate...")
+            val rootOptions = CertificateOptions(
+                certificateType = CertificateType.ROOT,
+                organizationName = "ProofMode Root User CA",
+                email = "rootuserca@proofmode.org"
+            )
 
+            val rootCertificate = CertificateSigningHelper.createRootCertificate(rootOptions)
+            println("✓ Successfully created root certificate")
+            println("  Subject: ${rootCertificate.certificate.subjectX500Principal.name}")
+            println("  Issuer: ${rootCertificate.certificate.issuerX500Principal.name}")
+            println("  Serial: ${rootCertificate.certificate.serialNumber}")
+            println("  Valid from: ${rootCertificate.certificate.notBefore}")
+            println("  Valid to: ${rootCertificate.certificate.notAfter}")
 
-            if ((!fileUserKey.exists()) || (!fileUserCert.exists())) {
+            // Test 3: Create content credentials certificate
+            println("\n3. Creating content credentials certificate...")
+            val contentOptions = CertificateOptions(
+                certificateType = CertificateType.CONTENT_CREDENTIALS,
+                organizationName = "ProofMode User Content $emailAddress $pgpFingerprint",
+                email = "proofmodeuser@proofmode.org"
+            )
+            val contentCertificate = CertificateSigningHelper.createContentCredentialsCertificate(
+                rootCertificate,
+                contentOptions
+            )
+            println("✓ Successfully created content credentials certificate")
+            println("  Subject: ${contentCertificate.certificate.subjectX500Principal.name}")
+            println("  Issuer: ${contentCertificate.certificate.issuerX500Principal.name}")
+            println("  Serial: ${contentCertificate.certificate.serialNumber}")
 
-                var fileParentCert = File(mContext.filesDir, C2PA_CERT_PATH_PARENT)
-                var fileParentKey = File(mContext.filesDir,C2PA_KEY_PATH_PARENT)
-
-                var parentKey = createPrivateKey();
-                fileParentKey.writeBytes(parentKey.getBytes())
-
-                var organization = "ProofMode-Root";
-                var rootCert = createRootCertificate(organization, CERT_VALIDITY_DAYS)
-
-                rootCert?.let {
-
-                    fileParentCert.writeBytes(rootCert.getCertificateBytes())
-
-                    var userKey = createPrivateKey()
-                    fileUserKey.writeBytes(userKey.getBytes())
-
-                    var userCertType =
-                        CertificateType.ContentCredentials("ProofMode-User-$_identityKey", CERT_VALIDITY_DAYS)
-                    var userCertOptions = CertificateOptions(
-                        userKey,
-                        userCertType,
-                        rootCert,
-                        _identityEmail,
-                        _identityKey
-                    )
-
-                    userCert = createCertificate(userCertOptions)
-
-                    userCert?.let {
-
-                        //this is where we would save the cert data once we have access to it
-                        fileUserCert.writeBytes(it.getCertificateBytes())
-
-                    }
-                }
+            // Test 4: Verify certificate chain
+            println("\n4. Verifying certificate chain...")
+            try {
+                contentCertificate.certificate.verify(rootCertificate.keyPair.public)
+                println("✓ Content certificate successfully verified against root certificate")
+            } catch (e: Exception) {
+                println("✗ Certificate verification failed: ${e.message}")
 
             }
-            else
-            {
-                val userPrivateKey = FileData(fileUserKey.absolutePath,fileUserKey.readBytes(),fileUserKey.name)
-                userCert = Certificate(FileData(fileUserCert.absolutePath,fileUserCert.readBytes(),fileUserKey.name), userPrivateKey, null)
-            }**/
+
+            // Test 5: Display PEM formats
+            println("\n5. PEM Certificate (first 100 chars):")
+            println("${contentCertificate.pemCertificate.take(50)}...")
+
+            certPemFile.writeBytes(contentCertificate.pemCertificate.toByteArray())
+            keyPemFile.writeBytes(contentCertificate.pemPrivateKey.toByteArray())
+
         }
 
         /**
@@ -400,6 +406,11 @@ class C2paUtils {
                                                   allowMachineLearning: Boolean, contentType: String, fileIn: File, fileOut: File) {
 
             val version = C2PA.version()
+
+            var certPemFile = File(mContext.filesDir, C2PA_CERT_PATH)
+
+            if (!certPemFile.exists())
+                initCredentials(mContext, emailAddress, pgpFingerprint)
 
             if (mPrefs == null) mPrefs = PreferenceManager.getDefaultSharedPreferences(mContext)
 
