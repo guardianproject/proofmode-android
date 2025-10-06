@@ -25,6 +25,7 @@ import org.witness.proofmode.notaries.GoogleSafetyNetNotarizationProvider
 import org.witness.proofmode.notaries.OpenTimestampsNotarizationProvider
 import org.witness.proofmode.notaries.SafetyNetCheck
 import org.witness.proofmode.notarization.NotarizationProvider
+import org.witness.proofmode.org.witness.proofmode.notaries.AircraftLocationNotarizationProvider
 import org.witness.proofmode.storage.StorageProviderManager
 import timber.log.Timber
 import java.io.IOException
@@ -265,11 +266,9 @@ class ProofModeApp : MultiDexApplication() {
             val gProvider = GoogleSafetyNetNotarizationProvider(this)
             ProofMode.addNotarizationProvider(this, gProvider)
 
-            /**
-            runAsync {
-                val p2pProvider = P2PNotarizationProvider()
-                ProofMode.addNotarizationProvider(this, p2pProvider)
-            }**/
+	    // a neat idea we will revisit later
+            //val aProvider = AircraftLocationNotarizationProvider(this)
+            //ProofMode.addNotarizationProvider(this, aProvider)
 
         } catch (ce: ClassNotFoundException) {
             //SafetyNet API not available
