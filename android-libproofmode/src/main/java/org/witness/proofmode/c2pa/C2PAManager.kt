@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.location.Location
 import android.os.Build
 import android.os.Environment
+import android.preference.PreferenceManager
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.security.keystore.WrappedKeyEntry
@@ -40,6 +41,9 @@ import org.contentauth.c2pa.manifest.ManifestBuilder
 import org.contentauth.c2pa.manifest.TimestampAuthorities
 import org.json.JSONArray
 import org.json.JSONObject
+import org.witness.proofmode.ProofMode
+import org.witness.proofmode.ProofMode.PREF_OPTION_LOCATION
+import timber.log.Timber
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.math.BigInteger
@@ -63,8 +67,9 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         private const val KEYSTORE_ALIAS_PREFIX = "C2PA_KEY_"
 
         // Using null for TSA URL to skip timestamping for testing
-        private const val DEFAULT_TSA_URL = "http://timestamp.digicert.com"
+     //   private const val DEFAULT_TSA_URL = "http://timestamp.digicert.com"
 
+        private const val TSA_SSL_COM = "https://api.c2patool.io/api/v1/timestamps/ecc"
     }
 
     private val httpClient = OkHttpClient()
@@ -79,10 +84,10 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
     private fun loadDefaultCertificates() {
         try {
             // Load default test certificates from assets
-            context.assets.open("default_certs.pem").use { stream ->
+            context.assets.open("sslcom_test.pem").use { stream ->
                 defaultCertificate = stream.bufferedReader().readText()
             }
-            context.assets.open("default_private.key").use { stream ->
+            context.assets.open("sslcom_test.key").use { stream ->
                 defaultPrivateKey = stream.bufferedReader().readText()
             }
             Log.d(TAG, "Default certificates loaded successfully")
@@ -107,10 +112,11 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             Log.d(TAG, "Using signing mode: $signingMode")
 
             // Create manifest JSON
-            val manifestJSON = createManifestJSON(context, "Android", "Image from Android", location, true, signingMode)
+            val manifestJSON = createManifestJSON(context, "Android", "Image from Android",
+                C2PAFormats.JPEG, location, true, signingMode)
 
             // Create appropriate signer based on mode
-            val signer = createSigner(signingMode)
+            val signer = createSigner(signingMode, TimestampAuthorities.DIGICERT)
 
             // Sign the image using C2PA library
             val signedBytes = signImageData(imageBytes, manifestJSON, signer)
@@ -128,7 +134,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         }
     }
 
-    suspend fun signMediaFile(inFile: File, contentType: String, location: Location? = null, creator: String, outFile: File): Result<Stream> = withContext(Dispatchers.IO) {
+    suspend fun signMediaFile(inFile: File, contentType: String, outFile: File): Result<Stream> = withContext(Dispatchers.IO) {
         try {
 
 
@@ -136,13 +142,54 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
             // Get current signing mode
             val signingMode = preferencesManager.signingMode.first()
-            Log.d(TAG, "Using signing mode: $signingMode")
+           Log.d(TAG, "Using signing mode: $signingMode")
+
+            var pPrefs = PreferenceManager.getDefaultSharedPreferences(context)
+            val email = pPrefs.getString(ProofMode.PREF_CREDENTIALS_PRIMARY,"");
+
+            val showLocation = pPrefs?.getBoolean(
+                PREF_OPTION_LOCATION,
+                false
+            )
+            val gpsTracker = GPSTracker(context)
+            var location = Location("")
+            val exifMake = Build.MANUFACTURER
+            val exifModel = Build.MODEL
+            val exifTimestamp = Date().toGMTString()
+
+            val exifGpsVersion = "2.2.0.0"
+            var exifLat: String? = null
+            var exifLong: String? = null
+            var exifAlt: String? = null
+            var exifSpeed: String? = null
+            var exifBearing: String? = null
+
+            if (showLocation == true && gpsTracker.canGetLocation()) {
+
+                gpsTracker.updateLocation()
+                location = gpsTracker.getLocation()
+                location?.let {
+                    exifLat = GPSTracker.getLatitudeAsDMS(location, 3)
+                    exifLong = GPSTracker.getLongitudeAsDMS(location, 3)
+                    location.altitude?.let {
+                        exifAlt = location.altitude.toString()
+                    }
+                    location.speed?.let {
+                        exifSpeed = location.speed.toString()
+                    }
+                    location.bearing?.let {
+                        exifBearing = location.bearing.toString()
+                    }
+                }
+
+            }
 
             // Create manifest JSON
-            val manifestJSON = createManifestJSON(context, creator, inFile.name, location, true, signingMode)
+            val manifestJSON = createManifestJSON(context, email!!, inFile.name, contentType, location, true, signingMode)
+            Timber.tag(TAG).d("Media manifest file:\n\n$manifestJSON")
 
             // Create appropriate signer based on mode
-            val signer = createSigner(signingMode)
+            val signer = createSigner(signingMode, TimestampAuthorities.DIGICERT)
 
             // Sign the image using C2PA library
             //val signedBytes = signImageData(imageBytes, manifestJSON, signer)
@@ -163,34 +210,31 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         }
     }
 
-    private suspend fun createSigner(mode: SigningMode): Signer = withContext(Dispatchers.IO) {
+    private suspend fun createSigner(mode: SigningMode, tsaUrl: String): Signer = withContext(Dispatchers.IO) {
         when (mode) {
-            SigningMode.DEFAULT -> createDefaultSigner()
-            SigningMode.KEYSTORE -> createKeystoreSigner()
-            SigningMode.HARDWARE -> createHardwareSigner()
-            SigningMode.CUSTOM -> createCustomSigner()
+            SigningMode.DEFAULT -> createDefaultSigner(tsaUrl)
+            SigningMode.KEYSTORE -> createKeystoreSigner(tsaUrl)
+            SigningMode.HARDWARE -> createHardwareSigner(tsaUrl)
+            SigningMode.CUSTOM -> createCustomSigner(tsaUrl)
             SigningMode.REMOTE -> createRemoteSigner()
         }
     }
 
-    private fun createDefaultSigner(): Signer {
+    private fun createDefaultSigner(tsaUrl: String): Signer {
         requireNotNull(defaultCertificate) { "Default certificate not available" }
         requireNotNull(defaultPrivateKey) { "Default private key not available" }
 
         Log.d(TAG, "Creating default signer with test certificates")
         Log.d(TAG, "Certificate length: ${defaultCertificate!!.length} chars")
         Log.d(TAG, "Private key length: ${defaultPrivateKey!!.length} chars")
-        Log.d(
-            TAG,
-            "TSA URL: ${if (DEFAULT_TSA_URL.isEmpty()) "NONE (skipping timestamping)" else DEFAULT_TSA_URL}",
-        )
+
 
         return try {
             Signer.fromKeys(
                 certsPEM = defaultCertificate!!,
                 privateKeyPEM = defaultPrivateKey!!,
                 algorithm = SigningAlgorithm.ES256,
-                tsaURL = if (DEFAULT_TSA_URL.isEmpty()) null else DEFAULT_TSA_URL,
+                tsaURL = tsaUrl,
             )
         } catch (e: Exception) {
             Log.e(TAG, "Failed to create default signer", e)
@@ -198,7 +242,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         }
     }
 
-    private suspend fun createKeystoreSigner(): Signer {
+    private suspend fun createKeystoreSigner(tsaUrl: String): Signer {
         val keyAlias = "C2PA_SOFTWARE_KEY_SECURE"
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
         keyStore.load(null)
@@ -219,11 +263,11 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             algorithm = SigningAlgorithm.ES256,
             certificateChainPEM = certChain,
             keyAlias = keyAlias,
-            tsaURL = if (DEFAULT_TSA_URL.isEmpty()) null else DEFAULT_TSA_URL,
+            tsaURL = tsaUrl
         )
     }
 
-    private suspend fun createHardwareSigner(): Signer {
+    private suspend fun createHardwareSigner(tsaUrl: String): Signer {
         val alias =
             preferencesManager.hardwareKeyAlias.first()
                 ?: "$KEYSTORE_ALIAS_PREFIX${SigningMode.HARDWARE.name}"
@@ -262,11 +306,11 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             algorithm = SigningAlgorithm.ES256,
             certificateChainPEM = certChain,
             config = config,
-            tsaURL = if (DEFAULT_TSA_URL.isEmpty()) null else DEFAULT_TSA_URL,
+            tsaURL = tsaUrl
         )
     }
 
-    private suspend fun createCustomSigner(): Signer {
+    private suspend fun createCustomSigner(tsaUrl: String): Signer {
         val certPEM =
             preferencesManager.customCertificate.first()
                 ?: throw IllegalStateException("Custom certificate not configured")
@@ -302,7 +346,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                     certsPEM = certPEM,
                     privateKeyPEM = keyPEM,
                     algorithm = SigningAlgorithm.ES256,
-                    tsaURL = if (DEFAULT_TSA_URL.isEmpty()) null else DEFAULT_TSA_URL,
+                    tsaURL = tsaUrl
                 )
             }
         }
@@ -314,7 +358,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             algorithm = SigningAlgorithm.ES256,
             certificateChainPEM = certPEM,
             keyAlias = keyAlias,
-            tsaURL = if (DEFAULT_TSA_URL.isEmpty()) null else DEFAULT_TSA_URL,
+            tsaURL = tsaUrl,
         )
     }
 
@@ -622,7 +666,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         }
     }
 
-    private fun createManifestJSON(context: Context, creator: String, fileName: String, location: Location?, isDirectCapture: Boolean, signingMode: SigningMode): String {
+    private fun createManifestJSON(context: Context, creator: String, fileName: String, contentType: String, location: Location?, isDirectCapture: Boolean, signingMode: SigningMode): String {
 
         val appLabel = getAppName(context)
         val appVersion = getAppVersionName(context)
@@ -645,9 +689,10 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         var mb = ManifestBuilder()
         mb.claimGenerator(appLabel, version = appVersion)
         mb.timestampAuthorityUrl(TimestampAuthorities.DIGICERT)
+      //  mb.timestampAuthorityUrl(TSA_SSL_COM)
 
         mb.title(fileName)
-        mb.format(C2PAFormats.JPEG)
+        mb.format(contentType)
         //   mb.addThumbnail(Thumbnail(C2PAFormats.JPEG, thumbnailId))
 
         if (isDirectCapture)
@@ -707,7 +752,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                     put("@type", "Place")
                     put("latitude", exifLat)
                     put("longitude", exifLong)
-                    put("name", "Somewhere")
+                //    put("name", "Somewhere")
                 }
 
                 attestationBuilder.addAssertionMetadata {

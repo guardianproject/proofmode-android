@@ -6,6 +6,7 @@ import android.annotation.SuppressLint
 import android.app.Application
 import android.content.ContentValues
 import android.content.Intent
+import android.database.Cursor
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -56,8 +57,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.witness.proofmode.c2pa.C2PAManager
 import org.witness.proofmode.c2pa.PreferencesManager
-// TODO: Update to use new C2PAManager API
-// import org.witness.proofmode.c2pa.C2PAManager
 import org.witness.proofmode.camera.CameraActivity
 import org.witness.proofmode.camera.adapter.Media
 import org.witness.proofmode.camera.fragments.CameraConstants.NEW_MEDIA_EVENT
@@ -450,19 +449,36 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
             var pm = PreferencesManager(activity)
             var cm = C2PAManager(activity, pm)
 
-            //this is from our camera
-            val allowMachineLearning = !CameraActivity.useBlockAIFlag; //by default, we flag to not allow
-            val contentType = activity.contentResolver.getType(finalUri!!)
-            val fileIn = File(finalUri.path)
-            val fileOut = File(finalUri.path)
-            val fileResult = cm.signMediaFile(fileIn,contentType!!, location = null,"no one", fileOut )
-           /** val fileOut = C2paUtils.addContentCredentials(
-                app.applicationContext,
-                finalUri,
-                isDirectCapture,
-                allowMachineLearning
-            )**/
+            var filePath: String? = null
+            var contentType: String = "image/jpeg"
 
+            if (proofUri != null && "content" == proofUri.scheme) {
+                val cursor: Cursor? = activity.contentResolver?.query(
+                    proofUri,
+                    arrayOf<String>(MediaStore.Images.ImageColumns.DATA),
+                    null,
+                    null,
+                    null
+                )
+                cursor?.moveToFirst()
+                filePath = cursor?.getString(0)
+                var localType = activity.contentResolver?.getType(proofUri)
+                localType?.let {
+                    contentType = it
+                }
+                cursor?.close()
+            } else {
+                filePath = proofUri!!.path
+            }
+
+            if (contentType.isEmpty())
+                contentType = "image/jpeg"
+
+            val fileMedia = File(filePath!!)
+            val fileOut = File(filePath)
+
+            val fileResult = cm.signMediaFile(fileMedia,contentType, fileOut )
+          
             if (fileOut.exists())
                 finalUri = Uri.fromFile(fileOut)
 

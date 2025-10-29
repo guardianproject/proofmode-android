@@ -9,12 +9,12 @@
         <option name="gradleJvm" value="jbr-17" />
         <option name="modules">
           <set>
-            <option value="$PROJECT_DIR$" />
-            <option value="$PROJECT_DIR$/android-libproofcam" />
-            <option value="$PROJECT_DIR$/android-libproofmode" />
-            <option value="$PROJECT_DIR$/android-opentimestamps" />
-            <option value="$PROJECT_DIR$/app" />
-            <option value="$PROJECT_DIR$/c2pa" />
+            <option value="/Volumes/minimi/dev/repos/proofmode-android" />
+            <option value="/Volumes/minimi/dev/repos/proofmode-android/android-libproofcam" />
+            <option value="/Volumes/minimi/dev/repos/proofmode-android/android-libproofmode" />
+            <option value="/Volumes/minimi/dev/repos/proofmode-android/android-opentimestamps" />
+            <option value="/Volumes/minimi/dev/repos/proofmode-android/app" />
+            <option value="/Volumes/minimi/dev/repos/proofmode-android/c2pa" />
           </set>
         </option>
       </GradleProjectSettings>

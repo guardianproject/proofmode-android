@@ -1,6 +1,7 @@
 package org.witness.proofmode.c2pa
 
 enum class SigningMode(val displayName: String, val description: String, val requiresConfiguration: Boolean = false) {
+
     DEFAULT(
         displayName = "Default",
         description = "Use the included test certificate for signing",
