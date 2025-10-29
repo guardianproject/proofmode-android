@@ -19,13 +19,13 @@ import org.acra.ktx.initAcra
 import org.bouncycastle.openpgp.PGPException
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
-import org.witness.proofmode.c2pa.C2paUtils
+import org.witness.proofmode.c2pa.C2PAManager
+import org.witness.proofmode.c2pa.PreferencesManager
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.notaries.GoogleSafetyNetNotarizationProvider
 import org.witness.proofmode.notaries.OpenTimestampsNotarizationProvider
 import org.witness.proofmode.notaries.SafetyNetCheck
 import org.witness.proofmode.notarization.NotarizationProvider
-import org.witness.proofmode.org.witness.proofmode.notaries.AircraftLocationNotarizationProvider
 import org.witness.proofmode.storage.StorageProviderManager
 import timber.log.Timber
 import java.io.IOException
@@ -84,6 +84,12 @@ class ProofModeApp : MultiDexApplication() {
     }
 
     fun initContentCredentials () {
+
+        var pm = PreferencesManager(applicationContext)
+        var cm = C2PAManager(applicationContext, pm)
+
+        //TODO c2pa
+        /**
         val email = mPrefs.getString(ProofMode.PREF_CREDENTIALS_PRIMARY,"");
         var display : String? = null
         var key : String? = "0x" + mPgpUtils?.publicKeyFingerprint
@@ -101,7 +107,7 @@ class ProofModeApp : MultiDexApplication() {
         C2paUtils.setC2PAIdentity(display, uri, email, key)
         if (email != null && key != null) {
             C2paUtils.initCredentials(this, email, key)
-        }
+        }**/
     }
 
 

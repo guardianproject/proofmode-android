@@ -18,7 +18,6 @@ import android.provider.MediaStore;
 import android.text.TextUtils;
 
 import org.witness.proofmode.ProofMode;
-import org.witness.proofmode.c2pa.C2paUtils;
 
 import java.io.FileInputStream;
 import java.io.IOException;

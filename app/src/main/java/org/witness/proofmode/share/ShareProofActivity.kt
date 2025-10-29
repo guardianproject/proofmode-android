@@ -46,8 +46,6 @@ import org.witness.proofmode.ProofMode.PREF_OPTION_CREDENTIALS
 import org.witness.proofmode.ProofMode.PREF_OPTION_CREDENTIALS_DEFAULT
 import org.witness.proofmode.ProofModeApp
 import org.witness.proofmode.R
-import org.witness.proofmode.c2pa.C2paUtils
-import org.witness.proofmode.c2pa.C2paUtils.Companion.C2PA_CERT_PATH
 import org.witness.proofmode.crypto.HashUtils
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.databinding.ActivityShareBinding
@@ -816,7 +814,8 @@ class ShareProofActivity : AppCompatActivity() {
                     val isDirectCapture = false // this is from an import, and we are manually generating proof
                     
                     if ((application as ProofModeApp).useContentCredentials()) {
-                        C2paUtils.addContentCredentials(this@ShareProofActivity, mediaUri, isDirectCapture, allowMachineLearning)
+                        //TODO c2pa
+                    //    C2paUtils.addContentCredentials(this@ShareProofActivity, mediaUri, isDirectCapture, allowMachineLearning)
                     }
                     
                     ProofMode.generateProof(this@ShareProofActivity, mediaUri, proofHash)
@@ -853,6 +852,8 @@ class ShareProofActivity : AppCompatActivity() {
                         if (genProofHash != null && genProofHash == proofHash) {
                             if ((application as ProofModeApp).useContentCredentials()) {
                                 val isDirectCapture = false // this is from an import, and we are manually generating proof
+                                //TODO c2pas
+                                /**
                                 val fileC2PA = C2paUtils.addContentCredentials(
                                     this@ShareProofActivity,
                                     mediaUri,
@@ -865,7 +866,7 @@ class ShareProofActivity : AppCompatActivity() {
                                     fileC2PA.name,
                                     FileInputStream(fileC2PA),
                                     null
-                                )
+                                )**/
                             }
                         }
                     } catch (fe: FileNotFoundException) {
@@ -1177,13 +1178,15 @@ class ShareProofActivity : AppCompatActivity() {
         out.putNextEntry(entry)
         out.write(pubKey.toByteArray())
 
+        //TODO c2pa
+        /**
         var fileCert = File(filesDir,C2PA_CERT_PATH)
         if (fileCert.exists()) {
             Timber.d("Adding C2PA certificate")
             entry = ZipEntry(C2PA_CERT_PATH)
             out.putNextEntry(entry)
             out.write(fileCert.readBytes())
-        }
+        }**/
 
         Timber.d("Adding HowToVerifyProofData.txt")
         val howToFile = "HowToVerifyProofData.txt"

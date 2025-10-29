@@ -15,8 +15,6 @@ import com.google.android.gms.common.AccountPicker
 import com.google.android.gms.common.AccountPicker.AccountChooserOptions
 import org.witness.proofmode.PermissionActivity.Companion.hasPermissions
 import org.witness.proofmode.ProofMode.PREF_CREDENTIALS_PRIMARY
-import org.witness.proofmode.c2pa.C2paUtils
-import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.databinding.ActivitySettingsBinding
 import org.witness.proofmode.storage.FilebaseConfig
 import org.witness.proofmode.util.GPSTracker
@@ -264,6 +262,8 @@ class SettingsActivity : AppCompatActivity() {
 
     fun initContentCredentials (accountName : String?) {
 
+        //TODO c2pa reimplement this
+        /**
         val mPgpUtils = PgpUtils.getInstance();
 
         val email = accountName;
@@ -283,6 +283,7 @@ class SettingsActivity : AppCompatActivity() {
             C2paUtils.resetCredentials(this)
             C2paUtils.initCredentials(this, email, key)
         }
+        **/
     }
 
     override fun onBackPressed() {

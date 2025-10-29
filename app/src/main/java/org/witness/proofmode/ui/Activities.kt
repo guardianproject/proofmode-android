@@ -135,13 +135,13 @@ interface ActivitiesDao {
     suspend fun getAll(): List<Activity>
 
     @Update
-    suspend fun update(activity: Activity?)
+    suspend fun update(activity: Activity)
 
     @Insert
-    suspend fun insert(activity: Activity?)
+    suspend fun insert(activity: Activity)
 
     @Delete
-    suspend fun delete(activity: Activity?)
+    suspend fun delete(activity: Activity)
 
     @Query("DELETE FROM activities WHERE data LIKE '%\"' || :id || '\"%'")
     suspend fun deleteId(id: String?)

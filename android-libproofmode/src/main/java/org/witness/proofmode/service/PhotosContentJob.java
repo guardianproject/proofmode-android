@@ -31,7 +31,6 @@ import java.util.concurrent.Executors;
 
 import timber.log.Timber;
 
-import org.witness.proofmode.c2pa.C2paUtils;
 /**
  * Job to monitor when there is a change to photos in the media provider.
  */

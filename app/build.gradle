@@ -2,13 +2,14 @@ plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
     id 'kotlin-kapt'
-    id 'com.google.devtools.ksp' version '1.9.0-1.0.13'
+    id 'com.google.devtools.ksp' version '2.2.20-2.0.3'
     id 'org.jetbrains.kotlin.plugin.serialization'
+    id 'org.jetbrains.kotlin.plugin.compose' version '2.2.20'
 }
 
 
 android {
-    compileSdk 35
+    compileSdk 36
     namespace = "org.witness.proofmode"
 
     buildFeatures {
@@ -23,6 +24,7 @@ android {
         }
     }
 
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -34,7 +36,7 @@ android {
     defaultConfig {
         applicationId "org.witness.proofmode"
         minSdkVersion 28
-        targetSdkVersion 34
+        targetSdkVersion 36
         versionCode 260303
         versionName "2.6.0-RC-3"
         multiDexEnabled true
@@ -71,9 +73,6 @@ android {
     buildFeatures {
         viewBinding = true
         compose = true
-    }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.14"
     }
     configurations {
         all {
@@ -137,12 +136,11 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0'
 
     // Room database support (for activity view)
-    def room_version = "2.5.2"
+    def room_version = "2.7.2"
 
     implementation "androidx.room:room-runtime:$room_version"
     implementation "androidx.room:room-ktx:$room_version"
-    annotationProcessor "androidx.room:room-compiler:$room_version"
-    // To use Kotlin Symbol Processing (KSP)
+    // Using KSP instead of KAPT for better performance
     ksp "androidx.room:room-compiler:$room_version"
 
     implementation project(":android-libproofcam")

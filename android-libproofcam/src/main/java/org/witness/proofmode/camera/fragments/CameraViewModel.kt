@@ -3,11 +3,9 @@
 package org.witness.proofmode.camera.fragments
 
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.app.Application
 import android.content.ContentValues
 import android.content.Intent
-import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -15,7 +13,6 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
 import android.util.Range
-import android.view.Display
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraControl
 import androidx.camera.core.CameraSelector
@@ -57,8 +54,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import org.witness.proofmode.c2pa.C2paUtils
+import org.witness.proofmode.c2pa.C2PAManager
+import org.witness.proofmode.c2pa.PreferencesManager
+// TODO: Update to use new C2PAManager API
+// import org.witness.proofmode.c2pa.C2PAManager
 import org.witness.proofmode.camera.CameraActivity
 import org.witness.proofmode.camera.adapter.Media
 import org.witness.proofmode.camera.fragments.CameraConstants.NEW_MEDIA_EVENT
@@ -443,22 +442,32 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
         val isDirectCapture = true
         val dateSaved = Date()
 
+        // TODO: Update C2PA implementation to use new C2PAManager API
+
         //add C2PA
         if (CameraActivity.useCredentials && Build.SUPPORTED_64_BIT_ABIS.isNotEmpty()) {
 
+            var pm = PreferencesManager(activity)
+            var cm = C2PAManager(activity, pm)
+
             //this is from our camera
             val allowMachineLearning = !CameraActivity.useBlockAIFlag; //by default, we flag to not allow
-            val fileOut = C2paUtils.addContentCredentials(
+            val contentType = activity.contentResolver.getType(finalUri!!)
+            val fileIn = File(finalUri.path)
+            val fileOut = File(finalUri.path)
+            val fileResult = cm.signMediaFile(fileIn,contentType!!, location = null,"no one", fileOut )
+           /** val fileOut = C2paUtils.addContentCredentials(
                 app.applicationContext,
                 finalUri,
                 isDirectCapture,
                 allowMachineLearning
-            )
+            )**/
 
             if (fileOut.exists())
                 finalUri = Uri.fromFile(fileOut)
 
         }
+
 
         //generate Proofmode package
         val mw: MediaWatcher = MediaWatcher.getInstance(app.applicationContext)

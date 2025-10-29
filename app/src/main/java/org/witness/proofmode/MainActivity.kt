@@ -35,7 +35,6 @@ import org.witness.proofmode.ProofMode.EVENT_PROOF_GENERATED
 import org.witness.proofmode.ProofMode.PREF_OPTION_AI_DEFAULT
 import org.witness.proofmode.ProofMode.PREF_OPTION_BLOCK_AI
 import org.witness.proofmode.ProofMode.PREF_OPTION_CREDENTIALS
-import org.witness.proofmode.c2pa.C2paUtils
 import org.witness.proofmode.camera.CameraActivity
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.databinding.ActivityMainBinding
@@ -571,11 +570,13 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
                         }
 
+                        /**
+                         * TODO c2pa
                         if (importKey != null && importCert != null)
                         C2paUtils.importCredentials(this,
                             contentResolver.openInputStream(importKey),
                             contentResolver.openInputStream(importCert))
-
+                        **/
 
                     } else {
                         val uri = data.data

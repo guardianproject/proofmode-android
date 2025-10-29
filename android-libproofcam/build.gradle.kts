@@ -1,12 +1,13 @@
 plugins {
     id("com.android.library")
-    kotlin("android")
-    kotlin("kapt")
+    id ("com.google.devtools.ksp") version("2.2.20-2.0.3")
     id("androidx.navigation.safeargs")
+    id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose") version "2.2.20"
 }
 
 android {
-    compileSdk = 35
+    compileSdk = 36
     namespace = "org.witness.proofmode.camera"
 
     defaultConfig {
@@ -23,14 +24,10 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-
-
     kotlinOptions {
         jvmTarget = "17"
     }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.14"
-    }
+
     buildFeatures {
         viewBinding = true
         compose = true
