@@ -36,8 +36,10 @@ import org.contentauth.c2pa.manifest.AttestationBuilder
 import org.contentauth.c2pa.manifest.C2PAActions
 import org.contentauth.c2pa.manifest.C2PAFormats
 import org.contentauth.c2pa.manifest.C2PARelationships
+import org.contentauth.c2pa.manifest.DigitalSourceTypes
 import org.contentauth.c2pa.manifest.Ingredient
 import org.contentauth.c2pa.manifest.ManifestBuilder
+import org.contentauth.c2pa.manifest.SoftwareAgent
 import org.contentauth.c2pa.manifest.TimestampAuthorities
 import org.json.JSONArray
 import org.json.JSONObject
@@ -695,15 +697,17 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         mb.format(contentType)
         //   mb.addThumbnail(Thumbnail(C2PAFormats.JPEG, thumbnailId))
 
+        val sAgent = SoftwareAgent(appLabel, appVersion, Build.PRODUCT)
+
         if (isDirectCapture)
         {
             //add created
-            mb.addAction(Action(C2PAActions.CREATED, currentTs, appLabel))
+            mb.addAction(Action(C2PAActions.CREATED, currentTs, softwareAgent = sAgent, digitalSourceType = DigitalSourceTypes.DIGITAL_CAPTURE))
         }
         else
         {
             //add placed
-            mb.addAction(Action(C2PAActions.PLACED, currentTs, appLabel))
+            mb.addAction(Action(C2PAActions.PLACED, currentTs, sAgent))
 
         }
 
