@@ -22,12 +22,10 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.video.Quality
 import androidx.camera.video.Recorder
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FlashAuto
-import androidx.compose.material.icons.filled.FlashOff
-import androidx.compose.material.icons.filled.FlashOn
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
 import androidx.core.content.FileProvider
-import androidx.lifecycle.flowWithLifecycle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -104,12 +102,13 @@ fun Quality.toIconRes(): Int {
     }
 }
 
+@Composable
 fun flashModeToIconRes(flashMode: Int): ImageVector {
     return when (flashMode) {
-        ImageCapture.FLASH_MODE_OFF -> Icons.Filled.FlashOff
-        ImageCapture.FLASH_MODE_ON -> Icons.Filled.FlashOn
-        ImageCapture.FLASH_MODE_AUTO -> Icons.Filled.FlashAuto
-        else -> Icons.Filled.FlashOff
+        ImageCapture.FLASH_MODE_OFF -> ImageVector.vectorResource(R.drawable.ic_flash_off)
+        ImageCapture.FLASH_MODE_ON -> ImageVector.vectorResource(R.drawable.ic_flash_on)
+        ImageCapture.FLASH_MODE_AUTO -> ImageVector.vectorResource(R.drawable.ic_flash_auto)
+        else -> ImageVector.vectorResource(R.drawable.ic_flash_off)
     }
 
 

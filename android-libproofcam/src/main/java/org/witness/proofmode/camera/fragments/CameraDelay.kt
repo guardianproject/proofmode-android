@@ -1,11 +1,10 @@
 package org.witness.proofmode.camera.fragments
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Timer10Select
-import androidx.compose.material.icons.outlined.Timer3Select
-import androidx.compose.material.icons.outlined.TimerOff
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
+import org.witness.proofmode.camera.R
 
 enum class CameraDelay(val value:Int){
     Zero(0),
@@ -17,13 +16,13 @@ enum class CameraDelay(val value:Int){
 fun CameraDelay.toVectorIcon(): ImageVector {
     return when(this){
         CameraDelay.Zero -> {
-            Icons.Outlined.TimerOff
+            ImageVector.vectorResource(R.drawable.timer_off)
         }
         CameraDelay.Three -> {
-            Icons.Outlined.Timer3Select
+            ImageVector.vectorResource(R.drawable.timer_3_select)
         }
         CameraDelay.Ten -> {
-            Icons.Outlined.Timer10Select
+            ImageVector.vectorResource(R.drawable.timer_10_select)
 
         }
     }

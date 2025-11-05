@@ -30,14 +30,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.FlashAuto
-import androidx.compose.material.icons.filled.FlashOff
-import androidx.compose.material.icons.filled.FlashOn
-import androidx.compose.material.icons.filled.Photo
-import androidx.compose.material.icons.outlined.Cameraswitch
-import androidx.compose.material.icons.outlined.Exposure
-import androidx.compose.material.icons.outlined.GridOff
-import androidx.compose.material.icons.outlined.GridOn
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
@@ -68,11 +60,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.geometry.takeOrElse
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -301,7 +295,8 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                             IconButton(onClick = {
                                 showGridLines = !showGridLines
                             }) {
-                                Icon(imageVector = if (showGridLines) Icons.Outlined.GridOff else Icons.Outlined.GridOn,
+                                Icon(imageVector = if (showGridLines) ImageVector.vectorResource(R.drawable.ic_grid_off)
+                                else ImageVector.vectorResource(R.drawable.ic_grid_on) ,
                                     tint = Color.White,contentDescription = if (showGridLines) stringResource(
                                         R.string.grid_lines_hide_description
                                     ) else stringResource(R.string.show_grid_lines_description)
@@ -319,7 +314,7 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                             IconButton(onClick = {
                                 showExposureIndicator = true
                             }) {
-                                Icon(Icons.Outlined.Exposure, tint = Color.White,contentDescription = stringResource(
+                                Icon(ImageVector.vectorResource(R.drawable.ic_exposure) , tint = Color.White,contentDescription = stringResource(
                                     R.string.change_exposure_compensation
                                 )
                                 )
@@ -343,7 +338,7 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                                 showFlashModes = false
                             }) {
                                 Icon(
-                                    Icons.Filled.FlashOff,
+                                    ImageVector.vectorResource(R.drawable.ic_flash_off) ,
                                     tint = if (flashMode == ImageCapture.FLASH_MODE_OFF) Color.Red else Color.White,
                                     contentDescription = stringResource(R.string.turn_off_flash_description)
                                 )
@@ -354,7 +349,7 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                                 showFlashModes = false
                             }) {
                                 Icon(
-                                    Icons.Filled.FlashAuto,
+                                    ImageVector.vectorResource(R.drawable.ic_flash_auto) ,
                                     tint = if (flashMode == ImageCapture.FLASH_MODE_AUTO) Color.Red else Color.White,
                                     contentDescription = stringResource(R.string.turn_flash_on_auto_description)
                                 )
@@ -366,7 +361,7 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                                 showFlashModes = false
                             }) {
                                 Icon(
-                                    Icons.Filled.FlashOn,
+                                    ImageVector.vectorResource(R.drawable.ic_flash_on) ,
                                     tint = if (flashMode == ImageCapture.FLASH_MODE_ON) Color.Red else Color.White,
                                     contentDescription = stringResource(R.string.turn_flash_on_description)
                                 )
@@ -445,7 +440,7 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                                         }, media = media)
                                 } else {
                                     Icon(
-                                        imageVector = Icons.Default.Photo,
+                                        imageVector = ImageVector.vectorResource(R.drawable.ic_no_picture) ,
                                         contentDescription = "No media",
                                         tint = Color.Gray,
                                         modifier = Modifier
@@ -474,7 +469,7 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                                 .background(Color(0xFF444444), CircleShape)
                                 .clip(CircleShape)
                         ) {
-                            Icon(imageVector = Icons.Outlined.Cameraswitch,
+                            Icon(imageVector = ImageVector.vectorResource(R.drawable.ic_switch),
                                 tint = Color.White,
                                 contentDescription = null)
                         }

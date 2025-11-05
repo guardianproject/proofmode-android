@@ -36,36 +36,36 @@ android {
 
 dependencies {
 
-
-    implementation("androidx.compose.foundation:foundation-android:1.7.0")
-    val cameraxVersion = "1.5.0-alpha06"
-    val nav_version = "2.8.9"
-    val accompanist =  "0.36.0"
+    implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
+    implementation("androidx.compose.foundation:foundation-android:1.9.4")
+    val cameraxVersion = "1.5.1"
+    val nav_version = "2.9.5"
+    val accompanist =  "0.37.3"
     val composeBom = platform("androidx.compose:compose-bom:2025.02.00")
     implementation(composeBom)
     implementation("androidx.compose.material3:material3")
     // Optional - Add full set of material icons
-    implementation("androidx.compose.material:material-icons-extended")
+    //implementation("androidx.compose.material:material-icons-extended")
     // Optional - Add window size utils
     implementation("androidx.compose.material3.adaptive:adaptive")
 
     // Optional - Integration with activities
-    implementation("androidx.activity:activity-compose:1.10.1")
+    implementation("androidx.activity:activity-compose:1.11.0")
     // Optional - Integration with ViewModels
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.4")
     implementation("androidx.navigation:navigation-compose:$nav_version")
     implementation ("androidx.constraintlayout:constraintlayout-compose:1.1.1")
     implementation(kotlin("stdlib"))
 
     implementation(project(":android-libproofmode"))
 
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 
-    implementation("com.google.android.material:material:1.11.0")
+    implementation("com.google.android.material:material:1.13.0")
 
-    implementation("androidx.appcompat:appcompat:1.6.1")
-    implementation("androidx.core:core-ktx:1.12.0")
-    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
+    implementation("androidx.appcompat:appcompat:1.7.1")
+    implementation("androidx.core:core-ktx:1.17.0")
+    implementation("androidx.constraintlayout:constraintlayout:2.2.1")
 
 
     implementation("androidx.camera:camera-core:$cameraxVersion")
@@ -77,13 +77,13 @@ dependencies {
 
     implementation("com.google.accompanist:accompanist-permissions:$accompanist")
 
-    implementation("androidx.fragment:fragment:1.6.2")
-    implementation("androidx.fragment:fragment-ktx:1.6.2")
-    implementation("androidx.navigation:navigation-fragment-ktx:2.7.6")
-    implementation("androidx.navigation:navigation-ui-ktx:2.7.6")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
-    implementation("androidx.viewpager2:viewpager2:1.0.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.6.0")
+    implementation("androidx.fragment:fragment:1.8.9")
+    implementation("androidx.fragment:fragment-ktx:1.8.9")
+    implementation("androidx.navigation:navigation-fragment-ktx:2.9.5")
+    implementation("androidx.navigation:navigation-ui-ktx:2.9.5")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.9.4")
+    implementation("androidx.viewpager2:viewpager2:1.1.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.10.2")
 
     implementation("io.coil-kt:coil:2.2.2"){
     }
@@ -93,7 +93,7 @@ dependencies {
     }
 
     // Kotlin + coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.3.9")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 
     //logging
     implementation ("com.jakewharton.timber:timber:5.0.1")

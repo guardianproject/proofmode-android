@@ -61,9 +61,9 @@ dependencies {
     implementation 'androidx.multidex:multidex:2.0.1'
     implementation "androidx.exifinterface:exifinterface:1.4.1"
 
-    implementation 'org.bouncycastle:bcpkix-jdk18on:1.82'
-    implementation 'org.bouncycastle:bcprov-jdk18on:1.82'
-    api 'org.bouncycastle:bcpg-jdk18on:1.82'
+    implementation 'org.bouncycastle:bcpkix-jdk15to18:1.81'
+    implementation 'org.bouncycastle:bcprov-jdk15to18:1.81'
+    api 'org.bouncycastle:bcpg-jdk15to18:1.81'
 
     implementation 'androidx.core:core-ktx:1.17.0'
 

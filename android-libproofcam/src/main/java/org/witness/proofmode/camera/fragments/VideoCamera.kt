@@ -31,15 +31,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Photo
-import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material.icons.outlined.Cameraswitch
-import androidx.compose.material.icons.outlined.FlashOff
-import androidx.compose.material.icons.outlined.FlashOn
-import androidx.compose.material.icons.outlined.GridOff
-import androidx.compose.material.icons.outlined.GridOn
-import androidx.compose.material.icons.outlined.VideoSettings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ElevatedAssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -70,6 +61,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.geometry.takeOrElse
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.layoutId
@@ -77,6 +69,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.round
 import androidx.constraintlayout.compose.ConstraintLayout
@@ -267,7 +260,7 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                             IconButton(onClick = {
                                 onClose()
                             }) {
-                                Icon(Icons.Filled.Close,
+                                Icon(ImageVector.vectorResource(R.drawable.baseline_close_24),
                                     tint = Color.White,
                                     contentDescription = null)
                             }
@@ -276,12 +269,13 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                                     showBSettingsBottomSheet = !showBSettingsBottomSheet
                                 }
                             }) {
-                                Icon(Icons.Outlined.VideoSettings, contentDescription = null, tint = Color.White)
+                                Icon(ImageVector.vectorResource(R.drawable.ic_video_settings), contentDescription = null, tint = Color.White)
                             }
                             IconButton(onClick = {
                                 showGridLines = !showGridLines
                             }) {
-                                Icon(imageVector = if (showGridLines) Icons.Outlined.GridOff else Icons.Outlined.GridOn,
+                                Icon(imageVector = if (showGridLines) ImageVector.vectorResource(R.drawable.ic_grid_off)
+                                else ImageVector.vectorResource(R.drawable.ic_grid_on),
                                     tint = Color.White,contentDescription = if (showGridLines) stringResource(
                                         R.string.grid_lines_hide_description
                                     ) else stringResource(R.string.show_grid_lines_description)
@@ -291,7 +285,8 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                                 cameraViewModel.toggleTorchForVideo()
 
                             }) {
-                                Icon(imageVector = if (torchOn) Icons.Outlined.FlashOn else Icons.Outlined.FlashOff,
+                                Icon(imageVector = if (torchOn) ImageVector.vectorResource(R.drawable.ic_flash_on)
+                                else ImageVector.vectorResource(R.drawable.ic_flash_off),
                                     tint = Color.White,contentDescription = if (torchOn) stringResource(
                                         R.string.turn_flash_off
                                     ) else stringResource(R.string.turn_flash_on)
@@ -375,8 +370,10 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                                     .clip(CircleShape)
                             ) {
                                 Icon(
-                                    imageVector = if (recordingState == RecordingState.Idle || recordingState == RecordingState.Stopped) Icons.Filled.Videocam else Icons.Filled.Stop,
-                                    tint = Color.White,
+                                    imageVector = if (recordingState == RecordingState.Idle || recordingState == RecordingState.Stopped)
+                                        ImageVector.vectorResource(R.drawable.ic_take_video)
+                                        else ImageVector.vectorResource(R.drawable.ic_stop_circle),
+                                    tint = Color.Red,
                                     contentDescription = if (recordingState == RecordingState.Idle) stringResource(
                                         R.string.record_video
                                     ) else stringResource(R.string.stop_recording)
@@ -414,7 +411,7 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                                                 , media = media )
                                         } else {
                                             Icon(
-                                                imageVector = Icons.Default.Photo,
+                                                imageVector = ImageVector.vectorResource(R.drawable.ic_no_picture),
                                                 contentDescription = "No media",
                                                 tint = Color.Gray,
                                                 modifier = Modifier
@@ -442,7 +439,7 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                                         .background(Color(0xFF444444), CircleShape)
                                         .clip(CircleShape)
                                 ) {
-                                    Icon(imageVector = Icons.Outlined.Cameraswitch,
+                                    Icon(imageVector = ImageVector.vectorResource(R.drawable.ic_switch),
                                         tint = Color.White,
                                         contentDescription = null)
                                 }

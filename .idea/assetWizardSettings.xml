@@ -327,7 +327,7 @@
                                 <PersistentState>
                                   <option name="values">
                                     <map>
-                                      <entry key="url" value="file:$USER_HOME$/Android/Sdk/icons/material/materialiconsoutlined/assignment_turned_in/outline_assignment_turned_in_24.xml" />
+                                      <entry key="url" value="file:$USER_HOME$/Android/Sdk/icons/material/materialicons/timer_off/baseline_timer_off_24.xml" />
                                     </map>
                                   </option>
                                 </PersistentState>
@@ -337,8 +337,9 @@
                         </option>
                         <option name="values">
                           <map>
-                            <entry key="outputName" value="outline_check" />
-                            <entry key="sourceFile" value="$USER_HOME$/Documents/CONFIDENTIAL Content Credentials Assets and Usage Guideline 2/SVG/white outline transparent.svg" />
+                            <entry key="assetSourceType" value="FILE" />
+                            <entry key="outputName" value="ic_stop_circle" />
+                            <entry key="sourceFile" value="$USER_HOME$/Downloads/ic_stop_circle.svg" />
                           </map>
                         </option>
                       </PersistentState>
