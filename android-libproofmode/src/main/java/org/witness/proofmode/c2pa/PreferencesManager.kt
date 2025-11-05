@@ -28,7 +28,7 @@ class PreferencesManager(private val context: Context) {
 
     val signingMode: Flow<SigningMode> =
         context.dataStore.data.map { preferences ->
-            val mode = preferences[SIGNING_MODE_KEY] ?: SigningMode.DEFAULT.name
+            val mode = preferences[SIGNING_MODE_KEY] ?: SigningMode.KEYSTORE.name
             SigningMode.fromString(mode)
         }
 

@@ -118,6 +118,8 @@ class CameraViewModel(private val activity: CameraActivity, private val app: App
 
     }
 
+    lateinit var c2paManager : C2PAManager
+
     private fun loadMediaFiles() {
         viewModelScope.launch {
             getMediaFlow(app.applicationContext,outputDirectory)
@@ -441,13 +443,9 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
         val isDirectCapture = true
         val dateSaved = Date()
 
-        // TODO: Update C2PA implementation to use new C2PAManager API
-
         //add C2PA
         if (CameraActivity.useCredentials && Build.SUPPORTED_64_BIT_ABIS.isNotEmpty()) {
 
-            var pm = PreferencesManager(activity)
-            var cm = C2PAManager(activity, pm)
 
             var filePath: String? = null
             var contentType: String = "image/jpeg"
@@ -477,7 +475,10 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
             val fileMedia = File(filePath!!)
             val fileOut = File(filePath)
 
-            val fileResult = cm.signMediaFile(fileMedia,contentType, fileOut )
+            if (!::c2paManager.isInitialized)
+                c2paManager = C2PAManager(activity, PreferencesManager(activity))
+
+            val fileResult = c2paManager.signMediaFile(fileMedia,contentType, fileOut )
           
             if (fileOut.exists())
                 finalUri = Uri.fromFile(fileOut)

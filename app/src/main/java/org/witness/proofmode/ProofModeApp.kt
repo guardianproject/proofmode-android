@@ -86,7 +86,7 @@ class ProofModeApp : MultiDexApplication() {
     fun initContentCredentials () {
 
         var pm = PreferencesManager(applicationContext)
-        var cm = C2PAManager(applicationContext, pm)
+//        var cm = C2PAManager(applicationContext, pm)
 
         //TODO c2pa
         /**

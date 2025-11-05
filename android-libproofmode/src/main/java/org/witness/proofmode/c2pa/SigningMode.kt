@@ -2,11 +2,6 @@ package org.witness.proofmode.c2pa
 
 enum class SigningMode(val displayName: String, val description: String, val requiresConfiguration: Boolean = false) {
 
-    DEFAULT(
-        displayName = "Default",
-        description = "Use the included test certificate for signing",
-        requiresConfiguration = false,
-    ),
     KEYSTORE(
         displayName = "Android Keystore",
         description = "Generate and store keys in Android Keystore",
@@ -30,6 +25,6 @@ enum class SigningMode(val displayName: String, val description: String, val req
     ;
 
     companion object {
-        fun fromString(value: String): SigningMode = entries.find { it.name == value } ?: DEFAULT
+        fun fromString(value: String): SigningMode = entries.find { it.name == value } ?: KEYSTORE
     }
 }

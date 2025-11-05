@@ -1,6 +1,7 @@
 package org.witness.proofmode.c2pa
 
 import android.content.Context
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.location.Location
@@ -45,6 +46,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.witness.proofmode.ProofMode
 import org.witness.proofmode.ProofMode.PREF_OPTION_LOCATION
+import org.witness.proofmode.c2pa.selfsign.CertificateSigningService
 import timber.log.Timber
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -80,67 +82,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
     private val httpClient = OkHttpClient()
 
-    private var defaultCertificate: String? = null
-    private var defaultPrivateKey: String? = null
-
-    init {
-        loadDefaultCertificates()
-    }
-
-
-
-    private fun loadDefaultCertificates() {
-        try {
-            // Load default test certificates from assets
-            context.assets.open("sslcom_test.pem").use { stream ->
-                defaultCertificate = stream.bufferedReader().readText()
-            }
-            context.assets.open("sslcom_test.key").use { stream ->
-                defaultPrivateKey = stream.bufferedReader().readText()
-            }
-            Log.d(TAG, "Default certificates loaded successfully")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error loading default certificates", e)
-        }
-    }
-
-    suspend fun signImage(bitmap: Bitmap, location: Location? = null): Result<ByteArray> = withContext(Dispatchers.IO) {
-        try {
-            // Convert bitmap to JPEG bytes
-            val imageBytes =
-                ByteArrayOutputStream().use { outputStream ->
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
-                    outputStream.toByteArray()
-                }
-
-            Log.d(TAG, "Original image size: ${imageBytes.size} bytes")
-
-            // Get current signing mode
-            val signingMode = preferencesManager.signingMode.first()
-            Log.d(TAG, "Using signing mode: $signingMode")
-
-            // Create manifest JSON
-            val manifestJSON = createManifestJSON(context, "Android", "Image from Android",
-                C2PAFormats.JPEG, location, true, signingMode)
-
-            // Create appropriate signer based on mode
-            val signer = createSigner(signingMode, TimestampAuthorities.DIGICERT)
-
-            // Sign the image using C2PA library
-            val signedBytes = signImageData(imageBytes, manifestJSON, signer)
-
-            Log.d(TAG, "Signed image size: ${signedBytes.size} bytes")
-            Log.d(TAG, "Size difference: ${signedBytes.size - imageBytes.size} bytes")
-
-            // Verify the signed image
-            verifySignedImage(signedBytes)
-
-            Result.success(signedBytes)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error signing image", e)
-            Result.failure(e)
-        }
-    }
+    private lateinit var defaultSigner:Signer
 
     suspend fun signMediaFile(inFile: File, contentType: String, outFile: File): Result<Stream> = withContext(Dispatchers.IO) {
         try {
@@ -197,14 +139,15 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             Timber.tag(TAG).d("Media manifest file:\n\n$manifestJSON")
 
             // Create appropriate signer based on mode
-            val signer = createSigner(signingMode, TimestampAuthorities.DIGICERT)
+            if (!::defaultSigner.isInitialized)
+                defaultSigner = createSigner(signingMode, TimestampAuthorities.DIGICERT)
 
             // Sign the image using C2PA library
             //val signedBytes = signImageData(imageBytes, manifestJSON, signer)
 
             val fileStream = FileStream(inFile)
             val outStream = FileStream(outFile)
-            signStream(fileStream, contentType, outStream, manifestJSON, signer)
+            signStream(fileStream, contentType, outStream, manifestJSON, defaultSigner)
 
             Log.d(TAG, "Signed file size: ${outFile.length()} bytes")
 
@@ -220,7 +163,6 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
     private suspend fun createSigner(mode: SigningMode, tsaUrl: String): Signer = withContext(Dispatchers.IO) {
         when (mode) {
-            SigningMode.DEFAULT -> createDefaultSigner(tsaUrl)
             SigningMode.KEYSTORE -> createKeystoreSigner(tsaUrl)
             SigningMode.HARDWARE -> createHardwareSigner(tsaUrl)
             SigningMode.CUSTOM -> createCustomSigner(tsaUrl)
@@ -228,6 +170,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         }
     }
 
+    /**
     private fun createDefaultSigner(tsaUrl: String): Signer {
         requireNotNull(defaultCertificate) { "Default certificate not available" }
         requireNotNull(defaultPrivateKey) { "Default private key not available" }
@@ -248,21 +191,39 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             Log.e(TAG, "Failed to create default signer", e)
             throw e
         }
-    }
+    }**/
 
     private suspend fun createKeystoreSigner(tsaUrl: String): Signer {
         val keyAlias = "C2PA_SOFTWARE_KEY_SECURE"
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
         keyStore.load(null)
 
+        var certChain = ""
+
         // Create or get the keystore key
         if (!keyStore.containsAlias(keyAlias)) {
             Log.d(TAG, "Creating new keystore key")
             createKeystoreKey(keyAlias, false)
+
+            // Get certificate chain from signing server
+            certChain = enrollHardwareKeyCertificate(keyAlias)
+
+            var fileCert = File(context.filesDir,"$keyAlias.cert")
+            fileCert.writeText(certChain)
+        }
+        else{
+            // Get certificate chain from signing server
+
+            var fileCert = File(context.filesDir,"$keyAlias.cert")
+            if (fileCert.exists())
+                certChain = fileCert.readText()
+            else {
+                certChain = enrollHardwareKeyCertificate(keyAlias)
+                fileCert.writeText(certChain)
+            }
+
         }
 
-        // Get certificate chain from signing server
-        val certChain = enrollHardwareKeyCertificate(keyAlias)
 
         Log.d(TAG, "Using KeyStoreSigner with keyAlias: $keyAlias")
 
@@ -435,38 +396,14 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
     }
 
     private suspend fun enrollHardwareKeyCertificate(alias: String): String {
-        val remoteUrl =
-            preferencesManager.remoteUrl.first()
-                ?: throw IllegalStateException("Remote URL required for hardware signing")
-        val bearerToken = preferencesManager.remoteToken.first()
 
         // Generate CSR for the hardware key
         val csr = generateCSR(alias)
 
         // Submit CSR to signing server
-        val enrollUrl = "$remoteUrl/api/v1/certificates/sign"
-
-        val requestBody = JSONObject().apply { put("csr", csr) }.toString()
-
-        val request =
-            Request.Builder()
-                .url(enrollUrl)
-                .post(requestBody.toRequestBody("application/json".toMediaType()))
-                .apply {
-                    if (!bearerToken.isNullOrEmpty()) {
-                        addHeader("Authorization", "Bearer $bearerToken")
-                    }
-                }
-                .build()
-
-        val response = httpClient.newCall(request).execute()
-        if (!response.isSuccessful) {
-            throw Exception("Certificate enrollment failed: ${response.code}")
-        }
-
-        val responseJson = JSONObject(response.body?.string())
-        val certChain = responseJson.getString("certificate_chain")
-        val certId = responseJson.getString("certificate_id")
+        val csrResp = CertificateSigningService().signCSR(csr)
+        val certChain = csrResp.certificate_chain
+        val certId = csrResp.certificate_id
 
         Log.d(TAG, "Certificate enrolled successfully. ID: $certId")
 
@@ -478,12 +415,12 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             // Use the library's CertificateManager to generate a proper CSR
             val config =
                 CertificateManager.CertificateConfig(
-                    commonName = "C2PA Hardware Key",
-                    organization = "C2PA Example App",
+                    commonName = "Proofmode C2PA Hardware Key",
+                    organization = "Proofmode.org",
                     organizationalUnit = "Mobile",
                     country = "US",
-                    state = "CA",
-                    locality = "San Francisco",
+                    state = "New York",
+                    locality = "New York",
                 )
 
             // Generate CSR using the library
@@ -688,7 +625,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         val exifModel = Build.MODEL
         val exifTimestamp = Date().toGMTString()
 
-        var softwareAgent = SoftwareAgent("$appLabel $appVersion", android.os.Build.VERSION.CODENAME, android.os.Build.VERSION.BASE_OS)
+        var softwareAgent = SoftwareAgent("$appLabel $appVersion", android.os.Build.VERSION.SDK_INT.toString(), android.os.Build.VERSION.CODENAME)
 
         val currentTs = iso8601.format(Date())
         val thumbnailId = fileName + "-thumb.jpg"
@@ -851,21 +788,6 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         }
     }
 
-    private fun createCreationAssertion(): JSONObject {
-        val timestamp = formatIsoTimestamp(Date())
-        val action =
-            JSONObject().apply {
-                put("action", "c2pa.created")
-                put("when", timestamp)
-            }
-        val actions = JSONArray().apply { put(action) }
-        val data = JSONObject().apply { put("actions", actions) }
-        return JSONObject().apply {
-            put("label", "c2pa.actions")
-            put("data", data)
-        }
-    }
-
     private fun formatIsoTimestamp(date: Date): String {
         val formatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
         formatter.timeZone = TimeZone.getTimeZone("UTC")
@@ -915,10 +837,12 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
      * Helper functions for getting app name and version
      */
     fun getAppVersionName(context: Context): String {
+
         var appVersionName = ""
         try {
             appVersionName =
                 context.packageManager.getPackageInfo(context.packageName, 0).versionName?:""
+
         } catch (e: PackageManager.NameNotFoundException) {
             e.printStackTrace()
         }
@@ -926,13 +850,13 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
     }
 
     fun getAppName(context: Context): String {
-        var appVersionName = ""
+        var applicationInfo: ApplicationInfo? = null
         try {
-            appVersionName =
-                context.packageManager.getPackageInfo(context.packageName, 0).applicationInfo?.name?:""
+            applicationInfo = context.packageManager.getApplicationInfo(context.applicationInfo.packageName, 0)
         } catch (e: PackageManager.NameNotFoundException) {
-            e.printStackTrace()
+            Log.d("TAG", "The package with the given name cannot be found on the system.", e)
         }
-        return appVersionName
+        return (if (applicationInfo != null) context.packageManager.getApplicationLabel(applicationInfo) else "Unknown") as String
+
     }
 }
