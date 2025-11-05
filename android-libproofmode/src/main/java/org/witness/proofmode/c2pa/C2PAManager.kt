@@ -639,6 +639,8 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         mb.format(contentType)
         //   mb.addThumbnail(Thumbnail(C2PAFormats.JPEG, thumbnailId))
 
+        val sAgent = SoftwareAgent(appLabel, appVersion, Build.PRODUCT)
+
         if (isDirectCapture)
         {
             //add created
