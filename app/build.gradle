@@ -107,36 +107,35 @@ android {
 }
 
 dependencies {
-    implementation 'androidx.navigation:navigation-fragment-ktx:2.7.7'
-    implementation 'androidx.navigation:navigation-ui-ktx:2.7.7'
+    implementation 'androidx.navigation:navigation-fragment-ktx:2.9.5'
+    implementation 'androidx.navigation:navigation-ui-ktx:2.9.5'
 
-    //  implementation files('src/main/libs/Web3StorageMobile.aar')
     testImplementation 'junit:junit:4.13.2'
 
     implementation project(':android-libproofmode')
-    implementation project(':android-opentimestamps')
+  //  implementation project(':android-opentimestamps')
 
-    implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'androidx.core:core-ktx:1.12.0'
+    implementation 'androidx.appcompat:appcompat:1.7.1'
+    implementation 'androidx.core:core-ktx:1.17.0'
     implementation "androidx.preference:preference-ktx:1.2.1"
 
     // Activity view
-    implementation 'androidx.compose.ui:ui:1.7.8'
-    implementation 'androidx.compose.runtime:runtime:1.7.8'
-    implementation 'androidx.compose.material3:material3:1.3.1'
-    implementation "androidx.compose.material:material-icons-extended:1.7.7"
-    implementation 'androidx.compose.ui:ui-tooling:1.7.8'
+    implementation 'androidx.compose.ui:ui:1.9.4'
+    implementation 'androidx.compose.runtime:runtime:1.9.4'
+    implementation 'androidx.compose.material3:material3:1.4.0'
+    //implementation "androidx.compose.material:material-icons-extended:1.7.7"
+    implementation 'androidx.compose.ui:ui-tooling:1.9.4'
     implementation "androidx.constraintlayout:constraintlayout-compose:1.1.1"
-    implementation "androidx.activity:activity-compose:1.10.1"
-    implementation "io.coil-kt:coil-compose:2.4.0"
-    implementation("io.coil-kt:coil-video:2.4.0") {
+    implementation "androidx.activity:activity-compose:1.11.0"
+    implementation "io.coil-kt:coil-compose:2.7.0"
+    implementation("io.coil-kt:coil-video:2.7.0") {
     }
-    implementation("io.coil-kt:coil-compose:2.4.0"){
+    implementation("io.coil-kt:coil-compose:2.7.0"){
     }
-    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0'
 
     // Room database support (for activity view)
-    def room_version = "2.7.2"
+    def room_version = "2.8.3"
 
     implementation "androidx.room:room-runtime:$room_version"
     implementation "androidx.room:room-ktx:$room_version"
@@ -144,9 +143,10 @@ dependencies {
     ksp "androidx.room:room-compiler:$room_version"
 
     implementation project(":android-libproofcam")
-    implementation 'com.google.android.material:material:1.9.0-alpha01'
+    implementation 'com.google.android.material:material:1.13.0'
+    implementation 'androidx.compose.material:material-icons-core:1.7.8'
 
-    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'androidx.constraintlayout:constraintlayout:2.2.1'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
     implementation 'androidx.legacy:legacy-support-v13:1.0.0'
 
@@ -158,11 +158,11 @@ dependencies {
 
     implementation 'androidx.multidex:multidex:2.0.1'
 
-    implementation 'com.caverock:androidsvg-aar:1.3'
+    implementation 'com.caverock:androidsvg-aar:1.4'
 
-    implementation 'io.github.ParkSangGwon:tedimagepicker:1.4.2'
+    implementation 'io.github.ParkSangGwon:tedimagepicker:1.6.1'
 
-    implementation 'com.google.android.gms:play-services-safetynet:18.0.1'
+//    implementation 'com.google.android.gms:play-services-safetynet:18.0.1'
     implementation 'com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava'
 
     // Required -- JUnit 4 framework
@@ -179,25 +179,25 @@ dependencies {
     //implementation "net.java.dev.jna:jna:5.13.0@aar"
 
     //for upload to proofcheck
-    implementation 'com.squareup.okio:okio:2.10.0'
-    implementation 'com.squareup.okhttp3:okhttp:4.11.0'
+    //implementation 'com.squareup.okio:okio:2.10.0'
+    //implementation 'com.squareup.okhttp3:okhttp:4.11.0'
 
     //crash reporting
-    implementation "ch.acra:acra-mail:5.11.3"
-    implementation "ch.acra:acra-dialog:5.11.3"
+    implementation "ch.acra:acra-mail:5.13.1"
+    implementation "ch.acra:acra-dialog:5.13.1"
 
     //background service worker
-    def work_version = "2.9.0"
+    def work_version = "2.11.0"
 
     // (Java only)
     implementation "androidx.work:work-runtime:$work_version"
 
     // Kotlin + coroutines
     implementation "androidx.work:work-runtime-ktx:$work_version"
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.3.9'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
 
 
-    implementation("com.google.zxing:core:3.4.1")
+    implementation("com.google.zxing:core:3.5.3")
 
 
 
