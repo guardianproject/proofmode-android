@@ -6,7 +6,6 @@ import android.annotation.SuppressLint
 import android.app.Application
 import android.content.ContentValues
 import android.content.Intent
-import android.database.Cursor
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -55,15 +54,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.witness.proofmode.c2pa.C2PAManager
-import org.witness.proofmode.c2pa.PreferencesManager
 import org.witness.proofmode.camera.CameraActivity
 import org.witness.proofmode.camera.adapter.Media
 import org.witness.proofmode.camera.fragments.CameraConstants.NEW_MEDIA_EVENT
 import org.witness.proofmode.camera.utils.getMediaFlow
 import org.witness.proofmode.camera.utils.getSupportedQualities
 import org.witness.proofmode.camera.utils.isUltraHdrSupported
-import org.witness.proofmode.service.MediaWatcher
+import org.witness.proofmode.service.MediaWatcher.Companion.getInstance
 import timber.log.Timber
 import java.io.File
 import java.io.FileNotFoundException
@@ -118,7 +115,6 @@ class CameraViewModel(private val activity: CameraActivity, private val app: App
 
     }
 
-    lateinit var c2paManager : C2PAManager
 
     private fun loadMediaFiles() {
         viewModelScope.launch {
@@ -406,25 +402,14 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
             object : OnImageSavedCallback {
                 override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
                     val savedUri = outputFileResults.savedUri
-                    // Create a temporary image to immediately show in thumbnail.
-                    savedUri?.let { _thumbPreviewUri.value = Media(it,false,System.currentTimeMillis()) }
-                    val capturedTime = System.currentTimeMillis()
 
-                    CoroutineScope(Dispatchers.IO).launch {
-                        val mediaWithContentCredentials = attachContentCredentialsAndProofData(
-                            savedUri,
-                            CameraEventType.NEW_IMAGE
-                        )
-                        val newMedia = mediaWithContentCredentials ?: savedUri?.let {
-                            Media(
-                                it,
-                                false,
-                                capturedTime
-                            )
-                        }
-                        newMedia?.let {
-                            _lastCapturedMedia.value = it
-                            _mediaFiles.value = listOf(it) + mediaFiles.value
+                    // Create a temporary image to immediately show in thumbnail.
+                    savedUri?.let {
+                        _thumbPreviewUri.value = Media(it, false, System.currentTimeMillis())
+
+                        CoroutineScope(Dispatchers.IO).launch {
+                            sendLocalCameraEvent(it, CameraEventType.NEW_IMAGE)
+
                         }
                     }
 
@@ -438,75 +423,7 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
         )
     }
 
-    private suspend fun attachContentCredentialsAndProofData(proofUri: Uri?, cameraEventType: CameraEventType):Media? {
-        var finalUri = proofUri
-        val isDirectCapture = true
-        val dateSaved = Date()
 
-        //add C2PA
-        if (CameraActivity.useCredentials && Build.SUPPORTED_64_BIT_ABIS.isNotEmpty()) {
-
-
-            var filePath: String? = null
-            var contentType: String = "image/jpeg"
-
-            if (proofUri != null && "content" == proofUri.scheme) {
-                val cursor: Cursor? = activity.contentResolver?.query(
-                    proofUri,
-                    arrayOf<String>(MediaStore.Images.ImageColumns.DATA),
-                    null,
-                    null,
-                    null
-                )
-                cursor?.moveToFirst()
-                filePath = cursor?.getString(0)
-                var localType = activity.contentResolver?.getType(proofUri)
-                localType?.let {
-                    contentType = it
-                }
-                cursor?.close()
-            } else {
-                filePath = proofUri!!.path
-            }
-
-            if (contentType.isEmpty())
-                contentType = "image/jpeg"
-
-            val fileMedia = File(filePath!!)
-            val fileOut = File(filePath)
-
-            if (!::c2paManager.isInitialized)
-                c2paManager = C2PAManager(activity, PreferencesManager(activity))
-
-            val fileResult = c2paManager.signMediaFile(fileMedia,contentType, fileOut )
-          
-            if (fileOut.exists())
-                finalUri = Uri.fromFile(fileOut)
-
-        }
-
-
-        //generate Proofmode package
-        val mw: MediaWatcher = MediaWatcher.getInstance(app.applicationContext)
-
-        if (finalUri != null) {
-            mw.queueMedia(finalUri, isDirectCapture, dateSaved) { resultProofHash: String? ->
-                Timber.tag("CameraViewModel")
-                    .d("Proof generated: %s", resultProofHash)
-                if (resultProofHash != null)
-                    sendLocalCameraEvent(finalUri,cameraEventType)
-            }
-        }
-        else
-        {
-            Timber.tag("CameraViewModel")
-                .d("URI was null")
-        }
-        return if (finalUri != null) {
-            Media(uri = finalUri, isVideo = cameraEventType == CameraEventType.NEW_VIDEO, date = dateSaved.time)
-        } else null
-
-    }
     @SuppressLint("MissingPermission")
     fun startRecording() {
         videoCapture?.targetRotation = activity.getScreenOrientation()
@@ -543,24 +460,25 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
                                 savedUri?.let {
                                     _thumbPreviewUri.value =
                                         Media(it, true, System.currentTimeMillis())
-                                }
 
-                                val capturedTime = System.currentTimeMillis()
-                                val mediaWithContentCredentials =
-                                    attachContentCredentialsAndProofData(
-                                        savedUri,
+
+                                    val capturedTime = System.currentTimeMillis()
+                                    sendLocalCameraEvent(
+                                        it,
                                         CameraEventType.NEW_VIDEO
                                     )
-                                val newMedia = mediaWithContentCredentials ?: savedUri?.let {
-                                    Media(
-                                        it,
-                                        true,
-                                        capturedTime
-                                    )
-                                }
-                                newMedia?.let {
-                                    _lastCapturedMedia.value = it
-                                    _mediaFiles.value = listOf(it) + mediaFiles.value
+
+                                    val newMedia = savedUri?.let {
+                                        Media(
+                                            it,
+                                            true,
+                                            capturedTime
+                                        )
+                                    }
+                                    newMedia?.let {
+                                        _lastCapturedMedia.value = it
+                                        _mediaFiles.value = listOf(it) + mediaFiles.value
+                                    }
                                 }
                             }
                         } else {
@@ -598,9 +516,14 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
 
 
     private fun sendLocalCameraEvent(newMediaFile: Uri, cameraEventType: CameraEventType) {
+        val mw = getInstance(activity)
+
         if (cameraEventType == CameraEventType.NEW_VIDEO) {
-            val intent = Intent(NEW_MEDIA_EVENT).apply { data = newMediaFile }
-            LocalBroadcastManager.getInstance(app).sendBroadcast(intent)
+           // val intent = Intent(NEW_MEDIA_EVENT).apply { data = newMediaFile }
+          //  LocalBroadcastManager.getInstance(app).sendBroadcast(intent)
+
+            mw?.processUri(newMediaFile, true, null, "video/mp4")
+
         } else {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
 
@@ -619,7 +542,11 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
                     e.printStackTrace()
                 }
             }
+
+            mw?.processUri(newMediaFile, true, null, "image/jpeg")
+
         }
+
 
     }
 

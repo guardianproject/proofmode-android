@@ -28,11 +28,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -52,11 +47,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
@@ -162,7 +159,7 @@ fun ProofableItemView(
         
         if (isVideo) {
             Icon(
-                imageVector = Icons.Default.Videocam,
+                imageVector = ImageVector.vectorResource(R.drawable.videocam),
                 contentDescription = "Video",
                 tint = Color.White,
                 modifier = Modifier
@@ -607,7 +604,7 @@ fun ActivitiesView(onAnyItemSelected: ((Boolean) -> Unit)? = null) {
                                     onAnyItemSelected?.invoke(false)
                                 }) {
                                 Icon(
-                                    imageVector = Icons.Default.Share,
+                                    imageVector = ImageVector.vectorResource(org.witness.proofmode.camera.R.drawable.ic_share),
                                     contentDescription = "Share"
                                 )
                             }
@@ -625,7 +622,7 @@ fun ActivitiesView(onAnyItemSelected: ((Boolean) -> Unit)? = null) {
                                     onAnyItemSelected?.invoke(false)
                                 }) {
                                 Icon(
-                                    imageVector = Icons.Default.Close,
+                                    imageVector = ImageVector.vectorResource(R.drawable.ic_close_black_24dp), tint = Color.White,
                                     contentDescription = "Cancel"
                                 )
                             }
@@ -672,7 +669,7 @@ fun activityMenu(activity: Activity): (@Composable() (BoxScope.() -> Unit))? {
     return {
         IconButton(onClick = { expanded = true }) {
             Icon(
-                Icons.Default.MoreVert,
+                ImageVector.vectorResource(R.drawable.more_vert),
                 contentDescription = "Activity action menu",
                 tint = Color.Gray
             )

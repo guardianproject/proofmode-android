@@ -11,8 +11,7 @@ import android.widget.CheckBox
 import android.widget.CompoundButton
 import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.PreferenceManager
-import com.google.android.gms.common.AccountPicker
-import com.google.android.gms.common.AccountPicker.AccountChooserOptions
+
 import org.witness.proofmode.PermissionActivity.Companion.hasPermissions
 import org.witness.proofmode.ProofMode.PREF_CREDENTIALS_PRIMARY
 import org.witness.proofmode.databinding.ActivitySettingsBinding
@@ -180,12 +179,14 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun showIdentityChooser () {
 
+        /**
         val intent = AccountPicker.newChooseAccountIntent(
             AccountChooserOptions.Builder()
                 .build()
         )
 
         startActivityForResult(intent, REQ_ACCOUNT_CHOOSER)
+        **/
     }
 
     private fun updateUI() {

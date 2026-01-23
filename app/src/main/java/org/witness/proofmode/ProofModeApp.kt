@@ -1,5 +1,6 @@
 package org.witness.proofmode
 
+import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
@@ -7,11 +8,10 @@ import android.os.Handler
 import android.os.Looper
 import android.preference.PreferenceManager
 import android.widget.Toast
-import androidx.multidex.BuildConfig
-import androidx.multidex.MultiDexApplication
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import org.acra.BuildConfig
 import org.acra.config.dialog
 import org.acra.config.mailSender
 import org.acra.data.StringFormat
@@ -19,13 +19,8 @@ import org.acra.ktx.initAcra
 import org.bouncycastle.openpgp.PGPException
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
-import org.witness.proofmode.c2pa.C2PAManager
 import org.witness.proofmode.c2pa.PreferencesManager
 import org.witness.proofmode.crypto.pgp.PgpUtils
-import org.witness.proofmode.notaries.GoogleSafetyNetNotarizationProvider
-import org.witness.proofmode.notaries.OpenTimestampsNotarizationProvider
-import org.witness.proofmode.notaries.SafetyNetCheck
-import org.witness.proofmode.notarization.NotarizationProvider
 import org.witness.proofmode.storage.StorageProviderManager
 import timber.log.Timber
 import java.io.IOException
@@ -38,7 +33,7 @@ private lateinit var mPrefs: SharedPreferences
 /**
  * Created by n8fr8 on 10/10/16.
  */
-class ProofModeApp : MultiDexApplication() {
+class ProofModeApp : Application() {
     override fun onCreate() {
         super.onCreate()
         init(this)
@@ -173,12 +168,11 @@ class ProofModeApp : MultiDexApplication() {
     }
 
     fun init(context: Context) {
-        if (BuildConfig.DEBUG) {
-            Timber.plant(Timber.DebugTree())
-        }
+
+        Timber.plant(Timber.DebugTree())
+
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
         if (prefs.getBoolean(ProofMode.PREFS_DOPROOF, false)) {
-
 
             ProofMode.initBackgroundService(this)
 //            ProofBackgroundWorker.scheduleWork(this)
@@ -264,6 +258,7 @@ class ProofModeApp : MultiDexApplication() {
     }
 
     private fun addDefaultNotarizationProviders() {
+        /**
         try {
             Class.forName("com.google.android.gms.safetynet.SafetyNetApi")
             SafetyNetCheck.setApiKey(getString(org.witness.proofmode.library.R.string.verification_api_key))
@@ -286,13 +281,8 @@ class ProofModeApp : MultiDexApplication() {
             ProofMode.addNotarizationProvider(this, nProvider)
         } catch (e: ClassNotFoundException) {
             //class not available
-        }
+        }**/
 
-        /**
-         * // original idea for adding C2PA through notarization... moving now to use in camera capture directly
-        val nProvider: NotarizationProvider = C2paNotarizationProvider(this)
-        ProofMode.addNotarizationProvider(this, nProvider)
-        **/
 
     }
 

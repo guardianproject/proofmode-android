@@ -16,6 +16,10 @@ public class CameraEventReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
 
         if (intent != null && intent.getData() != null) {
+
+            Timber.d("camera event received for path: " + intent.getData().toString());
+
+            /**
             MediaWatcher.getInstance(context).queueMedia(intent.getData(), true, new Date(), new MediaWatcher.QueueMediaCallback() {
                         @Override
                         public void processUriDone(String resultProofHash) {
@@ -23,7 +27,7 @@ public class CameraEventReceiver extends BroadcastReceiver {
                         }
                     }
 
-            );
+            );**/
         }
     }
 }

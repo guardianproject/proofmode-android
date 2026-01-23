@@ -3,20 +3,13 @@ buildscript {
     repositories {
         mavenCentral()
         google()
-        maven { url 'https://jitpack.io' }
-        maven {
-            url "https://raw.githubusercontent.com/guardianproject/gpmaven/master"
-            content {
-                includeModule 'org.contentauth', 'c2pa'
-            }
-        }
 
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.13.0'
+        classpath 'com.android.tools.build:gradle:9.0.0'
         classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.2.20'
         classpath "org.jetbrains.kotlin:kotlin-serialization:2.2.20"
-        classpath "androidx.navigation:navigation-safe-args-gradle-plugin:2.8.5"
+        classpath "androidx.navigation:navigation-safe-args-gradle-plugin:2.9.6"
     }
 }
 
@@ -37,25 +30,27 @@ allprojects {
     repositories {
         mavenCentral()
         google()
-       maven { url "https://raw.githubusercontent.com/guardianproject/gpmaven/master" }
-    //    maven { url 'https://jitpack.io' }
-        /**
+
         maven {
             name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/contenauth/c2pa-android")
+            url = uri("https://maven.pkg.github.com/contentauth/c2pa-android")
             credentials {
                 username = System.getenv("gpr.user") ?: project.findProperty("gpr.user")
                 password = System.getenv("gpr.key") ?: project.findProperty("gpr.key")
             }
-        }**/
+        }
 
+        maven { url "https://jitpack.io" }
+
+
+        /**
         maven { url 'https://gitlab.com/api/v4/projects/51891540/packages/maven'  }
         maven { url "https://artifacts.consensys.net/public/maven/maven/" }
-
+            **/
 }
     project.ext {
         // these are common variables used in */build.gradle
-        buildToolsVersion="34.0.0"
+        buildToolsVersion="35.0.0"
         compileSdkVersion=35
         minSdkVersion=28
         targetSdkVersion=35

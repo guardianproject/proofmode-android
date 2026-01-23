@@ -6,7 +6,7 @@
       <GradleProjectSettings>
         <option name="testRunner" value="CHOOSE_PER_TEST" />
         <option name="externalProjectPath" value="$PROJECT_DIR$" />
-        <option name="gradleJvm" value="jbr-17" />
+        <option name="gradleJvm" value="#GRADLE_LOCAL_JAVA_HOME" />
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
@@ -14,7 +14,6 @@
             <option value="$PROJECT_DIR$/android-libproofmode" />
             <option value="$PROJECT_DIR$/android-opentimestamps" />
             <option value="$PROJECT_DIR$/app" />
-            <option value="$PROJECT_DIR$/c2pa" />
           </set>
         </option>
       </GradleProjectSettings>

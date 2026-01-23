@@ -2,7 +2,6 @@
 plugins {
     id 'maven-publish'
     id 'com.android.library'
-    id 'org.jetbrains.kotlin.android'
     id 'com.google.devtools.ksp' version '2.2.20-2.0.3'
 }
 
@@ -15,7 +14,7 @@ android {
         minSdkVersion 28
         targetSdkVersion 36
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        multiDexEnabled true
+        multiDexEnabled = true
 
     }
 
@@ -23,18 +22,21 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
-    }
 
     buildTypes {
         release {
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
     lint {
-        abortOnError false
+        abortOnError = false
+    }
+
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+        }
     }
 
     sourceSets {
@@ -50,20 +52,19 @@ android {
             }
         }
     }
+
 }
 
 dependencies {
 
-    implementation 'androidx.appcompat:appcompat:1.7.1'
+ //   implementation 'androidx.appcompat:appcompat:1.7.1'
     implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.1.0'
 
     implementation 'com.jakewharton.timber:timber:5.0.1'
     implementation 'androidx.multidex:multidex:2.0.1'
     implementation "androidx.exifinterface:exifinterface:1.4.2"
 
-    implementation 'org.bouncycastle:bcpkix-jdk15to18:1.83'
-    implementation 'org.bouncycastle:bcprov-jdk15to18:1.83'
-    api 'org.bouncycastle:bcpg-jdk15to18:1.83'
+    api 'org.bouncycastle:bcpg-jdk18on:1.81'
 
     implementation 'androidx.core:core-ktx:1.17.0'
 
@@ -74,8 +75,7 @@ dependencies {
     // Required -- JUnit 4 framework
     androidTestImplementation 'junit:junit:4.13.2'
 
-    //new C2PA content authenticity support
-   // api ("net.java.dev.jna:jna:5.13.0@aar")
+    implementation("org.bouncycastle:bcpkix-jdk18on:1.81")
 
     // Testing-only dependencies
     androidTestImplementation 'androidx.test:core:' + rootProject.coreVersion;
@@ -85,7 +85,7 @@ dependencies {
     // DataStore for preferences
     implementation("androidx.datastore:datastore-preferences:1.1.7")
 
-    api ("org.contentauth:c2pa:1.0.0-SNAPSHOT")
+    api ("org.contentauth:c2pa:0.0.8")
 
 
 }
@@ -95,9 +95,9 @@ project.afterEvaluate {
     publishing {
         publications {
             release(MavenPublication) {
-                groupId 'org.proofmode'
-                artifactId 'android-libproofmode'
-                version '1.0.30'
+                groupId = 'org.proofmode'
+                artifactId = 'android-libproofmode'
+                version = '1.0.30'
                 from components.release
             }
         }

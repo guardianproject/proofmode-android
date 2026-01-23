@@ -813,11 +813,7 @@ class ShareProofActivity : AppCompatActivity() {
                 try {
                     val isDirectCapture = false // this is from an import, and we are manually generating proof
                     
-                    if ((application as ProofModeApp).useContentCredentials()) {
-                        //TODO c2pa
-                    //    C2paUtils.addContentCredentials(this@ShareProofActivity, mediaUri, isDirectCapture, allowMachineLearning)
-                    }
-                    
+
                     ProofMode.generateProof(this@ShareProofActivity, mediaUri, proofHash)
                 } catch (e: Exception) {
                     Timber.e(e, "Error generating proof")

@@ -4,6 +4,8 @@ package org.witness.proofmode.service;
  * Created by n8fr8 on 3/3/17.
  */
 
+import static android.app.job.JobInfo.NETWORK_TYPE_ANY;
+
 import android.annotation.TargetApi;
 import android.app.job.JobInfo;
 import android.app.job.JobParameters;
@@ -19,6 +21,7 @@ import android.text.TextUtils;
 
 import org.witness.proofmode.ProofMode;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -61,6 +64,9 @@ public class VideosContentJob extends JobService {
       //  builder.addTriggerContentUri(
         //        new JobInfo.TriggerContentUri(Uri.parse("content://media/external_primary"),
           //              JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS));
+
+        //for now require internet, so c2pa will work
+        builder.setRequiredNetworkType(NETWORK_TYPE_ANY);
 
         // Get all media changes within a tenth of a second.
         builder.setTriggerContentUpdateDelay(1000);
@@ -119,55 +125,24 @@ public class VideosContentJob extends JobService {
                         uri = MediaStore.setRequireOriginal(uri);
                     }
 
-                    String mediaPath = MediaWatcher.getMediaPath(VideosContentJob.this, uri);
+                    String mediaPath = MediaWatcher.getVideoPath(VideosContentJob.this, uri);
 
-                    if (mediaPath != null)
-                        uriList.put(mediaPath, uri);
+                    if (mediaPath != null) {
+                        File fileNew = new File(mediaPath);
+                        if (!fileNew.getName().startsWith("."))
+                            uriList.put(mediaPath, Uri.fromFile(fileNew));
+                    }
                     else
                         uriList.put(uri.toString(), uri);
                 }
 
+                MediaWatcher mw = MediaWatcher.getInstance(VideosContentJob.this);
+
+                String DEFAULT_VIDEO_TYPE="video/mp4";
+
                 for (Uri uri : uriList.values())
-                {
+                    mw.processUri(uri, true, null,DEFAULT_VIDEO_TYPE);
 
-                    final Uri uriProcess = uri;
-                    MediaWatcher mw = MediaWatcher.getInstance(VideosContentJob.this);
-
-                    mw.singleThreaded().execute(() -> {
-                        try {
-
-
-                            String resultProofHash = mw.processUri(uriProcess, true, null);
-
-                            /**
-                            //generate external C2PA file
-                            var fileC2paSidecar = C2paUtils.Companion.addContentCredentials(VideosContentJob.this,
-                                    uriProcess, false, true);
-
-                            if (fileC2paSidecar.exists())
-                            {
-                                //add it to the proof hash directory
-                                try {
-                                    mw.getStorageProvider().saveStream(resultProofHash,
-                                            fileC2paSidecar.getName(),
-                                            new FileInputStream(fileC2paSidecar), null);
-                                }
-                                catch (IOException ioe)
-                                {
-                                    Timber.d("error saving c2pa file to hash: " + ioe.getLocalizedMessage());
-
-                                }
-                            }**/
-
-                            Timber.d("generated hash via job: " + resultProofHash);
-
-                        } catch (RuntimeException e) {
-                            Timber.d(e, "Error generating hash from proof URI");
-
-                        }
-                    });
-
-                }
 
 
             } else {

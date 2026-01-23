@@ -1,31 +1,4 @@
 <project version="4">
-  <component name="CMakeSettings">
-    <configurations>
-      <configuration PROFILE_NAME="Debug" CONFIG_NAME="Debug" />
-    </configurations>
-  </component>
-  <component name="DesignSurface">
-    <option name="filePathToZoomLevelMap">
-      <map>
-        <entry key="android-libproofmode/src/main/res/drawable/ic_baseline_photo_library_24.xml" value="0.233" />
-        <entry key="app/src/artwork/res/drawable/ic_ill_tut01.xml" value="0.2495" />
-        <entry key="app/src/main/res/drawable/ic_ill_tut01.xml" value="0.2495" />
-        <entry key="app/src/main/res/layout/activity_main.xml" value="0.24010416666666667" />
-        <entry key="app/src/main/res/layout/activity_onboarding.xml" value="0.3038949275362319" />
-        <entry key="app/src/main/res/layout/activity_share.xml" value="0.33" />
-        <entry key="app/src/main/res/layout/content_main.xml" value="0.25" />
-        <entry key="app/src/main/res/layout/dialog_share_robust.xml" value="0.33061594202898553" />
-        <entry key="app/src/main/res/layout/permission_location.xml" value="0.2817028985507246" />
-        <entry key="app/src/main/res/menu/menu_main.xml" value="0.26510416666666664" />
-        <entry key="app/src/main/res/menu/menu_share_proof.xml" value="0.2453125" />
-        <entry key="camera/src/main/res/layout/activity_camera_main.xml" value="0.24592391304347827" />
-        <entry key="camera/src/main/res/layout/content_camera_main.xml" value="0.24592391304347827" />
-        <entry key="camera/src/main/res/layout/fragment_camera.xml" value="0.24592391304347827" />
-        <entry key="camera/src/main/res/layout/fragment_permissions.xml" value="0.24592391304347827" />
-        <entry key="camera/src/main/res/layout/fragment_view_captured.xml" value="0.17753623188405798" />
-      </map>
-    </option>
-  </component>
   <component name="ExternalStorageConfigurationManager" enabled="true" />
   <component name="ProjectRootManager" version="2" languageLevel="JDK_21" default="true" project-jdk-name="jbr-21" project-jdk-type="JavaSDK">
     <output url="file://$PROJECT_DIR$/build/classes" />

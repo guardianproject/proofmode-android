@@ -10,16 +10,18 @@ import android.graphics.Paint
 import android.media.ExifInterface
 import android.net.Uri
 import android.os.Build
-import com.google.android.gms.common.util.IOUtils
+
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.MultiFormatWriter
 import com.google.zxing.common.BitMatrix
+import org.acra.util.IOUtils
 import org.witness.proofmode.R
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
+import java.io.InputStreamReader
 import java.lang.reflect.InvocationTargetException
 
 
@@ -27,7 +29,7 @@ class SocialImageUtil {
 
     fun createImageCard (context: Context, sourceImage : Uri, verifyUrl: String?) : Uri {
 
-        var ba = IOUtils.readInputStreamFully(context.contentResolver.openInputStream(sourceImage)!!)
+        var ba = context.contentResolver.openInputStream(sourceImage)!!.readBytes()
         var bm = decodeBitmapWithRotation(ba)
         val waterMark = BitmapFactory.decodeResource(context.getResources(), R.drawable.proofmode128)
         var qrcode : Bitmap? = null

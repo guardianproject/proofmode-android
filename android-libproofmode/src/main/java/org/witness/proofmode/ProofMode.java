@@ -148,15 +148,9 @@ public class ProofMode {
         return sProvider;
     }
 
-    public static String generateProof(Context context, Uri uri) {
+    public static void generateProof(Context context, Uri uri, FileDescriptor fdMediaFile, String mimeType) throws IOException, PGPException {
 
-        return MediaWatcher.getInstance(context).processUri(uri, false, null);
-
-    }
-
-    public static String generateProof(Context context, Uri uri, FileDescriptor fdMediaFile, String mimeType) throws IOException, PGPException {
-
-        return MediaWatcher.getInstance(context).processFileDescriptor(context, uri, fdMediaFile, mimeType);
+        MediaWatcher.getInstance(context).processFileDescriptor(context, uri, fdMediaFile, mimeType);
 
     }
 

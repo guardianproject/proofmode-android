@@ -11,6 +11,7 @@ import android.app.job.JobScheduler;
 import android.app.job.JobService;
 import android.content.ComponentName;
 import android.content.Context;
+import android.net.NetworkRequest;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
@@ -79,8 +80,6 @@ public class PhotosContentJob extends JobService {
         return true;
     }
 
-    //private static HashMap<Uri,String> mUriStack = new HashMap<>();
-
     private void doWork ()
     {
 
@@ -97,56 +96,24 @@ public class PhotosContentJob extends JobService {
                                 uri = MediaStore.setRequireOriginal(uri);
                             }
 
-                            String mediaPath = MediaWatcher.getMediaPath(PhotosContentJob.this, uri);
+                            String mediaPath = MediaWatcher.getImagePath(PhotosContentJob.this, uri);
 
                             //if we can get to the direct file path, we should!
-                            if (mediaPath != null)
-                                uriList.put(mediaPath, Uri.fromFile(new File(mediaPath)));
+                            if (mediaPath != null) {
+                                File fileNew = new File(mediaPath);
+                                if (!fileNew.getName().startsWith("."))
+                                    uriList.put(mediaPath, Uri.fromFile(fileNew));
+                            }
                             else
                                 uriList.put(uri.toString(), uri);
                         }
 
+                        MediaWatcher mw = MediaWatcher.getInstance(PhotosContentJob.this);
+
+                        String DEFAULT_PHOTO_TYPE = "image/jpeg";
+
                         for (Uri uri : uriList.values())
-                        {
-
-                            final Uri uriProcess = uri;
-                            MediaWatcher mw = MediaWatcher.getInstance(PhotosContentJob.this);
-
-                            mw.singleThreaded().execute(() -> {
-                                try {
-
-                                    //generate external C2PA file
-
-                                  //  var fileC2paSidecar = C2paUtils.Companion.addContentCredentials(PhotosContentJob.this,
-                                    //        uriProcess, false, true);
-
-                                    String resultProofHash = mw.processUri(uriProcess, true, null);
-                                    Timber.d("generated hash via job: " + resultProofHash);
-
-                                    /**
-                                    if (fileC2paSidecar.exists())
-                                    {
-                                        try {
-                                            mw.getStorageProvider().saveStream(resultProofHash,
-                                                    fileC2paSidecar.getName(),
-                                                    new FileInputStream(fileC2paSidecar), null);
-                                        }
-                                        catch (IOException ioe)
-                                        {
-                                            Timber.d("error saving c2pa file to hash: " + ioe.getLocalizedMessage());
-
-                                        }
-                                    }**/
-
-                                } catch (RuntimeException e) {
-                                    Timber.d(e, "Error generating hash from proof URI");
-
-                                }
-                            });
-
-                        }
-
-
+                            mw.processUri(uri, true, null,DEFAULT_PHOTO_TYPE);
                     } else {
                         // We don't have any details about URIs (because too many changed at once),
                         // so just note that we need to do a full rescan.
@@ -163,6 +130,8 @@ public class PhotosContentJob extends JobService {
     }
 
 
+
+
     @Override
     public boolean onStopJob(JobParameters params) {
         return false;
@@ -177,9 +146,11 @@ public class PhotosContentJob extends JobService {
         JobInfo.Builder builder = new JobInfo.Builder(
                 PHOTOS_CONTENT_JOB,
                 new ComponentName(context, PhotosContentJob.class));
+
         builder.addTriggerContentUri(
                 new JobInfo.TriggerContentUri(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                         JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS));
+
         builder.addTriggerContentUri(
                 new JobInfo.TriggerContentUri(MediaStore.Images.Media.INTERNAL_CONTENT_URI,
                         JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS));
@@ -189,6 +160,7 @@ public class PhotosContentJob extends JobService {
           //              JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS));
 
         // Get all media changes within a tenth of a second.
+        builder.setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY);
         builder.setTriggerContentUpdateDelay(1000);
         builder.setTriggerContentMaxDelay(1000);
         js.schedule(builder.build());
