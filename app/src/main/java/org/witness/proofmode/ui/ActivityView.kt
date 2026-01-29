@@ -452,8 +452,7 @@ fun ActivityDateView(date: Date, menu: (@Composable() (BoxScope.() -> Unit))? = 
         Text(
             text = date.displayFormatted(),
             style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(top = 24.dp)
+            fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.weight(1f))
         if (menu != null) {
@@ -541,7 +540,6 @@ fun ActivitiesView(onAnyItemSelected: ((Boolean) -> Unit)? = null) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(top = 56.dp)
                         .background(Color.White)
                 ) {
                     LazyColumn(

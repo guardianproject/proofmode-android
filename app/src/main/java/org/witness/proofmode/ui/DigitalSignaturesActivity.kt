@@ -12,18 +12,12 @@ class DigitalSignaturesActivity : AppCompatActivity() {
         binding = ActivityDigitalSignaturesBinding.inflate(layoutInflater)
         binding.apply {
             setContentView(root)
-            setSupportActionBar(toolbar)
-            toolbar.title = title
         }
         supportActionBar?.apply {
             setDisplayHomeAsUpEnabled(true)
             setDisplayShowHomeEnabled(true)
             setDisplayShowTitleEnabled(true)
         }
-    }
-
-    override fun onBackPressed() {
-        finish()
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

@@ -37,13 +37,10 @@ class SettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivitySettingsBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        val toolbar = binding.toolbar
-        setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.setDisplayShowHomeEnabled(true)
         supportActionBar?.setDisplayShowTitleEnabled(false)
-        val title = binding.toolbarTitle
-        title.text = getTitle()
+
         mPrefs = PreferenceManager.getDefaultSharedPreferences(this)
         switchLocation = binding.contentSettings.switchLocation
         switchNetwork = binding.contentSettings.switchNetwork

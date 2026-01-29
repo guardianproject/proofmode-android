@@ -14,7 +14,7 @@ class DataLegendActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityDataLegendBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        setSupportActionBar(binding.toolbar)
+
         supportActionBar?.apply {
             setDisplayHomeAsUpEnabled(true)
             setDisplayShowHomeEnabled(true)
@@ -31,11 +31,6 @@ class DataLegendActivity : AppCompatActivity() {
             loadUrl("file:///android_asset/datalegend/datalegend.html")
         }
     }
-
-    override fun onBackPressed() {
-        finish()
-    }
-
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long

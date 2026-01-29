@@ -28,9 +28,6 @@ import androidx.preference.PreferenceManager
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.navigation.NavigationView
 import gun0912.tedimagepicker.builder.TedImagePicker
-import org.witness.proofmode.org.witness.proofmode.ui.ActivityConstants.EXTRA_FILE_NAME
-import org.witness.proofmode.org.witness.proofmode.ui.ActivityConstants.EXTRA_SHARE_TEXT
-import org.witness.proofmode.org.witness.proofmode.ui.ActivityConstants.INTENT_ACTIVITY_ITEMS_SHARED
 import org.witness.proofmode.ProofMode.EVENT_PROOF_GENERATED
 import org.witness.proofmode.ProofMode.PREF_OPTION_AI_DEFAULT
 import org.witness.proofmode.ProofMode.PREF_OPTION_BLOCK_AI
@@ -44,6 +41,9 @@ import org.witness.proofmode.org.witness.proofmode.ui.Activities
 import org.witness.proofmode.org.witness.proofmode.ui.ActivitiesView
 import org.witness.proofmode.org.witness.proofmode.ui.ActivitiesViewDelegate
 import org.witness.proofmode.org.witness.proofmode.ui.Activity
+import org.witness.proofmode.org.witness.proofmode.ui.ActivityConstants.EXTRA_FILE_NAME
+import org.witness.proofmode.org.witness.proofmode.ui.ActivityConstants.EXTRA_SHARE_TEXT
+import org.witness.proofmode.org.witness.proofmode.ui.ActivityConstants.INTENT_ACTIVITY_ITEMS_SHARED
 import org.witness.proofmode.org.witness.proofmode.ui.ActivityType
 import org.witness.proofmode.org.witness.proofmode.ui.DataLegendActivity
 import org.witness.proofmode.org.witness.proofmode.ui.DigitalSignaturesActivity
@@ -58,8 +58,6 @@ import java.util.UUID
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener,
     ActivitiesViewDelegate {
     private lateinit var mPrefs: SharedPreferences
-    private lateinit var layoutOn: View
-    //private lateinit var layoutOff: View
     private lateinit var drawer: DrawerLayout
     private lateinit var drawerToggle: ActionBarDrawerToggle
     private lateinit var mainBinding: ActivityMainBinding
@@ -128,11 +126,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         mainBinding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(mainBinding.root)
-        val toolbar = mainBinding.toolbar
-        setSupportActionBar(toolbar)
         supportActionBar?.title = getString(R.string.app_name)
-        layoutOn = mainBinding.contentMain.layoutOn
-       // layoutOff = mainBinding.contentMain.layoutOff
+        supportActionBar?.setDisplayHomeAsUpEnabled(true);
+        supportActionBar?.setHomeButtonEnabled(true);
+
         if (mPrefs.getBoolean("firsttime", true)) {
             startActivityForResult(Intent(this, OnboardingActivity::class.java), REQUEST_CODE_INTRO)
         }
@@ -140,44 +137,13 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         //Setup drawer
         drawer = mainBinding.drawerLayout
         drawerToggle = ActionBarDrawerToggle(
-            this, drawer, toolbar, 0, 0
+            this, drawer, R.string.open, R.string.close
         )
         drawer.addDrawerListener(drawerToggle)
         drawerToggle.syncState()
+
         val navigationView = mainBinding.navView
         navigationView.setNavigationItemSelectedListener(this)
-
-        /**
-        var switchItem = navigationView.menu.findItem(R.id.menu_background_service);
-        var switchView = MenuItemCompat.getActionView(switchItem) as CompoundButton
-
-        switchView.isChecked =  mPrefs.getBoolean("doProof", false)
-
-        switchView.setOnCheckedChangeListener { buttonView, isChecked ->
-            setProofModeOn(isChecked)
-        }**/
-
-        /**
-        val btnSettings = mainBinding.contentMain.btnSettings
-        btnSettings.setOnClickListener { openSettings() }
-        val btnShareProof = mainBinding.contentMain.btnShareProof
-        btnShareProof.setOnClickListener {
-
-            // Initializing the popup menu and giving the reference as current context
-            val popupMenu = PopupMenu(this@MainActivity, it)
-
-            // Inflating popup menu from popup_menu.xml file
-            popupMenu.menuInflater.inflate(R.menu.menu_share_proof, popupMenu.menu)
-            popupMenu.setOnMenuItemClickListener { menuItem ->
-                if (menuItem.itemId == R.id.menu_photo) showMediaPicker()
-                true
-            }
-            // Showing the popup menu
-            popupMenu.show()
-        }**/
-
-        //updateOnOffState(false)
-
 
         fab = findViewById<FloatingActionButton>(R.id.fab)
         fab.setOnClickListener { view ->
@@ -187,11 +153,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         // Setup activity view
         val activityView = findViewById<ComposeView>(R.id.activityView)
-
-        /**
-        Activities.load(this)
-
-        }**/
 
         activityView.setContent {
             ActivitiesView {
@@ -313,15 +274,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         startActivity(intentShare)
     }
 
-    /**
-    fun toggleOnClicked(view: View?) {
-        setProofModeOn(true)
-    }
-
-    fun toggleOffClicked(view: View?) {
-        setProofModeOn(false)
-    }**/
-
     private fun setProofModeOn(isOn: Boolean) {
         if (isOn) {
             if (!askForPermissions(requiredPermissions, REQUEST_CODE_REQUIRED_PERMISSIONS)) {
@@ -365,6 +317,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             shareCurrentPublicKey()
             return true
         } else **/
+
+        if (drawerToggle.onOptionsItemSelected(item))
+        {
+            return true;
+        }
 
         if (id == R.id.action_share_photos) {
             showMediaPicker();

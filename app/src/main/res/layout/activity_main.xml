@@ -14,19 +14,6 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <include
-            android:id="@+id/content_main"
-            layout="@layout/content_main" />
-
-        <androidx.appcompat.widget.Toolbar
-            android:id="@+id/toolbar"
-            android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            app:theme="@style/MainToolBarStyle"
-            android:backgroundTint="@color/colorPrimaryDark"
-            android:background="@color/colorPrimary"
-            app:popupTheme="@style/AppTheme.PopupOverlay" />
-
         <androidx.compose.ui.platform.ComposeView
             android:id="@+id/activityView"
             android:layout_width="match_parent"
@@ -49,11 +36,12 @@
 
     <com.google.android.material.navigation.NavigationView
         android:id="@+id/nav_view"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_gravity="start"
-        android:layout_weight="1"
         android:fitsSystemWindows="true"
+
+        android:layout_weight="1"
         app:headerLayout="@layout/nav_header_main"
         app:menu="@menu/activity_main_drawer" />
 </androidx.drawerlayout.widget.DrawerLayout>

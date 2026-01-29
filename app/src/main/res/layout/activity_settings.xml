@@ -11,19 +11,4 @@
         android:id="@+id/content_settings"
         layout="@layout/content_settings" />
 
-    <androidx.appcompat.widget.Toolbar
-        android:id="@+id/toolbar"
-        android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        android:background="@android:color/transparent"
-        app:popupTheme="@style/AppTheme.PopupOverlay"
-        app:theme="@style/SettingsToolBarStyle">
-
-        <TextView
-            android:id="@+id/toolbar_title"
-            style="@style/SettingsToolBarTitleStyle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center" />
-    </androidx.appcompat.widget.Toolbar>
 </FrameLayout>

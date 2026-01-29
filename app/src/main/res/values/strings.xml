@@ -235,5 +235,7 @@
     <string name="share_media">Share Media</string>
     <string name="share_using">Share using</string>
     <string name="verify_this_media_at">"Verify this media at: "</string>
+    <string name="open">Open</string>
+    <string name="close">Close</string>
 
 </resources>

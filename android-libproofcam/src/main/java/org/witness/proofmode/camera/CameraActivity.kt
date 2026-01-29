@@ -1,19 +1,19 @@
 package org.witness.proofmode.camera
 
-import android.content.res.Configuration
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.os.Build
 import android.os.Bundle
-import android.view.Display
 import android.view.Surface
 import android.view.View
-import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import org.witness.proofmode.ProofMode.PREF_OPTION_BLOCK_AI
 import org.witness.proofmode.camera.fragments.CameraScreen
 
@@ -33,7 +33,20 @@ class CameraActivity : ComponentActivity(), SensorEventListener {
         // If the Android version is lower than Jellybean, use this call to hide
         // the status bar.
 
-        window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN
+        WindowInsetsControllerCompat(window, window.decorView)
+            .hide(WindowInsetsCompat.Type.systemBars())
+
+        /**
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.decorView.windowInsetsController!!.hide(
+                android.view.WindowInsets.Type.statusBars()
+            )
+
+        }
+        else
+        {
+            window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN
+        }**/
 
         setContent {
 
