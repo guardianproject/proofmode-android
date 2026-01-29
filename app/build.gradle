@@ -100,11 +100,11 @@ android.applicationVariants.configureEach { variant ->
 }**/
 
 base {
-    archivesName = "ProofMode-${android.defaultConfig.versionName}"
+    archivesName = "Proofmode-${android.defaultConfig.versionName}"
 }
 
 dependencies {
-    implementation 'androidx.navigation:navigation-fragment-ktx:2.9.5'
+    implementation 'androidx.navigation:navigation-fragment-ktx:2.9.7'
     implementation 'androidx.navigation:navigation-ui-ktx:2.9.7'
 
     testImplementation 'junit:junit:4.13.2'
