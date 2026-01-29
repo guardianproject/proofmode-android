@@ -105,7 +105,7 @@ base {
 
 dependencies {
     implementation 'androidx.navigation:navigation-fragment-ktx:2.9.5'
-    implementation 'androidx.navigation:navigation-ui-ktx:2.9.5'
+    implementation 'androidx.navigation:navigation-ui-ktx:2.9.7'
 
     testImplementation 'junit:junit:4.13.2'
 
@@ -116,13 +116,13 @@ dependencies {
     implementation "androidx.preference:preference-ktx:1.2.1"
 
     // Activity view
-    implementation 'androidx.compose.ui:ui:1.9.4'
-    implementation 'androidx.compose.runtime:runtime:1.9.4'
+    implementation 'androidx.compose.ui:ui:1.10.2'
+    implementation 'androidx.compose.runtime:runtime:1.10.2'
     implementation 'androidx.compose.material3:material3:1.4.0'
     //implementation "androidx.compose.material:material-icons-extended:1.7.7"
-    implementation 'androidx.compose.ui:ui-tooling:1.9.4'
+    implementation 'androidx.compose.ui:ui-tooling:1.10.2'
     implementation "androidx.constraintlayout:constraintlayout-compose:1.1.1"
-    implementation "androidx.activity:activity-compose:1.11.0"
+    implementation "androidx.activity:activity-compose:1.12.3"
     implementation "io.coil-kt:coil-compose:2.7.0"
     implementation("io.coil-kt:coil-video:2.7.0") {
     }
