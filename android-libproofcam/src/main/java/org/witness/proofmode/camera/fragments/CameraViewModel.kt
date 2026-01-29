@@ -516,13 +516,28 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
 
 
     private fun sendLocalCameraEvent(newMediaFile: Uri, cameraEventType: CameraEventType) {
-        val mw = getInstance(activity)
+       // val mw = getInstance(activity)
+
+        try {
+
+            app.sendBroadcast(
+                Intent(
+                    Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, newMediaFile
+                )
+            )
+        } catch (e: FileNotFoundException) {
+            e.printStackTrace()
+        }
 
         if (cameraEventType == CameraEventType.NEW_VIDEO) {
            // val intent = Intent(NEW_MEDIA_EVENT).apply { data = newMediaFile }
           //  LocalBroadcastManager.getInstance(app).sendBroadcast(intent)
 
-            mw?.processUri(newMediaFile, true, null, "video/mp4")
+           // mw?.processUri(newMediaFile, true, null, "video/mp4")
+
+
+
+
 
         } else {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
@@ -533,17 +548,13 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
                         app.contentResolver,
                         f.absolutePath, f.name, null
                     )
-                    app.sendBroadcast(
-                        Intent(
-                            Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(f)
-                        )
-                    )
+
                 } catch (e: FileNotFoundException) {
                     e.printStackTrace()
                 }
             }
 
-            mw?.processUri(newMediaFile, true, null, "image/jpeg")
+            //mw?.processUri(newMediaFile, true, null, "image/jpeg")
 
         }
 

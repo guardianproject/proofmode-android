@@ -242,6 +242,7 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
             val mediaHash = HashUtils.getSHA256FromFileContent(
                 mContext!!.getContentResolver().openInputStream(uriMedia)
             )
+
             val resultHash = processUri(mContext!!, uriMedia, mediaHash, autogen, createdAt)
 
             if (resultHash != null) {

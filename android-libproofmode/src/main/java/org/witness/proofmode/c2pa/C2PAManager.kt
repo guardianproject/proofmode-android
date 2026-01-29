@@ -1,5 +1,6 @@
 package org.witness.proofmode.c2pa
 
+import android.Manifest
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import org.contentauth.c2pa.Action
 import org.contentauth.c2pa.Builder
+import org.contentauth.c2pa.BuilderIntent
 import org.contentauth.c2pa.ByteArrayStream
 import org.contentauth.c2pa.C2PA
 import org.contentauth.c2pa.CertificateManager
@@ -64,8 +66,8 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             timeZone = TimeZone.getTimeZone("UTC")
         }
 
-        private const val TSA_DIGICERT = "http://timestamp.digicert.com"
-
+//        private const val TSA_DIGICERT = "http://timestamp.digicert.com"
+        private const val TSA_SSLCOM = "https://api.c2patool.io/api/v1/timestamps/ecc"
     }
 
     private lateinit var defaultSigner: Signer
@@ -93,7 +95,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
             // Create appropriate signer based on mode
             if (!::defaultSigner.isInitialized)
-                defaultSigner = createSigner(signingMode, TSA_DIGICERT)
+                defaultSigner = createSigner(signingMode, TSA_SSLCOM)
 
             // Sign the image using C2PA library
             val fileStream = FileStream(inFile)
@@ -528,9 +530,12 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             builder.setNoEmbed()
 
         var mParams = null//HashMap<String, String>()
+
         var softwareAgent = "$appLabel-$appVersion";// ${android.os.Build.VERSION.SDK_INT.toString()} ${android.os.Build.VERSION.CODENAME}";
         var action = Action(PredefinedAction.CREATED, DigitalSourceType.DIGITAL_CAPTURE,softwareAgent,mParams)
         builder.addAction(action)
+
+  //      builder.setIntent(BuilderIntent.Create(DigitalSourceType.DIGITAL_CAPTURE))
 
         val ingredientJson = JSONObject().apply {
             put("title", fileName)
@@ -662,6 +667,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                     put("exif:GPSLatitude", it.latitude.toString())
                     put("exif:GPSLongitude", it.longitude.toString())
                     put("exif:GPSAltitude", it.altitude.toString())
+
                     put ("exif:GPSAccuracy", it.accuracy.toString())
                     put ("exif:GPSSpeed", it.speed.toString())
                     put ("exif:GPSDestBearing", it.bearing.toString())
@@ -673,7 +679,6 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                     else
                     {
                         put ("exif:GPSProcessingMethod", "Provider=${location.provider}")
-
                     }
 
                     val timestamp = formatIsoTimestamp(Date(it.time))
@@ -683,16 +688,15 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                 put ("tiff:Model", model)
                 put ("tiff:DateTime", formatIsoTimestamp(Date(fileIn.lastModified())))
 
-
                 put(
                     "@context",
                     JSONObject().apply {
                         put("exif", "http://ns.adobe.com/exif/1.0/")
-                   //     put ("dc", "http://purl.org/dc/elements/1.1/")
-                    //    put ( "exifEX", "http://cipa.jp/exif/2.32/")
-                    //    put ("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+                        put ("dc", "http://purl.org/dc/elements/1.1/")
+                        put ( "exifEX", "http://cipa.jp/exif/2.32/")
+                        put ("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
                         put ("tiff", "http://ns.adobe.com/tiff/1.0/")
-                     //   put ("xmp", "http://ns.adobe.com/xap/1.0/")
+                        put ("xmp", "http://ns.adobe.com/xap/1.0/")
 
                     },
                 )
