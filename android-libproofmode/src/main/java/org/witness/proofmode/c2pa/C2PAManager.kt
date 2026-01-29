@@ -87,10 +87,10 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                 PREF_OPTION_LOCATION,
                 false
             )
-            val location = Location("")
 
             // Create manifest JSON
-            val manifestJSON = createManifestJSON(context, email!!, inFile, contentType, location, true)
+            val manifestJSON = createManifestJSON(context, email!!, inFile, contentType,
+                showLocation == true, true)
             Timber.d("Media manifest file:\n\n$manifestJSON")
 
             // Create appropriate signer based on mode
@@ -570,7 +570,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         }
     }
 
-    private fun createManifestJSON(context: Context, creator: String, fileIn: File, contentType: String, location: Location?, isDirectCapture: Boolean): String {
+    private fun createManifestJSON(context: Context, creator: String, fileIn: File, contentType: String, showLocation: Boolean, isDirectCapture: Boolean): String {
 
         val appLabel = getAppName(context)
         val appVersion = getAppVersionName(context)
@@ -593,7 +593,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         val assertionMap = HashMap<String,JSONObject>()
 
         val gpsTracker = GPSTracker(context)
-        if (location  != null && gpsTracker.canGetLocation()) {
+        if (showLocation && gpsTracker.canGetLocation()) {
             gpsTracker.updateLocation()
             val location = gpsTracker.getLocation()
             location?.let {
