@@ -260,19 +260,6 @@ class ProofModeApp : Application() {
     }
 
     private fun addDefaultNotarizationProviders() {
-        /**
-        try {
-            Class.forName("com.google.android.gms.safetynet.SafetyNetApi")
-            SafetyNetCheck.setApiKey(getString(org.witness.proofmode.library.R.string.verification_api_key))
-
-            //notarize and then write proof so we can include notarization response
-            val gProvider = GoogleSafetyNetNotarizationProvider(this)
-            ProofMode.addNotarizationProvider(this, gProvider)
-
-        } catch (ce: ClassNotFoundException) {
-            //SafetyNet API not available
-        }
-        **/
 
         try {
             //this may not be included in the current build
