@@ -21,6 +21,8 @@ import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
 import org.witness.proofmode.c2pa.PreferencesManager
 import org.witness.proofmode.crypto.pgp.PgpUtils
+import org.witness.proofmode.notaries.OpenTimestampsNotarizationProvider
+import org.witness.proofmode.notarization.NotarizationProvider
 import org.witness.proofmode.storage.StorageProviderManager
 import timber.log.Timber
 import java.io.IOException
@@ -267,13 +269,11 @@ class ProofModeApp : Application() {
             val gProvider = GoogleSafetyNetNotarizationProvider(this)
             ProofMode.addNotarizationProvider(this, gProvider)
 
-	    // a neat idea we will revisit later
-            //val aProvider = AircraftLocationNotarizationProvider(this)
-            //ProofMode.addNotarizationProvider(this, aProvider)
-
         } catch (ce: ClassNotFoundException) {
             //SafetyNet API not available
         }
+        **/
+
         try {
             //this may not be included in the current build
             Class.forName("com.eternitywall.ots.OpenTimestamps")
@@ -281,7 +281,7 @@ class ProofModeApp : Application() {
             ProofMode.addNotarizationProvider(this, nProvider)
         } catch (e: ClassNotFoundException) {
             //class not available
-        }**/
+        }
 
 
     }
