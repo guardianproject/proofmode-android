@@ -92,19 +92,22 @@ class ShareProofActivity : AppCompatActivity() {
         pgpUtils = PgpUtils.getInstance()
         mBlockAI = mPrefs?.getBoolean(PREF_OPTION_BLOCK_AI, PREF_OPTION_AI_DEFAULT) == false
         mC2PAEnable = mPrefs?.getBoolean(PREF_OPTION_CREDENTIALS, PREF_OPTION_CREDENTIALS_DEFAULT) == true
-        setContentView(binding.root)
+
+        binding.apply {
+            setContentView(root)
+        }
+
+        supportActionBar?.apply {
+            setDisplayHomeAsUpEnabled(true)
+            setDisplayShowHomeEnabled(true)
+            setDisplayShowTitleEnabled(true)
+        }
+
         mStorageProvider = DefaultStorageProvider(applicationContext)
     }
 
     override fun onResume() {
         super.onResume()
-        val toolbar = binding.toolbar
-        setSupportActionBar(toolbar)
-        supportActionBar?.apply {
-            title = ""
-            setDisplayHomeAsUpEnabled(false)
-            setDisplayShowHomeEnabled(false)
-        }
 
         val tvInfoBasic = binding.tvInfoBasic
         tvInfoBasic.setOnClickListener { showInfoBasic() }
@@ -157,11 +160,6 @@ class ShareProofActivity : AppCompatActivity() {
         return resultUri
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        menuInflater.inflate(R.menu.menu_share, menu)
-        return true
-    }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         // Respond to the action bar's Up/Home button
