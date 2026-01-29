@@ -36,6 +36,15 @@
 -dontwarn javax.annotation.Nullable
 -dontwarn javax.annotation.ParametersAreNonnullByDefault
 
+# Bitcoinj and its optional dependencies
+-dontwarn org.fusesource.leveldbjni.**
+-dontwarn org.iq80.leveldb.**
+-dontwarn org.slf4j.impl.**
+
+# Missing classes referenced from bitcoinj on Android
+-dontwarn sun.misc.Cleaner
+-dontwarn sun.nio.ch.DirectBuffer
+
 ####
 -keep class org.**  { *; }
 -keep class org.spongycastle.**
