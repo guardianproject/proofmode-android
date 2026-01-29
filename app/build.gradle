@@ -159,6 +159,9 @@ dependencies {
 //    implementation 'com.google.android.gms:play-services-safetynet:18.0.1'
     implementation 'com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava'
 
+    //replace safetynet
+    implementation 'com.google.android.play:integrity:1.6.0'
+
     // Required -- JUnit 4 framework
     androidTestImplementation 'junit:junit:4.13.2'
 
