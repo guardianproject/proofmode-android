@@ -26,7 +26,7 @@
 -allowaccessmodification
 -keepattributes *Annotation*
 
--injars libs
+##-injars libs
 
 -outjars bin/classes-processed.jar
 
