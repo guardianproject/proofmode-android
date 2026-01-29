@@ -453,12 +453,12 @@ fun ActivityDateView(date: Date, menu: (@Composable() (BoxScope.() -> Unit))? = 
             text = date.displayFormatted(),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold
+
         )
         Spacer(modifier = Modifier.weight(1f))
         if (menu != null) {
             Box(
                 modifier = Modifier
-                    .padding(top = 24.dp)
                     .fillMaxSize()
                     .wrapContentSize(Alignment.TopEnd),
                 content = menu
