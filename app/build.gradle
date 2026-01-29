@@ -154,7 +154,7 @@ dependencies {
 
     implementation 'com.caverock:androidsvg-aar:1.4'
 
-    implementation 'io.github.ParkSangGwon:tedimagepicker:1.6.1'
+    implementation 'io.github.parksanggwon:tedimagepicker:1.7.3'
 
 //    implementation 'com.google.android.gms:play-services-safetynet:18.0.1'
     implementation 'com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava'
