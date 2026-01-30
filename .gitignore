@@ -48,3 +48,6 @@ captures/
 *.jks
 
 /app/src/main/res/values/googleapis.actual.xml
+
+# Secrets file (contains API keys and tokens)
+secrets.properties

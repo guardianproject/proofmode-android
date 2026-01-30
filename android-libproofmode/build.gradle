@@ -3,6 +3,7 @@ plugins {
     id 'maven-publish'
     id 'com.android.library'
     id 'com.google.devtools.ksp' version '2.2.20-2.0.3'
+    id 'com.google.android.libraries.mapsplatform.secrets-gradle-plugin'
 }
 
 android {
@@ -16,6 +17,10 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         multiDexEnabled = true
 
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     compileOptions {
@@ -102,5 +107,20 @@ project.afterEvaluate {
             }
         }
     }
+}
+
+secrets {
+    // Optionally specify a different file name containing your secrets.
+    // The plugin defaults to "secrets.properties" if not configured.
+    propertiesFileName = "secrets.properties"
+
+    // A properties file containing default secret values.
+    // This file can be checked into version control.
+    defaultPropertiesFileName = "secrets.defaults.properties"
+
+    // Configure which keys should be ignored by the plugin by providing regular expressions.
+    // "sdk.dir" is ignored by default.
+    ignoreList.add("keyToIgnore")
+    ignoreList.add("sdk.*")
 }
 

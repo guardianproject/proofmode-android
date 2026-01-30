@@ -36,6 +36,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.witness.proofmode.ProofMode
 import org.witness.proofmode.ProofMode.PREF_OPTION_LOCATION
+import org.witness.proofmode.library.BuildConfig
 import org.witness.proofmode.c2pa.selfsign.CertificateSigningService
 import timber.log.Timber
 import java.io.File
@@ -58,9 +59,6 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         private const val TAG = "C2PAManager"
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
         private const val KEYSTORE_ALIAS_PREFIX = "C2PA_KEY_"
-
-        private const val DEFAULT_SIGNING_SERVER_ENDPOINT = "https://zbjspd6jfv.us-east-2.awsapprunner.com/api/v1/c2pa/configuration?platform=android"
-        private const val DEFAULT_SIGNING_SERVER_TOKEN = "2d0c8b6b66c47c3b215976cc808296269322558c6d533d9ce6f3c45a9ccfe811"
 
         private val iso8601 = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
             timeZone = TimeZone.getTimeZone("UTC")
@@ -278,8 +276,8 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                 "$remoteUrl/api/v1/c2pa/configuration"
             }**/
 
-        val configUrl = DEFAULT_SIGNING_SERVER_ENDPOINT
-        val bearerToken = DEFAULT_SIGNING_SERVER_TOKEN
+        val configUrl = BuildConfig.SIGNING_SERVER_ENDPOINT
+        val bearerToken = BuildConfig.SIGNING_SERVER_TOKEN
 
         Timber.d( "Creating WebServiceSigner with URL: $configUrl")
 
