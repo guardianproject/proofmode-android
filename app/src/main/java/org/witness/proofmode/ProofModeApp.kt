@@ -201,7 +201,6 @@ class ProofModeApp : Application() {
 
         }
 
-     //   C2paJNI.init(this)
 
     }
 

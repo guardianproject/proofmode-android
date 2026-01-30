@@ -18,6 +18,7 @@ import org.witness.proofmode.databinding.ActivitySettingsBinding
 import org.witness.proofmode.storage.FilebaseConfig
 import org.witness.proofmode.util.GPSTracker
 import androidx.core.content.edit
+import com.google.android.gms.common.AccountPicker
 import org.witness.proofmode.org.witness.proofmode.share.FilebaseSettingsActivity
 
 
@@ -167,7 +168,6 @@ class SettingsActivity : AppCompatActivity() {
             else
                 (application as ProofModeApp).cancel(this)
 
-
         }
 
     }
@@ -176,14 +176,12 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun showIdentityChooser () {
 
-        /**
         val intent = AccountPicker.newChooseAccountIntent(
-            AccountChooserOptions.Builder()
+            AccountPicker.AccountChooserOptions.Builder()
                 .build()
         )
 
         startActivityForResult(intent, REQ_ACCOUNT_CHOOSER)
-        **/
     }
 
     private fun updateUI() {

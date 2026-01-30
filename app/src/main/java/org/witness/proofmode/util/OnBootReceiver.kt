@@ -16,13 +16,6 @@ class OnBootReceiver : BroadcastReceiver() {
 
             ProofMode.initBackgroundService(context)
 
-            /**
-            val intentService = Intent(context, ProofService::class.java)
-            if (Build.VERSION.SDK_INT >= 26) {
-                context.startForegroundService(intentService)
-            } else {
-                context.startService(intentService)
-            }**/
         }
     }
 }

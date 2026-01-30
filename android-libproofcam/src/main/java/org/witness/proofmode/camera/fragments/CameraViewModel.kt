@@ -47,6 +47,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import androidx.preference.PreferenceManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -54,6 +55,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.witness.proofmode.ProofMode
 import org.witness.proofmode.camera.CameraActivity
 import org.witness.proofmode.camera.adapter.Media
 import org.witness.proofmode.camera.fragments.CameraConstants.NEW_MEDIA_EVENT
@@ -516,7 +518,9 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
 
 
     private fun sendLocalCameraEvent(newMediaFile: Uri, cameraEventType: CameraEventType) {
-       // val mw = getInstance(activity)
+
+        val mw = getInstance(activity)
+        var prefs = PreferenceManager.getDefaultSharedPreferences(activity)
 
         try {
 
@@ -530,13 +534,9 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
         }
 
         if (cameraEventType == CameraEventType.NEW_VIDEO) {
-           // val intent = Intent(NEW_MEDIA_EVENT).apply { data = newMediaFile }
-          //  LocalBroadcastManager.getInstance(app).sendBroadcast(intent)
 
-           // mw?.processUri(newMediaFile, true, null, "video/mp4")
-
-
-
+            if (!prefs.getBoolean(ProofMode.PREFS_DOPROOF,false))
+                 mw?.processUri(newMediaFile, true, null, "video/mp4")
 
 
         } else {
@@ -554,7 +554,8 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
                 }
             }
 
-            //mw?.processUri(newMediaFile, true, null, "image/jpeg")
+            if (!prefs.getBoolean(ProofMode.PREFS_DOPROOF,false))
+                mw?.processUri(newMediaFile, true, null, "image/jpeg")
 
         }
 

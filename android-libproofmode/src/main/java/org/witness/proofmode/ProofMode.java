@@ -142,6 +142,8 @@ public class ProofMode {
 
         if (mLocationTracker != null)
             mLocationTracker.stopUpdateLocation();
+
+        mInit = false;
     }
 
     public static BouncyCastleProvider getProvider() {

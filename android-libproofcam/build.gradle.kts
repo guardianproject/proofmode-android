@@ -34,6 +34,7 @@ dependencies {
 
     implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
     implementation("androidx.compose.foundation:foundation-android:1.9.4")
+    implementation("androidx.preference:preference-ktx:1.2.1")
     val cameraxVersion = "1.5.1"
     val nav_version = "2.9.5"
     val accompanist =  "0.37.3"
