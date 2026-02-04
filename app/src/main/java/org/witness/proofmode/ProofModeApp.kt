@@ -8,12 +8,6 @@ import android.os.Handler
 import android.os.Looper
 import android.preference.PreferenceManager
 import android.widget.Toast
-import com.google.android.gms.tasks.Task
-import com.google.android.play.core.integrity.IntegrityManagerFactory
-import com.google.android.play.core.integrity.StandardIntegrityManager
-import com.google.android.play.core.integrity.StandardIntegrityManager.StandardIntegrityToken
-import com.google.android.play.core.integrity.StandardIntegrityManager.StandardIntegrityTokenProvider
-import com.google.android.play.core.integrity.StandardIntegrityManager.StandardIntegrityTokenRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -58,7 +52,6 @@ class ProofModeApp : Application() {
 
         StorageProviderManager.getInstance().initializeStorageProviders(this)
 
-        initPlayIntegrity()
     }
 
     fun initPgpKey () {
@@ -280,54 +273,7 @@ class ProofModeApp : Application() {
 
     }
 
-    var integrityTokenProvider : StandardIntegrityManager.StandardIntegrityTokenProvider? = null;
 
-    private fun initPlayIntegrity () {
-
-        // Create an instance of a manager.
-        var standardIntegrityManager =
-        IntegrityManagerFactory.createStandard(applicationContext);
-
-
-        //official proofmode-android cloud project number //TODO is this sensitive?
-        var cloudProjectNumber = 870739507591;
-
-// Prepare integrity token. Can be called once in a while to keep internal
-// state fresh.
-        standardIntegrityManager.prepareIntegrityToken(
-            StandardIntegrityManager.PrepareIntegrityTokenRequest.builder()
-                .setCloudProjectNumber(cloudProjectNumber)
-                .build())
-            .addOnSuccessListener { tokenProvider ->
-                run {
-                    integrityTokenProvider = tokenProvider;
-
-                    checkPlayIntegrity("foobar")
-                }
-            }
-            .addOnFailureListener {  }
-
-    }
-
-    private fun checkPlayIntegrity (requestHash: String) {
-
-        integrityTokenProvider?.let {
-// Request integrity token by providing a user action request hash. Can be called
-// several times for different user actions.
-
-            val integrityTokenResponse: Task<StandardIntegrityToken?> =
-                it.request(
-                    StandardIntegrityTokenRequest.builder()
-                        .setRequestHash(requestHash)
-                        .build()
-                )
-            integrityTokenResponse
-                .addOnSuccessListener({
-                    response -> Timber.d(response?.token()) })
-                .addOnFailureListener({
-                    exception -> Timber.d(exception) })
-        }
-    }
 
     companion object {
         const val TAG = "ProofMode"

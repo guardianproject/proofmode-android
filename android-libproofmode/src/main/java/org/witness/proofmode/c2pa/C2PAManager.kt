@@ -70,6 +70,8 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
     private lateinit var defaultSigner: Signer
 
+
+
     suspend fun signMediaFile(signingMode: SigningMode, inFile: File, contentType: String, outFile: File, doEmbed: Boolean = true): Result<Stream> = withContext(Dispatchers.IO) {
         try {
 
@@ -106,12 +108,21 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             var isVerified = verifySignedImage(outFile.absolutePath)
             Timber.d("isVerified=$isVerified")
 
-            Result.success(outStream)
+            Result.Success(outStream)
         } catch (e: Exception) {
             Log.e(TAG, "Error signing image", e)
             e.printStackTrace()
-            Result.failure(e)
+            Result.Failure("Error signing image",e)
         }
+    }
+
+    fun setupProofSign () {
+
+        val client = ProofSignClient(context,
+            BuildConfig.SIGNING_SERVER_ENDPOINT,
+            BuildConfig.CLOUD_INTEGRITY_PROJECT_NUMBER,
+            BuildConfig.SIGNING_SERVER_TOKEN
+        );
     }
 
     private suspend fun createSigner(mode: SigningMode, tsaUrl: String): Signer = withContext(Dispatchers.IO) {
@@ -744,10 +755,10 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             Log.e(TAG, "File saved but cannot be read")
         }
 
-        Result.success(file.absolutePath)
+        Result.Success(file.absolutePath)
     } catch (e: Exception) {
         Log.e(TAG, "Error saving image", e)
-        Result.failure(e)
+        Result.Failure("Error signing image",e)
     }
 
     /**

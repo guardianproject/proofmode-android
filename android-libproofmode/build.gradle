@@ -92,6 +92,10 @@ dependencies {
 
     api ("org.contentauth:c2pa:0.0.8")
 
+    //replace safetynet
+    implementation 'com.google.android.play:integrity:1.6.0'
+
+
 
 }
 
