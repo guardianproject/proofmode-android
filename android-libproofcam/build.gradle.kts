@@ -1,8 +1,8 @@
 plugins {
-    id("com.android.library")
-    id ("com.google.devtools.ksp") version("2.2.20-2.0.3")
-    id("androidx.navigation.safeargs")
-    id("org.jetbrains.kotlin.plugin.compose") version "2.2.20"
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.navigation.safeargs)
+    alias(libs.plugins.kotlin.compose)
 }
 
 android {
@@ -32,67 +32,47 @@ android {
 
 dependencies {
 
-    implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
-    implementation("androidx.compose.foundation:foundation-android:1.9.4")
-    implementation("androidx.preference:preference-ktx:1.2.1")
-    val cameraxVersion = "1.5.1"
-    val nav_version = "2.9.5"
-    val accompanist =  "0.37.3"
-    val composeBom = platform("androidx.compose:compose-bom:2025.02.00")
-    implementation(composeBom)
-    implementation("androidx.compose.material3:material3")
-    // Optional - Add full set of material icons
-    //implementation("androidx.compose.material:material-icons-extended")
+    implementation(libs.androidx.localbroadcastmanager)
+    implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.preference.ktx)
+
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons.core)
     // Optional - Add window size utils
-    implementation("androidx.compose.material3.adaptive:adaptive")
+    implementation(libs.androidx.compose.material3.adaptive)
 
     // Optional - Integration with activities
-    implementation("androidx.activity:activity-compose:1.11.0")
+    implementation(libs.androidx.activity.compose)
     // Optional - Integration with ViewModels
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.4")
-    implementation("androidx.navigation:navigation-compose:$nav_version")
-    implementation ("androidx.constraintlayout:constraintlayout-compose:1.1.1")
-    implementation(kotlin("stdlib"))
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.constraintlayout.compose)
+    implementation(libs.kotlin.stdlib)
 
     implementation(project(":android-libproofmode"))
 
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    implementation(libs.kotlinx.coroutines.android)
 
-    implementation("com.google.android.material:material:1.13.0")
+    implementation(libs.google.material)
 
-   // implementation("androidx.appcompat:appcompat:1.7.1")
-    implementation("androidx.core:core-ktx:1.17.0")
-    implementation("androidx.constraintlayout:constraintlayout:2.2.1")
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.constraintlayout)
 
+    implementation(libs.bundles.camerax)
 
-    implementation("androidx.camera:camera-core:$cameraxVersion")
-    implementation("androidx.camera:camera-camera2:$cameraxVersion")
-    implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
-    implementation("androidx.camera:camera-extensions:$cameraxVersion")
-    implementation("androidx.camera:camera-view:$cameraxVersion")
-    implementation("androidx.camera:camera-compose:$cameraxVersion")
+    implementation(libs.accompanist.permissions)
 
-    implementation("com.google.accompanist:accompanist-permissions:$accompanist")
+    implementation(libs.androidx.fragment)
+    implementation(libs.androidx.fragment.ktx)
+    implementation(libs.bundles.navigation)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.viewpager2)
+    implementation(libs.kotlinx.coroutines.guava)
 
-    implementation("androidx.fragment:fragment:1.8.9")
-    implementation("androidx.fragment:fragment-ktx:1.8.9")
-    implementation("androidx.navigation:navigation-fragment-ktx:2.9.5")
-    implementation("androidx.navigation:navigation-ui-ktx:2.9.5")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.9.4")
-    implementation("androidx.viewpager2:viewpager2:1.1.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.10.2")
-
-    implementation("io.coil-kt:coil:2.2.2"){
-    }
-    implementation("io.coil-kt:coil-video:2.2.2") {
-    }
-    implementation("io.coil-kt:coil-compose:2.2.2"){
-    }
-
-    // Kotlin + coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    implementation(libs.bundles.coil)
 
     //logging
-    implementation ("com.jakewharton.timber:timber:5.0.1")
+    implementation(libs.timber)
 
 }

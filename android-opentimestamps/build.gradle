@@ -1,8 +1,8 @@
 
 plugins {
     id 'maven-publish'
-    id 'com.android.library'
-    id 'com.google.devtools.ksp' version '2.2.20-2.0.3'
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.ksp)
 
 }
 
@@ -58,26 +58,26 @@ android {
 dependencies {
 
    // implementation 'androidx.appcompat:appcompat:1.7.1'
-    implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.1.0'
+    implementation libs.androidx.localbroadcastmanager
 
-    implementation 'com.jakewharton.timber:timber:5.0.1'
-    implementation 'androidx.multidex:multidex:2.0.1'
+    implementation libs.timber
+    implementation libs.androidx.multidex
 
 
-    implementation 'androidx.core:core-ktx:1.17.0'
+    implementation libs.androidx.core.ktx
 
-    implementation 'com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava'
+    implementation libs.listenablefuture
 
-    implementation 'org.bitcoinj:bitcoinj-core:0.14.7'
+    implementation libs.bitcoinj.core
     implementation project(path: ':android-libproofmode')
 
     // Required -- JUnit 4 framework
-    androidTestImplementation 'junit:junit:4.13.2'
+    androidTestImplementation libs.junit
 
     // Testing-only dependencies
-    androidTestImplementation 'androidx.test:core:' + rootProject.coreVersion;
-    androidTestImplementation 'androidx.test.ext:junit:' + rootProject.extJUnitVersion;
-    androidTestImplementation 'androidx.test:runner:' + rootProject.runnerVersion;
+    androidTestImplementation libs.androidx.test.core
+    androidTestImplementation libs.androidx.test.ext.junit
+    androidTestImplementation libs.androidx.test.runner
 
 
 }
@@ -94,6 +94,5 @@ project.afterEvaluate {
         }
     }
 }
-
 
 

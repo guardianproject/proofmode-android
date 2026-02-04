@@ -1,8 +1,8 @@
 plugins {
-    id 'com.android.application'
-    id 'com.google.devtools.ksp' version '2.2.20-2.0.3'
-    id 'org.jetbrains.kotlin.plugin.serialization'
-    id 'org.jetbrains.kotlin.plugin.compose' version '2.2.20'
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.kotlin.compose)
 }
 
 
@@ -88,107 +88,91 @@ android {
 }
 
 //Increments versionCode by ABI type
-/**
-def abiCodeMap = ['armeabi-v7a': '1', 'arm64-v8a': '2', 'x86': '4', 'x86_64': '5']
-android.applicationVariants.configureEach { variant ->
-    variant.outputs.each { output ->
-        def baseVersionCode = abiCodeMap.get(output.getFilter("ABI"))
-        if(baseVersionCode != null) {
-            output.versionCodeOverride = Integer.valueOf(variant.versionCode + "00" + baseVersionCode)
+def abiCodeMap = ['armeabi-v7a': 1, 'arm64-v8a': 2, 'x86': 4, 'x86_64': 5]
+androidComponents {
+    onVariants(selector().all()) { variant ->
+        variant.outputs.each { output ->
+            def abi = output.filters.find { it.filterType.toString() == 'ABI' }?.identifier
+            def abiCode = abiCodeMap.get(abi)
+            if (abiCode != null) {
+                output.versionCode.set(output.versionCode.get() * 100 + abiCode)
+            }
         }
     }
-}**/
+}
 
 base {
     archivesName = "Proofmode-${android.defaultConfig.versionName}"
 }
 
 dependencies {
-    implementation 'androidx.navigation:navigation-fragment-ktx:2.9.7'
-    implementation 'androidx.navigation:navigation-ui-ktx:2.9.7'
+    implementation libs.bundles.navigation
 
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation libs.kotlinx.coroutines.android
+    implementation libs.okhttp
 
-    testImplementation 'junit:junit:4.13.2'
+    testImplementation libs.junit
 
     implementation project(':android-libproofmode')
     implementation project(':android-opentimestamps')
 
-    implementation 'androidx.core:core-ktx:1.17.0'
-    implementation "androidx.preference:preference-ktx:1.2.1"
+    implementation libs.androidx.core.ktx
+    implementation libs.androidx.preference.ktx
 
     // Activity view
-    implementation 'androidx.compose.ui:ui:1.10.2'
-    implementation 'androidx.compose.runtime:runtime:1.10.2'
-    implementation 'androidx.compose.material3:material3:1.4.0'
-    //implementation "androidx.compose.material:material-icons-extended:1.7.7"
-    implementation 'androidx.compose.ui:ui-tooling:1.10.2'
-    implementation "androidx.constraintlayout:constraintlayout-compose:1.1.1"
-    implementation "androidx.activity:activity-compose:1.12.3"
-    implementation "io.coil-kt:coil-compose:2.7.0"
-    implementation("io.coil-kt:coil-video:2.7.0") {
-    }
-    implementation("io.coil-kt:coil-compose:2.7.0"){
-    }
-    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0'
+    implementation libs.androidx.compose.ui
+    implementation libs.androidx.compose.runtime
+    implementation libs.androidx.compose.material3
+    implementation libs.androidx.compose.ui.tooling
+    implementation libs.androidx.constraintlayout.compose
+    implementation libs.androidx.activity.compose
+    implementation libs.coil.compose
+    implementation libs.coil.video
+    implementation libs.kotlinx.serialization.json
 
     // Room database support (for activity view)
-    def room_version = "2.8.3"
-
-    implementation "androidx.room:room-runtime:$room_version"
-    implementation "androidx.room:room-ktx:$room_version"
+    implementation libs.bundles.room
     // Using KSP instead of KAPT for better performance
-    ksp "androidx.room:room-compiler:$room_version"
+    ksp libs.androidx.room.compiler
 
     implementation project(":android-libproofcam")
-    implementation 'com.google.android.material:material:1.13.0'
-    implementation 'androidx.compose.material:material-icons-core:1.7.8'
+    implementation libs.google.material
+    implementation libs.androidx.compose.material.icons.core
 
-    implementation 'androidx.constraintlayout:constraintlayout:2.2.1'
-    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
-    implementation 'androidx.legacy:legacy-support-v13:1.0.0'
+    implementation libs.androidx.constraintlayout
+    implementation libs.androidx.legacy.support.v4
+    implementation libs.androidx.legacy.support.v13
 
 
     //To be removed
-    implementation 'com.github.AppIntro:AppIntro:6.3.1'
+    implementation libs.appintro
 
-    implementation 'com.jakewharton.timber:timber:5.0.1'
+    implementation libs.timber
 
-    implementation 'com.caverock:androidsvg-aar:1.4'
+    implementation libs.androidsvg
 
-    implementation 'io.github.parksanggwon:tedimagepicker:1.7.3'
+    implementation libs.tedimagepicker
 
 //    implementation 'com.google.android.gms:play-services-safetynet:18.0.1'
-    implementation 'com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava'
+    implementation libs.listenablefuture
 
 
     // Required -- JUnit 4 framework
-    androidTestImplementation 'junit:junit:4.13.2'
+    androidTestImplementation libs.junit
 
     // Testing-only dependencies
-    androidTestImplementation 'androidx.test:core:' + rootProject.coreVersion;
-    androidTestImplementation 'androidx.test.ext:junit:' + rootProject.extJUnitVersion;
-    androidTestImplementation 'androidx.test:runner:' + rootProject.runnerVersion;
-    androidTestImplementation 'androidx.test.espresso:espresso-core:' + rootProject.espressoVersion;
+    androidTestImplementation libs.androidx.test.core
+    androidTestImplementation libs.androidx.test.ext.junit
+    androidTestImplementation libs.androidx.test.runner
+    androidTestImplementation libs.espresso.core
 
     //crash reporting
-    implementation "ch.acra:acra-mail:5.13.1"
-    implementation "ch.acra:acra-dialog:5.13.1"
+    implementation libs.bundles.acra
 
     //background service worker
-    def work_version = "2.11.1"
+    implementation libs.bundles.work
 
-    // (Java only)
-    implementation "androidx.work:work-runtime:$work_version"
-
-    // Kotlin + coroutines
-    implementation "androidx.work:work-runtime-ktx:$work_version"
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
-
-    implementation 'androidx.core:core-ktx:1.17.0'
-
-    implementation("com.google.zxing:core:3.5.4")
+    implementation libs.zxing.core
 
 
 

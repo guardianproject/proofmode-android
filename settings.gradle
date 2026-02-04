@@ -1,1 +1,9 @@
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
 include ':app', ':android-libproofmode',  ':android-libproofcam', ':android-opentimestamps'
