@@ -8,15 +8,15 @@ buildscript {
     dependencies {
         classpath 'com.android.tools.build:gradle:9.0.0'
         classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.2.20'
-        classpath "org.jetbrains.kotlin:kotlin-serialization:2.2.20"
-        classpath "androidx.navigation:navigation-safe-args-gradle-plugin:2.9.6"
+        classpath "org.jetbrains.kotlin:kotlin-serialization:2.3.0"
+        classpath "androidx.navigation:navigation-safe-args-gradle-plugin:2.9.7"
         classpath "com.google.android.libraries.mapsplatform.secrets-gradle-plugin:secrets-gradle-plugin:2.0.1"
     }
 }
 
 ext {
     supportLibVersion = '28.0.0'
-    buildToolsVersion = "32.0.0"
+    buildToolsVersion = "35.0.0"
     androidxAnnotationVersion = "1.5.0"
     guavaVersion = "31.1-android"
     coreVersion = "1.5.0"
@@ -43,19 +43,18 @@ allprojects {
 
         maven { url "https://jitpack.io" }
 
-
-        /**
-        maven { url 'https://gitlab.com/api/v4/projects/51891540/packages/maven'  }
-        maven { url "https://artifacts.consensys.net/public/maven/maven/" }
-            **/
-}
-    project.ext {
-        // these are common variables used in */build.gradle
-        buildToolsVersion="35.0.0"
-        compileSdkVersion=35
-        minSdkVersion=28
-        targetSdkVersion=35
     }
+
+
+}
+
+project.ext {
+    // these are common variables used in */build.gradle
+    buildToolsVersion=ext.buildToolsVersion
+    supportLibVersion=ext.supportLibVersion
+    compileSdkVersion=35
+    minSdkVersion=28
+    targetSdkVersion=35
 }
 
 task clean(type: Delete) {

@@ -107,6 +107,9 @@ dependencies {
     implementation 'androidx.navigation:navigation-fragment-ktx:2.9.7'
     implementation 'androidx.navigation:navigation-ui-ktx:2.9.7'
 
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
     testImplementation 'junit:junit:4.13.2'
 
     implementation project(':android-libproofmode')
@@ -128,7 +131,7 @@ dependencies {
     }
     implementation("io.coil-kt:coil-compose:2.7.0"){
     }
-    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0'
 
     // Room database support (for activity view)
     def room_version = "2.8.3"
@@ -169,16 +172,12 @@ dependencies {
     androidTestImplementation 'androidx.test:runner:' + rootProject.runnerVersion;
     androidTestImplementation 'androidx.test.espresso:espresso-core:' + rootProject.espressoVersion;
 
-    //for upload to proofcheck
-    //implementation 'com.squareup.okio:okio:2.10.0'
-    //implementation 'com.squareup.okhttp3:okhttp:4.11.0'
-
     //crash reporting
     implementation "ch.acra:acra-mail:5.13.1"
     implementation "ch.acra:acra-dialog:5.13.1"
 
     //background service worker
-    def work_version = "2.11.0"
+    def work_version = "2.11.1"
 
     // (Java only)
     implementation "androidx.work:work-runtime:$work_version"
@@ -187,8 +186,9 @@ dependencies {
     implementation "androidx.work:work-runtime-ktx:$work_version"
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
 
+    implementation 'androidx.core:core-ktx:1.17.0'
 
-    implementation("com.google.zxing:core:3.5.3")
+    implementation("com.google.zxing:core:3.5.4")
 
 
 
