@@ -237,7 +237,7 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
                 fileMediaOut = File(mContext!!.getCacheDir(), fileMedia.getName() + ".c2pa")
             }
 
-            mC2paManager?.signMediaFile(SigningMode.REMOTE,fileMedia, mimeType, fileMediaOut, doEmbed);
+            mC2paManager?.signMediaFile(SigningMode.HARDWARE,fileMedia, mimeType, fileMediaOut, doEmbed);
 
             val mediaHash = HashUtils.getSHA256FromFileContent(
                 mContext!!.getContentResolver().openInputStream(uriMedia)

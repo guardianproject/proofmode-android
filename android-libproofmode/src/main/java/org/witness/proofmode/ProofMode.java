@@ -3,6 +3,7 @@ package org.witness.proofmode;
 import android.content.Context;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.location.Location;
 import android.net.Uri;
 import android.os.Build;
 import android.preference.PreferenceManager;
@@ -121,15 +122,23 @@ public class ProofMode {
                 VideosContentJob.scheduleJob(context);
             }
 
-            startLocationListener(context);
-
             mInit = true;
         }
     }
 
-    private static void startLocationListener(Context context) {
+    public static void startLocationListener(Context context) {
         mLocationTracker = new GPSTracker(context);
         mLocationTracker.updateLocation();
+    }
+
+    public static Location getLatestLocation (Context context) {
+
+        if (mLocationTracker == null)
+            return null;
+        else if (!mLocationTracker.canGetLocation())
+            return null;
+        else
+            return mLocationTracker.getLocation();
     }
 
     public static void stopBackgroundService (Context context)

@@ -61,12 +61,7 @@ public class VideosContentJob extends JobService {
         builder.addTriggerContentUri(
                 new JobInfo.TriggerContentUri(MediaStore.Video.Media.INTERNAL_CONTENT_URI,
                         JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS));
-      //  builder.addTriggerContentUri(
-        //        new JobInfo.TriggerContentUri(Uri.parse("content://media/external_primary"),
-          //              JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS));
 
-        //for now require internet, so c2pa will work
-        builder.setRequiredNetworkType(NETWORK_TYPE_ANY);
 
         // Get all media changes within a tenth of a second.
         builder.setTriggerContentUpdateDelay(1000);

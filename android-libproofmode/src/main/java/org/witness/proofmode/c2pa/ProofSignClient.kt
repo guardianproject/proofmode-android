@@ -71,6 +71,7 @@ import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
+import org.witness.proofmode.library.BuildConfig
 
 sealed class Result<out T> {
     data class Success<T>(val data: T) : Result<T>()
@@ -117,7 +118,7 @@ class ProofSignClient(
     }
 
     var bearerToken: String?
-        get() = prefs.getString(PREF_BEARER_TOKEN, null)
+        get() = prefs.getString(PREF_BEARER_TOKEN, BuildConfig.SIGNING_SERVER_TOKEN)
         set(value) {
             if (value != null) {
                 prefs.edit().putString(PREF_BEARER_TOKEN, value).apply()

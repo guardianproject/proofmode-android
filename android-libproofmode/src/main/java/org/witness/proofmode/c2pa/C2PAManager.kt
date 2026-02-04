@@ -13,6 +13,7 @@ import android.security.keystore.KeyProperties
 import android.security.keystore.WrappedKeyEntry
 import android.util.Base64
 import android.util.Log
+import androidx.exifinterface.media.ExifInterface
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -85,7 +86,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
             val showLocation = pPrefs?.getBoolean(
                 PREF_OPTION_LOCATION,
-                false
+                true
             )
 
             // Create manifest JSON
@@ -274,20 +275,8 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
     }
 
     private suspend fun createRemoteSigner(): Signer {
-        /**
-        val remoteUrl =
-            preferencesManager.remoteUrl.first()
-                ?: throw IllegalStateException("Remote signing URL not configured")
-        val bearerToken = preferencesManager.remoteToken.first()
 
-        val configUrl =
-            if (remoteUrl.contains("/api/v1/c2pa/configuration")) {
-                remoteUrl
-            } else {
-                "$remoteUrl/api/v1/c2pa/configuration"
-            }**/
-
-        val configUrl = BuildConfig.SIGNING_SERVER_ENDPOINT
+        val configUrl = BuildConfig.SIGNING_SERVER_AND_ENDPOINT
         val bearerToken = BuildConfig.SIGNING_SERVER_TOKEN
 
         Timber.d( "Creating WebServiceSigner with URL: $configUrl")
@@ -362,7 +351,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             val config =
                 CertificateManager.CertificateConfig(
                     commonName = "Proofmode C2PA Hardware Key",
-                    organization = "Proofmode.org",
+                    organization = "Proofmode App Self-Signed",
                     organizationalUnit = "Mobile",
                     country = "US",
                     state = "New York",
@@ -601,12 +590,10 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
         val assertionMap = HashMap<String,JSONObject>()
 
-        val gpsTracker = GPSTracker(context)
-        if (showLocation && gpsTracker.canGetLocation()) {
-            gpsTracker.updateLocation()
-            val location = gpsTracker.getLocation()
+        if (showLocation) {
+            val location = ProofMode.getLatestLocation(context);
             location?.let {
-                val exifData = createExifAssertion(exifMake,exifModel,it, fileIn);
+                val exifData = createExifAssertion(exifMake,exifModel,it, fileIn, contentType);
                 assertionMap.put(exifData.getString("label"),exifData.getJSONObject("data"))
             }
 
@@ -669,7 +656,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         return false
     }
 
-    private fun createExifAssertion(make: String, model: String, location: Location?, fileIn: File): JSONObject {
+    private fun createExifAssertion(make: String, model: String, location: Location?, fileIn: File, contentType: String): JSONObject {
         val metadata =
             JSONObject().apply {
                 location?.let {
@@ -689,6 +676,18 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                     {
                         put ("exif:GPSProcessingMethod", "Provider=${location.provider}")
                     }
+
+                    /**
+                    if (contentType.equals("image/jpeg")) {
+                        //add EXIF values to file
+                        var exifIn = ExifInterface(fileIn.canonicalFile)
+                        exifIn.setAttribute(ExifInterface.TAG_GPS_LATITUDE, it.latitude.toString());
+                        exifIn.setAttribute(
+                            ExifInterface.TAG_GPS_LONGITUDE,
+                            it.longitude.toString()
+                        );
+                        exifIn.saveAttributes();
+                    }**/
 
                     val timestamp = formatIsoTimestamp(Date(it.time))
                     put("exif:GPSTimeStamp", timestamp)
