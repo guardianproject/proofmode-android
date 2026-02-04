@@ -11,7 +11,6 @@ import android.widget.Toast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import org.acra.BuildConfig
 import org.acra.config.dialog
 import org.acra.config.mailSender
 import org.acra.data.StringFormat
@@ -20,7 +19,9 @@ import org.bouncycastle.openpgp.PGPException
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
 import org.witness.proofmode.c2pa.PreferencesManager
+import org.witness.proofmode.c2pa.ProofSignClient
 import org.witness.proofmode.crypto.pgp.PgpUtils
+import org.witness.proofmode.library.BuildConfig
 import org.witness.proofmode.notaries.OpenTimestampsNotarizationProvider
 import org.witness.proofmode.notarization.NotarizationProvider
 import org.witness.proofmode.storage.StorageProviderManager
@@ -77,7 +78,30 @@ class ProofModeApp : Application() {
             ProofMode.PREF_OPTION_CREDENTIALS_DEFAULT
         );
 
-        return Build.SUPPORTED_64_BIT_ABIS.isNotEmpty() && useCredentials
+        /**
+        val client = ProofSignClient(
+            context = applicationContext,
+            BuildConfig.SIGNING_SERVER,
+            BuildConfig.CLOUD_INTEGRITY_PROJECT_NUMBER
+        )
+
+        client.verifyDevice { result ->
+
+        }
+
+        client.authenticatedRequest(
+                endpoint = "/api/v1/protected-endpoint",
+                method = "POST",
+                body = """{"data": "value"}"""
+                    ) { result ->
+            when (result) {
+
+
+                else -> {}
+            }
+            }**/
+
+        return useCredentials
 
     }
 
@@ -178,7 +202,6 @@ class ProofModeApp : Application() {
         if (prefs.getBoolean(ProofMode.PREFS_DOPROOF, false)) {
 
             ProofMode.initBackgroundService(this)
-//            ProofBackgroundWorker.scheduleWork(this)
 
             /**
             val intentService = Intent(context, ProofService::class.java)
@@ -194,7 +217,10 @@ class ProofModeApp : Application() {
 
         }
 
+        ProofMode.startLocationListener(this)
 
+
+        initContentCredentials()
     }
 
     override fun attachBaseContext(base:Context) {
