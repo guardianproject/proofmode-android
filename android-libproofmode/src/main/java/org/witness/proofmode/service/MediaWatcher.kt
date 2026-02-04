@@ -237,7 +237,14 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
                 fileMediaOut = File(mContext!!.getCacheDir(), fileMedia.getName() + ".c2pa")
             }
 
-            mC2paManager?.signMediaFile(SigningMode.HARDWARE,fileMedia, mimeType, fileMediaOut, doEmbed);
+            var signingMode = SigningMode.KEYSTORE
+            val hasStrongBox: Boolean =
+                mContext?.packageManager?.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE) == true
+
+            if (hasStrongBox)
+                signingMode = SigningMode.HARDWARE
+
+            mC2paManager?.signMediaFile(signingMode,fileMedia, mimeType, fileMediaOut, doEmbed);
 
             val mediaHash = HashUtils.getSHA256FromFileContent(
                 mContext!!.getContentResolver().openInputStream(uriMedia)
@@ -915,18 +922,20 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
         else if (mediaPath != null) {
             val fileMedia = File(mediaPath)
             if (fileMedia.exists()) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    var attr: BasicFileAttributes? = null
-                    try {
-                        attr = Files.readAttributes<BasicFileAttributes?>(
-                            fileMedia.toPath(),
-                            BasicFileAttributes::class.java
-                        )
-                        val createdAtMs = attr.creationTime().toMillis()
-                        hmProof.put(ProofModeV1Constants.FILE_CREATED, df.format(Date(createdAtMs)))
-                    } catch (e: IOException) {
-                        e.printStackTrace()
+                var attr: BasicFileAttributes? = null
+                try {
+                    attr = Files.readAttributes<BasicFileAttributes?>(
+                        fileMedia.toPath(),
+                        BasicFileAttributes::class.java
+                    )
+                    var createdAtMs = Date().time
+                    val fileCreatedAtMs = attr?.creationTime()?.toMillis()
+                    fileCreatedAtMs?.let {
+                        createdAtMs = it
                     }
+                    hmProof[ProofModeV1Constants.FILE_CREATED] = df.format(Date(createdAtMs))
+                } catch (e: IOException) {
+                    e.printStackTrace()
                 }
             }
         }
