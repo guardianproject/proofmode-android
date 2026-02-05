@@ -23,6 +23,7 @@ class OnboardingActivity : AppCompatActivity(), OnboardingStepListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityOnboardingBinding.inflate(layoutInflater)
+
         supportActionBar?.hide()
         setContentView(binding.root)
         pager = binding.pager

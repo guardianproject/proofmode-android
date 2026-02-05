@@ -33,6 +33,8 @@ class CameraActivity : ComponentActivity(), SensorEventListener {
         // If the Android version is lower than Jellybean, use this call to hide
         // the status bar.
 
+        window.decorView.setBackgroundColor(android.graphics.Color.BLACK)
+
         WindowInsetsControllerCompat(window, window.decorView)
             .hide(WindowInsetsCompat.Type.systemBars())
 

@@ -72,8 +72,7 @@
         <activity android:name=".PermissionActivity" />
         <activity
             android:name=".onboarding.OnboardingActivity"
-            android:label="@string/app_name"
-            android:theme="@style/AppTheme" />
+            android:label="@string/app_name" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

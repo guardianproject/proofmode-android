@@ -7,6 +7,7 @@ import android.widget.ImageView
 import android.widget.MediaController
 import android.widget.VideoView
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -122,6 +123,7 @@ fun MediaPreview(viewModel: CameraViewModel, modifier: Modifier = Modifier,
             DeleteMediaDialog(onDismiss = { showDeleteDialog = false }, onConfirmDelete = {
                 viewModel.deleteMedia(mediaItems[pagerState.currentPage])
                 showDeleteDialog = false
+                onNavigateBack?.invoke()
             })
         }
 

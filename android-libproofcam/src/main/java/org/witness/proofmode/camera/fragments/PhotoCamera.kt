@@ -269,7 +269,7 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                         modifier = Modifier
                             .fillMaxWidth()
                             .constrainAs(topBAr) {
-                                top.linkTo(parent.top)
+                                top.linkTo(parent.top, margin = 60.dp)
                                 start.linkTo(parent.start)
                                 end.linkTo(parent.end)
                             }){
@@ -324,7 +324,7 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
 
                     AnimatedVisibility(visible = showFlashModes,
                         modifier = Modifier.constrainAs(flashModeRow){
-                            top.linkTo(parent.top)
+                            top.linkTo(parent.top, margin = 60.dp)
                             start.linkTo(parent.start)
                             end.linkTo(parent.end)
 

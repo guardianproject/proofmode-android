@@ -224,41 +224,62 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
             var fileMedia = File(uriMedia.getPath())
 
             if (uriMedia.scheme != "file")
-                if (mimeType.startsWith("image"))
-                    fileMedia = File(getImagePath(mContext!!,uriMedia))
-                else if (mimeType.startsWith("video"))
-                    fileMedia = File(getVideoPath(mContext!!,uriMedia))
+                if (mimeType.startsWith("image")) {
+                    var mediaPath = getImagePath(mContext!!, uriMedia)
+                    if (mediaPath != null)
+                        fileMedia = File(mediaPath)
+                }
+                else if (mimeType.startsWith("video")) {
+                    var mediaPath = getVideoPath(mContext!!,uriMedia)
+                    if (mediaPath != null)
+                        fileMedia = File(mediaPath)
+                }
 
-            var fileMediaOut = fileMedia
-            var doEmbed = true
+            if (fileMedia != null) {
+                var fileMediaOut = fileMedia
+                var doEmbed = true
 
-            if (!fileMediaOut.canWrite()) {
-                doEmbed = false;
-                fileMediaOut = File(mContext!!.getCacheDir(), fileMedia.getName() + ".c2pa")
-            }
+                if (!fileMediaOut.canWrite()) {
+                    doEmbed = false;
+                    fileMediaOut = File(mContext!!.getCacheDir(), fileMedia.getName() + ".c2pa")
+                }
 
-            var signingMode = SigningMode.KEYSTORE
-            val hasStrongBox: Boolean =
-                mContext?.packageManager?.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE) == true
+                var signingMode = SigningMode.KEYSTORE
+                val hasStrongBox: Boolean =
+                    mContext?.packageManager?.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE) == true
 
-            if (hasStrongBox)
-                signingMode = SigningMode.HARDWARE
+                if (hasStrongBox)
+                    signingMode = SigningMode.HARDWARE
 
-            mC2paManager?.signMediaFile(signingMode,fileMedia, mimeType, fileMediaOut, doEmbed);
+                mC2paManager?.signMediaFile(
+                    signingMode,
+                    fileMedia,
+                    mimeType,
+                    fileMediaOut,
+                    doEmbed
+                );
 
-            val mediaHash = HashUtils.getSHA256FromFileContent(
-                mContext!!.getContentResolver().openInputStream(uriMedia)
-            )
+                try {
 
-            val resultHash = processUri(mContext!!, uriMedia, mediaHash, autogen, createdAt)
+                    val mediaHash = HashUtils.getSHA256FromFileContent(
+                        mContext!!.contentResolver.openInputStream(uriMedia)
+                    )
 
-            if (resultHash != null) {
-                //send generated event
+                    val resultHash = processUri(mContext!!, uriMedia, mediaHash, autogen, createdAt)
 
-                intent.action = (ProofMode.EVENT_PROOF_GENERATED)
-                intent.putExtra(ProofMode.EVENT_PROOF_EXTRA_URI, uriMedia.toString())
-                intent.putExtra(ProofMode.EVENT_PROOF_EXTRA_HASH, resultHash)
-                mContext!!.sendBroadcast(intent)
+                    if (resultHash != null) {
+                        //send generated event
+
+                        intent.action = (ProofMode.EVENT_PROOF_GENERATED)
+                        intent.putExtra(ProofMode.EVENT_PROOF_EXTRA_URI, uriMedia.toString())
+                        intent.putExtra(ProofMode.EVENT_PROOF_EXTRA_HASH, resultHash)
+                        mContext!!.sendBroadcast(intent)
+
+                    }
+                } catch (exception: FileNotFoundException) {
+                    Timber.d(exception, "Couldn't process uri, as the file doesn't exist")
+                }
+
 
             }
         }

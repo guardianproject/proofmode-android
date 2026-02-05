@@ -5,10 +5,12 @@
     android:layout_height="match_parent"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     tools:context=".onboarding.OnboardingActivity">
+
     <org.witness.proofmode.onboarding.NoSwipeViewPager
         android:id="@+id/pager"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        android:layout_marginTop="40dp"/>
     <org.witness.proofmode.onboarding.DottedProgressView
         android:id="@+id/indicator"
         android:layout_width="match_parent"

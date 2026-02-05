@@ -11,11 +11,9 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.OpenableColumns
-import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.widget.Toast
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.mutableStateListOf
@@ -26,14 +24,12 @@ import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.preference.PreferenceManager
 import com.google.android.material.floatingactionbutton.FloatingActionButton
-import com.google.android.material.navigation.NavigationView
 import gun0912.tedimagepicker.builder.TedImagePicker
 import org.witness.proofmode.ProofMode.EVENT_PROOF_GENERATED
 import org.witness.proofmode.ProofMode.PREF_OPTION_AI_DEFAULT
 import org.witness.proofmode.ProofMode.PREF_OPTION_BLOCK_AI
 import org.witness.proofmode.ProofMode.PREF_OPTION_CREDENTIALS
 import org.witness.proofmode.camera.CameraActivity
-import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.databinding.ActivityMainBinding
 import org.witness.proofmode.onboarding.OnboardingActivity
 import org.witness.proofmode.org.witness.proofmode.share.ShareProofActivity
@@ -57,7 +53,7 @@ import java.util.UUID
 import androidx.core.content.edit
 import androidx.core.net.toUri
 
-class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener,
+class MainActivity : AppCompatActivity(),
     ActivitiesViewDelegate {
     private lateinit var mPrefs: SharedPreferences
     private lateinit var drawer: DrawerLayout
@@ -144,7 +140,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         drawerToggle.syncState()
 
         val navigationView = mainBinding.navView
-        navigationView.setNavigationItemSelectedListener(this)
+
+        navigationView.setNavigationItemSelectedListener { menuItem ->
+            handleNavMenu(menuItem)
+        }
 
         fab = findViewById<FloatingActionButton>(R.id.fab)
         fab.setOnClickListener { view ->
@@ -206,17 +205,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private val cameraReceiver = CameraReceiver()
-
-    private fun showDocumentPicker() {
-        val intent = Intent()
-        intent.type = "*/*"
-        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
-        intent.action = Intent.ACTION_GET_CONTENT
-        startActivityForResult(
-            Intent.createChooser(intent, "Choose Key and Certificate"),
-            REQUEST_CODE_CHOOSE_CREDS
-        )
-    }
 
     private fun showMediaPicker() {
         TedImagePicker.with(this).imageAndVideo().showVideoDuration(true).dropDownAlbum()
@@ -288,6 +276,44 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         // Inflate the menu; this adds items to the action bar if it is present.
         menuInflater.inflate(R.menu.menu_main, menu)
         return true
+    }
+
+    private fun handleNavMenu (menuItem: MenuItem): Boolean {
+        when (menuItem.itemId) {
+            R.id.menu_how_it_works -> {
+                drawer.closeDrawer(GravityCompat.START)
+                val intent = Intent(this, OnboardingActivity::class.java)
+                intent.putExtra(OnboardingActivity.ARG_ONLY_TUTORIAL, true)
+                startActivityForResult(intent, REQUEST_CODE_INTRO)
+                return true
+            }
+
+            R.id.menu_settings -> {
+                drawer.closeDrawer(GravityCompat.START)
+                openSettings()
+                return true
+            }
+
+            R.id.menu_datalegend -> {
+                drawer.closeDrawer(GravityCompat.START)
+                openDataLegend()
+                return true
+            }
+
+            R.id.menu_digital_signatures -> {
+                drawer.closeDrawer(GravityCompat.START)
+                openDigitalSignatures()
+                return true
+            }
+
+            R.id.menu_verify -> {
+                drawer.closeDrawer(GravityCompat.START)
+                openVerify()
+                return true
+            }
+        }
+
+        return false
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -503,42 +529,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         startActivity(browserIntent)
     }
 
-    override fun onNavigationItemSelected(menuItem: MenuItem): Boolean {
-        when (menuItem.itemId) {
-            R.id.menu_how_it_works -> {
-                drawer.closeDrawer(GravityCompat.START)
-                val intent = Intent(this, OnboardingActivity::class.java)
-                intent.putExtra(OnboardingActivity.ARG_ONLY_TUTORIAL, true)
-                startActivityForResult(intent, REQUEST_CODE_INTRO)
-                return true
-            }
-
-            R.id.menu_settings -> {
-                drawer.closeDrawer(GravityCompat.START)
-                openSettings()
-                return true
-            }
-
-            R.id.menu_datalegend -> {
-                drawer.closeDrawer(GravityCompat.START)
-                openDataLegend()
-                return true
-            }
-
-            R.id.menu_digital_signatures -> {
-                drawer.closeDrawer(GravityCompat.START)
-                openDigitalSignatures()
-                return true
-            }
-
-            R.id.menu_verify -> {
-                drawer.closeDrawer(GravityCompat.START)
-                openVerify()
-                return true
-            }
-        }
-        return false
-    }
 
     fun startCamera(view: View?) {
         val intentCam = Intent(this, CameraActivity::class.java)
