@@ -32,7 +32,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.BasicAlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -152,8 +151,8 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
         Scaffold(modifier = modifier.fillMaxSize()){ paddingValues->
                 ConstraintLayout(modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Transparent)) {
-                    val (viewFinder,topBAr, cancelButton,countDownStateView, bottomBg,captureButton,cameraSwitcher,galleryPreview,videoText,cameraText,
+                    .background(Color.Black)) {
+                    val (viewFinder,topBAr, cancelButton,countDownStateView, bottomBg,captureButton,cameraSwitcher,galleryPreview,cameraText,
                         flashModeRow) = createRefs()
                     // Define guidelines for the grid (1/3 and 2/3 positions)
                     val vertical1 = createGuidelineFromStart(0.33f)
@@ -496,35 +495,21 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                         }
                     }
 
-                    Button(onClick = {},modifier = Modifier
-                        .constrainAs(cameraText){
-                            start.linkTo(captureButton.start)
-                            end.linkTo(captureButton.end)
-                            top.linkTo(captureButton.bottom, margin = 8.dp)
-
-                        }) {
-                        Text(stringResource(R.string.camera))
-                    }
-
-                    AnimatedVisibility(visible = countDownState == CountDownState.Idle || countDownState == CountDownState.Completed,
-                        modifier = Modifier.
-                        constrainAs(videoText) {
-                            end.linkTo(cameraText.start)
-                            top.linkTo(cameraText.top)
-                            bottom.linkTo(cameraText.bottom)
+                    AnimatedVisibility(
+                        visible = countDownState == CountDownState.Idle || countDownState == CountDownState.Completed,
+                        modifier = Modifier.constrainAs(cameraText) {
                             start.linkTo(parent.start)
-                            horizontalBias = 0.6f
-
+                            end.linkTo(parent.end)
+                            top.linkTo(captureButton.bottom, margin = 8.dp)
                         }
-
-                    ){
-                        Text(text = stringResource(R.string.video),
-                            modifier = Modifier
-                                .clickable {
+                    ) {
+                        CameraModeToggle(
+                            selectedMode = CameraModeSelection.PHOTO,
+                            onModeSelected = { mode ->
+                                if (mode == CameraModeSelection.VIDEO) {
                                     onNavigateToVideo()
-                                },
-                            style = MaterialTheme.typography.labelLarge.copy(color = Color.White),
-                            textAlign = TextAlign.Center
+                                }
+                            }
                         )
                     }
 

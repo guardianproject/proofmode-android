@@ -12,6 +12,7 @@
         <item name="windowActionBar">true</item>
         <item name="windowNoTitle">true</item>
         <item name="android:windowFullscreen">true</item>
+        <item name="android:navigationBarColor">@color/colorPrimaryDark</item>
         <item name="android:background">@color/colorPrimaryDark</item>
 
     </style>

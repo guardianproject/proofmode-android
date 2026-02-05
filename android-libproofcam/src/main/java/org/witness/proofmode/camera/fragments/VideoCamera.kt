@@ -31,7 +31,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Button
 import androidx.compose.material3.ElevatedAssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -445,22 +444,23 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                                 }
                             }
 
-                            Button(onClick = {},modifier = Modifier
-                                .layoutId("videoText")
-                                .rotate(if (isPortrait) 0f else -90f)
-                            ) {
-                                Text(stringResource(R.string.video))
-                            }
-
-                            Text(text = stringResource(R.string.camera),
+                            AnimatedVisibility(
+                                visible = recordingState != RecordingState.Recording,
+                                enter = fadeIn(),
+                                exit = fadeOut(),
                                 modifier = Modifier
-                                    .layoutId("cameraText")
+                                    .layoutId("modeToggle")
                                     .rotate(if (isPortrait) 0f else -90f)
-                                    .clickable {
-                                        onNavigateToPhotoCamera()
-                                    },
-                                style = MaterialTheme.typography.labelLarge.copy(color = Color.White)
-                            )
+                            ) {
+                                CameraModeToggle(
+                                    selectedMode = CameraModeSelection.VIDEO,
+                                    onModeSelected = { mode ->
+                                        if (mode == CameraModeSelection.PHOTO) {
+                                            onNavigateToPhotoCamera()
+                                        }
+                                    }
+                                )
+                            }
 
                             // 1/3 vertical grid line
                             Box(
@@ -568,8 +568,7 @@ private fun portraitConstraints(): ConstraintSet {
         val recordButton = createRefFor("recordButton")
         val cameraSwitcher = createRefFor("cameraSwitcher")
         val galleryPreview = createRefFor("galleryPreview")
-        val videoText = createRefFor("videoText")
-        val cameraText = createRefFor("cameraText")
+        val modeToggle = createRefFor("modeToggle")
         val chipTimer = createRefFor("chipTimer")
 
         // Guidelines
@@ -619,18 +618,10 @@ private fun portraitConstraints(): ConstraintSet {
             start.linkTo(parent.start)
         }
 
-        constrain(videoText) {
-            start.linkTo(recordButton.start)
-            end.linkTo(recordButton.end)
-            top.linkTo(recordButton.bottom, 8.dp)
-        }
-
-        constrain(cameraText) {
-            end.linkTo(videoText.start)
-            top.linkTo(videoText.top)
-            bottom.linkTo(videoText.bottom)
+        constrain(modeToggle) {
             start.linkTo(parent.start)
-            horizontalBias = 0.6f
+            end.linkTo(parent.end)
+            top.linkTo(recordButton.bottom, 8.dp)
         }
 
         // Grid lines (optional, since they're visibility controlled)
@@ -665,8 +656,7 @@ private fun landscapeConstraints(): ConstraintSet {
         val recordButton = createRefFor("recordButton")
         val cameraSwitcher = createRefFor("cameraSwitcher")
         val galleryPreview = createRefFor("galleryPreview")
-        val videoText = createRefFor("videoText")
-        val cameraText = createRefFor("cameraText")
+        val modeToggle = createRefFor("modeToggle")
         val chipTimer = createRefFor("chipTimer")
 
         // Guidelines
@@ -703,35 +693,23 @@ private fun landscapeConstraints(): ConstraintSet {
             end.linkTo(recordButton.end)
         }
 
-
-
         constrain(chipTimer) {
             bottom.linkTo(bottomBg.top, 8.dp)
             start.linkTo(parent.start)
             end.linkTo(parent.end)
         }
 
-
-
         constrain(cameraSwitcher) {
             top.linkTo(recordButton.bottom)
             bottom.linkTo(bottomBg.bottom)
             end.linkTo(recordButton.end)
             start.linkTo(recordButton.start)
-
         }
 
-        constrain(videoText) {
+        constrain(modeToggle) {
             start.linkTo(recordButton.end, margin = 8.dp)
             top.linkTo(recordButton.top)
             bottom.linkTo(recordButton.bottom)
-        }
-
-        constrain(cameraText) {
-            end.linkTo(videoText.start)
-            top.linkTo(videoText.bottom)
-            bottom.linkTo(bottomBg.bottom)
-            start.linkTo(videoText.end)
         }
 
         // Grid lines (optional, since they're visibility controlled)
