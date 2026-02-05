@@ -54,6 +54,8 @@ import java.io.File
 import java.io.IOException
 import java.util.Date
 import java.util.UUID
+import androidx.core.content.edit
+import androidx.core.net.toUri
 
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener,
     ActivitiesViewDelegate {
@@ -64,7 +66,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     public lateinit var fab: FloatingActionButton
 
     private val ACTION_OPEN_CAMERA = "org.witness.proofmode.OPEN_CAMERA"
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -171,24 +172,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private class CameraReceiver : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
-                /**
-                "org.witness.proofmode.NEW_MEDIA" -> {
-                    val uri = intent.data
-                    if (uri != null && context != null) {
-                        Activities.addActivity(
-                            Activity(
-                                UUID.randomUUID().toString(), ActivityType.MediaCaptured(
-                                    items = mutableStateListOf(
-                                        ProofableItem(uri.toString(), uri)
-                                    )
-                                ), Date()
-                            ), context
-                        )
-
-                        MediaWatcher.getInstance(context).queueMedia(intent.data, true, Date())
-
-                    }
-                }**/
 
                 EVENT_PROOF_GENERATED -> {
                     val uri = intent.data
@@ -277,12 +260,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private fun setProofModeOn(isOn: Boolean) {
         if (isOn) {
             if (!askForPermissions(requiredPermissions, REQUEST_CODE_REQUIRED_PERMISSIONS)) {
-                mPrefs.edit().putBoolean(ProofMode.PREFS_DOPROOF, true).apply()
+                mPrefs.edit { putBoolean(ProofMode.PREFS_DOPROOF, true) }
                 //   updateOnOffState(true)
                 (application as ProofModeApp).init(this)
             }
         } else {
-            mPrefs.edit().putBoolean(ProofMode.PREFS_DOPROOF, false).apply()
+            mPrefs.edit { putBoolean(ProofMode.PREFS_DOPROOF, false) }
             //  updateOnOffState(true)
             (application as ProofModeApp).cancel(this)
         }
@@ -312,11 +295,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         val id = item.itemId
-        /**
-        if (id == R.id.action_share_key) {
-            shareCurrentPublicKey()
-            return true
-        } else **/
 
         if (drawerToggle.onOptionsItemSelected(item))
         {
@@ -330,36 +308,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             drawer.closeDrawer(GravityCompat.START)
             openSettings()
 	}
-        /**
-        else if (id == R.id.action_import_creds) {
-            showDocumentPicker();
-        }**/
+
         return super.onOptionsItemSelected(item)
-    }
-
-    private fun pickMedia() {
-
-
-        // create an instance of the
-        // intent of the type image
-        val i = Intent()
-        i.type = "image/*"
-        i.action = Intent.ACTION_GET_CONTENT
-
-        // pass the constant to compare it
-        // with the returned requestCode
-        startActivityForResult(Intent.createChooser(i, "Open Picture"), 9999)
-        /**
-         * Matisse.from(MainActivity.this)
-         * .choose(MimeType.ofAll())
-         * .countable(true)
-         * //   .maxSelectable(9)
-         * //     .gridExpectedSize(getResources().getDimensionPixelSize(R.dimen.grid_expected_size))
-         * .restrictOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED)
-         * .thumbnailScale(0.85f)
-         * .showPreview(false) // Default is `true`
-         * .forResult(9999);
-         */
     }
 
     /**
@@ -379,41 +329,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         return askForPermissions(arrayOf(permission), requestCode)
     }
 
-    private fun publishKey() {
-        try {
-
-
-            PgpUtils.getInstance()?.publishPublicKey()
-            Toast.makeText(
-                this,
-                getString(R.string.publish_key_to) + PgpUtils.URL_LOOKUP_ENDPOINT,
-                Toast.LENGTH_LONG
-            ).show()
-
-            //String fingerprint = mPgpUtils.getPublicKeyFingerprint();
-
-            //Toast.makeText(this, R.string.open_public_key_page, Toast.LENGTH_LONG).show();
-
-            //openUrl(PgpUtils.URL_LOOKUP_ENDPOINT + fingerprint);
-        } catch (ioe: IOException) {
-            Log.e("Proofmode", "error publishing key", ioe)
-        }
-    }
-
-    private fun shareCurrentPublicKey() {
-        try {
-
-
-            PgpUtils.getInstance()?.publishPublicKey()
-            val pubKey = PgpUtils.getInstance()?.publicKeyString
-            if (pubKey != null) {
-                sharePublicKey(pubKey)
-            }
-        } catch (ioe: IOException) {
-            Log.e("Proofmode", "error publishing key", ioe)
-        }
-    }
-
     override fun sharePublicKey(pubKey: String) {
         try {
             val intent = Intent(Intent.ACTION_SEND)
@@ -429,20 +344,20 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             )
             Activities.addActivity(activity, this)
         } catch (ioe: IOException) {
-            Log.e("Proofmode", "error publishing key", ioe)
+            Timber.tag("Proofmode").e(ioe, "error publishing key")
         }
     }
 
     private fun openUrl(url: String) {
         val i = Intent(Intent.ACTION_VIEW)
-        i.data = Uri.parse(url)
+        i.data = url.toUri()
         startActivity(i)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQUEST_CODE_INTRO) {
-            mPrefs.edit().putBoolean("firsttime", false).commit()
+            mPrefs.edit(commit = true) { putBoolean("firsttime", false) }
 
             // Ask for initial permissions
             if (!askForPermissions(requiredPermissions, REQUEST_CODE_REQUIRED_PERMISSIONS)) {
@@ -467,18 +382,18 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     arrayOf(Manifest.permission.ACCESS_NETWORK_STATE)
                 )
             ) {
-                mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_NETWORK, true).commit()
+                mPrefs.edit(commit = true) { putBoolean(ProofMode.PREF_OPTION_NETWORK, true) }
             } else {
-                mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_NETWORK, false).commit()
+                mPrefs.edit(commit = true) { putBoolean(ProofMode.PREF_OPTION_NETWORK, false) }
             }
             if (PermissionActivity.hasPermissions(
                     this,
                     arrayOf(Manifest.permission.READ_PHONE_STATE)
                 )
             ) {
-                mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_PHONE, true).commit()
+                mPrefs.edit(commit = true) { putBoolean(ProofMode.PREF_OPTION_PHONE, true) }
             } else {
-                mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_PHONE, false).commit()
+                mPrefs.edit(commit = true) { putBoolean(ProofMode.PREF_OPTION_PHONE, false)}
             }
         } else if (requestCode == REQUEST_CODE_CHOOSE_MEDIA) {
             val intentShare = Intent(this, ShareProofActivity::class.java)
@@ -527,14 +442,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
                         }
 
-                        /**
-                         * TODO c2pa
-                        if (importKey != null && importCert != null)
-                        C2paUtils.importCredentials(this,
-                            contentResolver.openInputStream(importKey),
-                            contentResolver.openInputStream(importCert))
-                        **/
-
                     } else {
                         val uri = data.data
                     }
@@ -564,7 +471,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     private fun askForOptionals() {
         if (!askForPermissions(optionalPermissions, REQUEST_CODE_OPTIONAL_PERMISSIONS)) {
-            mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_NETWORK, true).commit()
+            mPrefs.edit(commit = true) { putBoolean(ProofMode.PREF_OPTION_NETWORK, true) }
             // mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_PHONE, true).commit()
         }
     }
@@ -592,7 +499,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun openVerify() {
-        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://check.proofmode.org"))
+        val browserIntent = Intent(Intent.ACTION_VIEW, "https://check.proofmode.org".toUri())
         startActivity(browserIntent)
     }
 
@@ -679,7 +586,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     override fun shareItems(media: List<ProofableItem>, fileName: String?, shareText: String?) {
         // Check if we still have the original to share.
         if (fileName != null) {
-            val uri = Uri.parse(fileName)
+            val uri = fileName.toUri()
             if (uri != null && contentResolver.getType(uri) != null) {
 
 
@@ -707,11 +614,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         Activities.clearActivity(activity.id, this)
 
         if (activity.type is ActivityType.MediaCaptured)
-            for (pi in (activity.type as ActivityType.MediaCaptured).items)
+            for (pi in activity.type.items)
                 Activities.clearActivity(pi.id, this)
 
         if (activity.type is ActivityType.MediaImported)
-            for (pi in (activity.type as ActivityType.MediaImported).items)
+            for (pi in activity.type.items)
                 Activities.clearActivity(pi.id, this)
 
         Activities.load(this)
