@@ -156,9 +156,9 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
         }
         Scaffold(modifier = modifier.fillMaxSize()){ paddingValues->
             Box(modifier = Modifier
-                .padding(paddingValues)
                 .fillMaxSize()){
                 CameraXViewfinder(surfaceRequest = newRequest, modifier = Modifier
+                    .padding(paddingValues)
                     .fillMaxSize()
                     .pointerInput(cameraViewModel, coordinateTransformer, zoom) {
                         var currentZoom = zoom
@@ -297,7 +297,7 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
 
                         ConstraintLayout(modifier = Modifier
                             .fillMaxSize()
-                            .background(Color.Transparent),
+                            .background(Color.Black),
                             constraintSet = constraints
                         ) {
                             // Common modifier for grid lines
@@ -579,7 +579,7 @@ private fun portraitConstraints(): ConstraintSet {
 
         // Constraints
         constrain(topBar) {
-            top.linkTo(parent.top)
+            top.linkTo(parent.top, margin = 60.dp)
             start.linkTo(parent.start)
             end.linkTo(parent.end)
         }
@@ -595,7 +595,7 @@ private fun portraitConstraints(): ConstraintSet {
             bottom.linkTo(bottomBg.bottom)
             start.linkTo(bottomBg.start)
             end.linkTo(bottomBg.end)
-            verticalBias = 0.3f
+            verticalBias = 0.2f
         }
 
         constrain(chipTimer) {
@@ -669,7 +669,7 @@ private fun landscapeConstraints(): ConstraintSet {
         constrain(topBar) {
             top.linkTo(parent.top)
             bottom.linkTo(parent.bottom)
-            start.linkTo(parent.start)
+            start.linkTo(parent.start, margin = 60.dp)
         }
 
         constrain(bottomBg) {
