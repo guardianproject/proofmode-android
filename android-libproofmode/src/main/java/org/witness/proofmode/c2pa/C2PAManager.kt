@@ -576,7 +576,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         return manifest.toString()
     }
 
-    private fun verifySignedImage(filePath: String): Boolean {
+    public fun verifySignedImage(filePath: String): Boolean {
         try {
 
             // Read and verify using C2PA

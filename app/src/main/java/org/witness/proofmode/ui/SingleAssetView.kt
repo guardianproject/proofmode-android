@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.RectF
 import android.location.Location
 import android.net.Uri
+import android.preference.PreferenceManager
 import android.widget.MediaController
 import android.widget.VideoView
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -77,11 +78,15 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.launch
+import org.contentauth.c2pa.C2PA
 import org.witness.proofmode.R
+import org.witness.proofmode.c2pa.C2PAManager
+import org.witness.proofmode.c2pa.PreferencesManager
 import org.witness.proofmode.service.ProofModeV1Constants
 import org.witness.proofmode.storage.DefaultStorageProvider
 import org.witness.proofmode.util.ProofModeUtil
 import timber.log.Timber
+import java.io.File
 import java.io.FileNotFoundException
 import java.lang.Float.max
 import java.lang.Float.min
@@ -330,6 +335,15 @@ fun updateMetadata (itemUri : Uri, context : Context) {
         var storageProvider = DefaultStorageProvider(context)
         var hmap: HashMap<String, String>? =
             ProofModeUtil.getProofHashMap(storageProvider, hash)
+
+        if (hmap?.contains(ProofModeV1Constants.FILE_PATH) == true) {
+            var c2paMan = C2PAManager(context, PreferencesManager(context))
+            var c2paFile = File(hmap?.get(ProofModeV1Constants.FILE_PATH))
+            var valid = c2paMan.verifySignedImage(c2paFile.canonicalPath)
+
+            addRow(context.getString(R.string.content_credentials),"$valid")
+
+        }
 
         if (hmap?.contains(ProofModeV1Constants.PROOF_GENERATED) == true)
             addRow(
