@@ -472,47 +472,6 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         return Base64.decode(pemContent, Base64.NO_WRAP)
     }
 
-    private fun signImageData(imageData: ByteArray, manifestJSON: String, signer: Signer): ByteArray {
-        Timber.d( "Starting signImageData")
-        Timber.d( "Input image size: ${imageData.size} bytes")
-        Timber.d( "Manifest JSON: ${manifestJSON.take(200)}...") // First 200 chars
-
-        // Create Builder with manifest
-        Timber.d( "Creating Builder from JSON")
-        val builder = Builder.fromJson(manifestJSON)
-
-        // Use ByteArrayStream which is designed for this purpose
-        Timber.d( "Creating streams")
-        val sourceStream = DataStream(imageData)
-        val destStream = ByteArrayStream()
-
-        try {
-            // Sign the image
-            Timber.d( "Calling builder.sign()")
-            builder.sign(
-                format = "image/jpeg",
-                source = sourceStream,
-                dest = destStream,
-                signer = signer,
-            )
-
-            Timber.d( "builder.sign() completed successfully")
-            val result = destStream.getData()
-            Timber.d( "Output size: ${result.size} bytes")
-            return result
-        } catch (e: Exception) {
-            Log.e(TAG, "Error in signImageData", e)
-            Log.e(TAG, "Error message: ${e.message}")
-            Log.e(TAG, "Error cause: ${e.cause}")
-            throw e
-        } finally {
-            // Make sure to close streams
-            Timber.d( "Closing streams")
-            sourceStream.close()
-            destStream.close()
-        }
-    }
-
     private fun signStream(fileName: String, sourceStream: Stream, contentType: String, destStream: Stream, manifestJSON: String, signer: Signer, embed: Boolean = true) {
         Timber.d( "Starting signImageData")
         Timber.d( "Manifest JSON: ${manifestJSON.take(200)}...") // First 200 chars
