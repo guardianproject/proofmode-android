@@ -156,7 +156,8 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
         }
         Scaffold(modifier = modifier.fillMaxSize()){ paddingValues->
             Box(modifier = Modifier
-                .fillMaxSize()){
+                .fillMaxSize()
+                .background(Color.Black)){
                 CameraXViewfinder(surfaceRequest = newRequest, modifier = Modifier
                     .padding(paddingValues)
                     .fillMaxSize()
@@ -297,7 +298,7 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
 
                         ConstraintLayout(modifier = Modifier
                             .fillMaxSize()
-                            .background(Color.Black),
+                            .background(Color.Transparent),
                             constraintSet = constraints
                         ) {
                             // Common modifier for grid lines
