@@ -106,7 +106,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             Timber.d( "Signed file size: ${outFile.length()} bytes")
 
             // Verify the signed image
-            var isVerified = verifySignedImage(outFile.absolutePath)
+            var isVerified = validateSignedMedia(outFile.absolutePath)
             Timber.d("isVerified=$isVerified")
 
             Result.Success(outStream)
@@ -576,7 +576,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         return manifest.toString()
     }
 
-    public fun verifySignedImage(filePath: String): Boolean {
+    public fun validateSignedMedia(filePath: String): Boolean {
         try {
 
             // Read and verify using C2PA

@@ -339,7 +339,7 @@ fun updateMetadata (itemUri : Uri, context : Context) {
         if (hmap?.contains(ProofModeV1Constants.FILE_PATH) == true) {
             var c2paMan = C2PAManager(context, PreferencesManager(context))
             var c2paFile = File(hmap?.get(ProofModeV1Constants.FILE_PATH))
-            var valid = c2paMan.verifySignedImage(c2paFile.canonicalPath)
+            var valid = c2paMan.validateSignedMedia(c2paFile.canonicalPath)
 
             addRow(context.getString(R.string.content_credentials),"$valid")
 

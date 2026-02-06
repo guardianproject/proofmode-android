@@ -37,6 +37,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -44,6 +45,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -80,6 +83,24 @@ import java.util.Date
 const val ASSETS_GUTTER_SIZE = 10F
 const val ASSETS_CORNER_RADIUS = 20F
 val ASSETS_BACKGROUND = Color.Black.copy(0.1F)
+
+/**
+ * Cache for C2PA verification results to avoid repeated expensive checks.
+ * Results are cached for the lifespan of the process.
+ */
+object C2PAVerificationCache {
+    private val cache = mutableMapOf<String, Boolean>()
+
+    fun get(path: String): Boolean? = cache[path]
+
+    fun put(path: String, hasC2PA: Boolean) {
+        cache[path] = hasC2PA
+    }
+
+    fun clear() {
+        cache.clear()
+    }
+}
 
 interface ActivitiesViewDelegate {
     abstract fun openCamera()
@@ -120,11 +141,31 @@ fun ProofableItemView(
 
     }
 
-    var hasC2PA = false
+    var hasC2PA by remember { mutableStateOf(false) }
     val uri = item.uri
-    if (uri.scheme == "file") {
-        var c2paMan = C2PAManager(context, PreferencesManager(context))
-        hasC2PA = c2paMan.verifySignedImage(uri.toFile().canonicalPath)
+
+    // Perform C2PA check asynchronously with caching
+    LaunchedEffect(uri) {
+        if (uri.scheme == "file") {
+            val filePath = uri.toFile().canonicalPath
+            // Check cache first
+            val cachedResult = C2PAVerificationCache.get(filePath)
+            if (cachedResult != null) {
+                hasC2PA = cachedResult
+            } else {
+                // Perform check on IO dispatcher
+                val result = withContext(Dispatchers.IO) {
+                    try {
+                        val c2paMan = C2PAManager(context, PreferencesManager(context))
+                        c2paMan.validateSignedMedia(filePath)
+                    } catch (e: Exception) {
+                        false
+                    }
+                }
+                C2PAVerificationCache.put(filePath, result)
+                hasC2PA = result
+            }
+        }
     }
 
 
