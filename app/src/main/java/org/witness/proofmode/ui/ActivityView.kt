@@ -45,13 +45,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
@@ -69,13 +66,15 @@ import coil.compose.AsyncImage
 import coil.decode.VideoFrameDecoder
 import coil.request.ImageRequest
 import coil.size.Size
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.witness.proofmode.MediaType
 import org.witness.proofmode.R
 import org.witness.proofmode.c2pa.C2PAManager
 import org.witness.proofmode.c2pa.PreferencesManager
 import org.witness.proofmode.getMediaTypeFromFileUri
-import org.witness.proofmode.service.ProofModeV1Constants
-import java.io.File
+import org.witness.proofmode.service.MediaWatcher
+import org.witness.proofmode.service.MediaWatcher.Companion.getImagePath
 import java.text.SimpleDateFormat
 import java.util.Date
 
@@ -146,8 +145,17 @@ fun ProofableItemView(
 
     // Perform C2PA check asynchronously with caching
     LaunchedEffect(uri) {
-        if (uri.scheme == "file") {
-            val filePath = uri.toFile().canonicalPath
+        var filePath : String? = ""
+
+        if (uri.scheme == "file")
+            filePath = uri.toFile().canonicalPath
+        else {
+            filePath = MediaWatcher.getImagePath(context, uri)
+            if (filePath?.isEmpty()==true)
+                filePath = MediaWatcher.getVideoPath(context, uri)
+        }
+
+        filePath?.let {
             // Check cache first
             val cachedResult = C2PAVerificationCache.get(filePath)
             if (cachedResult != null) {
@@ -166,6 +174,7 @@ fun ProofableItemView(
                 hasC2PA = result
             }
         }
+
     }
 
 
