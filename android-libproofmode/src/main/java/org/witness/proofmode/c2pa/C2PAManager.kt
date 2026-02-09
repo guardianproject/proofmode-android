@@ -15,6 +15,7 @@ import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.contentauth.c2pa.Action
@@ -38,13 +39,19 @@ import org.json.JSONObject
 import org.witness.proofmode.ProofMode
 import org.witness.proofmode.ProofMode.PREF_OPTION_LOCATION
 import org.witness.proofmode.c2pa.selfsign.CertificateSigningService
+import org.witness.proofmode.crypto.HashUtils
 import org.witness.proofmode.library.BuildConfig
 import timber.log.Timber
+import java.io.ByteArrayInputStream
 import java.io.File
+import java.io.FileInputStream
 import java.math.BigInteger
 import java.security.KeyFactory
 import java.security.KeyPairGenerator
 import java.security.KeyStore
+import java.security.cert.CertificateException
+import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
 import java.security.interfaces.ECPrivateKey
 import java.security.spec.ECGenParameterSpec
 import java.security.spec.PKCS8EncodedKeySpec
@@ -97,10 +104,11 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                 title = inFile.name,
                 claimGeneratorInfo = listOf(ClaimGeneratorInfo.fromContext(context)),
                 assertions = listOf(
-                    createExifAssertion(context, location, inFile, contentType)
+                    createExifAssertion(context, location, inFile, contentType),
+                    createProofmodeAssertion(context, inFile)
                 )
             );
-            
+
             var manifestJSON = manifest.toJson()
             Timber.d("Media manifest file:\n\n$manifestJSON")
 
@@ -686,6 +694,99 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
 
             })
+
+    }
+
+    private fun createProofmodeAssertion(context: Context, inFile: File): AssertionDefinition {
+
+        var sigs = context.packageManager.getPackageInfo(context.packageName, PackageManager.GET_SIGNATURES).signatures;
+
+        val keyAlias = "attested_key"
+        val keyGen = KeyPairGenerator.getInstance(
+            KeyProperties.KEY_ALGORITHM_EC, "AndroidKeyStore"
+        )
+
+        //generate a local hardware-back signature with the nonce of the sha256 ingredient image inside of it
+        //https://proandroiddev.com/your-app-is-secure-but-is-the-device-android-hardware-attestation-explained-e9a531312035
+        val nonceOfIngredient = HashUtils.getSHA256FromFileContent(FileInputStream(inFile))
+
+        val spec = KeyGenParameterSpec.Builder(
+            keyAlias,
+            KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY
+        )
+            .setDigests(KeyProperties.DIGEST_SHA256)
+            .setAttestationChallenge(nonceOfIngredient.toByteArray())        // request attestation
+            .build()
+
+        keyGen.initialize(spec)
+
+        //create temp key with Nonce
+        val keyPair = keyGen.generateKeyPair()
+        val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+
+        val certChain = ks.getCertificateChain(keyAlias)
+
+        // Custom assertion
+        var result = AssertionDefinition.custom(
+            label = "proofmode.metadata.v1",
+            data = buildJsonObject {
+
+                put ("@context",
+                    buildJsonObject {
+                        put("proofmode", "http://proofmode.org/c2pa/spec/1.0/")
+                    })
+
+                put ("proofmode:UserPublicKey",ProofMode.getPublicKeyString())
+
+
+                if (sigs != null) {
+                    for ( sig in sigs)
+                    {
+
+                                var rawCert = sig.toByteArray();
+                                var certStream = ByteArrayInputStream(rawCert);
+
+                                try {
+                                    var certFactory = CertificateFactory.getInstance("X509");
+                                    var x509Cert =
+                                        certFactory.generateCertificate(certStream) as X509Certificate;
+
+                                    put ("proofmode:AppSignature-${x509Cert.serialNumber}",
+                                        buildJsonObject {
+                                            put(
+                                                "proofmode:AppCertificateSubject",
+                                                x509Cert.subjectDN.name
+                                            );
+                                            put(
+                                                "proofmode:AppCertificateNotBefore",
+                                                x509Cert.notBefore.toString()
+                                            );
+                                            put("proofmode:AppSignatures", sig.toCharsString())
+
+                                        })
+                                    } catch (e: CertificateException) {
+                                    // e.printStackTrace();
+                                }
+
+
+                    }
+                }
+
+                if (certChain != null)
+                {
+                    for (cert in certChain)
+                    {
+                        var xCert = cert as X509Certificate
+                        put("proofmode:HardwareAttestation-${xCert.serialNumber}", xCert.toString())
+                    }
+                }
+
+            })
+
+        //just for one moment!
+        ks.deleteEntry(keyAlias)
+
+        return result
 
     }
 

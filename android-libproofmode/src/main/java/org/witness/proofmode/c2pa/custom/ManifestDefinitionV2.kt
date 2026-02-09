@@ -1,26 +1,14 @@
-package org.witness.proofmode.c2pa
+package org.witness.proofmode.c2pa.custom
 
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import org.contentauth.c2pa.DigitalSourceType
 import org.contentauth.c2pa.manifest.ActionAssertion
 import org.contentauth.c2pa.manifest.AssertionDefinition
 import org.contentauth.c2pa.manifest.ClaimGeneratorInfo
 import org.contentauth.c2pa.manifest.Ingredient
 import org.contentauth.c2pa.manifest.ResourceRef
-
-/*
-This file is licensed to you under the Apache License, Version 2.0
-(http://www.apache.org/licenses/LICENSE-2.0) or the MIT license
-(http://opensource.org/licenses/MIT), at your option.
-
-Unless required by applicable law or agreed to in writing, this software is
-distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS OF
-ANY KIND, either express or implied. See the LICENSE-MIT and LICENSE-APACHE
-files for the specific language governing permissions and limitations under
-each license.
-*/
-
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 
 /**
  * Defines a C2PA manifest for content authenticity.
@@ -56,9 +44,9 @@ import kotlinx.serialization.json.Json
  * @property label An optional unique label for this manifest.
  * @property instanceId An optional instance identifier.
  * @property redactions A list of assertion URIs to redact from ingredients.
- * @see AssertionDefinition
- * @see Ingredient
- * @see ClaimGeneratorInfo
+ * @see org.contentauth.c2pa.manifest.AssertionDefinition
+ * @see org.contentauth.c2pa.manifest.Ingredient
+ * @see org.contentauth.c2pa.manifest.ClaimGeneratorInfo
  */
 @Serializable
 data class ManifestDefinitionV2 (
@@ -127,13 +115,13 @@ data class ManifestDefinitionV2 (
         fun created(
             title: String,
             claimGeneratorInfo: ClaimGeneratorInfo,
-            digitalSourceType: org.contentauth.c2pa.DigitalSourceType,
+            digitalSourceType: DigitalSourceType,
         ) = ManifestDefinitionV2 (
             title = title,
             claimGeneratorInfo = listOf(claimGeneratorInfo),
             createdAssertions = listOf(
-                AssertionDefinition.action(
-                    ActionAssertion.created(digitalSourceType),
+                AssertionDefinition.Companion.action(
+                    ActionAssertion.Companion.created(digitalSourceType),
                 ),
             ),
         )
