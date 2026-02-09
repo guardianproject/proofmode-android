@@ -16,18 +16,21 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import org.contentauth.c2pa.Action
 import org.contentauth.c2pa.Builder
+import org.contentauth.c2pa.BuilderIntent
 import org.contentauth.c2pa.C2PA
 import org.contentauth.c2pa.CertificateManager
 import org.contentauth.c2pa.DigitalSourceType
 import org.contentauth.c2pa.FileStream
 import org.contentauth.c2pa.KeyStoreSigner
+import org.contentauth.c2pa.PredefinedAction
 import org.contentauth.c2pa.Signer
 import org.contentauth.c2pa.SigningAlgorithm
 import org.contentauth.c2pa.Stream
 import org.contentauth.c2pa.StrongBoxSigner
 import org.contentauth.c2pa.WebServiceSigner
-import org.contentauth.c2pa.manifest.ActionAssertion
 import org.contentauth.c2pa.manifest.AssertionDefinition
 import org.contentauth.c2pa.manifest.ClaimGeneratorInfo
 import org.contentauth.c2pa.manifest.ManifestDefinition
@@ -51,9 +54,6 @@ import java.util.Locale
 import java.util.TimeZone
 import javax.crypto.Cipher
 import javax.security.auth.x500.X500Principal
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
 
 class C2PAManager(private val context: Context, private val preferencesManager: PreferencesManager) {
     companion object {
@@ -61,9 +61,10 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
         private const val KEYSTORE_ALIAS_PREFIX = "C2PA_KEY_"
 
+        /**
         private val iso8601 = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
             timeZone = TimeZone.getTimeZone("UTC")
-        }
+        }**/
 
 //        private const val TSA_DIGICERT = "http://timestamp.digicert.com"
         private const val TSA_SSLCOM = "https://api.c2patool.io/api/v1/timestamps/ecc"
@@ -91,19 +92,15 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
             val location = ProofMode.getLatestLocation(context);
 
+
             val manifest = ManifestDefinition(
                 title = inFile.name,
                 claimGeneratorInfo = listOf(ClaimGeneratorInfo.fromContext(context)),
                 assertions = listOf(
-                    AssertionDefinition.actions(
-                        listOf(
-                            ActionAssertion.created(DigitalSourceType.DIGITAL_CAPTURE)
-                        )
-                    ),
                     createExifAssertion(context, location, inFile, contentType)
                 )
             );
-
+            
             var manifestJSON = manifest.toJson()
             Timber.d("Media manifest file:\n\n$manifestJSON")
 
@@ -512,15 +509,26 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         var action = Action(PredefinedAction.CREATED, DigitalSourceType.DIGITAL_CAPTURE,softwareAgent,mParams)
         builder.addAction(action)
         **/
-  //      builder.setIntent(BuilderIntent.Create(DigitalSourceType.DIGITAL_CAPTURE))
+        val appLabel = getAppName(context)
+        val appVersion = getAppVersionName(context)
+        var mParams = null//HashMap<String, String>()
+
+        var softwareAgent = "$appLabel-$appVersion";// ${android.os.Build.VERSION.SDK_INT.toString()} ${android.os.Build.VERSION.CODENAME}";
+        var action = Action(
+            PredefinedAction.CREATED,
+            DigitalSourceType.DIGITAL_CAPTURE,
+            softwareAgent,
+            mParams
+        )
+        builder.addAction(action)
+
+        builder.setIntent(BuilderIntent.Create(DigitalSourceType.DIGITAL_CAPTURE))
 
         val ingredientJson = JSONObject().apply {
             put("title", fileName)
             put("format", contentType)
         }
         builder.addIngredient(ingredientJson.toString(),contentType, sourceStream)
-
-//        builder.addResource("thumbnail",sourceStream)
 
         try {
             // Sign the image
@@ -546,56 +554,6 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             destStream.close()
         }
     }
-
-    /**
-    private fun createManifestJSON(context: Context, creator: String, fileIn: File, contentType: String, showLocation: Boolean, isDirectCapture: Boolean): String {
-
-        val appLabel = getAppName(context)
-        val appVersion = getAppVersionName(context)
-
-        //val appInfo = ApplicationInfo(appLabel, appVersion, APP_ICON_URI)
-
-        //  val mediaFile = FileData(fileImageIn.absolutePath, null, fileImageIn.name)
-        //val contentCreds = userCert?.let { ContentCredentials(it,mediaFile, appInfo) }
-
-        val exifMake = Build.MANUFACTURER
-        val exifModel = Build.MODEL
-
-
-        val manifest =  JSONObject().apply {
-            put ("claim_generator","$appLabel/$appVersion")
-            put ("title",fileIn.name)
-            put ("format",contentType)
-        }
-
-        val assertionMap = HashMap<String,JSONObject>()
-
-        if (showLocation) {
-            val location = ProofMode.getLatestLocation(context);
-            location?.let {
-                val exifData = createExifAssertion(exifMake,exifModel,it, fileIn, contentType);
-                assertionMap.put(exifData.getString("label"),exifData.getJSONObject("data"))
-            }
-
-        }
-
-        manifest.put ("assertions",
-
-            JSONArray().apply {
-                assertionMap.forEach { assertion ->
-                    put(
-                    JSONObject().apply {
-                        put("label",assertion.key)
-                        put ("data", assertion.value)
-                    })
-                }
-            }
-
-        )
-
-
-        return manifest.toString()
-    }**/
 
     public fun validateSignedMedia(filePath: String): Boolean {
         try {
