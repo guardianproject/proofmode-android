@@ -1,6 +1,5 @@
 package org.witness.proofmode.c2pa
 
-import android.Manifest
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
@@ -13,32 +12,30 @@ import android.security.keystore.KeyProperties
 import android.security.keystore.WrappedKeyEntry
 import android.util.Base64
 import android.util.Log
-import androidx.exifinterface.media.ExifInterface
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
-import org.contentauth.c2pa.Action
+import kotlinx.serialization.json.buildJsonObject
 import org.contentauth.c2pa.Builder
-import org.contentauth.c2pa.BuilderIntent
-import org.contentauth.c2pa.ByteArrayStream
 import org.contentauth.c2pa.C2PA
 import org.contentauth.c2pa.CertificateManager
-import org.contentauth.c2pa.DataStream
 import org.contentauth.c2pa.DigitalSourceType
 import org.contentauth.c2pa.FileStream
 import org.contentauth.c2pa.KeyStoreSigner
-import org.contentauth.c2pa.PredefinedAction
 import org.contentauth.c2pa.Signer
 import org.contentauth.c2pa.SigningAlgorithm
 import org.contentauth.c2pa.Stream
 import org.contentauth.c2pa.StrongBoxSigner
 import org.contentauth.c2pa.WebServiceSigner
-import org.json.JSONArray
+import org.contentauth.c2pa.manifest.ActionAssertion
+import org.contentauth.c2pa.manifest.AssertionDefinition
+import org.contentauth.c2pa.manifest.ClaimGeneratorInfo
+import org.contentauth.c2pa.manifest.ManifestDefinition
 import org.json.JSONObject
 import org.witness.proofmode.ProofMode
 import org.witness.proofmode.ProofMode.PREF_OPTION_LOCATION
-import org.witness.proofmode.library.BuildConfig
 import org.witness.proofmode.c2pa.selfsign.CertificateSigningService
+import org.witness.proofmode.library.BuildConfig
 import timber.log.Timber
 import java.io.File
 import java.math.BigInteger
@@ -54,6 +51,9 @@ import java.util.Locale
 import java.util.TimeZone
 import javax.crypto.Cipher
 import javax.security.auth.x500.X500Principal
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 class C2PAManager(private val context: Context, private val preferencesManager: PreferencesManager) {
     companion object {
@@ -89,9 +89,22 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                 true
             )
 
-            // Create manifest JSON
-            val manifestJSON = createManifestJSON(context, email!!, inFile, contentType,
-                showLocation == true, true)
+            val location = ProofMode.getLatestLocation(context);
+
+            val manifest = ManifestDefinition(
+                title = inFile.name,
+                claimGeneratorInfo = listOf(ClaimGeneratorInfo.fromContext(context)),
+                assertions = listOf(
+                    AssertionDefinition.actions(
+                        listOf(
+                            ActionAssertion.created(DigitalSourceType.DIGITAL_CAPTURE)
+                        )
+                    ),
+                    createExifAssertion(context, location, inFile, contentType)
+                )
+            );
+
+            var manifestJSON = manifest.toJson()
             Timber.d("Media manifest file:\n\n$manifestJSON")
 
             // Create appropriate signer based on mode
@@ -476,6 +489,12 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         Timber.d( "Starting signImageData")
         Timber.d( "Manifest JSON: ${manifestJSON.take(200)}...") // First 200 chars
 
+
+        val builder = Builder.fromJson(manifestJSON)
+        if (!embed)
+            builder.setNoEmbed()
+
+        /**
         val appLabel = getAppName(context)
         val appVersion = getAppVersionName(context)
 
@@ -488,10 +507,11 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
         var mParams = null//HashMap<String, String>()
 
+
         var softwareAgent = "$appLabel-$appVersion";// ${android.os.Build.VERSION.SDK_INT.toString()} ${android.os.Build.VERSION.CODENAME}";
         var action = Action(PredefinedAction.CREATED, DigitalSourceType.DIGITAL_CAPTURE,softwareAgent,mParams)
         builder.addAction(action)
-
+        **/
   //      builder.setIntent(BuilderIntent.Create(DigitalSourceType.DIGITAL_CAPTURE))
 
         val ingredientJson = JSONObject().apply {
@@ -527,6 +547,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         }
     }
 
+    /**
     private fun createManifestJSON(context: Context, creator: String, fileIn: File, contentType: String, showLocation: Boolean, isDirectCapture: Boolean): String {
 
         val appLabel = getAppName(context)
@@ -574,7 +595,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
 
         return manifest.toString()
-    }
+    }**/
 
     public fun validateSignedMedia(filePath: String): Boolean {
         try {
@@ -615,9 +636,65 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         return false
     }
 
-    private fun createExifAssertion(make: String, model: String, location: Location?, fileIn: File, contentType: String): JSONObject {
-        val metadata =
-            JSONObject().apply {
+    /**
+     * Should be under c2pa.metadata
+     *
+     * {
+     * 	"@context" : {
+     * 		"exif": "http://ns.adobe.com/exif/1.0/",
+     * 		"exifEX": "http://cipa.jp/exif/2.32/",
+     * 		"tiff": "http://ns.adobe.com/tiff/1.0/",
+     * 		"Iptc4xmpExt": "http://iptc.org/std/Iptc4xmpExt/2008-02-29/",
+     * 		"photoshop" : "http://ns.adobe.com/photoshop/1.0/"
+     * 	},
+     * 	"photoshop:DateCreated": "Aug 31, 2022",
+     * 	"Iptc4xmpExt:DigitalSourceType": "http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture",
+     * 	"exif:GPSVersionID": "2.2.0.0",
+     * 	"exif:GPSLatitude": "39,21.102N",
+     * 	"exif:GPSLongitude": "74,26.5737W",
+     * 	"exif:GPSAltitudeRef": 0,
+     * 	"exif:GPSAltitude": "100963/29890",
+     * 	"exif:GPSTimeStamp": "18:22:57",
+     * 	"exif:GPSDateStamp": "2019:09:22",
+     * 	"exif:GPSSpeedRef": "K",
+     * 	"exif:GPSSpeed": "4009/161323",
+     * 	"exif:GPSImgDirectionRef": "T",
+     * 	"exif:GPSImgDirection": "296140/911",
+     * 	"exif:GPSDestBearingRef": "T",
+     * 	"exif:GPSDestBearing": "296140/911",
+     * 	"exif:GPSHPositioningError": "13244/2207",
+     * 	"exif:ExposureTime": "1/100",
+     * 	"exif:FNumber": 4.0,
+     * 	"exif:ColorSpace": 1,
+     * 	"exif:DigitalZoomRatio": 2.0,
+     * 	"tiff:Make": "CameraCompany",
+     * 	"tiff:Model": "Shooter S1",
+     * 	"exifEX:LensMake": "CameraCompany",
+     * 	"exifEX:LensModel": "17.0-35.0 mm",
+     * 	"exifEX:LensSpecification": { "@list": [ 1.55, 4.2, 1.6, 2.4 ] }
+     *
+     * }
+     */
+    private fun createExifAssertion(context: Context, location: Location?, fileIn: File, contentType: String): AssertionDefinition {
+
+        // Custom assertion
+        return AssertionDefinition.custom(
+          //  label = "c2pa.metadata",
+            label = "stds.exif",
+            data = buildJsonObject {
+
+                put ("@context",
+                    buildJsonObject {
+                        put("exif", "http://ns.adobe.com/exif/1.0/")
+                        put("dc", "http://purl.org/dc/elements/1.1/")
+                        put("exifEX", "http://cipa.jp/exif/2.32/")
+                        put("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+                        put("tiff", "http://ns.adobe.com/tiff/1.0/")
+                        put("xmp", "http://ns.adobe.com/xap/1.0/")
+                        put("Iptc4xmpExt", "http://iptc.org/std/Iptc4xmpExt/2008-02-29/")
+
+                    })
+
                 location?.let {
                     put("exif:GPSLatitude", it.latitude.toString())
                     put("exif:GPSLongitude", it.longitude.toString())
@@ -636,42 +713,22 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                         put ("exif:GPSProcessingMethod", "Provider=${location.provider}")
                     }
 
-                    /**
-                    if (contentType.equals("image/jpeg")) {
-                        //add EXIF values to file
-                        var exifIn = ExifInterface(fileIn.canonicalFile)
-                        exifIn.setAttribute(ExifInterface.TAG_GPS_LATITUDE, it.latitude.toString());
-                        exifIn.setAttribute(
-                            ExifInterface.TAG_GPS_LONGITUDE,
-                            it.longitude.toString()
-                        );
-                        exifIn.saveAttributes();
-                    }**/
-
                     val timestamp = formatIsoTimestamp(Date(it.time))
                     put("exif:GPSTimeStamp", timestamp)
                 }
-                put ("tiff:Make",make)
-                put ("tiff:Model", model)
+
+                val exifMake = Build.MANUFACTURER
+                val exifModel = Build.MODEL
+
+                put ("tiff:Make",exifMake)
+                put ("tiff:Model", exifModel)
                 put ("tiff:DateTime", formatIsoTimestamp(Date(fileIn.lastModified())))
+                put ("exifEX:LensMake", exifMake)
+                put ("exifEX:LensModel", exifModel)
 
-                put(
-                    "@context",
-                    JSONObject().apply {
-                        put("exif", "http://ns.adobe.com/exif/1.0/")
-                        put ("dc", "http://purl.org/dc/elements/1.1/")
-                        put ( "exifEX", "http://cipa.jp/exif/2.32/")
-                        put ("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
-                        put ("tiff", "http://ns.adobe.com/tiff/1.0/")
-                        put ("xmp", "http://ns.adobe.com/xap/1.0/")
 
-                    },
-                )
-            }
-        return JSONObject().apply {
-            put("label","stds.exif")
-            put("data", metadata)
-        }
+            })
+
     }
 
     private fun formatIsoTimestamp(date: Date): String {

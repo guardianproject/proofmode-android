@@ -95,7 +95,7 @@ dependencies {
     //replace safetynet
     implementation libs.play.integrity
 
-
+    implementation libs.kotlinx.serialization.json
 
 }
 
