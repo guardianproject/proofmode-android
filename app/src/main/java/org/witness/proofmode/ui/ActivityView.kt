@@ -246,8 +246,8 @@ fun ProofableItemView(
                 painterResource(R.drawable.cricon),
                 contentDescription = "CR",
                 modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(2.dp)
+                    .align(Alignment.TopStart)
+                    .padding(8.dp)
                     .size(24.dp)
             )
         }
