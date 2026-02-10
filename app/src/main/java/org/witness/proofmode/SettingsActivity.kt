@@ -62,17 +62,6 @@ class SettingsActivity : AppCompatActivity() {
                         R.layout.permission_location
                     )
                 ) {
-                    /**
-                    if (!askForPermission(
-                            Manifest.permission.ACCESS_BACKGROUND_LOCATION,
-                            0,
-                            REQUEST_CODE_LOCATION_BACKGROUND,
-                            0
-                        )
-                    ) {
-                        mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_LOCATION, true).commit()
-                        refreshLocation()
-                    }*/
                     mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_LOCATION, true).commit()
                     refreshLocation()
                 }

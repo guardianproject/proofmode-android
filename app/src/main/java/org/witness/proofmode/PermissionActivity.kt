@@ -13,7 +13,7 @@ import androidx.core.content.ContextCompat
 import org.witness.proofmode.PermissionActivity
 import java.util.ArrayList
 
-class PermissionActivity : AppCompatActivity() {
+class  PermissionActivity : AppCompatActivity() {
     private var uiMode = true
     private var showMissingPermissionsDialog = false
     private lateinit var btnContinue: Button
