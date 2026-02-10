@@ -245,11 +245,17 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
                 }
 
                 var signingMode = SigningMode.KEYSTORE
-                val hasStrongBox: Boolean =
-                    mContext?.packageManager?.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE) == true
+                var useRemoteSigning = false
 
-                if (hasStrongBox)
-                    signingMode = SigningMode.HARDWARE
+                if (useRemoteSigning)
+                    signingMode = SigningMode.REMOTE
+                else {
+                    val hasStrongBox: Boolean =
+                        mContext?.packageManager?.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE) == true
+
+                    if (hasStrongBox)
+                        signingMode = SigningMode.HARDWARE
+                }
 
                 mC2paManager?.signMediaFile(
                     signingMode,
