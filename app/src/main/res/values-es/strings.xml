@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ProofMode</string>
+    <string name="app_name">Proofmode</string>
     <string name="action_settings">Configuracion</string>
     <string name="action_share_key">Compartir la clave pública...</string>
     <string name="action_publish_key">Publicar la clave pública...</string>
@@ -18,8 +18,8 @@
     <string name="share_proof_only">Compartir la evidencia ( Unicamente archivos de Metadatos )</string>
     <string name="share_proof_with_media">Compartir la evidencia con Multimedia ( Everything! )</string>
     <string name="open_public_key_page">Abriendo la pagina de la llave publica</string>
-    <string name="no_external_storage">ADVERTENCIA: ¡ProofMode activado, pero no hay almacenamiento externo disponible!</string>
-    <string name="no_hash_generated">ProofMode Alert: No fue posible accessar los datos multimedia</string>
+    <string name="no_external_storage">ADVERTENCIA: ¡Proofmode activado, pero no hay almacenamiento externo disponible!</string>
+    <string name="no_hash_generated">Proofmode Alert: No fue posible accessar los datos multimedia</string>
     <string name="generating_proof_notify">Generar pruebas...</string>
     <string name="inspect_photos">Inspeccionando Fotos</string>
     <string name="inspect_videos">Inspeccionando Videos</string>
@@ -43,17 +43,17 @@
     <string name="settings_title">Fortalezca la verificabilidad de tus medios agregando datos a tu prueba.</string>
     <string name="onboarding_get_started">Empezar</string>
     <string name="onboarding_intro_title">Una imagen puede valer más que mil palabras, pero la prueba de que es real no tiene precio.</string>
-    <string name="onboarding_intro_content">ProofMode captura información que hace que tus medios sean más confiables.</string>
+    <string name="onboarding_intro_content">Proofmode captura información que hace que tus medios sean más confiables.</string>
     <string name="onboarding_step1">Paso 1</string>
-    <string name="onboarding_step1_title">Obtener pruebas es fácil. Una vez que ProofMode esté activado, usa tu cámara como de costumbre.</string>
+    <string name="onboarding_step1_title">¡Obtener pruebas es fácil con la cámara Proofmode!</string>
     <string name="onboarding_step2">Paso 2</string>
-    <string name="onboarding_step2_title">Una vez que hayas tomado una foto o un video, búscalo en la galería de tu cámara para compartirlo.</string>
-    <string name="onboarding_step2_content">Seleccione una foto, toca el icono de compartir y elige \"Compartir prueba\".</string>
+    <string name="onboarding_step2_title">Una vez que hayas tomado una foto o un video, aparecerá en la pantalla de inicio de Proofmode.</string>
+    <string name="onboarding_step2_content">Abre una foto o un vídeo, luego toca el icono de compartir y elige «Compartir prueba».</string>
     <string name="onboarding_step3_title">Antes de enviar, elige qué nivel de prueba deseas compartir.</string>
     <string name="onboarding_step3_content">Siempre tienes el control. Comparte información mínima para demostrar que tu archivo existe. Robusto comparte todo lo capturado.</string>
     <string name="onboarding_step4_title">Luego elige cómo enviarlo.</string>
     <string name="onboarding_step4_content">¡Puedes compartir de muchas maneras, desde correo electrónico hasta servicios de mensajería como WhatsApp!</string>
-    <string name="onboarding_privacy_content">Obten información sobre lo que captura ProofMode en nuestra Leyenda de datos.</string>
+    <string name="onboarding_privacy_content">Obtén información sobre lo que captura Proofmode en nuestra Leyenda de datos.</string>
     <string name="onboarding_privacy_subtitle">NOS PREOCUPAMOS POR TU PRIVACIDAD</string>
     <string name="onboarding_privacy_continue">Continuar</string>
     <string name="onboarding_privacy_options">Opciones de privacidad</string>
@@ -68,7 +68,7 @@
     <string name="share_mode_basic_info">Comparte una huella digital de tu medio para establecer que existe.</string>
     <string name="share_share_basic">Compartir básica</string>
     <string name="share_mode_robust">Robusto</string>
-    <string name="share_mode_robust_info">Comparte todo lo que has habilitado ProofMode para capturar en un archivo firmado criptográficamente.</string>
+    <string name="share_mode_robust_info">Comparte en un único archivo zip todo aquello que hayas habilitado para capturar Proofmode.</string>
     <string name="share_share_robust">Compartir</string>
     <string name="share_info_basic_message">• No incluye información personal
 \n• No se necesita confianza
@@ -87,11 +87,11 @@
     <string name="share_proof_action">Compartir prueba</string>
     <string name="choose_my_settings">Cambiar mi configuración</string>
     <string name="settings_description">Toca los iconos para agregar o eliminar.</string>
-    <string name="onboarding_step1_content">ProofMode funciona en segundo plano para generar y guardar pruebas. ¡No tienes que hacer nada especial!</string>
-    <string name="proofmode_is_capturing">ProofMode captura un conjunto sólido de metadatos de forma predeterminada. Fortalece la verificabilidad de tus medios agregando más.</string>
+    <string name="onboarding_step1_content">Proofmode funciona en segundo plano para generar y guardar pruebas. ¡No tienes que hacer nada especial!</string>
+    <string name="proofmode_is_capturing">Proofmode captura un conjunto sólido de metadatos de forma predeterminada. Fortalece la verificabilidad de tus medios agregando más.</string>
     <string name="onboarding_step3">Paso 3</string>
-    <string name="onboarding_privacy_title">ProofMode activa múltiples sensores en tu teléfono para generar pruebas.</string>
-    <string name="onboarding_privacy_info">ProofMode captura la identidad de tu teléfono de forma predeterminada. Si no te sientes cómodo con esto, ve a la configuración para desactivarlo.</string>
+    <string name="onboarding_privacy_title">Proofmode activa múltiples sensores en tu teléfono para generar pruebas.</string>
+    <string name="onboarding_privacy_info">Proofmode captura la identidad de tu teléfono de forma predeterminada. Si no te sientes cómodo con esto, ve a la configuración para desactivarlo.</string>
     <string name="permission_location_info">Si no deseas capturar estos datos por motivos de seguridad o privacidad, no habilites el permiso.</string>
     <string name="menu_home">Inicio</string>
     <string name="menu_digital_signatures">Firmas digitales</string>
@@ -100,12 +100,12 @@
     <string name="digital_signatures_whattodo_info">Se compartirá una versión pública de tu clave PGP junto con sus archivos multimedia y proof.csv. Esto permite que un tercero verifique los archivos de firma PGP “.asc” que vienen con los datos de prueba. Incluir tu clave PGP pública con la prueba garantiza que se conservará en caso de que tu dispositivo se vea comprometido o reinstale la aplicación. Recuerde que cada vez que vuelva a instalar la aplicación, se creará una nueva identidad digital (clave PGP).</string>
     <string name="share_mode_basic">Basico</string>
     <string name="permissions_needed_content">Habilite los permisos requeridos en la configuración del sistema.</string>
-    <string name="share_info_robust_title">Comparte todo lo que ha habilitado ProofMode para capturar en un archivo firmado criptográficamente.</string>
+    <string name="share_info_robust_title">Comparte todo lo que ha habilitado Proofmode para capturar en un archivo firmado criptográficamente.</string>
     <string name="share_info_robust_message">• Revela información de identificación personal
 \n• Comparte con alguien en quien confíes
 \n• Requiere acceso a Internet
 \n• Comparte archivos .csv con datos, PGP y huellas dactilares únicas</string>
-    <string name="digital_signatures_whatis_info">Cada vez que instala ProofMode, se crea una identidad digital única, que consta de claves PGP públicas y secretas. Esto funciona con el estándar OpenPGP. Se utiliza para firmar criptográficamente tus medios y archivos de prueba de apoyo. Si las firmas PGP coinciden con la identidad digital (clave PGP) de su instancia actual de ProofMode, entonces la firma fue creada por esa instancia de ProofMode.</string>
+    <string name="digital_signatures_whatis_info">Cada vez que instalas Proofmode, se crea una identidad digital única, compuesta por claves PGP pública y secreta. Esto se basa en el estándar OpenPGP. Se utiliza para firmar criptográficamente tus archivos multimedia y los archivos de prueba correspondientes. Si las firmas PGP coinciden con la identidad digital (clave PGP) de tu instancia actual de Proofmode, entonces la firma fue creada por esa instancia de Proofmode.</string>
     <string name="waiting_proof_notify">Listo para agregar prueba</string>
     <string name="share_save_robust">Guardar</string>
     <string name="publish_key_to">\"Clave de publicación para: \"</string>
@@ -136,7 +136,7 @@
     <string name="cb_timer">Seleccionar un temporizador</string>
     <string name="status_download_content_credentials">Descargando las imágenes con las credenciales de contenido...</string>
     <string name="share_with_proofsign">¿Compartir con el servicio en la nube de ProofSign para añadir las credenciales del contenido (C2PA)\?</string>
-    <string name="menu_import_photos">Importando…</string>
+    <string name="menu_import_photos">Importar Multimedia…</string>
     <string name="proof_integrity_verified_success">Integridad de la prueba comprobada</string>
     <string name="progress_signing_proof">Compartir y verificar con ProofSign...</string>
     <plurals name="n_items_selected">
@@ -174,7 +174,7 @@
         <item quantity="other">Has importado %d artículos</item>
     </plurals>
     <string name="settings_ai">Bloquear IA</string>
-    <string name="settings_credentials_desc">Añadir credenciales del contenido (C2PA) a fotos y vídeos</string>
+    <string name="settings_credentials_desc">Añadir credenciales del contenido (C2PA) a fotos &amp; vídeos</string>
     <string name="settings_ai_desc">Marcar que no se utilizará para la capacitación en el aprendizaje automático</string>
     <plurals name="clear_these_n_items">
         <item quantity="one">Borrar este elemento</item>
@@ -182,4 +182,36 @@
         <item quantity="other">Borrar estos %d elementos</item>
     </plurals>
     <string name="default_share_text">Se trata de un ProofPack que contiene archivos multimedia, metadatos y firmas digitales. Aprende a verificarlo en https://proofmode.org/verify</string>
+    <string name="menu_import_creds">Importar Credenciales...</string>
+    <string name="title_activity_p2_pshare">P2PShareActivity</string>
+    <string name="first_fragment_label">Primer Fragmento</string>
+    <string name="second_fragment_label">Segundo Fragmento</string>
+    <string name="next">Siguiente</string>
+    <string name="previous">Previo</string>
+    <string name="content_credentials">Credenciales de Contenido</string>
+    <string name="share_content_credentials_info">Comparte imágenes o vídeos directamente con metadatos de prueba incrustados en el propio archivo, verificados y firmados por Proofmode.org</string>
+    <string name="optional_filename">Nombre del Archivo (Opcional)</string>
+    <string name="set_a_custom_name_for_the_proof_zip">Asigna un nombre personalizado al archivo zip de prueba</string>
+    <string name="filebase_ipfs_storage">Sincronización automática de IPFS de Filebase (BETA)</string>
+    <string name="filebase_ipfs_storage_description">Configure la carga automática de pruebas a Filebase. Se publicarán automáticamente en IPFS.</string>
+    <string name="enable_filebase_upload">Habilitar la carga de archivos</string>
+    <string name="access_key">Clave de acceso</string>
+    <string name="secret_key">Clave secreta</string>
+    <string name="bucket_name">Nombre del bucket</string>
+    <string name="endpoint_url">URL Endpoint</string>
+    <string name="instructions">Instrucciones:</string>
+    <string name="filebase_instructions_info">1. Crea una cuenta gratuita en filebase.com\n2. Crea un nuevo bucket para almacenar pruebas\n3. Genera las claves de acceso en tu panel de control de Filebase\n4. Introduce las claves anteriores y prueba la conexión.</string>
+    <string name="filebase_test_connection">Prueba de conexión</string>
+    <string name="filebase_save_settings">Guardar Ajustes</string>
+    <string name="please_fill_in_all_required_fields">Por favor rellene todos los campos obligatorios</string>
+    <string name="background_mode">Importación automática</string>
+    <string name="proofcheck_verifier">Verificador de ProofCheck</string>
+    <string name="background_mode_info">Añade pruebas a todas las fotos y vídeos nuevos en este dispositivo</string>
+    <string name="auto_sync_title">Sincronización automática</string>
+    <string name="auto_sync_desc">Copia de seguridad de los datos de prueba en el servicio en la nube Filebase IPFS</string>
+    <string name="social">social</string>
+    <string name="share_social">Solo comparte el archivo multimedia con C2PA y un enlace de verificación para redes sociales</string>
+    <string name="share_media">Comparte Multimedia</string>
+    <string name="share_using">Compartir con</string>
+    <string name="verify_this_media_at">"Verificar este archivo multimedia en: "</string>
 </resources>
