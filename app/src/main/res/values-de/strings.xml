@@ -64,7 +64,7 @@
     <string name="tap_hold_turn_off">Zum Ausschalten berühren und halten</string>
     <string name="proofmode_is_capturing">ProofMode erfasst standardmäßig einen umfangreichen Satz von Metadaten. Erhöhe die Verifizierbarkeit deiner Medien, indem du mehr hinzufügst.</string>
     <string name="tap_hold_turn_on">Tippe auf Halten, um einzuschalten</string>
-    <string name="onboarding_learn_more">Mehr Erfahren</string>
+    <string name="onboarding_learn_more">Mehr erfahren</string>
     <string name="onboarding_step1">Schritt 1</string>
     <string name="onboarding_step2">Schritt 2</string>
     <string name="permission_location_title">Wir benötigen deinen Standort, um zu dokumentieren, wo deine Medien erstellt wurden.</string>
