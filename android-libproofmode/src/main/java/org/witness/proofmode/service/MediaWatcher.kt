@@ -241,11 +241,14 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
 
                 if (!fileMediaOut.canWrite()) {
                     doEmbed = false;
-                    fileMediaOut = File(mContext!!.getCacheDir(), fileMedia.getName() + ".c2pa")
+                    fileMediaOut = File(mContext!!.cacheDir, fileMedia.name + ".c2pa")
                 }
 
                 var signingMode = SigningMode.KEYSTORE
-                var useRemoteSigning = false
+                var useRemoteSigning = mPrefs?.getBoolean(
+                    ProofMode.PREF_OPTION_REMOTE_SIGNING,
+                    ProofMode.PREF_OPTION_REMOTE_SIGNING_DEFAULT
+                ) ?: true
 
                 if (useRemoteSigning)
                     signingMode = SigningMode.REMOTE

@@ -56,6 +56,9 @@ public class ProofMode {
 
     public final static String PREF_CREDENTIALS_PRIMARY = "prefCredsPrimary";
 
+    public final static String PREF_OPTION_REMOTE_SIGNING = "useRemoteSigning";
+    public final static boolean PREF_OPTION_REMOTE_SIGNING_DEFAULT = true;
+
 
     public final static boolean PREF_OPTION_NOTARY_DEFAULT = true;
     public final static boolean PREF_OPTION_LOCATION_DEFAULT = true;

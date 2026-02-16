@@ -199,6 +199,10 @@
     <string name="video">Video</string>
     <string name="settings_credentials">Credentials</string>
     <string name="settings_credentials_desc">Add Content Credentials (C2PA) to photos &amp; videos</string>
+    <string name="settings_credentials_remote">Remote Signing via Proofmode.org</string>
+    <string name="settings_credentials_local">Local Signing Using Self-Signed Key</string>
+    <string name="settings_credentials_switched_remote">Switched to Remote Signing via Proofmode.org</string>
+    <string name="settings_credentials_switched_local">Switched to Local Signing Using Self-Signed Key</string>
     <string name="settings_ai">Block AI</string>
     <string name="settings_ai_desc">Flag to not be used for machine learning training</string>
 

@@ -77,7 +77,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         private const val TSA_SSLCOM = "https://api.c2patool.io/api/v1/timestamps/ecc"
     }
 
-    private lateinit var defaultSigner: Signer
+    private var defaultSigner: Signer? = null
 
 
 
@@ -113,21 +113,33 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             Timber.d("Media manifest file:\n\n$manifestJSON")
 
             // Create appropriate signer based on mode
-            if (!::defaultSigner.isInitialized)
+            if (defaultSigner == null)
                 defaultSigner = createSigner(signingMode, TSA_SSLCOM)
 
-            // Sign the image using C2PA library
-            val fileStream = FileStream(inFile)
-            val outStream = FileStream(outFile)
+            defaultSigner?.let {
+                // Sign the image using C2PA library
+                val fileStream = FileStream(inFile)
+                val outStream = FileStream(outFile)
 
-            signStream(inFile.name, fileStream, contentType, outStream, manifestJSON, defaultSigner, doEmbed)
-            Timber.d( "Signed file size: ${outFile.length()} bytes")
+                signStream(
+                    inFile.name,
+                    fileStream,
+                    contentType,
+                    outStream,
+                    manifestJSON,
+                    it,
+                    doEmbed
+                )
+                Timber.d("Signed file size: ${outFile.length()} bytes")
 
-            // Verify the signed image
-            var isVerified = validateSignedMedia(outFile.absolutePath)
-            Timber.d("isVerified=$isVerified")
+                // Verify the signed image
+                var isVerified = validateSignedMedia(outFile.absolutePath)
+                Timber.d("isVerified=$isVerified")
 
-            Result.Success(outStream)
+                Result.Success(outStream)
+            }
+            Result.Failure("Error signing image: no signer available",null)
+
         } catch (e: Exception) {
             Log.e(TAG, "Error signing image", e)
             e.printStackTrace()
@@ -144,7 +156,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         );
     }
 
-    private suspend fun createSigner(mode: SigningMode, tsaUrl: String): Signer = withContext(Dispatchers.IO) {
+    private suspend fun createSigner(mode: SigningMode, tsaUrl: String): Signer? = withContext(Dispatchers.IO) {
         when (mode) {
             SigningMode.KEYSTORE -> createKeystoreSigner(tsaUrl)
             SigningMode.HARDWARE -> createHardwareSigner(tsaUrl)
@@ -197,8 +209,8 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
     }
 
 
-    private suspend fun createHardwareSigner(tsaUrl: String): Signer {
-        val alias =
+    private suspend fun createHardwareSigner(tsaUrl: String): Signer? {
+        val keyAlias =
             preferencesManager.hardwareKeyAlias.first()
                 ?: "$KEYSTORE_ALIAS_PREFIX${SigningMode.HARDWARE.name}"
 
@@ -206,38 +218,56 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
         keyStore.load(null)
 
-        if (!keyStore.containsAlias(alias)) {
+        var certChain : String = ""
+
+        if (!keyStore.containsAlias(keyAlias)) {
             Timber.d( "Creating new hardware-backed key with StrongBox if available")
 
             // Create StrongBox config
-            val config = StrongBoxSigner.Config(keyTag = alias, requireUserAuthentication = false)
+            val config = StrongBoxSigner.Config(keyTag = keyAlias, requireUserAuthentication = false)
 
             // Create key using StrongBoxSigner (will use StrongBox if available, TEE otherwise)
             try {
                 StrongBoxSigner.createKey(config)
-                preferencesManager.setHardwareKeyAlias(alias)
+                preferencesManager.setHardwareKeyAlias(keyAlias)
             } catch (e: Exception) {
                 Timber.d( "StrongBox key creation failed, falling back to hardware-backed key")
-                createKeystoreKey(alias, true)
-                preferencesManager.setHardwareKeyAlias(alias)
+                createKeystoreKey(keyAlias, true)
+                preferencesManager.setHardwareKeyAlias(keyAlias)
             }
+            // Get certificate chain from signing server
+            certChain = enrollHardwareKeyCertificate(keyAlias)
+
+            var fileCert = File(context.filesDir,"$keyAlias.cert")
+            fileCert.writeText(certChain)
         }
 
-        // Get certificate chain from signing server
-        val certChain = enrollHardwareKeyCertificate(alias)
+        else{
+            // Get certificate chain from signing server
 
-        Timber.d( "Creating StrongBoxSigner")
+            val fileCert = File(context.filesDir,"$keyAlias.cert")
+            if (fileCert.exists())
+                certChain = fileCert.readText()
 
-        // Create StrongBox config
-        val config = StrongBoxSigner.Config(keyTag = alias, requireUserAuthentication = false)
+        }
 
-        // Use the new StrongBoxSigner class
-        return StrongBoxSigner.createSigner(
-            algorithm = SigningAlgorithm.ES256,
-            certificateChainPEM = certChain,
-            config = config,
-            tsaURL = tsaUrl
-        )
+
+        if (certChain.isNotEmpty()) {
+            Timber.d("Creating StrongBoxSigner")
+
+            // Create StrongBox config
+            val config = StrongBoxSigner.Config(keyTag = keyAlias, requireUserAuthentication = false)
+
+            // Use the new StrongBoxSigner class
+            return StrongBoxSigner.createSigner(
+                algorithm = SigningAlgorithm.ES256,
+                certificateChainPEM = certChain,
+                config = config,
+                tsaURL = tsaUrl
+            )
+        }
+        else
+            return null
     }
 
     private suspend fun createCustomSigner(tsaUrl: String): Signer {
