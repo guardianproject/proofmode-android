@@ -2,10 +2,10 @@
 # Kotlin & KSP
 kotlin = "2.2.20"
 kotlin-serialization = "2.3.0"
-ksp = "2.2.20-2.0.3"
+ksp = "2.3.2"
 
 # Android SDK
-agp = "9.0.0"
+agp = "9.0.1"
 compileSdk = "36"
 minSdk = "28"
 targetSdk = "36"
@@ -79,7 +79,8 @@ tedimagepicker = "1.7.3"
 listenablefuture = "9999.0-empty-to-avoid-conflict-with-guava"
 zxing = "3.5.4"
 bitcoinj = "0.14.7"
-c2pa = "0.0.9-beta.4"
+#c2pa = "0.0.9-beta.4"
+c2pa = "0.0.9-beta.5"
 play-integrity = "1.6.0"
 
 # Testing
@@ -183,7 +184,8 @@ tedimagepicker = { module = "io.github.parksanggwon:tedimagepicker", version.ref
 listenablefuture = { module = "com.google.guava:listenablefuture", version.ref = "listenablefuture" }
 zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
 bitcoinj-core = { module = "org.bitcoinj:bitcoinj-core", version.ref = "bitcoinj" }
-c2pa = { module = "org.contentauth:c2pa", version.ref = "c2pa" }
+#c2pa = { module = "org.contentauth:c2pa", version.ref = "c2pa" }
+c2pa = { module = "com.github.redaranj:c2pa-android", version.ref = "c2pa" }
 play-integrity = { module = "com.google.android.play:integrity", version.ref = "play-integrity" }
 kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
 
