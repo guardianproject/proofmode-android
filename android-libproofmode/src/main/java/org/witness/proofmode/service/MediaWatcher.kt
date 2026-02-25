@@ -743,7 +743,7 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
                             override fun notarizationSuccessful(hash: String?, fileTmp: File) {
                                 Timber.d(
                                     "Got notarization success response for %s",
-                                    fileTmp.getName()
+                                    fileTmp.name
                                 )
 
                                 val ext: String? = fileTmp.getName().split(".".toRegex())
