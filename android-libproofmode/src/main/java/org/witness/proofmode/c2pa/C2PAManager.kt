@@ -22,7 +22,7 @@ import org.contentauth.c2pa.Action
 import org.contentauth.c2pa.Builder
 import org.contentauth.c2pa.BuilderIntent
 import org.contentauth.c2pa.C2PA
-import org.contentauth.c2pa.C2paSettings
+import org.contentauth.c2pa.C2PASettings
 import org.contentauth.c2pa.CertificateManager
 import org.contentauth.c2pa.DigitalSourceType
 import org.contentauth.c2pa.FileStream
@@ -526,20 +526,25 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         Timber.d( "Starting signImageData")
         Timber.d( "Manifest JSON: ${manifestJSON.take(200)}...") // First 200 chars
 
-        val settingsJson = """
-                    {
-                        "version": 1,
-                        "builder": {
-                            "created_assertion_labels": ["c2pa.actions"]
-                        }
-                    }
-                """.trimIndent()
+        val createdLabels = (Builder.DEFAULT_CREATED_ASSERTION_LABELS + listOf(
+            "proofmode.metadata",
+        )).joinToString(", ") { "\"$it\"" }
 
-        val settings = C2paSettings().apply {
+        val settingsJson = """
+            {
+                "version": 1,
+                "builder": {
+                    "created_assertion_labels": [$createdLabels]
+                }
+            }
+        """.trimIndent()
+
+        val settings = C2PASettings.create().apply {
             updateFromString(settingsJson, "json")
         }
 
         val builder = Builder.fromJson(manifestJSON, settings)
+        settings.close()
         if (!embed)
             builder.setNoEmbed()
 
@@ -574,7 +579,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         )
         builder.addAction(action)
 
-      //  builder.setIntent(BuilderIntent.Create(DigitalSourceType.DIGITAL_CAPTURE))
+        builder.setIntent(BuilderIntent.Create(DigitalSourceType.DIGITAL_CAPTURE))
 
         val ingredientJson = JSONObject().apply {
             put("title", fileName)

@@ -80,7 +80,7 @@ listenablefuture = "9999.0-empty-to-avoid-conflict-with-guava"
 zxing = "3.5.4"
 bitcoinj = "0.14.7"
 #c2pa = "0.0.9-beta.4"
-c2pa = "0.0.9-beta.5"
+c2pa = "0.0.9-beta.6"
 play-integrity = "1.6.0"
 
 # Testing
