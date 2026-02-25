@@ -22,6 +22,7 @@ import org.contentauth.c2pa.Action
 import org.contentauth.c2pa.Builder
 import org.contentauth.c2pa.BuilderIntent
 import org.contentauth.c2pa.C2PA
+import org.contentauth.c2pa.C2paSettings
 import org.contentauth.c2pa.CertificateManager
 import org.contentauth.c2pa.DigitalSourceType
 import org.contentauth.c2pa.FileStream
@@ -35,6 +36,7 @@ import org.contentauth.c2pa.WebServiceSigner
 import org.contentauth.c2pa.manifest.AssertionDefinition
 import org.contentauth.c2pa.manifest.ClaimGeneratorInfo
 import org.contentauth.c2pa.manifest.ManifestDefinition
+import org.contentauth.c2pa.manifest.ManifestValidator
 import org.json.JSONObject
 import org.witness.proofmode.ProofMode
 import org.witness.proofmode.ProofMode.PREF_OPTION_LOCATION
@@ -524,8 +526,20 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         Timber.d( "Starting signImageData")
         Timber.d( "Manifest JSON: ${manifestJSON.take(200)}...") // First 200 chars
 
+        val settingsJson = """
+                    {
+                        "version": 1,
+                        "builder": {
+                            "created_assertion_labels": ["c2pa.actions"]
+                        }
+                    }
+                """.trimIndent()
 
-        val builder = Builder.fromJson(manifestJSON)
+        val settings = C2paSettings().apply {
+            updateFromString(settingsJson, "json")
+        }
+
+        val builder = Builder.fromJson(manifestJSON, settings)
         if (!embed)
             builder.setNoEmbed()
 
@@ -560,7 +574,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         )
         builder.addAction(action)
 
-        builder.setIntent(BuilderIntent.Create(DigitalSourceType.DIGITAL_CAPTURE))
+      //  builder.setIntent(BuilderIntent.Create(DigitalSourceType.DIGITAL_CAPTURE))
 
         val ingredientJson = JSONObject().apply {
             put("title", fileName)
@@ -578,6 +592,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                 signer = signer,
             )
 
+
             Timber.d( "builder.sign() completed successfully")
 
         } catch (e: Exception) {
@@ -594,40 +609,37 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
     }
 
     public fun validateSignedMedia(filePath: String): Boolean {
-        try {
+
 
             // Read and verify using C2PA
             val manifestJSON = C2PA.readFile(filePath, null)
-
-            Timber.d( "C2PA VERIFICATION SUCCESS")
             Timber.d( "Manifest JSON length: ${manifestJSON.length} characters")
             Timber.d("Menifest JSON:\n${manifestJSON}")
 
-            // Parse and log key information
-            val manifest = JSONObject(manifestJSON)
-            manifest?.optString("validation_state")?.let {
-                Timber.d( "validation_state: $it")
-                if (it == "Valid")
-                    return true
+            val validation = ManifestValidator.validateJson(manifestJSON, logWarnings = true)
+            if (validation.hasErrors()) {
+                Timber.d( "C2PA VALIDATION ERRORS")
+
+                Timber.d(validation.errors.joinToString("; "))
+
             }
 
-            /**
-            manifest.optJSONArray("manifests").let { mArray ->
+            if (validation.isValid())
+            {
 
-                Timber.d( "manifests found")
-                activeManifest?.optString("validation_state")?.let {
-                    Timber.d( "validation_state: $it")
-                    if (it == "Valid")
-                        return true
-                }
+                Timber.d( "C2PA MANIFEST IS VALID")
+                return true
 
-            }**/
-
-        } catch (e: Exception) {
-            Log.e(TAG, "C2PA VERIFICATION FAILED", e)
+            }
+            else
+            {
+                Timber.d( "C2PA MANIFEST IS INVALID")
+                return false
+            }
 
 
-        }
+
+
 
         return false
     }
