@@ -16,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.contentauth.c2pa.Action
@@ -34,6 +35,7 @@ import org.contentauth.c2pa.Stream
 import org.contentauth.c2pa.StrongBoxSigner
 import org.contentauth.c2pa.WebServiceSigner
 import org.contentauth.c2pa.manifest.AssertionDefinition
+import org.contentauth.c2pa.manifest.CawgTrainingMiningEntry
 import org.contentauth.c2pa.manifest.ClaimGeneratorInfo
 import org.contentauth.c2pa.manifest.ManifestDefinition
 import org.contentauth.c2pa.manifest.ManifestValidator
@@ -93,21 +95,25 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
             val pPrefs = PreferenceManager.getDefaultSharedPreferences(context)
             val email = pPrefs.getString(ProofMode.PREF_CREDENTIALS_PRIMARY,"info@proofmode.org")
+            val blockAI = pPrefs?.getBoolean(ProofMode.PREF_OPTION_BLOCK_AI, ProofMode.PREF_OPTION_AI_DEFAULT)
 
             val showLocation = pPrefs?.getBoolean(
                 PREF_OPTION_LOCATION,
                 true
             )
 
-            val location = ProofMode.getLatestLocation(context);
+            var location : Location? = null;
 
+            if (showLocation == true)
+                location = ProofMode.getLatestLocation(context);
 
             val manifest = ManifestDefinition(
                 title = inFile.name,
                 claimGeneratorInfo = listOf(ClaimGeneratorInfo.fromContext(context)),
                 assertions = listOf(
                     createExifAssertion(context, location, inFile, contentType),
-                    createProofmodeAssertion(context, inFile)
+                    createProofmodeAssertion(context, inFile),
+                    createCAWGAssertion(context, blockAI == true, email)
                 )
             );
 
@@ -548,24 +554,6 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         if (!embed)
             builder.setNoEmbed()
 
-        /**
-        val appLabel = getAppName(context)
-        val appVersion = getAppVersionName(context)
-
-        // Create Builder with manifest
-        Timber.d( "Creating Builder from JSON")
-        val builder = Builder.fromJson(manifestJSON)
-
-        if (!embed)
-            builder.setNoEmbed()
-
-        var mParams = null//HashMap<String, String>()
-
-
-        var softwareAgent = "$appLabel-$appVersion";// ${android.os.Build.VERSION.SDK_INT.toString()} ${android.os.Build.VERSION.CODENAME}";
-        var action = Action(PredefinedAction.CREATED, DigitalSourceType.DIGITAL_CAPTURE,softwareAgent,mParams)
-        builder.addAction(action)
-        **/
         val appLabel = getAppName(context)
         val appVersion = getAppVersionName(context)
         var mParams = null//HashMap<String, String>()
@@ -744,6 +732,49 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
     }
 
+    private fun createCAWGAssertion (context: Context, blockAI: Boolean, creatorEmail: String?): AssertionDefinition {
+
+        /**
+         *  CawgTrainingMiningEntry(
+         *     use: String,
+         *     constraintInfo: String? = null,
+         *     aiModelLearningType: String? = null,
+         *     aiMiningType: String? = null
+         * )
+         */
+
+        var cawgList = ArrayList<CawgTrainingMiningEntry>()
+
+        if (blockAI) {
+            cawgList.add(CawgTrainingMiningEntry("cawg.data_mining", "notAllowed"))
+            cawgList.add(CawgTrainingMiningEntry("cawg.ai_generative_training", "notAllowed"))
+            cawgList.add(CawgTrainingMiningEntry("cawg.ai_training", "notAllowed"))
+            cawgList.add(CawgTrainingMiningEntry("cawg.ai_inference", "notAllowed"))
+        }
+
+        //var result = AssertionDefinition.cawgTrainingMining(cawgList)
+
+        var result = AssertionDefinition.custom(
+            label = "cawg.training-mining",
+            data = buildJsonObject {
+
+                put ("entries",
+                    buildJsonObject {
+                        for (cawgEntry in cawgList) {
+                            put (cawgEntry.use,buildJsonObject {
+                                put("use", cawgEntry.constraintInfo)
+                            })
+                        }
+                    }
+
+                )
+
+            }
+        )
+
+        return result
+    }
+
     private fun createProofmodeAssertion(context: Context, inFile: File): AssertionDefinition {
 
         var sigs = context.packageManager.getPackageInfo(context.packageName, PackageManager.GET_SIGNATURES).signatures;
@@ -843,44 +874,6 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         return formatter.format(date)
     }
 
-    fun saveImageToGallery(imageData: ByteArray): Result<String> = try {
-        // Implementation depends on Android version
-        // For simplicity, saving to app's external files directory
-        val photosDir =
-            File(
-                context.getExternalFilesDir(
-                    Environment.DIRECTORY_PICTURES,
-                ),
-                "C2PA",
-            )
-        Timber.d( "Gallery directory: ${photosDir.absolutePath}")
-        Timber.d( "Directory exists: ${photosDir.exists()}")
-
-        if (!photosDir.exists()) {
-            val created = photosDir.mkdirs()
-            Timber.d( "Directory created: $created")
-        }
-
-        val fileName = "C2PA_${System.currentTimeMillis()}.jpg"
-        val file = File(photosDir, fileName)
-        file.writeBytes(imageData)
-
-        Timber.d( "Image saved to: ${file.absolutePath}")
-        Timber.d( "File exists: ${file.exists()}")
-        Timber.d( "File size: ${file.length()} bytes")
-
-        // Verify the file can be read back
-        if (file.exists() && file.canRead()) {
-            Timber.d( "File successfully saved and readable")
-        } else {
-            Log.e(TAG, "File saved but cannot be read")
-        }
-
-        Result.Success(file.absolutePath)
-    } catch (e: Exception) {
-        Log.e(TAG, "Error saving image", e)
-        Result.Failure("Error signing image",e)
-    }
 
     /**
      * Helper functions for getting app name and version
