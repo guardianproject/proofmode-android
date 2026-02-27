@@ -692,7 +692,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
         // Custom assertion
         return AssertionDefinition.custom(
-          //  label = "c2pa.metadata",
+           // label = "c2pa.metadata",
             label = "stds.exif",
             data = buildJsonObject {
 
@@ -775,7 +775,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
         // Custom assertion
         var result = AssertionDefinition.custom(
-            label = "proofmode.metadata.v1",
+            label = "proofmode.metadata",
             data = buildJsonObject {
 
                 put ("@context",
