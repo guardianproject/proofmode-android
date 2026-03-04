@@ -43,13 +43,13 @@ android {
     sourceSets {
         main {
             assets {
-                srcDirs 'src\\main\\assets'
+                srcDirs 'src/main/assets'
             }
         }
 
         test {
             resources {
-                srcDirs 'src\\test\\assets'
+                srcDirs 'src/test/assets'
             }
         }
     }

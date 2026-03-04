@@ -1,7 +1,7 @@
 [versions]
 # Kotlin & KSP
 kotlin = "2.2.20"
-kotlin-serialization = "2.3.0"
+kotlin-serialization = "2.2.20"
 ksp = "2.3.2"
 
 # Android SDK
