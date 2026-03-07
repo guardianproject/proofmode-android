@@ -407,7 +407,12 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
 
                     // Create a temporary image to immediately show in thumbnail.
                     savedUri?.let {
-                        _thumbPreviewUri.value = Media(it, false, System.currentTimeMillis())
+                        val capturedTime = System.currentTimeMillis()
+                        val newMedia = Media(it, false, capturedTime)
+                        _thumbPreviewUri.value = newMedia
+
+                        _lastCapturedMedia.value = newMedia
+                        _mediaFiles.value = listOf(newMedia) + mediaFiles.value
 
                         CoroutineScope(Dispatchers.IO).launch {
                             sendLocalCameraEvent(it, CameraEventType.NEW_IMAGE)
