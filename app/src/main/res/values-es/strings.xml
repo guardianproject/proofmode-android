@@ -188,7 +188,7 @@
     <string name="second_fragment_label">Segundo Fragmento</string>
     <string name="next">Siguiente</string>
     <string name="previous">Previo</string>
-    <string name="content_credentials">Credenciales de Contenido</string>
+    <string name="content_credentials">Credenciales de Contenido (C2PA)</string>
     <string name="share_content_credentials_info">Comparte imágenes o vídeos directamente con metadatos de prueba incrustados en el propio archivo, verificados y firmados por Proofmode.org</string>
     <string name="optional_filename">Nombre del Archivo (Opcional)</string>
     <string name="set_a_custom_name_for_the_proof_zip">Asigna un nombre personalizado al archivo zip de prueba</string>
