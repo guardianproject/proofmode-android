@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Bundle
 import android.view.Surface
 import android.view.View
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
@@ -44,6 +45,8 @@ class CameraActivity : ComponentActivity(), SensorEventListener {
             })
 
         }
+
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
     }
 
