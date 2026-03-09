@@ -274,17 +274,19 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
                         mContext!!.contentResolver.openInputStream(uriMedia)
                     )
 
-                    val resultHash = processUri(mContext!!, uriMedia, mediaHash, autogen, createdAt)
-
-                    if (resultHash != null) {
+                    if (mediaHash != null) {
                         //send generated event
 
                         intent.action = (ProofMode.EVENT_PROOF_GENERATED)
                         intent.putExtra(ProofMode.EVENT_PROOF_EXTRA_URI, uriMedia.toString())
-                        intent.putExtra(ProofMode.EVENT_PROOF_EXTRA_HASH, resultHash)
+                        intent.putExtra(ProofMode.EVENT_PROOF_EXTRA_HASH, mediaHash)
                         mContext!!.sendBroadcast(intent)
 
                     }
+
+                    val resultHash = processUri(mContext!!, uriMedia, mediaHash, autogen, createdAt)
+
+
                 } catch (exception: FileNotFoundException) {
                     Timber.d(exception, "Couldn't process uri, as the file doesn't exist")
                 }
