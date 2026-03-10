@@ -821,6 +821,8 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
                 put ("proofmode:UserPublicKey",ProofMode.getPublicKeyString())
 
+                //add security patch info to proofmode assertion
+                put ("proofmode:ANDROID_SECURITY_PATCH",Build.VERSION.SECURITY_PATCH)
 
                 if (sigs != null) {
                     for ( sig in sigs)
