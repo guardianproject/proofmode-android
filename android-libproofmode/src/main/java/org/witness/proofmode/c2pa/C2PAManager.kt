@@ -122,7 +122,12 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
             // Create appropriate signer based on mode
             if (defaultSigner == null)
-                defaultSigner = createSigner(signingMode, TSA_SSLCOM)
+            {
+                //we only allow C2PA on devices that have been patched within 90 days
+                if (checkOSSecurityPatch(90)) {
+                    defaultSigner = createSigner(signingMode, TSA_SSLCOM)
+                }
+            }
 
             defaultSigner?.let {
                 // Sign the image using C2PA library
@@ -900,5 +905,14 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         }
         return (if (applicationInfo != null) context.packageManager.getApplicationLabel(applicationInfo) else "Unknown") as String
 
+    }
+
+    fun checkOSSecurityPatch(withinDaysLimit: Int): Boolean {
+        val patchDateString = Build.VERSION.SECURITY_PATCH // format: YYYY-MM-DD
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        dateFormat.timeZone = TimeZone.getTimeZone("UTC")
+        val patchDate = dateFormat.parse(patchDateString) ?: return false
+        val daysSincePatch = (System.currentTimeMillis() - patchDate.time) / (1000L * 60 * 60 * 24)
+        return daysSincePatch <= withinDaysLimit
     }
 }
