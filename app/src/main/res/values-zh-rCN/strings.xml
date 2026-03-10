@@ -145,7 +145,7 @@
     <string name="action_share_proof_zip">分享证据压缩文件</string>
     <string name="action_add_content_credentials_c2pa">发送到 ProofCheck</string>
     <string name="err_content_credentials">验证或生成内容凭据时出现问题。</string>
-    <string name="status_download_content_credentials">正在下载带有内容凭据的图像…</string>
+    <string name="status_download_content_credentials">正在下载带有内容凭据的图片…</string>
     <string name="menu_import_photos">导入媒体…</string>
     <string name="cd_take_picture">拍照</string>
     <string name="cb_open_gallery">转到相册</string>
@@ -167,13 +167,13 @@
     <plurals name="clear_these_n_items">
         <item quantity="other">清除此%d项</item>
     </plurals>
-    <string name="default_share_text">这是包含媒体文件、元数据和数字签名的证明程序。在 https://proofmode.org/verify 了解如何验证</string>
+    <string name="default_share_text">这是包含媒体文件、元数据和数字签名的证明程序。如需了解如何验证，请访问 https://proofmode.org/verify</string>
     <string name="title_activity_p2_pshare">P2P 分享活动</string>
     <string name="next">下一页</string>
     <string name="previous">上一页</string>
     <string name="optional_filename">可选文件名</string>
     <string name="set_a_custom_name_for_the_proof_zip">为证据 ZIP 设置自定义名称</string>
-    <string name="content_credentials">内容凭据</string>
+    <string name="content_credentials">内容凭据（C2PA）</string>
     <string name="first_fragment_label">第一段</string>
     <string name="second_fragment_label">第二段</string>
     <string name="share_content_credentials_info">直接分享图片或视频，并将证据元数据直接嵌入文件本身，并由 Proofmode.org 验证和签名</string>
@@ -200,4 +200,10 @@
     <string name="share_media">分享媒体</string>
     <string name="share_using">使用以下方式分享</string>
     <string name="verify_this_media_at">"在以下位置验证此媒体： "</string>
+    <string name="open">打开</string>
+    <string name="close">关闭</string>
+    <string name="settings_credentials_remote">通过 Proofmode.org 进行远程签名</string>
+    <string name="settings_credentials_local">使用自签名密钥进行本地签名</string>
+    <string name="settings_credentials_switched_remote">已切换到通过 Proofmode.org 进行远程签名</string>
+    <string name="settings_credentials_switched_local">已切换到使用自签名密钥进行本地签名</string>
 </resources>
