@@ -11,10 +11,12 @@ import android.security.keystore.KeyProperties
 import android.security.keystore.WrappedKeyEntry
 import android.util.Base64
 import android.util.Log
+import android.widget.Toast
 import com.android.keyattestation.verifier.GoogleTrustAnchors
 import com.android.keyattestation.verifier.KeyDescription
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
@@ -46,6 +48,7 @@ import org.witness.proofmode.ProofMode.PREF_OPTION_LOCATION
 import org.witness.proofmode.c2pa.selfsign.CertificateSigningService
 import org.witness.proofmode.crypto.HashUtils
 import org.witness.proofmode.library.BuildConfig
+import org.witness.proofmode.library.R
 import timber.log.Timber
 import java.io.ByteArrayInputStream
 import java.io.File
@@ -126,8 +129,18 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             // Create appropriate signer based on mode
             if (defaultSigner == null)
             {
-                //we only allow C2PA on devices that have been patched within 90 days
-                if (checkOSSecurityPatchDate(90)) {
+                if (signingMode == SigningMode.REMOTE) {
+                    //we only allow C2PA on devices that have been patched within 90 days
+                    if (checkOSSecurityPatchDate(90)) {
+                        defaultSigner = createSigner(signingMode, TSA_SSLCOM)
+                    }
+                    else
+                    {
+                        Timber.i("C2PA Disabled: OS Security Patches not updated within 90 days")
+                    }
+                }
+                else
+                {
                     defaultSigner = createSigner(signingMode, TSA_SSLCOM)
                 }
             }

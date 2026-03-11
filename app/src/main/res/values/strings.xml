@@ -242,4 +242,6 @@
     <string name="open">Open</string>
     <string name="close">Close</string>
 
+    <string name="c2pa_os_patch_level_error">C2PA Disabled: OS Security Patches not updated within 90 days</string>
+
 </resources>

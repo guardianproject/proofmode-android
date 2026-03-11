@@ -18,6 +18,7 @@ import org.acra.ktx.initAcra
 import org.bouncycastle.openpgp.PGPException
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
+import org.witness.proofmode.c2pa.C2PAManager
 import org.witness.proofmode.c2pa.PreferencesManager
 import org.witness.proofmode.c2pa.ProofSignClient
 import org.witness.proofmode.crypto.pgp.PgpUtils
@@ -53,6 +54,19 @@ class ProofModeApp : Application() {
 
         StorageProviderManager.getInstance().initializeStorageProviders(this)
 
+        checkC2PAConformance()
+    }
+
+    //ensure this device has been updated with security patches within 90 days
+    fun checkC2PAConformance () {
+
+        val c2paMan = C2PAManager(this, PreferencesManager(this))
+        val conformant = c2paMan.checkOSSecurityPatchDate(90)
+
+        if (!conformant)
+        {
+            Toast.makeText(this,getString(R.string.c2pa_os_patch_level_error),Toast.LENGTH_LONG).show()
+        }
     }
 
     fun initPgpKey () {
