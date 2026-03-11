@@ -54,11 +54,10 @@ class ProofModeApp : Application() {
 
         StorageProviderManager.getInstance().initializeStorageProviders(this)
 
-        checkC2PAConformance()
     }
 
     //ensure this device has been updated with security patches within 90 days
-    fun checkC2PAConformance () {
+    fun checkC2PAConformance () : Boolean {
 
         val c2paMan = C2PAManager(this, PreferencesManager(this))
         val conformant = c2paMan.checkOSSecurityPatchDate(90)
@@ -67,6 +66,8 @@ class ProofModeApp : Application() {
         {
             Toast.makeText(this,getString(R.string.c2pa_os_patch_level_error),Toast.LENGTH_LONG).show()
         }
+
+        return conformant
     }
 
     fun initPgpKey () {
@@ -92,58 +93,39 @@ class ProofModeApp : Application() {
             ProofMode.PREF_OPTION_CREDENTIALS_DEFAULT
         );
 
-        /**
-        val client = ProofSignClient(
-            context = applicationContext,
-            BuildConfig.SIGNING_SERVER,
-            BuildConfig.CLOUD_INTEGRITY_PROJECT_NUMBER
-        )
-
-        client.verifyDevice { result ->
-
-        }
-
-        client.authenticatedRequest(
-                endpoint = "/api/v1/protected-endpoint",
-                method = "POST",
-                body = """{"data": "value"}"""
-                    ) { result ->
-            when (result) {
-
-
-                else -> {}
-            }
-            }**/
-
         return useCredentials
 
     }
 
     fun initContentCredentials () {
 
-        var pm = PreferencesManager(applicationContext)
-//        var cm = C2PAManager(applicationContext, pm)
+        val conformant = checkC2PAConformance()
 
-        //TODO c2pa
-        /**
-        val email = mPrefs.getString(ProofMode.PREF_CREDENTIALS_PRIMARY,"");
-        var display : String? = null
-        var key : String? = "0x" + mPgpUtils?.publicKeyFingerprint
-        var uri : String? = null
+        if (conformant) {
+            /**
+            val client = ProofSignClient(
+            context = applicationContext,
+            BuildConfig.SIGNING_SERVER,
+            BuildConfig.CLOUD_INTEGRITY_PROJECT_NUMBER
+            )
 
-        if (email?.isNotEmpty() == true)
-        {
-            display = "${email.replace("@"," at ")}"
+            client.verifyDevice { result ->
+
+            }
+
+            client.authenticatedRequest(
+            endpoint = "/api/v1/protected-endpoint",
+            method = "POST",
+            body = """{"data": "value"}"""
+            ) { result ->
+            when (result) {
+
+
+            else -> {}
+            }
+            }**/
         }
 
-        uri =
-            "https://keys.openpgp.org/search?q=" + mPgpUtils?.publicKeyFingerprint
-
-        C2paUtils.init(this)
-        C2paUtils.setC2PAIdentity(display, uri, email, key)
-        if (email != null && key != null) {
-            C2paUtils.initCredentials(this, email, key)
-        }**/
     }
 
 
