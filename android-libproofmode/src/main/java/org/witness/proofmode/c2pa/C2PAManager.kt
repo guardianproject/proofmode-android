@@ -50,10 +50,13 @@ import timber.log.Timber
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileInputStream
+import java.io.InputStreamReader
+import java.io.StringReader
 import java.math.BigInteger
 import java.security.KeyFactory
 import java.security.KeyPairGenerator
 import java.security.KeyStore
+import java.security.MessageDigest
 import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
@@ -541,7 +544,10 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         val createdLabels = Builder.DEFAULT_CREATED_ASSERTION_LABELS + listOf(
             "proofmode.metadata",
             "stds.exif"
+          //  "c2pa.metadata"
         )
+
+        val trustAnchors = InputStreamReader(context.assets.open("c2pa_trust_anchors.txt")).readText()
 
         val settingsJson = buildJsonObject {
             put("version", 1)
@@ -551,6 +557,9 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                         add(label)
                     }
                 })
+            })
+            put ("trust", buildJsonObject {
+                put ("trust_anchors", trustAnchors)
             })
         }
 
@@ -612,7 +621,16 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
     public fun validateSignedMedia(filePath: String): Boolean {
 
+        val trustAnchors = InputStreamReader(context.assets.open("c2pa_trust_anchors.txt")).readText()
 
+        val settingsJson = buildJsonObject {
+            put("version", 1)
+            put ("trust", buildJsonObject {
+                put ("trust_anchors", trustAnchors)
+            })
+        }
+            C2PA.loadSettings(settingsJson.toString(),"json")
+        
             // Read and verify using C2PA
             val manifestJSON = C2PA.readFile(filePath, null)
             Timber.d( "Manifest JSON length: ${manifestJSON.length} characters")
@@ -786,7 +804,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
     private fun createProofmodeAssertion(context: Context, inFile: File): AssertionDefinition {
 
-        var sigs = context.packageManager.getPackageInfo(context.packageName, PackageManager.GET_SIGNATURES).signatures;
+        var appSignatures = context.packageManager.getPackageInfo(context.packageName, PackageManager.GET_SIGNING_CERTIFICATES).signingInfo;
 
         val keyAlias = "attested_key"
         val keyGen = KeyPairGenerator.getInstance(
@@ -828,8 +846,11 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                 //add security patch info to proofmode assertion
                 put ("proofmode:AndroidSecurityPatch",Build.VERSION.SECURITY_PATCH)
 
-                if (sigs != null) {
-                    for ( sig in sigs)
+
+                if (appSignatures != null) {
+                    put("proofmode:AppSignatures", buildJsonObject {
+
+                    for ( sig in appSignatures.apkContentsSigners)
                     {
 
                                 var rawCert = sig.toByteArray();
@@ -840,8 +861,12 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                                     var x509Cert =
                                         certFactory.generateCertificate(certStream) as X509Certificate;
 
-                                    put ("proofmode:AppSignature-${x509Cert.serialNumber}",
+                                    put ("proofmode:AppSignature",
                                         buildJsonObject {
+                                            put(
+                                                "proofmode:AppCertificateSerialNumber",
+                                                x509Cert.serialNumber
+                                            );
                                             put(
                                                 "proofmode:AppCertificateSubject",
                                                 x509Cert.subjectDN.name
@@ -850,7 +875,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                                                 "proofmode:AppCertificateNotBefore",
                                                 x509Cert.notBefore.toString()
                                             );
-                                            put("proofmode:AppSignatures", sig.toCharsString())
+                                            put("proofmode:AppCertificateSignature", sig.toCharsString())
 
                                         })
                                     } catch (e: CertificateException) {
@@ -858,16 +883,19 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                                 }
 
 
-                    }
+                     }
+                        })
                 }
+
 
                 if (certChain != null)
                 {
-                    for (cert in certChain)
-                    {
-                        var xCert = cert as X509Certificate
-                        put("proofmode:HardwareAttestation-${xCert.serialNumber}", xCert.toString())
-                    }
+                    put("proofmode:HardwareAttestations", buildJsonArray {
+                        for (cert in certChain) {
+                            var xCert = cert as X509Certificate
+                            add (xCert.toString())
+                        }
+                    })
                 }
 
             })
