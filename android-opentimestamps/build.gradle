@@ -68,7 +68,9 @@ dependencies {
 
     implementation libs.listenablefuture
 
-    implementation libs.bitcoinj.core
+    implementation(libs.bitcoinj.core) {
+        exclude group: 'com.google.protobuf', module: 'protobuf-java'
+    }
     implementation project(path: ':android-libproofmode')
 
     // Required -- JUnit 4 framework

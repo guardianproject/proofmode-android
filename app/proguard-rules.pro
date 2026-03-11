@@ -45,6 +45,34 @@
 -dontwarn sun.misc.Cleaner
 -dontwarn sun.nio.ch.DirectBuffer
 
+# bitcoinj uses full protobuf-java but Android uses protobuf-javalite;
+# suppress warnings for full protobuf classes not present in lite
+-dontwarn com.google.protobuf.AbstractMessageLite$Builder$LimitedInputStream
+-dontwarn com.google.protobuf.Descriptors$Descriptor
+-dontwarn com.google.protobuf.Descriptors$EnumDescriptor
+-dontwarn com.google.protobuf.Descriptors$EnumValueDescriptor
+-dontwarn com.google.protobuf.Descriptors$FieldDescriptor
+-dontwarn com.google.protobuf.Descriptors$FileDescriptor
+-dontwarn com.google.protobuf.Descriptors$FileDescriptor$InternalDescriptorAssigner
+-dontwarn com.google.protobuf.Descriptors$OneofDescriptor
+-dontwarn com.google.protobuf.Extension
+-dontwarn com.google.protobuf.GeneratedMessage
+-dontwarn com.google.protobuf.GeneratedMessage$Builder
+-dontwarn com.google.protobuf.GeneratedMessage$BuilderParent
+-dontwarn com.google.protobuf.GeneratedMessage$FieldAccessorTable
+-dontwarn com.google.protobuf.GeneratedMessage$GeneratedExtension
+-dontwarn com.google.protobuf.Message
+-dontwarn com.google.protobuf.MessageOrBuilder
+-dontwarn com.google.protobuf.RepeatedFieldBuilder
+-dontwarn com.google.protobuf.SingleFieldBuilder
+-dontwarn com.google.protobuf.TextFormat
+-dontwarn com.google.protobuf.UnknownFieldSet
+-dontwarn com.google.protobuf.UnknownFieldSet$Builder
+-dontwarn com.google.protobuf.AbstractMessage$Builder
+-dontwarn com.google.protobuf.ExtensionRegistry
+-dontwarn com.google.protobuf.Message$Builder
+-dontwarn com.google.protobuf.ProtocolMessageEnum
+
 ####
 -keep class org.**  { *; }
 -keep class org.spongycastle.**

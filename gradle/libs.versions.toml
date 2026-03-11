@@ -1,5 +1,6 @@
 [versions]
 # Kotlin & KSP
+keyattestation = "-SNAPSHOT"
 kotlin = "2.2.20"
 kotlin-serialization = "2.2.20"
 ksp = "2.3.2"
@@ -144,6 +145,7 @@ androidx-work-runtime = { module = "androidx.work:work-runtime", version.ref = "
 androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
 
 # Coroutines
+keyattestation = { module = "com.github.android:keyattestation", version.ref = "keyattestation" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-coroutines-guava = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-guava", version.ref = "coroutines" }
 

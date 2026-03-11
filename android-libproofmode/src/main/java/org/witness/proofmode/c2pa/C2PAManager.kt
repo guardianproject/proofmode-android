@@ -5,17 +5,17 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Build
-import android.os.Environment
 import android.preference.PreferenceManager
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.security.keystore.WrappedKeyEntry
 import android.util.Base64
 import android.util.Log
+import com.android.keyattestation.verifier.GoogleTrustAnchors
+import com.android.keyattestation.verifier.KeyDescription
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -51,12 +51,10 @@ import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.InputStreamReader
-import java.io.StringReader
 import java.math.BigInteger
 import java.security.KeyFactory
 import java.security.KeyPairGenerator
 import java.security.KeyStore
-import java.security.MessageDigest
 import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
@@ -64,6 +62,7 @@ import java.security.interfaces.ECPrivateKey
 import java.security.spec.ECGenParameterSpec
 import java.security.spec.PKCS8EncodedKeySpec
 import java.text.SimpleDateFormat
+import java.time.Instant
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
@@ -128,7 +127,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             if (defaultSigner == null)
             {
                 //we only allow C2PA on devices that have been patched within 90 days
-                if (checkOSSecurityPatch(90)) {
+                if (checkOSSecurityPatchDate(90)) {
                     defaultSigner = createSigner(signingMode, TSA_SSLCOM)
                 }
             }
@@ -162,15 +161,6 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             e.printStackTrace()
             Result.Failure("Error signing image",e)
         }
-    }
-
-    fun setupProofSign () {
-
-        val client = ProofSignClient(context,
-            BuildConfig.SIGNING_SERVER_ENDPOINT,
-            BuildConfig.CLOUD_INTEGRITY_PROJECT_NUMBER,
-            BuildConfig.SIGNING_SERVER_TOKEN
-        );
     }
 
     private suspend fun createSigner(mode: SigningMode, tsaUrl: String): Signer? = withContext(Dispatchers.IO) {
@@ -821,30 +811,6 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
         var appSignatures = context.packageManager.getPackageInfo(context.packageName, PackageManager.GET_SIGNING_CERTIFICATES).signingInfo;
 
-        val keyAlias = "attested_key"
-        val keyGen = KeyPairGenerator.getInstance(
-            KeyProperties.KEY_ALGORITHM_EC, "AndroidKeyStore"
-        )
-
-        //generate a local hardware-back signature with the nonce of the sha256 ingredient image inside of it
-        //https://proandroiddev.com/your-app-is-secure-but-is-the-device-android-hardware-attestation-explained-e9a531312035
-        val nonceOfIngredient = HashUtils.getSHA256FromFileContent(FileInputStream(inFile))
-
-        val spec = KeyGenParameterSpec.Builder(
-            keyAlias,
-            KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY
-        )
-            .setDigests(KeyProperties.DIGEST_SHA256)
-            .setAttestationChallenge(nonceOfIngredient.toByteArray())        // request attestation
-            .build()
-
-        keyGen.initialize(spec)
-
-        //create temp key with Nonce
-        val keyPair = keyGen.generateKeyPair()
-        val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
-
-        val certChain = ks.getCertificateChain(keyAlias)
 
         // Custom assertion
         var result = AssertionDefinition.custom(
@@ -902,9 +868,13 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                         })
                 }
 
-
-                if (certChain != null)
+                val nonceOfIngredient = HashUtils.getSHA256FromFileContent(FileInputStream(inFile))
+                val certChain = getDeviceAttestationCertChain(nonceOfIngredient)
+                if (certChain != null && certChain.isNotEmpty())
                 {
+
+                    verifyAttestationCertificateChain(certChain)
+
                     put("proofmode:HardwareAttestations", buildJsonArray {
                         for (cert in certChain) {
                             var xCert = cert as X509Certificate
@@ -915,8 +885,6 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
             })
 
-        //just for one moment!
-        ks.deleteEntry(keyAlias)
 
         return result
 
@@ -928,6 +896,69 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         return formatter.format(date)
     }
 
+    fun getDeviceAttestationCertChain (nonceOfIngredient: String): ArrayList<X509Certificate> {
+
+        val keyAlias = "attested_key"
+        val keyGen = KeyPairGenerator.getInstance(
+            KeyProperties.KEY_ALGORITHM_EC, "AndroidKeyStore"
+        )
+        //generate a local hardware-back signature with the nonce of the sha256 ingredient image inside of it
+        //https://proandroiddev.com/your-app-is-secure-but-is-the-device-android-hardware-attestation-explained-e9a531312035
+
+        val spec = KeyGenParameterSpec.Builder(
+            keyAlias,
+            KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY
+        )
+            .setDigests(KeyProperties.DIGEST_SHA256)
+            .setAttestationChallenge(nonceOfIngredient.toByteArray())        // request attestation
+            .build()
+
+        keyGen.initialize(spec)
+
+        //create temp key with Nonce
+        val keyPair = keyGen.generateKeyPair()
+        val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+
+        val certChain = ks.getCertificateChain(keyAlias)
+
+        //just for one moment!
+        ks.deleteEntry(keyAlias)
+
+        var certChainList = ArrayList<X509Certificate>()
+        for (cert in certChain)
+            certChainList.add(cert as X509Certificate)
+
+        return certChainList
+    }
+
+    fun verifyAttestationCertificateChain (certificateChain: List<X509Certificate>) : Boolean {
+        // Create a verifier with default, Google-rooted trust anchors, revocation info, and time source
+
+        val verifier = com.android.keyattestation.verifier.Verifier(
+            GoogleTrustAnchors,                   // Trust anchors source
+            { setOf<String>() },                  // Revoked serials source
+            { Instant.now() }                     // Time source
+        )
+
+        /// Verify an attestation certificate chain
+        when (val result = verifier.verify(certificateChain) as com.android.keyattestation.verifier.VerificationResult) {
+
+            is com.android.keyattestation.verifier.VerificationResult.Success -> {
+                // Access verified information
+                val publicKey = result.publicKey
+                val securityLevel = result.securityLevel
+                val verifiedBootState = result.verifiedBootState
+                val deviceInformation = result.deviceInformation
+
+                return true
+            }
+            else -> {
+
+                return false
+
+            }
+        }
+    }
 
     /**
      * Helper functions for getting app name and version
@@ -956,12 +987,37 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
     }
 
-    fun checkOSSecurityPatch(withinDaysLimit: Int): Boolean {
-        val patchDateString = Build.VERSION.SECURITY_PATCH // format: YYYY-MM-DD
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-        dateFormat.timeZone = TimeZone.getTimeZone("UTC")
-        val patchDate = dateFormat.parse(patchDateString) ?: return false
-        val daysSincePatch = (System.currentTimeMillis() - patchDate.time) / (1000L * 60 * 60 * 24)
-        return daysSincePatch <= withinDaysLimit
+    fun GetAttestationOSPatchLevelDate (attestationCert: X509Certificate): String? {
+        return try {
+            val keyDescription = KeyDescription.parseFrom(attestationCert)
+            val osPatchLevel = keyDescription?.hardwareEnforced?.osPatchLevel
+                ?: keyDescription?.softwareEnforced?.osPatchLevel
+            return osPatchLevel?.toString()
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to parse attestation osPatchLevel, falling back to Build.VERSION.SECURITY_PATCH")
+            return null
+        }
+    }
+
+    fun checkOSSecurityPatchDate(withinDaysLimit: Int): Boolean {
+
+        val certChain = getDeviceAttestationCertChain("checkOSSecurityPatchDate")
+        if (certChain != null && certChain.isNotEmpty()) {
+
+            if (verifyAttestationCertificateChain(certChain)) {
+
+                //val patchDateString = Build.VERSION.SECURITY_PATCH // format: YYYY-MM-DD
+                val patchDateString = GetAttestationOSPatchLevelDate (certChain[0])
+                //val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+                val dateFormat = SimpleDateFormat("yyyyMM", Locale.US)
+                dateFormat.timeZone = TimeZone.getTimeZone("UTC")
+                val patchDate = dateFormat.parse(patchDateString) ?: return false
+                val daysSincePatch =
+                    (System.currentTimeMillis() - patchDate.time) / (1000L * 60 * 60 * 24)
+                return daysSincePatch <= withinDaysLimit
+            }
+        }
+
+        return false
     }
 }
