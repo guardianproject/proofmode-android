@@ -14,6 +14,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
@@ -77,7 +78,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.contentauth.c2pa.C2PA
 import org.witness.proofmode.R
 import org.witness.proofmode.c2pa.C2PAManager
@@ -341,7 +344,12 @@ fun updateMetadata (itemUri : Uri, context : Context) {
             var c2paFile = File(hmap?.get(ProofModeV1Constants.FILE_PATH))
             var valid = c2paMan.validateSignedMedia(c2paFile.canonicalPath)
 
-            addRow(context.getString(R.string.content_credentials),"$valid")
+            C2PAManifestRow(
+                label = context.getString(R.string.content_credentials),
+                valid = valid,
+                filePath = c2paFile.canonicalPath,
+                context = context
+            )
 
         }
 
@@ -385,6 +393,84 @@ fun updateMetadata (itemUri : Uri, context : Context) {
 
     }
 }
+@Composable
+fun C2PAManifestRow(label: String, valid: Boolean, filePath: String, context: Context) {
+    var expanded by remember { mutableStateOf(false) }
+    var manifestText by remember { mutableStateOf<String?>(null) }
+    var loading by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+
+    val onTap: () -> Unit = {
+        if (!expanded && manifestText == null && !loading) {
+            loading = true
+            coroutineScope.launch {
+                val result = withContext(Dispatchers.IO) {
+                    try {
+                        val c2paMan = C2PAManager(context, PreferencesManager(context))
+                        c2paMan.readManifest(filePath)
+                    } catch (e: Exception) {
+                        Timber.e(e, "Error reading C2PA manifest")
+                        "Error reading manifest: ${e.message}"
+                    }
+                }
+                manifestText = result
+                loading = false
+                expanded = true
+            }
+        } else {
+            expanded = !expanded
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onTap)
+    ) {
+        Row {
+            Text(
+                modifier = Modifier.padding(3.dp, 3.dp),
+                text = label,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        Row {
+            Text(
+                modifier = Modifier.padding(3.dp, 3.dp),
+                text = if (valid) "Valid: Tap to view manifest" else "Invalid: Tap to view manifest",
+                color = if (valid) Color(0xFF2E7D32) else Color(0xFFC62828)
+            )
+        }
+    }
+    if (loading) {
+        Row {
+            Text(
+                modifier = Modifier.padding(3.dp, 3.dp),
+                text = "Loading manifest...",
+                color = Color.Gray
+            )
+        }
+    }
+    if (expanded && manifestText != null) {
+        Row {
+            SelectionContainer {
+                Text(
+                    modifier = Modifier
+                        .padding(3.dp, 3.dp)
+                        .fillMaxWidth()
+                        .background(Color(0xFFF5F5F5))
+                        .padding(8.dp),
+                    text = manifestText!!,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+    }
+    Row {
+        Text(modifier = Modifier.padding(2.dp, 2.dp), text = "")
+    }
+}
+
 @Composable
 fun addRow (key : String,  hmap: HashMap<String,String>?) {
 

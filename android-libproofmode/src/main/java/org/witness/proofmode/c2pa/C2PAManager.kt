@@ -682,6 +682,24 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         return false
     }
 
+    public fun readManifest(filePath: String): String {
+
+        val trustAnchors = InputStreamReader(context.assets.open("c2pa_trust_anchors.txt")).readText()
+
+        val settingsJson = buildJsonObject {
+            put("version", 1)
+            put ("trust", buildJsonObject {
+                put ("trust_anchors", trustAnchors)
+            })
+        }
+        C2PA.loadSettings(settingsJson.toString(),"json")
+
+        // Read and verify using C2PA
+        val manifestJSON = C2PA.readFile(filePath, null)
+        return manifestJSON
+
+    }
+
     /**
      * Should be under c2pa.metadata
      *
