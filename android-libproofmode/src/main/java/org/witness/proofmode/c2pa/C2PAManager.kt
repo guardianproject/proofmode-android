@@ -16,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -537,22 +538,24 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         Timber.d( "Starting signImageData")
         Timber.d( "Manifest JSON: ${manifestJSON.take(200)}...") // First 200 chars
 
-        val createdLabels = (Builder.DEFAULT_CREATED_ASSERTION_LABELS + listOf(
+        val createdLabels = Builder.DEFAULT_CREATED_ASSERTION_LABELS + listOf(
             "proofmode.metadata",
             "stds.exif"
-        )).joinToString(", ") { "\"$it\"" }
+        )
 
-        val settingsJson = """
-            {
-                "version": 1,
-                "builder": {
-                    "created_assertion_labels": [$createdLabels]
-                }
-            }
-        """.trimIndent()
+        val settingsJson = buildJsonObject {
+            put("version", 1)
+            put("builder", buildJsonObject {
+                put("created_assertion_labels", buildJsonArray {
+                    for (label in createdLabels) {
+                        add(label)
+                    }
+                })
+            })
+        }
 
         val settings = C2PASettings.create().apply {
-            updateFromString(settingsJson, "json")
+            updateFromString(settingsJson.toString(), "json")
         }
 
         val builder = Builder.fromJson(manifestJSON, settings)
