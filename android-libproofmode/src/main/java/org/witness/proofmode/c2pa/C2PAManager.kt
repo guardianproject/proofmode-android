@@ -630,7 +630,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             })
         }
             C2PA.loadSettings(settingsJson.toString(),"json")
-        
+
             // Read and verify using C2PA
             val manifestJSON = C2PA.readFile(filePath, null)
             Timber.d( "Manifest JSON length: ${manifestJSON.length} characters")
@@ -644,16 +644,31 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
             }
 
+
             if (validation.isValid())
             {
 
                 Timber.d( "C2PA MANIFEST IS VALID")
+
+                if (validation.hasWarnings())
+                {
+                    Timber.d("C2PA Warnings: " + validation.warnings.joinToString("; "))
+                }
                 return true
 
             }
             else
             {
                 Timber.d( "C2PA MANIFEST IS INVALID")
+
+                if (validation.hasWarnings())
+                {
+                    Timber.d("C2PA Warnings: " + validation.warnings.joinToString("; "))
+                }
+                if (validation.hasErrors())
+                {
+                    Timber.d("C2PA Errors: " + validation.errors.joinToString("; "))
+                }
                 return false
             }
 
