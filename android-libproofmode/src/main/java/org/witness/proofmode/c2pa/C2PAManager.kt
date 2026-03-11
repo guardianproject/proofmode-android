@@ -1000,7 +1000,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
     }
 
-    fun GetAttestationOSPatchLevelDate (attestationCert: X509Certificate): String? {
+    fun getAttestationOSPatchLevelDate (attestationCert: X509Certificate): String? {
         return try {
             val keyDescription = KeyDescription.parseFrom(attestationCert)
             val osPatchLevel = keyDescription?.hardwareEnforced?.osPatchLevel
@@ -1020,7 +1020,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             if (verifyAttestationCertificateChain(certChain)) {
 
                 //val patchDateString = Build.VERSION.SECURITY_PATCH // format: YYYY-MM-DD
-                val patchDateString = GetAttestationOSPatchLevelDate (certChain[0])
+                val patchDateString = getAttestationOSPatchLevelDate (certChain[0])
                 //val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
                 val dateFormat = SimpleDateFormat("yyyyMM", Locale.US)
                 dateFormat.timeZone = TimeZone.getTimeZone("UTC")

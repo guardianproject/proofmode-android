@@ -21,6 +21,7 @@ import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
 import org.witness.proofmode.c2pa.C2PAManager
 import org.witness.proofmode.c2pa.PreferencesManager
 import org.witness.proofmode.c2pa.ProofSignClient
+import org.witness.proofmode.c2pa.VerificationResult
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.library.BuildConfig
 import org.witness.proofmode.notaries.OpenTimestampsNotarizationProvider
@@ -54,6 +55,7 @@ class ProofModeApp : Application() {
 
         StorageProviderManager.getInstance().initializeStorageProviders(this)
 
+        //initProofSignClient()
     }
 
     //ensure this device has been updated with security patches within 90 days
@@ -128,6 +130,22 @@ class ProofModeApp : Application() {
 
     }
 
+    fun initProofSignClient () {
+
+        val client = ProofSignClient(
+                   context = applicationContext,
+                    serverUrl = BuildConfig.SIGNING_DEV_SERVER,
+                    cloudProjectNumber = BuildConfig.CLOUD_INTEGRITY_PROJECT_NUMBER
+                        )
+
+            // Initial verification (do this once or periodically)
+            client.verifyDevice { result ->
+
+                Timber.d("result: " + result)
+
+                }
+
+    }
 
 
     fun checkAndGeneratePublicKey() {

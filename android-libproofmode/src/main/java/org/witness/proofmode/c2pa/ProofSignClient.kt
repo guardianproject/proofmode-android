@@ -70,8 +70,10 @@ import kotlinx.coroutines.*
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.bouncycastle.jcajce.provider.asymmetric.X509
 import org.json.JSONObject
 import org.witness.proofmode.library.BuildConfig
+import java.security.cert.X509Certificate
 
 sealed class Result<out T> {
     data class Success<T>(val data: T) : Result<T>()
@@ -301,6 +303,9 @@ class ProofSignClient(
             val publicKey = getPublicKeyBase64()
             Log.d(TAG, "Registering public key with server (${publicKey.length} chars)")
 
+            val c2paMan = C2PAManager(context, PreferencesManager(context))
+            val attestCertChain = c2paMan.getDeviceAttestationCertChain(nonce)
+
             val json =
                 JSONObject().apply {
                     put("device_id", deviceId)
@@ -308,6 +313,7 @@ class ProofSignClient(
                     put("nonce", nonce)
                     put("package_name", packageName)
                     put("public_key", publicKey)
+                    put ("attest_chain", encodeCertChain(attestCertChain))
                 }
 
             val requestBody = json.toString().toRequestBody("application/json".toMediaType())
@@ -387,6 +393,22 @@ class ProofSignClient(
                 callback(Result.Failure("Server verification failed: ${e.message}", e))
             }
         }
+    }
+
+    fun encodeCertChain (certChain: List<X509Certificate>) : String {
+
+        val sb = StringBuilder()
+
+        for (cert in certChain)
+        {
+            sb.append(cert.subjectDN.name).append("\n")
+            sb.append("-----BEGIN CERTIFICATE-----\n")
+            sb.append(Base64.getEncoder().encodeToString(cert.encoded))
+            sb.append("-----END CERTIFICATE-----\n")
+        }
+
+
+        return sb.toString()
     }
 
     /** Make an authenticated API request using device verification */

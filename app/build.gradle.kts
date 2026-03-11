@@ -193,4 +193,5 @@ dependencies {
     implementation(libs.bundles.work)
 
     implementation(libs.zxing.core)
+
 }
