@@ -890,8 +890,12 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
                     put("proofmode:HardwareAttestations", buildJsonArray {
                         for (cert in certChain) {
-                            var xCert = cert as X509Certificate
-                            add (xCert.toString())
+                            val sb = StringBuilder()
+                            sb.append(cert.subjectDN.name).append("\n")
+                            sb.append("-----BEGIN CERTIFICATE-----\n")
+                            sb.append(java.util.Base64.getEncoder().encodeToString(cert.encoded))
+                            sb.append("-----END CERTIFICATE-----\n")
+                            add (sb.toString())
                         }
                     })
                 }
