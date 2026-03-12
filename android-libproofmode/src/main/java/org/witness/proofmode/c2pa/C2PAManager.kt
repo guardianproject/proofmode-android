@@ -349,13 +349,13 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         Timber.d( "Creating WebServiceSigner with URL: $configUrl")
 
         // Use the new WebServiceSigner class
-      //  val webServiceSigner =
-        //    WebServiceSigner(configurationURL = configUrl, bearerToken = bearerToken)
+        val webServiceSigner =
+            WebServiceSigner(configurationURL = configUrl, bearerToken = bearerToken)
 
-       // return webServiceSigner.createSigner()
+        return webServiceSigner.createSigner()
 
-        val proofSignC2PASigner = ProofSignC2PASigner(context, configurationURL =  configUrl);
-        return proofSignC2PASigner.createSigner()
+       // val proofSignC2PASigner = ProofSignC2PASigner(context, configurationURL =  configUrl);
+       // return proofSignC2PASigner.createSigner()
     }
 
     private fun createKeystoreKey(alias: String, useHardware: Boolean) {
@@ -546,30 +546,10 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         Timber.d( "Starting signImageData")
         Timber.d( "Manifest JSON: ${manifestJSON.take(200)}...") // First 200 chars
 
-        val createdLabels = Builder.DEFAULT_CREATED_ASSERTION_LABELS + listOf(
-            "proofmode.metadata",
-            "stds.exif"
-          //  "c2pa.metadata"
-        )
-
-        val trustAnchors = InputStreamReader(context.assets.open("c2pa_trust_anchors.txt")).readText()
-
-        val settingsJson = buildJsonObject {
-            put("version", 1)
-            put("builder", buildJsonObject {
-                put("created_assertion_labels", buildJsonArray {
-                    for (label in createdLabels) {
-                        add(label)
-                    }
-                })
-            })
-            put ("trust", buildJsonObject {
-                put ("trust_anchors", trustAnchors)
-            })
-        }
+        val settingsJsonString = buildSettingsJson(context)
 
         val settings = C2PASettings.create().apply {
-            updateFromString(settingsJson.toString(), "json")
+            updateFromString(settingsJsonString, "json")
         }
 
         val builder = Builder.fromJson(manifestJSON, settings)
@@ -622,6 +602,68 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             sourceStream.close()
             destStream.close()
         }
+    }
+
+    fun buildSettingsJson (context: Context): String {
+        val createdLabels = Builder.DEFAULT_CREATED_ASSERTION_LABELS + listOf(
+            "proofmode.metadata",
+            "stds.exif"   //  "c2pa.metadata"
+        )
+
+        val trustAnchors = InputStreamReader(context.assets.open("c2pa_trust_anchors.txt")).readText()
+        val trustConfig = InputStreamReader(context.assets.open("trust_config.txt")).readText()
+
+        var doCawgSigner = true
+
+        val settingsJson = buildJsonObject {
+            put("version", 1)
+            put("builder", buildJsonObject {
+                put("created_assertion_labels", buildJsonArray {
+                    for (label in createdLabels) {
+                        add(label)
+                    }
+                })
+            })
+            put ("trust", buildJsonObject {
+                put ("trust_anchors", trustAnchors)
+                put ("trust_config", trustConfig)
+
+            })
+
+
+            if (doCawgSigner) {
+
+                val cawgTrustAnchors = InputStreamReader(context.assets.open("cawg_trust_anchors.txt")).readText()
+
+                put ("cawg_trust", buildJsonObject {
+                    put ("trust_anchors", cawgTrustAnchors)
+                })
+
+                val signCert = InputStreamReader(context.assets.open("cawg_certs.txt")).readText()
+                val privateKey = InputStreamReader(context.assets.open("cawg_key.txt")).readText()
+
+                put ("cawg_x509_signer", buildJsonObject {
+                    put ("local", buildJsonObject {
+                        put ("alg", "es256")
+
+                        put ("sign_cert",signCert)
+                        put ("private_key",privateKey)
+                        put ("tsa_url","http://timestamp.digicert.com")
+
+                        put("referenced_assertions", buildJsonArray {
+                         //   add("cawg.metadata")
+                            add("cawg.training-mining")
+                        })
+                    })
+                })
+            }
+        }
+
+        //[cawg_x509_signer]
+        //
+        //[cawg_x509_signer.local]
+
+        return settingsJson.toString()
     }
 
     public fun validateSignedMedia(filePath: String): Boolean {
