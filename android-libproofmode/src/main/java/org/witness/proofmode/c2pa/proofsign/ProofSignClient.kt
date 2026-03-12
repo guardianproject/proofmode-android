@@ -1,4 +1,4 @@
-package org.witness.proofmode.c2pa
+package org.witness.proofmode.c2pa.proofsign
 
 /**
  * ProofSign Android Client Single-file client for Google Play Integrity device verification with
@@ -70,10 +70,15 @@ import kotlinx.coroutines.*
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
-import org.bouncycastle.jcajce.provider.asymmetric.X509
+import org.json.JSONArray
 import org.json.JSONObject
+import org.witness.proofmode.c2pa.C2PAManager
+import org.witness.proofmode.c2pa.PreferencesManager
 import org.witness.proofmode.library.BuildConfig
+import java.security.KeyPair
 import java.security.cert.X509Certificate
+import java.security.spec.ECGenParameterSpec
+import java.util.concurrent.TimeUnit
 
 sealed class Result<out T> {
     data class Success<T>(val data: T) : Result<T>()
@@ -95,9 +100,9 @@ class ProofSignClient(
 ) {
     private val client =
         OkHttpClient.Builder()
-            .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-            .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
             .build()
 
     private val prefs: SharedPreferences =
@@ -154,7 +159,7 @@ class ProofSignClient(
     }
 
     /** Get or create an EC P-256 keypair in Android Keystore for request signing */
-    private fun getOrCreateKeyPair(): java.security.KeyPair {
+    private fun getOrCreateKeyPair(): KeyPair {
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
         keyStore.load(null)
 
@@ -163,7 +168,7 @@ class ProofSignClient(
             val privateKey = keyStore.getKey(KEYSTORE_ALIAS, null) as PrivateKey
             val publicKey = keyStore.getCertificate(KEYSTORE_ALIAS).publicKey
             Log.d(TAG, "Using existing keypair from Android Keystore")
-            return java.security.KeyPair(publicKey, privateKey)
+            return KeyPair(publicKey, privateKey)
         }
 
         // Generate new keypair
@@ -178,7 +183,7 @@ class ProofSignClient(
             KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY
         )
             .setDigests(KeyProperties.DIGEST_SHA256)
-            .setAlgorithmParameterSpec(java.security.spec.ECGenParameterSpec("secp256r1"))
+            .setAlgorithmParameterSpec(ECGenParameterSpec("secp256r1"))
             .build()
 
         keyPairGenerator.initialize(parameterSpec)
@@ -533,7 +538,7 @@ class ProofSignClient(
                     val responseBody = response.body?.string() ?: ""
 
                     if (response.isSuccessful) {
-                        val jsonArray = org.json.JSONArray(responseBody)
+                        val jsonArray = JSONArray(responseBody)
                         val history = mutableListOf<VerificationHistory>()
 
                         for (i in 0 until jsonArray.length()) {

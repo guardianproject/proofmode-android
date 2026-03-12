@@ -3,7 +3,6 @@ package org.witness.proofmode
 import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.preference.PreferenceManager
@@ -20,8 +19,7 @@ import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
 import org.witness.proofmode.c2pa.C2PAManager
 import org.witness.proofmode.c2pa.PreferencesManager
-import org.witness.proofmode.c2pa.ProofSignClient
-import org.witness.proofmode.c2pa.VerificationResult
+import org.witness.proofmode.c2pa.proofsign.ProofSignClient
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.library.BuildConfig
 import org.witness.proofmode.notaries.OpenTimestampsNotarizationProvider
@@ -55,7 +53,7 @@ class ProofModeApp : Application() {
 
         StorageProviderManager.getInstance().initializeStorageProviders(this)
 
-        //initProofSignClient()
+        initProofSignClient()
     }
 
     //ensure this device has been updated with security patches within 90 days
@@ -144,6 +142,8 @@ class ProofModeApp : Application() {
                 Timber.d("result: " + result)
 
                 }
+
+      //  client.signC2PAClaimWithDeviceAuth()
 
     }
 
