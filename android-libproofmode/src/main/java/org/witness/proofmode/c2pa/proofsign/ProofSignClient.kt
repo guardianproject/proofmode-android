@@ -72,11 +72,8 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
-import org.witness.proofmode.c2pa.C2PAManager
-import org.witness.proofmode.c2pa.PreferencesManager
 import org.witness.proofmode.library.BuildConfig
 import java.security.KeyPair
-import java.security.cert.X509Certificate
 import java.security.spec.ECGenParameterSpec
 import java.util.concurrent.TimeUnit
 
@@ -94,8 +91,8 @@ data class VerificationResult(val deviceId: String, val verdict: String, val exp
 
 class ProofSignClient(
     private val context: Context,
-    private val serverUrl: String,
-    private val cloudProjectNumber: String,
+    val serverUrl: String,
+    val cloudProjectNumber: String,
     bearerToken: String? = null
 ) {
     private val client =
@@ -143,7 +140,7 @@ class ProofSignClient(
     }
 
     /** Get or create a stable device identifier */
-    private fun getDeviceId(): String {
+    fun getDeviceId(): String {
         var deviceId = prefs.getString(PREF_DEVICE_ID, null)
         if (deviceId == null) {
             deviceId = UUID.randomUUID().toString()
@@ -280,17 +277,13 @@ class ProofSignClient(
                         }
 
                         is Result.Failure -> {
-                            scope.launch {
-                                withContext(Dispatchers.Main) { callback(tokenResult) }
-                            }
+                            callback(tokenResult)
                         }
                     }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error during device verification", e)
-                withContext(Dispatchers.Main) {
-                    callback(Result.Failure("Verification failed: ${e.message}", e))
-                }
+                callback(Result.Failure("Verification failed: ${e.message}", e))
             }
         }
     }
@@ -308,9 +301,6 @@ class ProofSignClient(
             val publicKey = getPublicKeyBase64()
             Log.d(TAG, "Registering public key with server (${publicKey.length} chars)")
 
-            val c2paMan = C2PAManager(context, PreferencesManager(context))
-            val attestCertChain = c2paMan.getDeviceAttestationCertChain(nonce)
-
             val json =
                 JSONObject().apply {
                     put("device_id", deviceId)
@@ -318,7 +308,6 @@ class ProofSignClient(
                     put("nonce", nonce)
                     put("package_name", packageName)
                     put("public_key", publicKey)
-                    put ("attest_chain", encodeCertChain(attestCertChain))
                 }
 
             val requestBody = json.toString().toRequestBody("application/json".toMediaType())
@@ -370,7 +359,7 @@ class ProofSignClient(
                             expiresAt = expiresAt
                         )
 
-                    withContext(Dispatchers.Main) { callback(Result.Success(result)) }
+                    callback(Result.Success(result))
                 } else {
                     val errorMsg =
                         try {
@@ -382,38 +371,16 @@ class ProofSignClient(
 
                     Log.e(TAG, "Verification failed: $errorMsg")
 
-                    withContext(Dispatchers.Main) {
-                        callback(Result.Failure("Verification failed: $errorMsg"))
-                    }
+                    callback(Result.Failure("Verification failed: $errorMsg"))
                 }
             }
         } catch (e: IOException) {
             Log.e(TAG, "Network error during verification", e)
-            withContext(Dispatchers.Main) {
-                callback(Result.Failure("Network error: ${e.message}", e))
-            }
+            callback(Result.Failure("Network error: ${e.message}", e))
         } catch (e: Exception) {
             Log.e(TAG, "Error during server verification", e)
-            withContext(Dispatchers.Main) {
-                callback(Result.Failure("Server verification failed: ${e.message}", e))
-            }
+            callback(Result.Failure("Server verification failed: ${e.message}", e))
         }
-    }
-
-    fun encodeCertChain (certChain: List<X509Certificate>) : String {
-
-        val sb = StringBuilder()
-
-        for (cert in certChain)
-        {
-            sb.append(cert.subjectDN.name).append("\n")
-            sb.append("-----BEGIN CERTIFICATE-----\n")
-            sb.append(Base64.getEncoder().encodeToString(cert.encoded))
-            sb.append("-----END CERTIFICATE-----\n")
-        }
-
-
-        return sb.toString()
     }
 
     /** Make an authenticated API request using device verification */
@@ -644,9 +611,7 @@ class ProofSignClient(
         scope.launch {
             try {
                 if (!isVerificationValid()) {
-                    withContext(Dispatchers.Main) {
-                        callback(Result.Failure("Device verification expired. Please call verifyDevice() first"))
-                    }
+                    callback(Result.Failure("Device verification expired. Please call verifyDevice() first"))
                     return@launch
                 }
 
@@ -674,6 +639,8 @@ class ProofSignClient(
 
                 val requestBody = json.toString().toRequestBody("application/json".toMediaType())
 
+                Log.d(TAG, "Sending device auth signing request to: $serverUrl/api/v1/c2pa/sign")
+
                 val request =
                     Request.Builder()
                         .url("$serverUrl/api/v1/c2pa/sign")
@@ -694,7 +661,7 @@ class ProofSignClient(
                                 )
 
                             Log.d(TAG, "Claim signed successfully with device auth")
-                            withContext(Dispatchers.Main) { callback(Result.Success(signature)) }
+                            callback(Result.Success(signature))
                         }
 
                         response.code == 428 && !isRetry -> {
@@ -722,11 +689,7 @@ class ProofSignClient(
 
                                     is Result.Failure -> {
                                         Log.e(TAG, "Fresh verification failed: ${verifyResult.error}")
-                                        scope.launch {
-                                            withContext(Dispatchers.Main) {
-                                                callback(Result.Failure("Integrity re-verification failed: ${verifyResult.error}"))
-                                            }
-                                        }
+                                        callback(Result.Failure("Integrity re-verification failed: ${verifyResult.error}"))
                                     }
                                 }
                             }
@@ -735,9 +698,7 @@ class ProofSignClient(
                         response.code == 428 && isRetry -> {
                             // Already retried once, don't loop forever
                             Log.e(TAG, "Integrity challenge failed even after re-verification")
-                            withContext(Dispatchers.Main) {
-                                callback(Result.Failure("Device integrity verification failed"))
-                            }
+                            callback(Result.Failure("Device integrity verification failed"))
                         }
 
                         else -> {
@@ -750,20 +711,16 @@ class ProofSignClient(
                                 }
 
                             Log.e(TAG, "Device auth signing failed: $errorMsg")
-                            withContext(Dispatchers.Main) { callback(Result.Failure(errorMsg)) }
+                            callback(Result.Failure(errorMsg))
                         }
                     }
                 }
             } catch (e: IOException) {
                 Log.e(TAG, "Network error during device auth signing", e)
-                withContext(Dispatchers.Main) {
-                    callback(Result.Failure("Network error: ${e.message}", e))
-                }
+                callback(Result.Failure("Network error: ${e.message}", e))
             } catch (e: Exception) {
                 Log.e(TAG, "Error during device auth signing", e)
-                withContext(Dispatchers.Main) {
-                    callback(Result.Failure("Signing failed: ${e.message}", e))
-                }
+                callback(Result.Failure("Signing failed: ${e.message}", e))
             }
         }
     }

@@ -3,21 +3,14 @@ package org.witness.proofmode.c2pa.proofsign
 
 import android.content.Context
 import android.util.Base64
-import java.util.concurrent.CountDownLatch
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
 import org.contentauth.c2pa.C2PAJson
 import org.contentauth.c2pa.Signer
 import org.contentauth.c2pa.SigningAlgorithm
-import org.contentauth.c2pa.WebServiceSigner
 import org.witness.proofmode.library.BuildConfig
 import java.util.concurrent.TimeUnit
-import kotlin.collections.component1
-import kotlin.collections.component2
 
 /**
  * ProofSignC2PASigner provides remote signing capabilities through a ProofSign C2PA signing server,
@@ -38,11 +31,6 @@ class ProofSignC2PASigner (
     private val configurationURL: String
 ) {
 
-    private val json = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-    }
-
     private val proofSignClient = ProofSignClient(
         context = context,
         serverUrl = BuildConfig.SIGNING_DEV_SERVER,
@@ -62,7 +50,6 @@ class ProofSignC2PASigner (
      * configuration from the server and sets up the signing callback.
      */
     suspend fun createSigner(): Signer {
-
         val configuration = fetchConfiguration()
         val signingAlgorithm = mapAlgorithm(configuration.algorithm)
         val certificateChain = parseCertificateChain(configuration.certificate_chain)
@@ -103,6 +90,28 @@ class ProofSignC2PASigner (
 
 
     private fun signData(data: ByteArray, signingURL: String): ByteArray {
+        // Auto-verify device if verification has expired or hasn't been done
+        if (!proofSignClient.isVerificationValid()) {
+            val verifyLatch = java.util.concurrent.CountDownLatch(1)
+            var verifyError: String? = null
+
+            proofSignClient.verifyDevice { result ->
+                when (result) {
+                    is Result.Success -> {}
+                    is Result.Failure -> {
+                        verifyError = result.error
+                    }
+                }
+                verifyLatch.countDown()
+            }
+
+            if (!verifyLatch.await(60, java.util.concurrent.TimeUnit.SECONDS)) {
+                throw SignerException.HttpError(-1, "Device verification timed out")
+            }
+
+            verifyError?.let { throw SignerException.HttpError(-1, "Device verification failed: $it") }
+        }
+
         val dataToSignBase64 = Base64.encodeToString(data, Base64.NO_WRAP)
 
         val latch = java.util.concurrent.CountDownLatch(1)

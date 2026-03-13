@@ -342,19 +342,8 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
     }
 
     private suspend fun createRemoteSigner(): Signer {
-
         val configUrl = BuildConfig.SIGNING_SERVER_AND_ENDPOINT
-        val bearerToken = BuildConfig.SIGNING_SERVER_TOKEN
-
-        Timber.d( "Creating WebServiceSigner with URL: $configUrl")
-
-        // Use the new WebServiceSigner class
-      //  val webServiceSigner =
-        //    WebServiceSigner(configurationURL = configUrl, bearerToken = bearerToken)
-
-       // return webServiceSigner.createSigner()
-
-        val proofSignC2PASigner = ProofSignC2PASigner(context, configurationURL =  configUrl);
+        val proofSignC2PASigner = ProofSignC2PASigner(context, configurationURL = configUrl)
         return proofSignC2PASigner.createSigner()
     }
 
