@@ -623,51 +623,47 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                 put ("trust_anchors", trustAnchors)
             })
         }
-            C2PA.loadSettings(settingsJson.toString(),"json")
+        C2PA.loadSettings(settingsJson.toString(),"json")
 
-            // Read and verify using C2PA
-            val manifestJSON = C2PA.readFile(filePath, null)
-            Timber.d( "Manifest JSON length: ${manifestJSON.length} characters")
-            Timber.d("Menifest JSON:\n${manifestJSON}")
+        // Read and verify using C2PA
+        val manifestJSON = C2PA.readFile(filePath, null)
+        Timber.d( "Manifest JSON length: ${manifestJSON.length} characters")
+        Timber.d("Menifest JSON:\n${manifestJSON}")
 
-            val validation = ManifestValidator.validateJson(manifestJSON, logWarnings = true)
-            if (validation.hasErrors()) {
-                Timber.d( "C2PA VALIDATION ERRORS")
+        val validation = ManifestValidator.validateJson(manifestJSON, logWarnings = true)
+        if (validation.hasErrors()) {
+            Timber.d( "C2PA VALIDATION ERRORS")
+            Timber.d(validation.errors.joinToString("; "))
+        }
 
-                Timber.d(validation.errors.joinToString("; "))
+        val isInvalid = manifestJSON.contains("\"validation_state\": \"Invalid\"")
 
-            }
+        if (validation.isValid() && (!isInvalid))
+        {
 
+            Timber.d( "C2PA MANIFEST IS VALID")
 
-            if (validation.isValid())
+            if (validation.hasWarnings())
             {
-
-                Timber.d( "C2PA MANIFEST IS VALID")
-
-                if (validation.hasWarnings())
-                {
-                    Timber.d("C2PA Warnings: " + validation.warnings.joinToString("; "))
-                }
-                return true
-
+                Timber.d("C2PA Warnings: " + validation.warnings.joinToString("; "))
             }
-            else
+            return true
+
+        }
+        else
+        {
+            Timber.d( "C2PA MANIFEST IS INVALID")
+
+            if (validation.hasWarnings())
             {
-                Timber.d( "C2PA MANIFEST IS INVALID")
-
-                if (validation.hasWarnings())
-                {
-                    Timber.d("C2PA Warnings: " + validation.warnings.joinToString("; "))
-                }
-                if (validation.hasErrors())
-                {
-                    Timber.d("C2PA Errors: " + validation.errors.joinToString("; "))
-                }
-                return false
+                Timber.d("C2PA Warnings: " + validation.warnings.joinToString("; "))
             }
-
-
-
+            if (validation.hasErrors())
+            {
+                Timber.d("C2PA Errors: " + validation.errors.joinToString("; "))
+            }
+            return false
+        }
 
 
         return false
