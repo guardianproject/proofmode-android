@@ -647,8 +647,10 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
             }
 
+            val isInvalid = manifestJSON.contains("\"validation_state\": \"Invalid\"")
 
-            if (validation.isValid())
+
+            if (validation.isValid() && (!isInvalid))
             {
 
                 Timber.d( "C2PA MANIFEST IS VALID")
