@@ -11,12 +11,10 @@ import android.security.keystore.KeyProperties
 import android.security.keystore.WrappedKeyEntry
 import android.util.Base64
 import android.util.Log
-import android.widget.Toast
 import com.android.keyattestation.verifier.GoogleTrustAnchors
 import com.android.keyattestation.verifier.KeyDescription
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
@@ -45,10 +43,10 @@ import org.contentauth.c2pa.manifest.ManifestValidator
 import org.json.JSONObject
 import org.witness.proofmode.ProofMode
 import org.witness.proofmode.ProofMode.PREF_OPTION_LOCATION
+import org.witness.proofmode.c2pa.selfsign.CAWGIdentityManager
 import org.witness.proofmode.c2pa.selfsign.CertificateSigningService
 import org.witness.proofmode.crypto.HashUtils
 import org.witness.proofmode.library.BuildConfig
-import org.witness.proofmode.library.R
 import timber.log.Timber
 import java.io.ByteArrayInputStream
 import java.io.File
@@ -85,6 +83,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
 //        private const val TSA_DIGICERT = "http://timestamp.digicert.com"
         private const val TSA_SSLCOM = "https://api.c2patool.io/api/v1/timestamps/ecc"
+        private const val TSA_DEFAULT = TSA_SSLCOM
     }
 
     private var defaultSigner: Signer? = null
@@ -183,6 +182,52 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             SigningMode.CUSTOM -> createCustomSigner(tsaUrl)
             SigningMode.REMOTE -> createRemoteSigner()
         }
+    }
+
+    val CAWG_KEY_ALIAS = "CAWG_SECURE_1"
+
+    private suspend fun createCawgIdentity() : List<String> {
+        val keyAlias = CAWG_KEY_ALIAS
+
+        var certChain = ""
+        var privateKey = ""
+
+        val result = ArrayList<String>()
+        var fileKey = File(context.filesDir,"$keyAlias.key")
+        fileKey.delete()
+
+        // Create or get the keystore key
+        if (!fileKey.exists()) {
+            Timber.d( "Creating new keystore key")
+            CAWGIdentityManager(context).createCawgKey(keyAlias, false)
+        }
+
+        // Get certificate chain from local files
+        fileKey = File(context.filesDir,"$keyAlias.key")
+        if (fileKey.exists()) {
+            privateKey = fileKey.readText()
+
+            result.add(privateKey)
+            val fileCert = File(context.filesDir, "$keyAlias.cert")
+            if (fileCert.exists())
+                certChain = fileCert.readText()
+            else {
+                certChain = enrollHardwareKeyCertificate(keyAlias)
+                fileCert.writeText(certChain)
+            }
+
+            result.add(certChain)
+        }
+
+
+
+
+
+
+        Timber.d( "Using CAWG with keyAlias: $keyAlias")
+
+
+        return result
     }
 
     private suspend fun createKeystoreSigner(tsaUrl: String): Signer {
@@ -540,7 +585,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         return Base64.decode(pemContent, Base64.NO_WRAP)
     }
 
-    private fun signStream(fileName: String, sourceStream: Stream, contentType: String, destStream: Stream, manifestJSON: String, signer: Signer, embed: Boolean = true) {
+    private suspend fun signStream(fileName: String, sourceStream: Stream, contentType: String, destStream: Stream, manifestJSON: String, signer: Signer, embed: Boolean = true) {
         Timber.d( "Starting signImageData")
         Timber.d( "Manifest JSON: ${manifestJSON.take(200)}...") // First 200 chars
 
@@ -550,6 +595,10 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         )
 
         val trustAnchors = InputStreamReader(context.assets.open("c2pa_trust_anchors.txt")).readText()
+
+        var currentSigner = signer;
+
+        val doCawgIdentity = false; //not ready yet!
 
         val settingsJson = buildJsonObject {
             put("version", 1)
@@ -563,7 +612,50 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             put ("trust", buildJsonObject {
                 put ("trust_anchors", trustAnchors)
             })
+
+            if (doCawgIdentity)
+            {
+                //val cawgKeyAndCerts = createCawgIdentity ()
+
+                put ("version","1")
+                val testPublicCertChain = InputStreamReader(context.assets.open("c2pa_test_cert.txt")).readText()
+                val testPrivateKey = InputStreamReader(context.assets.open("c2pa_test_key.txt")).readText()
+
+
+                put ("signer", buildJsonObject {
+
+                    put ("local", buildJsonObject {
+                       // put ("alg","es256")
+                        put ("alg","ps256")
+                        put ("sign_cert",testPublicCertChain)
+                        put ("private_key",testPrivateKey)
+                        put ("tsa_url",TSA_DEFAULT)
+                    })
+                })
+
+                val cawgPublicCertChain = InputStreamReader(context.assets.open("cawg_test_cert.txt")).readText()
+                val cawgPrivateKey = InputStreamReader(context.assets.open("cawg_test_key.txt")).readText()
+
+
+                put ("cawg_x509_signer", buildJsonObject {
+
+                    put ("local", buildJsonObject {
+                        put ("alg","es256")
+                        put ("sign_cert",cawgPublicCertChain)
+                        put ("private_key",cawgPrivateKey)
+                        put ("tsa_url",TSA_DEFAULT)
+                        put("referenced_assertions", buildJsonArray {
+                            add("cawg.training-mining")
+                        })
+                    })
+                })
+            }
         }
+
+        val settingsJsonString = settingsJson.toString()
+
+        if (doCawgIdentity)
+            currentSigner = Signer.fromSettingsJson(settingsJsonString)
 
         val settings = C2PASettings.create().apply {
             updateFromString(settingsJson.toString(), "json")
@@ -602,7 +694,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                 format = contentType,
                 source = sourceStream,
                 dest = destStream,
-                signer = signer,
+                signer = currentSigner,
             )
 
 
@@ -700,7 +792,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         return manifestJSON
 
     }
-    
+
     private fun createC2PAMetadataAssertion(context: Context, location: Location?, fileIn: File, contentType: String): AssertionDefinition {
 
         // Custom assertion
