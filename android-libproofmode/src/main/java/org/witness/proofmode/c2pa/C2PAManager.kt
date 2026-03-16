@@ -117,11 +117,11 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                 title = inFile.name,
                 claimGeneratorInfo = listOf(ClaimGeneratorInfo.fromContext(context)),
                 assertions = listOf(
-                    createExifAssertion(context, location, inFile, contentType),
+                    createC2PAMetadataAssertion(context, location, inFile, contentType),
                     createProofmodeAssertion(context, inFile),
                     createCAWGAssertion(context, blockAI == true, email)
                 )
-            );
+            )
 
             var manifestJSON = manifest.toJson()
             Timber.d("Media manifest file:\n\n$manifestJSON")
@@ -546,8 +546,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
         val createdLabels = Builder.DEFAULT_CREATED_ASSERTION_LABELS + listOf(
             "proofmode.metadata",
-            "stds.exif"
-          //  "c2pa.metadata"
+            "c2pa.metadata"
         )
 
         val trustAnchors = InputStreamReader(context.assets.open("c2pa_trust_anchors.txt")).readText()
@@ -701,97 +700,56 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         return manifestJSON
 
     }
-
-    /**
-     * Should be under c2pa.metadata
-     *
-     * {
-     * 	"@context" : {
-     * 		"exif": "http://ns.adobe.com/exif/1.0/",
-     * 		"exifEX": "http://cipa.jp/exif/2.32/",
-     * 		"tiff": "http://ns.adobe.com/tiff/1.0/",
-     * 		"Iptc4xmpExt": "http://iptc.org/std/Iptc4xmpExt/2008-02-29/",
-     * 		"photoshop" : "http://ns.adobe.com/photoshop/1.0/"
-     * 	},
-     * 	"photoshop:DateCreated": "Aug 31, 2022",
-     * 	"Iptc4xmpExt:DigitalSourceType": "http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture",
-     * 	"exif:GPSVersionID": "2.2.0.0",
-     * 	"exif:GPSLatitude": "39,21.102N",
-     * 	"exif:GPSLongitude": "74,26.5737W",
-     * 	"exif:GPSAltitudeRef": 0,
-     * 	"exif:GPSAltitude": "100963/29890",
-     * 	"exif:GPSTimeStamp": "18:22:57",
-     * 	"exif:GPSDateStamp": "2019:09:22",
-     * 	"exif:GPSSpeedRef": "K",
-     * 	"exif:GPSSpeed": "4009/161323",
-     * 	"exif:GPSImgDirectionRef": "T",
-     * 	"exif:GPSImgDirection": "296140/911",
-     * 	"exif:GPSDestBearingRef": "T",
-     * 	"exif:GPSDestBearing": "296140/911",
-     * 	"exif:GPSHPositioningError": "13244/2207",
-     * 	"exif:ExposureTime": "1/100",
-     * 	"exif:FNumber": 4.0,
-     * 	"exif:ColorSpace": 1,
-     * 	"exif:DigitalZoomRatio": 2.0,
-     * 	"tiff:Make": "CameraCompany",
-     * 	"tiff:Model": "Shooter S1",
-     * 	"exifEX:LensMake": "CameraCompany",
-     * 	"exifEX:LensModel": "17.0-35.0 mm",
-     * 	"exifEX:LensSpecification": { "@list": [ 1.55, 4.2, 1.6, 2.4 ] }
-     *
-     * }
-     */
-    private fun createExifAssertion(context: Context, location: Location?, fileIn: File, contentType: String): AssertionDefinition {
+    
+    private fun createC2PAMetadataAssertion(context: Context, location: Location?, fileIn: File, contentType: String): AssertionDefinition {
 
         // Custom assertion
         return AssertionDefinition.custom(
-           // label = "c2pa.metadata",
-            label = "stds.exif",
+            label = "c2pa.metadata",
             data = buildJsonObject {
 
                 put ("@context",
                     buildJsonObject {
                         put("exif", "http://ns.adobe.com/exif/1.0/")
                         put("dc", "http://purl.org/dc/elements/1.1/")
-                        put("exifEX", "http://cipa.jp/exif/2.32/")
-                        put("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+                        put("exifEX", "http://cipa.jp/exif/1.0/")
                         put("tiff", "http://ns.adobe.com/tiff/1.0/")
                         put("xmp", "http://ns.adobe.com/xap/1.0/")
+                        put("Iptc4xmpCore","http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/")
                         put("Iptc4xmpExt", "http://iptc.org/std/Iptc4xmpExt/2008-02-29/")
-
                     })
 
-                location?.let {
-                    put("exif:GPSLatitude", it.latitude.toString())
-                    put("exif:GPSLongitude", it.longitude.toString())
-                    put("exif:GPSAltitude", it.altitude.toString())
+                    put ("Iptc4xmpExt:DigitalSourceType","http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture")
 
-                    put ("exif:GPSAccuracy", it.accuracy.toString())
-                    put ("exif:GPSSpeed", it.speed.toString())
-                    put ("exif:GPSDestBearing", it.bearing.toString())
-                    put ("exif:GPSVersionID", "2.2.0.0")
+                    location?.let {
+                        put ("exif:GPSVersionID", "2.2.0.0")
+                        put("exif:GPSLatitude", it.latitude.toString())
+                        put("exif:GPSLongitude", it.longitude.toString())
+                        put("exif:GPSAltitude", it.altitude.toString())
+                        put ("exif:GPSHPositioningError", it.accuracy.toString())
+                        put ("exif:GPSSpeed", it.speed.toString())
+                        put ("exif:GPSDestBearing", it.bearing.toString())
 
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        put ("exif:GPSProcessingMethod", "Provider=${location.provider};IsMock=${it.isMock}")
+
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            put ("exif:GPSProcessingMethod", "Provider=${location.provider};IsMock=${it.isMock}")
+                        }
+                        else
+                        {
+                            put ("exif:GPSProcessingMethod", "Provider=${location.provider};IsMock=unknown")
+                        }
+
+                        val timestamp = formatIsoTimestamp(Date(it.time))
+                        put("exif:GPSTimeStamp", timestamp)
                     }
-                    else
-                    {
-                        put ("exif:GPSProcessingMethod", "Provider=${location.provider}")
-                    }
 
-                    val timestamp = formatIsoTimestamp(Date(it.time))
-                    put("exif:GPSTimeStamp", timestamp)
-                }
+                    val exifMake = Build.MANUFACTURER
+                    val exifModel = Build.MODEL
 
-                val exifMake = Build.MANUFACTURER
-                val exifModel = Build.MODEL
-
-                put ("tiff:Make",exifMake)
-                put ("tiff:Model", exifModel)
-                put ("tiff:DateTime", formatIsoTimestamp(Date(fileIn.lastModified())))
-                put ("exifEX:LensMake", exifMake)
-                put ("exifEX:LensModel", exifModel)
-
+                    put ("tiff:Make",exifMake)
+                    put ("tiff:Model", exifModel)
+                    put ("exifEX:LensMake", exifMake)
+                    put ("exifEX:LensModel", exifModel)
 
             })
 
@@ -816,8 +774,6 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             cawgList.add(CawgTrainingMiningEntry("cawg.ai_training", "notAllowed"))
             cawgList.add(CawgTrainingMiningEntry("cawg.ai_inference", "notAllowed"))
         }
-
-        //var result = AssertionDefinition.cawgTrainingMining(cawgList)
 
         var result = AssertionDefinition.custom(
             label = "cawg.training-mining",
