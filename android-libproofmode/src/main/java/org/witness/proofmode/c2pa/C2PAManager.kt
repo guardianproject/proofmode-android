@@ -615,34 +615,14 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
             if (doCawgIdentity)
             {
-                //val cawgKeyAndCerts = createCawgIdentity ()
-
-                put ("version","1")
-                val testPublicCertChain = InputStreamReader(context.assets.open("c2pa_test_cert.txt")).readText()
-                val testPrivateKey = InputStreamReader(context.assets.open("c2pa_test_key.txt")).readText()
-
-
-                put ("signer", buildJsonObject {
-
-                    put ("local", buildJsonObject {
-                       // put ("alg","es256")
-                        put ("alg","ps256")
-                        put ("sign_cert",testPublicCertChain)
-                        put ("private_key",testPrivateKey)
-                        put ("tsa_url",TSA_DEFAULT)
-                    })
-                })
-
-                val cawgPublicCertChain = InputStreamReader(context.assets.open("cawg_test_cert.txt")).readText()
-                val cawgPrivateKey = InputStreamReader(context.assets.open("cawg_test_key.txt")).readText()
-
+                val cawgKeyAndCerts = createCawgIdentity ()
 
                 put ("cawg_x509_signer", buildJsonObject {
 
                     put ("local", buildJsonObject {
                         put ("alg","es256")
-                        put ("sign_cert",cawgPublicCertChain)
-                        put ("private_key",cawgPrivateKey)
+                        put ("sign_cert",cawgKeyAndCerts.get(1))
+                        put ("private_key",cawgKeyAndCerts.get(0))
                         put ("tsa_url",TSA_DEFAULT)
                         put("referenced_assertions", buildJsonArray {
                             add("cawg.training-mining")
