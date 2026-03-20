@@ -340,9 +340,16 @@ fun updateMetadata (itemUri : Uri, context : Context) {
             ProofModeUtil.getProofHashMap(storageProvider, hash)
 
         if (hmap?.contains(ProofModeV1Constants.FILE_PATH) == true) {
-            var c2paMan = C2PAManager(context, PreferencesManager(context))
             var c2paFile = File(hmap?.get(ProofModeV1Constants.FILE_PATH))
-            var valid = c2paMan.validateSignedMedia(c2paFile.canonicalPath)
+
+            var valid = false
+
+            try {
+                val c2paMan = C2PAManager(context, PreferencesManager(context))
+                valid = c2paMan.validateSignedMedia(c2paFile.canonicalPath)
+            } catch (e: Exception) {
+                false
+            }
 
             C2PAManifestRow(
                 label = context.getString(R.string.content_credentials),

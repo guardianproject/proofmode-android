@@ -84,10 +84,16 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 //        private const val TSA_DIGICERT = "http://timestamp.digicert.com"
         private const val TSA_SSLCOM = "https://api.c2patool.io/api/v1/timestamps/ecc"
         private const val TSA_DEFAULT = TSA_SSLCOM
+
+
     }
 
     private var defaultSigner: Signer? = null
+    private var trustAnchors: String? = null
 
+    init {
+        trustAnchors = InputStreamReader(context.assets.open("c2pa_trust_anchors.txt")).readText()
+    }
 
 
     suspend fun signMediaFile(signingMode: SigningMode, inFile: File, contentType: String, outFile: File, doEmbed: Boolean = true): Result<Stream> = withContext(Dispatchers.IO) {
@@ -695,24 +701,25 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
     public fun validateSignedMedia(filePath: String): Boolean {
 
-        val trustAnchors = InputStreamReader(context.assets.open("c2pa_trust_anchors.txt")).readText()
-
         val settingsJson = buildJsonObject {
             put("version", 1)
             put ("trust", buildJsonObject {
                 put ("trust_anchors", trustAnchors)
             })
         }
-            C2PA.loadSettings(settingsJson.toString(),"json")
+
+        C2PA.loadSettings(settingsJson.toString(),"json")
+
+        try {
 
             // Read and verify using C2PA
             val manifestJSON = C2PA.readFile(filePath, null)
-            Timber.d( "Manifest JSON length: ${manifestJSON.length} characters")
+            Timber.d("Manifest JSON length: ${manifestJSON.length} characters")
             Timber.d("Menifest JSON:\n${manifestJSON}")
 
             val validation = ManifestValidator.validateJson(manifestJSON, logWarnings = true)
             if (validation.hasErrors()) {
-                Timber.d( "C2PA VALIDATION ERRORS")
+                Timber.d("C2PA VALIDATION ERRORS")
 
                 Timber.d(validation.errors.joinToString("; "))
 
@@ -721,35 +728,34 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             val isInvalid = manifestJSON.contains("\"validation_state\": \"Invalid\"")
 
 
-            if (validation.isValid() && (!isInvalid))
-            {
+            if (validation.isValid() && (!isInvalid)) {
 
-                Timber.d( "C2PA MANIFEST IS VALID")
+                Timber.d("C2PA MANIFEST IS VALID")
 
-                if (validation.hasWarnings())
-                {
+                if (validation.hasWarnings()) {
                     Timber.d("C2PA Warnings: " + validation.warnings.joinToString("; "))
                 }
                 return true
 
-            }
-            else
-            {
-                Timber.d( "C2PA MANIFEST IS INVALID")
+            } else {
+                Timber.d("C2PA MANIFEST IS INVALID")
 
-                if (validation.hasWarnings())
-                {
+                if (validation.hasWarnings()) {
                     Timber.d("C2PA Warnings: " + validation.warnings.joinToString("; "))
                 }
-                if (validation.hasErrors())
-                {
+                if (validation.hasErrors()) {
                     Timber.d("C2PA Errors: " + validation.errors.joinToString("; "))
                 }
                 return false
             }
 
 
+        }
+        catch (re: Error) {
 
+            Timber.d("C2PA Exception: $re")
+            return false
+        }
 
 
         return false
@@ -931,7 +937,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
                 val nonceOfIngredient = HashUtils.getSHA256FromFileContent(FileInputStream(inFile))
                 val certChain = getDeviceAttestationCertChain(nonceOfIngredient)
-                if (certChain != null && certChain.isNotEmpty())
+                if (certChain.isNotEmpty())
                 {
 
                     verifyAttestationCertificateChain(certChain)
@@ -1006,7 +1012,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         )
 
         /// Verify an attestation certificate chain
-        when (val result = verifier.verify(certificateChain) as com.android.keyattestation.verifier.VerificationResult) {
+        when (val result = verifier.verify(certificateChain)) {
 
             is com.android.keyattestation.verifier.VerificationResult.Success -> {
                 // Access verified information
@@ -1067,7 +1073,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
     fun checkOSSecurityPatchDate(withinDaysLimit: Int): Boolean {
 
         val certChain = getDeviceAttestationCertChain("checkOSSecurityPatchDate")
-        if (certChain != null && certChain.isNotEmpty()) {
+        if (certChain.isNotEmpty()) {
 
             if (verifyAttestationCertificateChain(certChain)) {
 
