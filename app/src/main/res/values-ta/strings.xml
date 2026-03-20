@@ -118,24 +118,24 @@
     <string name="pub_key_gen_error">அடையாள விசையை உருவாக்கும் பிழை. தயவுசெய்து மீண்டும் நிறுவவும்.</string>
     <string name="proof_generated_success">சான்று உருவாக்கப்பட்டது!</string>
     <plurals name="n_items_selected">
-        <item quantity="one">தேர்ந்தெடுக்கப்பட்ட ஒரு உருப்படி</item>
-        <item quantity="other">தேர்ந்தெடுக்கப்பட்ட %d உருப்படிகள்</item>
+        <item quantity="one">ஒரு உருப்படி தேர்ந்தெடுக்கப்பட்டது</item>
+        <item quantity="other">%d உருப்படிகள் தேர்ந்தெடுக்கப்பட்டன</item>
     </plurals>
     <plurals name="you_captured_n_items">
-        <item quantity="one">நீங்கள் ஒரு பொருளைக் கைப்பற்றினீர்கள்</item>
-        <item quantity="other">நீங்கள் %d உருப்படிகளைக் கைப்பற்றினீர்கள்</item>
+        <item quantity="one">ஒரு பொருளைப் பிடித்துவிட்டீர்கள்</item>
+        <item quantity="other">நீங்கள் %d உருப்படிகளைக் கைப்பற்றியுள்ளீர்கள்</item>
     </plurals>
     <plurals name="you_imported_n_items">
-        <item quantity="one">நீங்கள் ஒரு உருப்படியை இறக்குமதி செய்தீர்கள்</item>
-        <item quantity="other">நீங்கள் %d உருப்படிகளை இறக்குமதி செய்தீர்கள்</item>
+        <item quantity="one">நீங்கள் ஒரு பொருளை இறக்குமதி செய்துள்ளீர்கள்</item>
+        <item quantity="other">நீங்கள் %d பொருட்களை இறக்குமதி செய்துள்ளீர்கள்</item>
     </plurals>
     <plurals name="you_shared_n_items">
-        <item quantity="one">நீங்கள் ஒரு உருப்படியைப் பகிர்ந்து கொண்டீர்கள்</item>
-        <item quantity="other">நீங்கள் %d உருப்படிகளைப் பகிர்ந்து கொண்டீர்கள்</item>
+        <item quantity="one">ஒரு பொருளைப் பகிர்ந்துள்ளீர்கள்</item>
+        <item quantity="other">%d உருப்படிகளைப் பகிர்ந்துள்ளீர்கள்</item>
     </plurals>
     <plurals name="n_items_have_been_deleted_or_are_not_accessible">
-        <item quantity="one">ஒரு உருப்படி நீக்கப்பட்டது அல்லது அணுக முடியாது</item>
-        <item quantity="other">%d உருப்படிகள் நீக்கப்பட்டுள்ளன அல்லது அணுக முடியாது</item>
+        <item quantity="one">ஒரு உருப்படி நீக்கப்பட்டது அல்லது அணுக முடியவில்லை</item>
+        <item quantity="other">%d உருப்படிகள் நீக்கப்பட்டன அல்லது அணுக முடியவில்லை</item>
     </plurals>
     <string name="date_display_days_since_today">\'இன்று\' எச்.எச்: எம்.எம்</string>
     <string name="date_display_days_since_yesterday">\'நேற்று\' எச்.எச்: மிமீ</string>
@@ -175,7 +175,7 @@
     <string name="second_fragment_label">இரண்டாவது துண்டு</string>
     <string name="next">அடுத்தது</string>
     <string name="previous">முந்தைய</string>
-    <string name="content_credentials">உள்ளடக்க நற்சான்றிதழ்கள்</string>
+    <string name="content_credentials">உள்ளடக்க நற்சான்றிதழ்கள் (C2PA)</string>
     <string name="share_content_credentials_info">Proofmode.org ஆல் சரிபார்க்கப்பட்டு கையொப்பமிடப்பட்ட கோப்பில் நேரடியாக உட்பொதிக்கப்பட்ட ஆதார மெட்டாடேட்டாவுடன் படம் அல்லது வீடியோவை நேரடியாகப் பகிர்கிறது</string>
     <string name="optional_filename">விருப்ப கோப்பு பெயர்</string>
     <string name="set_a_custom_name_for_the_proof_zip">சான்று சிப்பிற்கு தனிப்பயன் பெயரை அமைக்கவும்</string>
@@ -202,4 +202,10 @@
     <string name="share_media">மீடியாவைப் பகிரவும்</string>
     <string name="share_using">பயன்படுத்தி பகிரவும்</string>
     <string name="verify_this_media_at">"இந்த ஊடகத்தைச் சரிபார்க்கவும்: "</string>
+    <string name="settings_credentials_remote">Proofmode.org வழியாக ரிமோட் கையொப்பமிடுதல்</string>
+    <string name="settings_credentials_local">தன்வய கையொப்பமிடப்பட்ட விசையைப் பயன்படுத்தி உள்ளக கையொப்பமிடுதல்</string>
+    <string name="settings_credentials_switched_remote">Proofmode.org வழியாக ரிமோட் கையொப்பத்திற்கு மாறியது</string>
+    <string name="settings_credentials_switched_local">தன்வய கையொப்பமிடப்பட்ட விசையைப் பயன்படுத்தி உள்ளக கையொப்பத்திற்கு மாற்றப்பட்டது</string>
+    <string name="open">திற</string>
+    <string name="close">மூடு</string>
 </resources>
