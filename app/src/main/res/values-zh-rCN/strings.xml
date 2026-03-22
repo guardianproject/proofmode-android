@@ -206,4 +206,5 @@
     <string name="settings_credentials_local">使用自签名密钥进行本地签名</string>
     <string name="settings_credentials_switched_remote">已切换到通过 Proofmode.org 进行远程签名</string>
     <string name="settings_credentials_switched_local">已切换到使用自签名密钥进行本地签名</string>
+    <string name="c2pa_os_patch_level_error">C2PA 已禁用：操作系统安全补丁未在 90 天内更新</string>
 </resources>
