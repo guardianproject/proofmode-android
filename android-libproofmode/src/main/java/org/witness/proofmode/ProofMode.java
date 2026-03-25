@@ -180,11 +180,12 @@ public class ProofMode {
 
     }
 
-    public static String generateProof(Context context, Uri uri, String proofHash) {
+    public static String generateProofForImport(Context context, Uri uri, String proofHash) {
 
         return MediaWatcher.getInstance(context).processUri(uri, proofHash, false, null);
 
     }
+
 
     public static void setProofPoints(Context context, boolean deviceIds, boolean location, boolean networks, boolean notarization) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);

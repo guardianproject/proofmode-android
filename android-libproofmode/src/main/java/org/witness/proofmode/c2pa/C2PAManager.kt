@@ -81,20 +81,21 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             timeZone = TimeZone.getTimeZone("UTC")
         }**/
 
-//        private const val TSA_DIGICERT = "http://timestamp.digicert.com"
-        private const val TSA_SSLCOM = "https://api.c2patool.io/api/v1/timestamps/ecc"
-        private const val TSA_DEFAULT = TSA_SSLCOM
+       private const val TSA_DIGICERT = "http://timestamp.digicert.com"
+    //    private const val TSA_SSLCOM = "https://api.c2patool.io/api/v1/timestamps/ecc"
+        private const val TSA_DEFAULT = TSA_DIGICERT
 
 
     }
 
     private var defaultSigner: Signer? = null
     private var trustAnchors: String? = null
+    private var allowedList: String? = null
 
     init {
-        trustAnchors = InputStreamReader(context.assets.open("c2pa_trust_anchors.txt")).readText()
+        trustAnchors = InputStreamReader(context.assets.open("C2PA-TRUST-LIST-AND-TSA-TRUST-LIST.pem")).readText()
+        allowedList = InputStreamReader(context.assets.open("proofsign_trust_anchors.txt")).readText()
     }
-
 
     suspend fun signMediaFile(signingMode: SigningMode, inFile: File, contentType: String, outFile: File, doEmbed: Boolean = true): Result<Stream> = withContext(Dispatchers.IO) {
         try {
@@ -705,6 +706,8 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             put("version", 1)
             put ("trust", buildJsonObject {
                 put ("trust_anchors", trustAnchors)
+                put ("allowed_list", allowedList)
+
             })
         }
 
