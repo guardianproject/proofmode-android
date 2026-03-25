@@ -85,6 +85,7 @@ import org.contentauth.c2pa.C2PA
 import org.witness.proofmode.R
 import org.witness.proofmode.c2pa.C2PAManager
 import org.witness.proofmode.c2pa.PreferencesManager
+import org.witness.proofmode.c2pa.ValidationState
 import org.witness.proofmode.service.ProofModeV1Constants
 import org.witness.proofmode.storage.DefaultStorageProvider
 import org.witness.proofmode.util.ProofModeUtil
@@ -342,18 +343,18 @@ fun updateMetadata (itemUri : Uri, context : Context) {
         if (hmap?.contains(ProofModeV1Constants.FILE_PATH) == true) {
             var c2paFile = File(hmap?.get(ProofModeV1Constants.FILE_PATH))
 
-            var valid = false
+            var validationState = ValidationState.INVALID
 
             try {
                 val c2paMan = C2PAManager(context, PreferencesManager(context))
-                valid = c2paMan.validateSignedMedia(c2paFile.canonicalPath)
+                validationState = c2paMan.validateSignedMedia(c2paFile.canonicalPath)
             } catch (e: Exception) {
-                false
+                ValidationState.INVALID
             }
 
             C2PAManifestRow(
                 label = context.getString(R.string.content_credentials),
-                valid = valid,
+                validationState = validationState,
                 filePath = c2paFile.canonicalPath,
                 context = context
             )
@@ -401,7 +402,7 @@ fun updateMetadata (itemUri : Uri, context : Context) {
     }
 }
 @Composable
-fun C2PAManifestRow(label: String, valid: Boolean, filePath: String, context: Context) {
+fun C2PAManifestRow(label: String, validationState: ValidationState, filePath: String, context: Context) {
     var expanded by remember { mutableStateOf(false) }
     var manifestText by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(false) }
@@ -444,8 +445,16 @@ fun C2PAManifestRow(label: String, valid: Boolean, filePath: String, context: Co
         Row {
             Text(
                 modifier = Modifier.padding(3.dp, 3.dp),
-                text = if (valid) "Valid: Tap to view manifest" else "Invalid: Tap to view manifest",
-                color = if (valid) Color(0xFF2E7D32) else Color(0xFFC62828)
+                text = when (validationState) {
+                    ValidationState.TRUSTED -> "Trusted: Tap to view manifest"
+                    ValidationState.VALID -> "Valid: Tap to view manifest"
+                    ValidationState.INVALID -> "Invalid: Tap to view manifest"
+                },
+                color = when (validationState) {
+                    ValidationState.TRUSTED -> Color(0xFF1B5E20)
+                    ValidationState.VALID -> Color(0xFF2E7D32)
+                    ValidationState.INVALID -> Color(0xFFC62828)
+                }
             )
         }
     }

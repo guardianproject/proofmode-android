@@ -70,6 +70,12 @@ import java.util.TimeZone
 import javax.crypto.Cipher
 import javax.security.auth.x500.X500Principal
 
+enum class ValidationState {
+    TRUSTED,
+    VALID,
+    INVALID
+}
+
 class C2PAManager(private val context: Context, private val preferencesManager: PreferencesManager) {
     companion object {
         private const val TAG = "C2PAManager"
@@ -138,7 +144,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                 if (signingMode == SigningMode.REMOTE) {
                     //we only allow C2PA on devices that have been patched within 90 days
                     if (checkOSSecurityPatchDate(90)) {
-                        defaultSigner = createSigner(signingMode, TSA_SSLCOM)
+                        defaultSigner = createSigner(signingMode, TSA_DEFAULT)
                     }
                     else
                     {
@@ -147,7 +153,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                 }
                 else
                 {
-                    defaultSigner = createSigner(signingMode, TSA_SSLCOM)
+                    defaultSigner = createSigner(signingMode, TSA_DEFAULT)
                 }
             }
 
@@ -168,8 +174,8 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                 Timber.d("Signed file size: ${outFile.length()} bytes")
 
                 // Verify the signed image
-                var isVerified = validateSignedMedia(outFile.absolutePath)
-                Timber.d("isVerified=$isVerified")
+                var validationState = validateSignedMedia(outFile.absolutePath)
+                Timber.d("validationState=$validationState")
 
                 Result.Success(outStream)
             }
@@ -601,8 +607,6 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             "c2pa.metadata"
         )
 
-        val trustAnchors = InputStreamReader(context.assets.open("c2pa_trust_anchors.txt")).readText()
-
         var currentSigner = signer;
 
         val doCawgIdentity = false; //not ready yet!
@@ -616,9 +620,10 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                     }
                 })
             })
+            /**
             put ("trust", buildJsonObject {
                 put ("trust_anchors", trustAnchors)
-            })
+            })**/
 
             if (doCawgIdentity)
             {
@@ -700,7 +705,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         }
     }
 
-    public fun validateSignedMedia(filePath: String): Boolean {
+    public fun validateSignedMedia(filePath: String): ValidationState {
 
         val settingsJson = buildJsonObject {
             put("version", 1)
@@ -728,17 +733,31 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
             }
 
-            val isInvalid = manifestJSON.contains("\"validation_state\": \"Invalid\"")
-
-
-            if (validation.isValid() && (!isInvalid)) {
+            if (validation.isValid()) {
 
                 Timber.d("C2PA MANIFEST IS VALID")
 
                 if (validation.hasWarnings()) {
                     Timber.d("C2PA Warnings: " + validation.warnings.joinToString("; "))
                 }
-                return true
+
+                // Check the manifest JSON for a validation_state key
+                try {
+                    val json = JSONObject(manifestJSON)
+                    if (json.has("validation_state")) {
+                        val state = json.getString("validation_state")
+                        Timber.d("C2PA validation_state: $state")
+                        return when (state.lowercase()) {
+                            "trusted" -> ValidationState.TRUSTED
+                            "valid" -> ValidationState.VALID
+                            else -> ValidationState.INVALID
+                        }
+                    }
+                } catch (e: Exception) {
+                    Timber.d("Error parsing manifest JSON for validation_state: $e")
+                }
+
+                return ValidationState.VALID
 
             } else {
                 Timber.d("C2PA MANIFEST IS INVALID")
@@ -749,7 +768,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                 if (validation.hasErrors()) {
                     Timber.d("C2PA Errors: " + validation.errors.joinToString("; "))
                 }
-                return false
+                return ValidationState.INVALID
             }
 
 
@@ -757,21 +776,20 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         catch (re: Error) {
 
             Timber.d("C2PA Exception: $re")
-            return false
+            return ValidationState.INVALID
         }
 
 
-        return false
+        return ValidationState.INVALID
     }
 
     public fun readManifest(filePath: String): String {
-
-        val trustAnchors = InputStreamReader(context.assets.open("c2pa_trust_anchors.txt")).readText()
 
         val settingsJson = buildJsonObject {
             put("version", 1)
             put ("trust", buildJsonObject {
                 put ("trust_anchors", trustAnchors)
+                put ("allowed_list", allowedList)
             })
         }
         C2PA.loadSettings(settingsJson.toString(),"json")

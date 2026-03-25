@@ -72,6 +72,7 @@ import org.witness.proofmode.MediaType
 import org.witness.proofmode.R
 import org.witness.proofmode.c2pa.C2PAManager
 import org.witness.proofmode.c2pa.PreferencesManager
+import org.witness.proofmode.c2pa.ValidationState
 import org.witness.proofmode.getMediaTypeFromFileUri
 import org.witness.proofmode.service.MediaWatcher
 import org.witness.proofmode.service.MediaWatcher.Companion.getImagePath
@@ -88,12 +89,12 @@ val ASSETS_BACKGROUND = Color.Black.copy(0.1F)
  * Results are cached for the lifespan of the process.
  */
 object C2PAVerificationCache {
-    private val cache = mutableMapOf<String, Boolean>()
+    private val cache = mutableMapOf<String, ValidationState>()
 
-    fun get(path: String): Boolean? = cache[path]
+    fun get(path: String): ValidationState? = cache[path]
 
-    fun put(path: String, hasC2PA: Boolean) {
-        cache[path] = hasC2PA
+    fun put(path: String, state: ValidationState) {
+        cache[path] = state
     }
 
     fun clear() {
@@ -140,7 +141,7 @@ fun ProofableItemView(
 
     }
 
-    var hasC2PA by remember { mutableStateOf(false) }
+    var c2paState by remember { mutableStateOf(ValidationState.INVALID) }
     val uri = item.uri
 
     // Perform C2PA check asynchronously with caching
@@ -159,7 +160,7 @@ fun ProofableItemView(
             // Check cache first
             val cachedResult = C2PAVerificationCache.get(filePath)
             if (cachedResult != null) {
-                hasC2PA = cachedResult
+                c2paState = cachedResult
             } else {
                 // Perform check on IO dispatcher
                 val result = withContext(Dispatchers.IO) {
@@ -167,11 +168,11 @@ fun ProofableItemView(
                         val c2paMan = C2PAManager(context, PreferencesManager(context))
                         c2paMan.validateSignedMedia(filePath)
                     } catch (e: Exception) {
-                        false
+                        ValidationState.INVALID
                     }
                 }
                 C2PAVerificationCache.put(filePath, result)
-                hasC2PA = result
+                c2paState = result
             }
         }
 
@@ -241,7 +242,7 @@ fun ProofableItemView(
             )
         }
 
-        if (hasC2PA) {
+        if (c2paState != ValidationState.INVALID) {
             Image(
                 painterResource(R.drawable.cricon),
                 contentDescription = "CR",

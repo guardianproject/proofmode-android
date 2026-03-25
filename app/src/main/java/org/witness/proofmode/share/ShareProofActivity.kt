@@ -835,11 +835,12 @@ class ShareProofActivity : AppCompatActivity() {
                         )
                         hashCache[mediaUri.toString()] = proofHash
 
-                        val genProofHash = ProofMode.generateProof(
+                        val genProofHash = ProofMode.generateProofForImport(
                             this@ShareProofActivity,
                             mediaUri,
                             proofHash
                         )
+
                         if (genProofHash != null && genProofHash == proofHash) {
                             if ((application as ProofModeApp).useContentCredentials()) {
                                 val isDirectCapture = false // this is from an import, and we are manually generating proof
