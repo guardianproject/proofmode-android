@@ -805,14 +805,11 @@ class ShareProofActivity : AppCompatActivity() {
         return null
     }
 
-    private fun generateProof(mediaUri: Uri?, proofHash: String?, allowMachineLearning: Boolean) {
+    private fun generateProof(mediaUri: Uri?, proofHash: String?) {
         lifecycleScope.launch {
             val result = withContext(Dispatchers.IO) {
                 try {
-                    val isDirectCapture = false // this is from an import, and we are manually generating proof
-                    
-
-                    ProofMode.generateProof(this@ShareProofActivity, mediaUri, proofHash)
+                    ProofMode.generateProofForImport(this@ShareProofActivity, mediaUri, proofHash)
                 } catch (e: Exception) {
                     Timber.e(e, "Error generating proof")
                     null
@@ -916,11 +913,6 @@ class ShareProofActivity : AppCompatActivity() {
                 showProofError()
             }
         }
-    }
-
-
-    private fun generateProof(mediaUri: Uri?, proofHash: String?) {
-        generateProof(mediaUri, proofHash, mBlockAI == false)
     }
 
     private fun showProofError() {
