@@ -8,6 +8,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
@@ -46,6 +47,9 @@ import org.witness.proofmode.ProofMode.PREF_OPTION_CREDENTIALS
 import org.witness.proofmode.ProofMode.PREF_OPTION_CREDENTIALS_DEFAULT
 import org.witness.proofmode.ProofModeApp
 import org.witness.proofmode.R
+import org.witness.proofmode.c2pa.C2PAManager
+import org.witness.proofmode.c2pa.PreferencesManager
+import org.witness.proofmode.c2pa.SigningMode
 import org.witness.proofmode.crypto.HashUtils
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.databinding.ActivityShareBinding
@@ -69,6 +73,8 @@ import java.util.concurrent.TimeUnit
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
+import kotlin.io.path.createTempFile
+import kotlin.math.sign
 
 
 class ShareProofActivity : AppCompatActivity() {
@@ -190,12 +196,15 @@ class ShareProofActivity : AppCompatActivity() {
             if (mediaUri == null) mediaUri = intent.data
             if (mediaUri != null) {
                 mediaUri = cleanUri(mediaUri)
+
                 try {
                     proofHash = hashCache[mediaUri.toString()]
                     if (proofHash != null) proofHash = HashUtils.getSHA256FromFileContent(
                         contentResolver.openInputStream(mediaUri)
                     )
-                    generateProof(mediaUri, proofHash)
+                    var mimeType = contentResolver.getType(mediaUri)
+
+                    generateProof(mediaUri, proofHash, mimeType!!)
                 } catch (fe: FileNotFoundException) {
                     proofHash = null
                 }
@@ -805,11 +814,12 @@ class ShareProofActivity : AppCompatActivity() {
         return null
     }
 
-    private fun generateProof(mediaUri: Uri?, proofHash: String?) {
+    private fun generateProof(mediaUri: Uri?, proofHash: String?, mimeType: String) {
         lifecycleScope.launch {
             val result = withContext(Dispatchers.IO) {
                 try {
-                    ProofMode.generateProofForImport(this@ShareProofActivity, mediaUri, proofHash)
+                    ProofMode.generateProofForImport(this@ShareProofActivity, mediaUri, proofHash, mimeType)
+
                 } catch (e: Exception) {
                     Timber.e(e, "Error generating proof")
                     null
@@ -835,37 +845,19 @@ class ShareProofActivity : AppCompatActivity() {
                         )
                         hashCache[mediaUri.toString()] = proofHash
 
-                        val genProofHash = ProofMode.generateProofForImport(
+                        var mimeType = contentResolver.getType(mediaUri)
+
+                        ProofMode.generateProofForImport(
                             this@ShareProofActivity,
                             mediaUri,
-                            proofHash
-                        )
-
-                        if (genProofHash != null && genProofHash == proofHash) {
-                            if ((application as ProofModeApp).useContentCredentials()) {
-                                val isDirectCapture = false // this is from an import, and we are manually generating proof
-                                //TODO c2pas
-                                /**
-                                val fileC2PA = C2paUtils.addContentCredentials(
-                                    this@ShareProofActivity,
-                                    mediaUri,
-                                    isDirectCapture,
-                                    allowMachineLearning
-                                )
-                                // now add fileC2PA to proof folder
-                                storageProvider?.saveStream(
-                                    proofHash,
-                                    fileC2PA.name,
-                                    FileInputStream(fileC2PA),
-                                    null
-                                )**/
-                            }
-                        }
+                            proofHash,
+                            mimeType
+                      )
                     } catch (fe: FileNotFoundException) {
                         Timber.d("FileNotFound: %s", mediaUri)
                     }
                 }
-                proofHash
+
             }
             
             if (result != null) {
@@ -1313,6 +1305,11 @@ class ShareProofActivity : AppCompatActivity() {
                 shareIntent.action = Intent.ACTION_SEND_MULTIPLE
                 shareIntent.setType("*/*")
                 shareIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, shareUris)
+                val clipData = ClipData("", arrayOf("*/*"), ClipData.Item(shareUris[0]))
+                for (i in 1 until shareUris.size) {
+                    clipData.addItem(ClipData.Item(shareUris[i]))
+                }
+                shareIntent.clipData = clipData
             }
             else
             {

@@ -136,7 +136,7 @@ public class VideosContentJob extends JobService {
                 String DEFAULT_VIDEO_TYPE="video/mp4";
 
                 for (Uri uri : uriList.values())
-                    mw.processUri(uri, true, null,DEFAULT_VIDEO_TYPE);
+                    mw.ingestMedia(uri, true, null,DEFAULT_VIDEO_TYPE, null);
 
 
 

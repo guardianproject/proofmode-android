@@ -180,9 +180,9 @@ public class ProofMode {
 
     }
 
-    public static String generateProofForImport(Context context, Uri uri, String proofHash) {
+    public static void generateProofForImport(Context context, Uri uri, String hash, String mimeType) {
 
-        return MediaWatcher.getInstance(context).processUri(uri, proofHash, false, null);
+        MediaWatcher.getInstance(context).ingestMedia(uri, false, null, mimeType, hash);
 
     }
 

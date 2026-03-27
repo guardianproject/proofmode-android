@@ -113,7 +113,7 @@ public class PhotosContentJob extends JobService {
                         String DEFAULT_PHOTO_TYPE = "image/jpeg";
 
                         for (Uri uri : uriList.values())
-                            mw.processUri(uri, true, null,DEFAULT_PHOTO_TYPE);
+                            mw.ingestMedia(uri, true, null,DEFAULT_PHOTO_TYPE, null);
                     } else {
                         // We don't have any details about URIs (because too many changed at once),
                         // so just note that we need to do a full rescan.

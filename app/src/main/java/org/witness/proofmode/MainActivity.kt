@@ -2,6 +2,7 @@ package org.witness.proofmode
 
 import android.Manifest
 import android.content.BroadcastReceiver
+import android.content.ClipData
 import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
@@ -242,6 +243,12 @@ class MainActivity : AppCompatActivity(),
         val aList = ArrayList<Uri>()
         for (uri in mediaList) aList.add(uri)
         intentShare.putParcelableArrayListExtra(Intent.EXTRA_STREAM, aList)
+        intentShare.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        val clipData = ClipData("", arrayOf(intentShare.type ?: "*/*"), ClipData.Item(aList[0]))
+        for (i in 1 until aList.size) {
+            clipData.addItem(ClipData.Item(aList[i]))
+        }
+        intentShare.clipData = clipData
         startActivity(intentShare)
     }
 
@@ -441,6 +448,7 @@ class MainActivity : AppCompatActivity(),
             if (data?.clipData != null) {
                 intentShare.action = Intent.ACTION_SEND_MULTIPLE
                 intentShare.clipData = data.clipData
+                intentShare.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             startActivity(intentShare)
 

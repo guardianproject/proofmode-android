@@ -15,6 +15,7 @@ import android.preference.PreferenceManager
 import android.provider.MediaStore
 import android.text.TextUtils
 import android.util.Log
+import com.google.android.gms.common.util.IOUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -44,6 +45,7 @@ import java.io.File
 import java.io.FileDescriptor
 import java.io.FileInputStream
 import java.io.FileNotFoundException
+import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.nio.charset.StandardCharsets
@@ -67,6 +69,11 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
 
     var storageProvider: StorageProvider? = null
     private var mC2paManager: C2PAManager? = null
+
+    private val outputDirectory: String by lazy {
+        "${Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)}/ProofMode/"
+    }
+
 
     private fun init(context: Context?, storageProvider: StorageProvider?) {
         if (mPrefs == null) mPrefs = PreferenceManager.getDefaultSharedPreferences(context)
@@ -170,7 +177,7 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
 
                 if (tmpUriMedia != null) {
                     CoroutineScope(Dispatchers.IO).launch {
-                        processUri(tmpUriMedia, true, null, mimeType!!)
+                        ingestMedia (tmpUriMedia, true, null, mimeType!!, null)
                     }
                 }
             }
@@ -189,48 +196,28 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
         fun processUriDone(hash: String?)
     }
 
-    /**
-    fun queueMedia(
-    uriMedia: Uri,
-    autogen: Boolean,
-    createdAt: Date?,
-    callback: QueueMediaCallback
-    ) {
-    var looper = Looper.myLooper()
-    if (looper == null) {
-    looper = mContext!!.getMainLooper()
-    }
-    val handler = Handler(looper)
-    mExec.submit(Runnable {
-
-    CoroutineScope(Dispatchers.IO).launch {
-    val hash = processUri(uriMedia, autogen, createdAt)
-    val myRunnable: Runnable = object : Runnable {
-    override fun run() {
-    callback.processUriDone(hash)
-    }
-    }
-    handler.post(myRunnable)
-    }
-    })
-    }**/
-
-    fun processUri(uriMedia: Uri, autogen: Boolean, createdAt: Date?, mimeType: String) {
+    fun ingestMedia (uriMediaSource: Uri, autogen: Boolean, createdAt: Date?, mimeType: String?, hash: String?)  {
         val intent = Intent()
         intent.setPackage("org.witness.proofmode")
+        var actualUriMedia = uriMediaSource
+
 
         CoroutineScope(Dispatchers.IO).launch {
 
-            var fileMedia = File(uriMedia.getPath())
+            var fileMedia = File(actualUriMedia.getPath())
+            var actualMimeType = mimeType
 
-            if (uriMedia.scheme != "file")
-                if (mimeType.startsWith("image")) {
-                    var mediaPath = getImagePath(mContext!!, uriMedia)
+            if (actualMimeType == null)
+                actualMimeType = mContext?.contentResolver?.getType(actualUriMedia)
+
+            if (actualUriMedia.scheme != "file")
+                if (actualMimeType?.startsWith("image") == true) {
+                    var mediaPath = getImagePath(mContext!!, actualUriMedia)
                     if (mediaPath != null)
                         fileMedia = File(mediaPath)
                 }
-                else if (mimeType.startsWith("video")) {
-                    var mediaPath = getVideoPath(mContext!!,uriMedia)
+                else if (actualMimeType?.startsWith("video") == true) {
+                    var mediaPath = getVideoPath(mContext!!,actualUriMedia)
                     if (mediaPath != null)
                         fileMedia = File(mediaPath)
                 }
@@ -238,10 +225,17 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
             if (fileMedia != null) {
                 var fileMediaOut = fileMedia
                 var doEmbed = true
+                var createdInProofmode = autogen
 
                 if (!fileMediaOut.canWrite()) {
-                    doEmbed = false;
-                    fileMediaOut = File(mContext!!.cacheDir, fileMedia.name + ".c2pa")
+
+                    createdInProofmode = false
+
+                    val dateTime = Date().time
+                    fileMedia = File(outputDirectory, "$dateTime-${fileMedia.name}")
+                    mContext?.contentResolver?.openInputStream(actualUriMedia)?.copyTo(FileOutputStream(fileMedia))
+                    fileMediaOut = fileMedia
+                    actualUriMedia = Uri.fromFile(fileMedia)
                 }
 
                 var signingMode = SigningMode.KEYSTORE
@@ -263,28 +257,30 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
                 mC2paManager?.signMediaFile(
                     signingMode,
                     fileMedia,
-                    mimeType,
+                    actualMimeType!!,
                     fileMediaOut,
-                    doEmbed
+                    doEmbed,
+                    createdInProofmode,
+                    hash
                 );
 
                 try {
 
                     val mediaHash = HashUtils.getSHA256FromFileContent(
-                        mContext!!.contentResolver.openInputStream(uriMedia)
+                        mContext!!.contentResolver.openInputStream(actualUriMedia)
                     )
 
                     if (mediaHash != null) {
                         //send generated event
 
                         intent.action = (ProofMode.EVENT_PROOF_GENERATED)
-                        intent.putExtra(ProofMode.EVENT_PROOF_EXTRA_URI, uriMedia.toString())
+                        intent.putExtra(ProofMode.EVENT_PROOF_EXTRA_URI, actualUriMedia.toString())
                         intent.putExtra(ProofMode.EVENT_PROOF_EXTRA_HASH, mediaHash)
                         mContext!!.sendBroadcast(intent)
 
                     }
 
-                    val resultHash = processUri(mContext!!, uriMedia, mediaHash, autogen, createdAt)
+                    val resultHash = processUri(mContext!!, actualUriMedia, mediaHash, autogen, createdAt)
 
 
                 } catch (exception: FileNotFoundException) {

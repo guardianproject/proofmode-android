@@ -35,11 +35,13 @@ import org.contentauth.c2pa.SigningAlgorithm
 import org.contentauth.c2pa.Stream
 import org.contentauth.c2pa.StrongBoxSigner
 import org.contentauth.c2pa.WebServiceSigner
+import org.contentauth.c2pa.manifest.ActionAssertion
 import org.contentauth.c2pa.manifest.AssertionDefinition
 import org.contentauth.c2pa.manifest.CawgTrainingMiningEntry
 import org.contentauth.c2pa.manifest.ClaimGeneratorInfo
 import org.contentauth.c2pa.manifest.ManifestDefinition
 import org.contentauth.c2pa.manifest.ManifestValidator
+import org.contentauth.c2pa.manifest.Relationship
 import org.json.JSONObject
 import org.witness.proofmode.ProofMode
 import org.witness.proofmode.ProofMode.PREF_OPTION_LOCATION
@@ -103,7 +105,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         allowedList = InputStreamReader(context.assets.open("proofsign_trust_anchors.txt")).readText()
     }
 
-    suspend fun signMediaFile(signingMode: SigningMode, inFile: File, contentType: String, outFile: File, doEmbed: Boolean = true): Result<Stream> = withContext(Dispatchers.IO) {
+    suspend fun signMediaFile(signingMode: SigningMode, inFile: File, contentType: String, outFile: File, doEmbed: Boolean = true, wasCreated: Boolean = true, hash: String?): Result<Stream> = withContext(Dispatchers.IO) {
         try {
 
 
@@ -125,17 +127,32 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             if (showLocation == true)
                 location = ProofMode.getLatestLocation(context);
 
+            var listAssertions = ArrayList<AssertionDefinition>()
+
+            listAssertions.add(createProofmodeAssertion(context, inFile))
+
+            if (wasCreated) {
+                //only add these for items we create
+                listAssertions.add(createC2PAMetadataAssertion(context, location, inFile, contentType))
+                listAssertions.add(createCAWGAssertion(context, blockAI == true, email))
+            }
+            else
+            {
+
+              //  var actionAssert = ActionAssertion(PredefinedAction.OPENED)
+               // listAssertions.add(AssertionDefinition.action(actionAssert))
+                val mediaHash = HashUtils.getSHA256FromFileContent(FileInputStream(inFile))
+                listAssertions.add(createActionOpenAssertion(mediaHash))
+            }
+
             val manifest = ManifestDefinition(
                 title = inFile.name,
                 claimGeneratorInfo = listOf(ClaimGeneratorInfo.fromContext(context)),
-                assertions = listOf(
-                    createC2PAMetadataAssertion(context, location, inFile, contentType),
-                    createProofmodeAssertion(context, inFile),
-                    createCAWGAssertion(context, blockAI == true, email)
-                )
+                assertions = listAssertions
             )
 
             var manifestJSON = manifest.toJson()
+
             Timber.d("Media manifest file:\n\n$manifestJSON")
 
             // Create appropriate signer based on mode
@@ -169,7 +186,9 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                     outStream,
                     manifestJSON,
                     it,
-                    doEmbed
+                    doEmbed,
+                    wasCreated,
+                    hash
                 )
                 Timber.d("Signed file size: ${outFile.length()} bytes")
 
@@ -598,7 +617,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         return Base64.decode(pemContent, Base64.NO_WRAP)
     }
 
-    private suspend fun signStream(fileName: String, sourceStream: Stream, contentType: String, destStream: Stream, manifestJSON: String, signer: Signer, embed: Boolean = true) {
+    private suspend fun signStream(fileName: String, sourceStream: Stream, contentType: String, destStream: Stream, manifestJSON: String, signer: Signer, embed: Boolean = true, created: Boolean = true, hash: String?) {
         Timber.d( "Starting signImageData")
         Timber.d( "Manifest JSON: ${manifestJSON.take(200)}...") // First 200 chars
 
@@ -619,11 +638,14 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                         add(label)
                     }
                 })
+
             })
-            /**
+
             put ("trust", buildJsonObject {
                 put ("trust_anchors", trustAnchors)
-            })**/
+                put ("allowed_list", allowedList)
+
+            })
 
             if (doCawgIdentity)
             {
@@ -660,24 +682,39 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
         val appLabel = getAppName(context)
         val appVersion = getAppVersionName(context)
-        var mParams = null//HashMap<String, String>()
+        var mParams = HashMap<String, String>()
 
         var softwareAgent = "$appLabel-$appVersion";// ${android.os.Build.VERSION.SDK_INT.toString()} ${android.os.Build.VERSION.CODENAME}";
-        var action = Action(
-            PredefinedAction.CREATED,
-            DigitalSourceType.DIGITAL_CAPTURE,
-            softwareAgent,
-            mParams
-        )
-        builder.addAction(action)
-
-        builder.setIntent(BuilderIntent.Create(DigitalSourceType.DIGITAL_CAPTURE))
 
         val ingredientJson = JSONObject().apply {
             put("title", fileName)
             put("format", contentType)
+            put ("relationship",  "parentOf")
         }
         builder.addIngredient(ingredientJson.toString(),contentType, sourceStream)
+
+        var action : Action? = null
+
+        if (created)
+        {
+            action = Action(
+                PredefinedAction.CREATED,
+                DigitalSourceType.DIGITAL_CAPTURE,
+                softwareAgent,
+                null
+            )
+
+            builder.addAction(action)
+            builder.setIntent(BuilderIntent.Create(DigitalSourceType.DIGITAL_CAPTURE))
+
+        }
+        else
+        {
+
+            builder.setIntent(BuilderIntent.Edit)
+
+        }
+
 
         try {
             // Sign the image
@@ -852,6 +889,66 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
             })
 
+    }
+
+    private fun createActionOpenAssertion (ingredientHash256: String?): AssertionDefinition {
+        /**
+         *"actions": [
+         *     {
+         *       "action": "c2pa.opened",
+         *       "when": "2023-02-11T09:00:00Z",
+         *       "softwareAgent" : {
+         *           "name": "ProofMode",
+         *           "version": "3.0",
+         *           "operating_system": "Android 14"
+         *       },
+         *       "digitalSourceType": "http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture",
+         *       "parameters" : {
+         *         "ingredients" : [
+         *           {
+         *             "url": "self#jumbf=c2pa.assertions/c2pa.ingredient.v3",
+         *             "alg": "sha256",
+         *             "hash" : b64'...',
+         *           }
+         *         ]
+         *       }
+         *     }
+         */
+
+        val appLabel = getAppName(context)
+        val appVersion = getAppVersionName(context)
+        val osVersion = "Android ${Build.VERSION.RELEASE}"
+        val timestamp = java.time.ZonedDateTime.now(java.time.ZoneOffset.UTC)
+            .format(java.time.format.DateTimeFormatter.ISO_INSTANT)
+
+        var result = AssertionDefinition.custom(
+            label = "actions",
+            data = buildJsonArray {
+                add(
+                    buildJsonObject {
+                        put("action", "c2pa.opened")
+                        put("when", timestamp)
+                        put("softwareAgent", buildJsonObject {
+                            put("name", appLabel)
+                            put("version", appVersion)
+                            put("operating_system", osVersion)
+                        })
+                    //    put("digitalSourceType", "http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture")
+                        put("parameters", buildJsonObject {
+                            put("ingredients", buildJsonArray {
+                                add(buildJsonObject {
+                                    put("url", "self#jumbf=c2pa.assertions/c2pa.ingredient.v3")
+                                    put("alg", "sha256")
+                                    put ("hash", ingredientHash256)
+                                })
+                            })
+                        })
+                    }
+                )
+            }
+        )
+
+        return result
     }
 
     private fun createCAWGAssertion (context: Context, blockAI: Boolean, creatorEmail: String?): AssertionDefinition {
