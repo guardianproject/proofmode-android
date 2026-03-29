@@ -541,7 +541,7 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
         if (cameraEventType == CameraEventType.NEW_VIDEO) {
 
             if (!prefs.getBoolean(ProofMode.PREFS_DOPROOF,false))
-                 mw?.processUri(newMediaFile, true, null, "video/mp4")
+                 mw?.ingestMedia(newMediaFile, true, null, "video/mp4", null)
 
 
         } else {
@@ -560,7 +560,7 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
             }
 
             if (!prefs.getBoolean(ProofMode.PREFS_DOPROOF,false))
-                mw?.processUri(newMediaFile, true, null, "image/jpeg")
+                mw?.ingestMedia(newMediaFile, true, null, "image/jpeg", null)
 
         }
 
