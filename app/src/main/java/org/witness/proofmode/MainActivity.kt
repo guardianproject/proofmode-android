@@ -91,17 +91,17 @@ class MainActivity : AppCompatActivity(),
         }
 
         ContextCompat.registerReceiver(this,
-            cameraReceiver, intentFilter,
+            eventReceiver, intentFilter,
             ContextCompat.RECEIVER_EXPORTED
         )
 
         ContextCompat.registerReceiver(this,
-            cameraReceiver, IntentFilter(EVENT_PROOF_GENERATED),
+            eventReceiver, IntentFilter(EVENT_PROOF_GENERATED),
             ContextCompat.RECEIVER_EXPORTED
         )
 
         ContextCompat.registerReceiver(this,
-            cameraReceiver, IntentFilter(INTENT_ACTIVITY_ITEMS_SHARED),
+            eventReceiver, IntentFilter(INTENT_ACTIVITY_ITEMS_SHARED),
             ContextCompat.RECEIVER_EXPORTED
         )
 
@@ -169,7 +169,7 @@ class MainActivity : AppCompatActivity(),
             fab.visibility = View.VISIBLE
     }
 
-    private class CameraReceiver : BroadcastReceiver() {
+    private class EventReceiver : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
 
@@ -205,7 +205,7 @@ class MainActivity : AppCompatActivity(),
         }
     }
 
-    private val cameraReceiver = CameraReceiver()
+    private val eventReceiver = EventReceiver()
 
     private fun showMediaPicker() {
         TedImagePicker.with(this).imageAndVideo().showVideoDuration(true).dropDownAlbum()
@@ -213,11 +213,12 @@ class MainActivity : AppCompatActivity(),
                 showShareProof(
                     it
                 )
-                addProofActivity(it)
+            //    addProofActivity(it)
             }
 
     }
 
+    /**
     private fun addProofActivity(items: List<Uri>) {
 
         Timber.d("addProofActivity: New Proof Items: ${items.size}")
@@ -235,7 +236,7 @@ class MainActivity : AppCompatActivity(),
             Date()
         )
         Activities.addActivity(activity, this)
-    }
+    }**/
 
     private fun showShareProof(mediaList: List<Uri>) {
         val intentShare = Intent(this, ShareProofActivity::class.java)
