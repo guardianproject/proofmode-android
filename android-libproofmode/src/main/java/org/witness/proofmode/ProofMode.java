@@ -20,7 +20,9 @@ import org.witness.proofmode.notarization.NotarizationProvider;
 import org.witness.proofmode.service.CameraEventReceiver;
 import org.witness.proofmode.service.MediaWatcher;
 import org.witness.proofmode.service.PhotosContentJob;
+import org.witness.proofmode.service.PhotosContentWorker;
 import org.witness.proofmode.service.VideosContentJob;
+import org.witness.proofmode.service.VideosContentWorker;
 import org.witness.proofmode.util.GPSTracker;
 
 import java.io.BufferedInputStream;
@@ -122,7 +124,12 @@ public class ProofMode {
         if (!mInit) {
             MediaWatcher.getInstance(context);
 
-            if (Build.VERSION.SDK_INT >= 24) {
+            // Use WorkManager for Android 15+ (API 35) due to background network restrictions,
+            // fall back to JobScheduler for older versions
+            if (Build.VERSION.SDK_INT >= 35) {
+                PhotosContentWorker.scheduleWork(context);
+                VideosContentWorker.scheduleWork(context);
+            } else if (Build.VERSION.SDK_INT >= 24) {
                 PhotosContentJob.scheduleJob(context);
                 VideosContentJob.scheduleJob(context);
             }
@@ -149,8 +156,13 @@ public class ProofMode {
     public static void stopBackgroundService (Context context)
     {
 
-        PhotosContentJob.cancelJob(context);
-        VideosContentJob.cancelJob(context);
+        if (Build.VERSION.SDK_INT >= 35) {
+            PhotosContentWorker.cancelWork(context);
+            VideosContentWorker.cancelWork(context);
+        } else {
+            PhotosContentJob.cancelJob(context);
+            VideosContentJob.cancelJob(context);
+        }
 
         MediaWatcher.getInstance(context).stop();
 

@@ -8,6 +8,7 @@ import android.os.Handler
 import android.os.Looper
 import android.preference.PreferenceManager
 import android.widget.Toast
+import androidx.work.Configuration
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -39,7 +40,12 @@ private lateinit var mPrefs: SharedPreferences
 /**
  * Created by n8fr8 on 10/10/16.
  */
-class ProofModeApp : Application() {
+class ProofModeApp : Application(), Configuration.Provider {
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder()
+            .setMinimumLoggingLevel(android.util.Log.INFO)
+            .build()
+
     override fun onCreate() {
         super.onCreate()
         init(this)
