@@ -28,21 +28,37 @@ class ProofEventReceiver : BroadcastReceiver() {
         val uriMedia = intent?.getStringExtra(ProofMode.EVENT_PROOF_EXTRA_URI)
         val proofHash = intent?.getStringExtra(ProofMode.EVENT_PROOF_EXTRA_HASH)
 
+        var proofImported = intent?.action.equals(ProofMode.EVENT_PROOF_GENERATED_IMPORT)
+
         uriMedia?.let {
 
             if (context != null && proofHash != null) {
 
                 if (Activities.getProofableItem(context, proofHash).isEmpty()) {
 
-                    Activities.addActivity(
-                        Activity(
-                            it, ActivityType.MediaCaptured(
-                                items = mutableStateListOf(
-                                    ProofableItem(proofHash, Uri.parse(it))
-                                )
-                            ), Date()
-                        ), context
-                    )
+                    if (proofImported)
+                    {
+                        Activities.addActivity(
+                            Activity(
+                                it, ActivityType.MediaImported(
+                                    items = mutableStateListOf(
+                                        ProofableItem(proofHash, Uri.parse(it))
+                                    )
+                                ), Date()
+                            ), context
+                        )
+                    }
+                    else {
+                        Activities.addActivity(
+                            Activity(
+                                it, ActivityType.MediaCaptured(
+                                    items = mutableStateListOf(
+                                        ProofableItem(proofHash, Uri.parse(it))
+                                    )
+                                ), Date()
+                            ), context
+                        )
+                    }
                 }
             }
 

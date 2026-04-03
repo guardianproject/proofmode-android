@@ -224,6 +224,9 @@
             <intent-filter android:priority="10000">
                 <action android:name="org.witness.proofmode.PROOF_GENERATED" />
             </intent-filter>
+            <intent-filter android:priority="10000">
+                <action android:name="org.witness.proofmode.PROOF_GENERATED_IMPORT" />
+            </intent-filter>
         </receiver>
 
         <provider

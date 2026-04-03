@@ -84,6 +84,8 @@ public class ProofMode {
 
     public final static String EVENT_PROOF_START = "org.witness.proofmode.PROOF_START";
     public final static String EVENT_PROOF_GENERATED = "org.witness.proofmode.PROOF_GENERATED";
+    public final static String EVENT_PROOF_GENERATED_IMPORT = "org.witness.proofmode.PROOF_GENERATED_IMPORT";
+
 
     public final static String EVENT_PROOF_EXISTS = "org.witness.proofmode.PROOF_EXISTS";
 
