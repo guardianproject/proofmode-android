@@ -20,12 +20,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.bouncycastle.openpgp.PGPException
+import org.contentauth.c2pa.C2PA
 import org.json.JSONObject
 import org.witness.proofmode.ProofMode
 import org.witness.proofmode.ProofModeConstants
 import org.witness.proofmode.c2pa.C2PAManager
 import org.witness.proofmode.c2pa.PreferencesManager
 import org.witness.proofmode.c2pa.SigningMode
+import org.witness.proofmode.c2pa.ValidationState
 import org.witness.proofmode.crypto.HashUtils
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.notarization.NotarizationListener
@@ -226,6 +228,7 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
                 var fileMediaOut = fileMedia
                 var doEmbed = true
                 var createdInProofmode = autogen
+                var vState : ValidationState? = ValidationState.TRUSTED
 
                 if (!fileMediaOut.canWrite()) {
 
@@ -236,6 +239,20 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
                     mContext?.contentResolver?.openInputStream(actualUriMedia)?.copyTo(FileOutputStream(fileMedia))
                     fileMediaOut = fileMedia
                     actualUriMedia = Uri.fromFile(fileMedia)
+
+                    try {
+
+                        vState = mC2paManager?.validateSignedMedia(fileMedia.absolutePath)
+
+                        //TODO: check manifest for any signs of AI
+                        val manifestJSON = C2PA.readFile(fileMedia.absolutePath, null)
+
+
+                    }catch (e :Exception )
+                    {
+                        //okay to throw exception, that means no C2PA
+                    }
+
                 }
 
                 var signingMode = SigningMode.KEYSTORE
@@ -254,15 +271,19 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
                         signingMode = SigningMode.HARDWARE
                 }
 
-                mC2paManager?.signMediaFile(
-                    signingMode,
-                    fileMedia,
-                    actualMimeType!!,
-                    fileMediaOut,
-                    doEmbed,
-                    createdInProofmode,
-                    hash
-                );
+                //only sign if the ingested media is validated by c2pa
+
+                if (vState != ValidationState.INVALID) {
+                    mC2paManager?.signMediaFile(
+                        signingMode,
+                        fileMedia,
+                        actualMimeType!!,
+                        fileMediaOut,
+                        doEmbed,
+                        createdInProofmode,
+                        hash
+                    );
+                }
 
                 try {
 
@@ -273,7 +294,11 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
                     if (mediaHash != null) {
                         //send generated event
 
-                        intent.action = (ProofMode.EVENT_PROOF_GENERATED)
+                        if (createdInProofmode)
+                            intent.action = (ProofMode.EVENT_PROOF_GENERATED)
+                        else
+                            intent.action = (ProofMode.EVENT_PROOF_GENERATED_IMPORT)
+
                         intent.putExtra(ProofMode.EVENT_PROOF_EXTRA_URI, actualUriMedia.toString())
                         intent.putExtra(ProofMode.EVENT_PROOF_EXTRA_HASH, mediaHash)
                         mContext!!.sendBroadcast(intent)
