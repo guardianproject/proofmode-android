@@ -141,8 +141,8 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
               //  var actionAssert = ActionAssertion(PredefinedAction.OPENED)
                // listAssertions.add(AssertionDefinition.action(actionAssert))
-                val mediaHash = HashUtils.getSHA256FromFileContent(FileInputStream(inFile))
-                listAssertions.add(createActionOpenAssertion(mediaHash))
+              //  val mediaHash = HashUtils.getSHA256FromFileContent(FileInputStream(inFile))
+             //   listAssertions.add(createActionOpenAssertion(mediaHash))
             }
 
             val manifest = ManifestDefinition(
@@ -710,11 +710,8 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         }
         else
         {
-
             builder.setIntent(BuilderIntent.Edit)
-
         }
-
 
         try {
             // Sign the image
