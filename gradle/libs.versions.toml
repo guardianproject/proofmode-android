@@ -6,7 +6,7 @@ kotlin-serialization = "2.2.20"
 ksp = "2.3.2"
 
 # Android SDK
-agp = "9.0.1"
+agp = "9.1.0"
 compileSdk = "36"
 minSdk = "28"
 targetSdk = "36"
@@ -37,13 +37,13 @@ lifecycle = "2.10.0"
 navigation = "2.9.7"
 
 # CameraX
-camerax = "1.5.3"
+camerax = "1.6.0"
 
 # Room
 room = "2.8.3"
 
 # Work Manager
-work = "2.11.1"
+work = "2.11.2"
 
 # Coroutines
 coroutines = "1.10.2"

@@ -158,6 +158,8 @@ public class PhotosContentJob extends JobService {
         // Get all media changes within a tenth of a second.
         builder.setTriggerContentUpdateDelay(1000);
         builder.setTriggerContentMaxDelay(1000);
+
+
         js.schedule(builder.build());
     }
 
