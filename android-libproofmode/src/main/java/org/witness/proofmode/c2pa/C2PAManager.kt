@@ -1111,8 +1111,10 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         ks.deleteEntry(keyAlias)
 
         var certChainList = ArrayList<X509Certificate>()
-        for (cert in certChain)
-            certChainList.add(cert as X509Certificate)
+        if (certChain != null) {
+            for (cert in certChain)
+                certChainList.add(cert as X509Certificate)
+        }
 
         return certChainList
     }
