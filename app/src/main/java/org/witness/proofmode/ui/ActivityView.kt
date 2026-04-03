@@ -629,14 +629,14 @@ fun ActivitiesView(onAnyItemSelected: ((Boolean) -> Unit)? = null) {
                     ) {
 
 
-                        Activities.activities.reversed().forEach { activity ->
-                            stickyHeader {
+                        Activities.activities.reversed().forEachIndexed { index, activity ->
+                            stickyHeader(key = "header_${index}_${activity.id}") {
                                 ActivityDateView(
                                     date = activity.startTime,
                                     menu = activityMenu(activity)
                                 )
                             }
-                            item(key = activity.id) {
+                            item(key = "item_${index}_${activity.id}") {
                                 ActivityView(activity = activity)
                             }
                         }

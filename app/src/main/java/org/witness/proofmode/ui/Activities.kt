@@ -209,6 +209,7 @@ object Activities: ViewModel()
             //db.clearAllTables()
             val allFromDb = db.activitiesDao().getAll()
             MainScope().launch {
+                activities.clear()
                 activities.addAll(allFromDb)
             }
         }
