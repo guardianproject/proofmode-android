@@ -686,13 +686,6 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
         var softwareAgent = "$appLabel-$appVersion";// ${android.os.Build.VERSION.SDK_INT.toString()} ${android.os.Build.VERSION.CODENAME}";
 
-        val ingredientJson = JSONObject().apply {
-            put("title", fileName)
-            put("format", contentType)
-            put ("relationship",  "parentOf")
-        }
-        builder.addIngredient(ingredientJson.toString(),contentType, sourceStream)
-
         var action : Action? = null
 
         if (created)
@@ -710,6 +703,14 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         }
         else
         {
+
+            val ingredientJson = JSONObject().apply {
+                put("title", fileName)
+                put("format", contentType)
+                put ("relationship",  "parentOf")
+            }
+            builder.addIngredient(ingredientJson.toString(),contentType, sourceStream)
+
             builder.setIntent(BuilderIntent.Edit)
         }
 
