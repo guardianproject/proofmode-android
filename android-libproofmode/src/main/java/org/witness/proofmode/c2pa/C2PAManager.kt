@@ -24,6 +24,7 @@ import org.contentauth.c2pa.Action
 import org.contentauth.c2pa.Builder
 import org.contentauth.c2pa.BuilderIntent
 import org.contentauth.c2pa.C2PA
+import org.contentauth.c2pa.C2PAContext
 import org.contentauth.c2pa.C2PASettings
 import org.contentauth.c2pa.CertificateManager
 import org.contentauth.c2pa.DigitalSourceType
@@ -99,10 +100,12 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
     private var defaultSigner: Signer? = null
     private var trustAnchors: String? = null
     private var allowedList: String? = null
+    private var trustConfig: String? = null
 
     init {
         trustAnchors = InputStreamReader(context.assets.open("C2PA-TRUST-LIST-AND-TSA-TRUST-LIST.pem")).readText()
         allowedList = InputStreamReader(context.assets.open("proofsign_trust_anchors.txt")).readText()
+        trustConfig = InputStreamReader(context.assets.open("trustConfig.txt")).readText()
     }
 
     suspend fun signMediaFile(signingMode: SigningMode, inFile: File, contentType: String, outFile: File, doEmbed: Boolean = true, wasCreated: Boolean = true, hash: String?): Result<Stream> = withContext(Dispatchers.IO) {
@@ -166,6 +169,9 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                     else
                     {
                         Timber.i("C2PA Disabled: OS Security Patches not updated within 90 days")
+                        //fall back to using a local keystore signer as fallback
+                        defaultSigner = createSigner(SigningMode.KEYSTORE, TSA_DEFAULT)
+
                     }
                 }
                 else
@@ -642,9 +648,9 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             })
 
             put ("trust", buildJsonObject {
-                put ("trust_anchors", trustAnchors)
-                put ("allowed_list", allowedList)
-
+              //  put ("trust_anchors", trustAnchors)
+            //    put ("allowed_list", allowedList)
+                put ("trust_config", trustConfig)
             })
 
             if (doCawgIdentity)
@@ -667,6 +673,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         }
 
         val settingsJsonString = settingsJson.toString()
+        Timber.d("Settings JSON:  $settingsJsonString")
 
         if (doCawgIdentity)
             currentSigner = Signer.fromSettingsJson(settingsJsonString)
@@ -675,7 +682,10 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             updateFromString(settingsJson.toString(), "json")
         }
 
-        val builder = Builder.fromJson(manifestJSON, settings)
+        var cc = C2PAContext.fromSettings(settings)
+        val builder = Builder.fromContext(cc).withDefinition(manifestJSON)
+
+       // val builder = Builder.fromJson(manifestJSON, settings)
         settings.close()
         if (!embed)
             builder.setNoEmbed()
@@ -747,7 +757,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             put ("trust", buildJsonObject {
                 put ("trust_anchors", trustAnchors)
                 put ("allowed_list", allowedList)
-
+                put ("trust_config", trustConfig)
             })
         }
 
@@ -758,7 +768,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             // Read and verify using C2PA
             val manifestJSON = C2PA.readFile(filePath, null)
             Timber.d("Manifest JSON length: ${manifestJSON.length} characters")
-            Timber.d("Menifest JSON:\n${manifestJSON}")
+           // Timber.d("Menifest JSON:\n${manifestJSON}")
 
             val validation = ManifestValidator.validateJson(manifestJSON, logWarnings = true)
             if (validation.hasErrors()) {
@@ -1039,6 +1049,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                                                 "proofmode:AppCertificateNotBefore",
                                                 x509Cert.notBefore.toString()
                                             );
+
                                             put("proofmode:AppCertificateSignature", sig.toCharsString())
 
                                         })
@@ -1056,18 +1067,25 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                 if (certChain.isNotEmpty())
                 {
 
-                    verifyAttestationCertificateChain(certChain)
-
-                    put("proofmode:HardwareAttestations", buildJsonArray {
-                        for (cert in certChain) {
-                            val sb = StringBuilder()
-                            sb.append(cert.subjectDN.name).append("\n")
-                            sb.append("-----BEGIN CERTIFICATE-----\n")
-                            sb.append(java.util.Base64.getEncoder().encodeToString(cert.encoded))
-                            sb.append("-----END CERTIFICATE-----\n")
-                            add (sb.toString())
-                        }
-                    })
+                    if (verifyAttestationCertificateChain(certChain)) {
+                        put("proofmode:HardwareAttestations", buildJsonArray {
+                            for (cert in certChain) {
+                                val sb = StringBuilder()
+                                sb.append("-----BEGIN CERTIFICATE-----\n")
+                                sb.append(
+                                    java.util.Base64.getEncoder().encodeToString(cert.encoded)
+                                )
+                                sb.append("-----END CERTIFICATE-----\n")
+                                add(sb.toString())
+                            }
+                        })
+                    }
+                    else
+                    {
+                        put("proofmode:HardwareAttestations", buildJsonArray {
+                            add("failed")
+                        })
+                    }
                 }
 
             })
