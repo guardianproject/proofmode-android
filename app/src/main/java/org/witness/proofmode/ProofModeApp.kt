@@ -72,7 +72,8 @@ class ProofModeApp : Application(), Configuration.Provider {
 
         if (!conformant)
         {
-            Toast.makeText(this,getString(R.string.c2pa_os_patch_level_error),Toast.LENGTH_LONG).show()
+            // this is obnoxious to show the user right now. we will indicate this in other parts of the app
+          //  showToastMessage(getString(R.string.c2pa_os_patch_level_error))
         }
 
         return conformant
@@ -211,6 +212,7 @@ class ProofModeApp : Application(), Configuration.Provider {
         val handler = Handler(Looper.getMainLooper())
         handler.post {
             //UI Thread work here
+
             Toast.makeText(applicationContext, message, Toast.LENGTH_LONG).show()
         }
     }
