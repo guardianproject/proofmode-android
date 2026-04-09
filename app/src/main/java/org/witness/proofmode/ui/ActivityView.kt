@@ -159,7 +159,7 @@ fun ProofableItemView(
         filePath?.let {
             // Check cache first
             val cachedResult = C2PAVerificationCache.get(filePath)
-            if (cachedResult != null) {
+            if (cachedResult != null && cachedResult != ValidationState.INVALID) {
                 c2paState = cachedResult
             } else {
                 // Perform check on IO dispatcher
