@@ -6,12 +6,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.LifecycleOwner
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
+import org.witness.proofmode.camera.utils.SharedPrefsManager
 
 @Composable
 fun CameraNavigation(navController:NavHostController,
@@ -19,15 +22,23 @@ fun CameraNavigation(navController:NavHostController,
                      lifecycleOwner: LifecycleOwner,
                      onClosed:()->Unit
 ) {
+    val context = LocalContext.current
+    val prefsManager = remember { SharedPrefsManager.newInstance(context) }
+    val savedMode = remember {
+        prefsManager.getString(SharedPrefsManager.KEY_CAMERA_MODE, CameraDestinations.PHOTO)
+    }
+
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = currentBackStackEntry?.destination?.route
     LaunchedEffect(currentDestination) {
         when(currentBackStackEntry?.destination?.route){
             CameraDestinations.PHOTO -> {
+                prefsManager.putString(SharedPrefsManager.KEY_CAMERA_MODE, CameraDestinations.PHOTO)
                 viewModel.unbindAll()
                 viewModel.bindUseCasesForImage(lifecycleOwner)
             }
             CameraDestinations.VIDEO -> {
+                prefsManager.putString(SharedPrefsManager.KEY_CAMERA_MODE, CameraDestinations.VIDEO)
                 viewModel.unbindAll()
                 viewModel.bindUseCasesForVideo(lifecycleOwner)
             }
@@ -37,7 +48,7 @@ fun CameraNavigation(navController:NavHostController,
         }
     }
 
-    NavHost(navController = navController, startDestination = CameraDestinations.PHOTO) {
+    NavHost(navController = navController, startDestination = savedMode) {
         composable(CameraDestinations.PHOTO,
             enterTransition = { fadeIn() },
             exitTransition = { fadeOut() }

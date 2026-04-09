@@ -59,6 +59,7 @@ import org.witness.proofmode.ProofMode
 import org.witness.proofmode.camera.CameraActivity
 import org.witness.proofmode.camera.adapter.Media
 import org.witness.proofmode.camera.fragments.CameraConstants.NEW_MEDIA_EVENT
+import org.witness.proofmode.camera.utils.SharedPrefsManager
 import org.witness.proofmode.camera.utils.getMediaFlow
 import org.witness.proofmode.camera.utils.getSupportedQualities
 import org.witness.proofmode.camera.utils.isUltraHdrSupported
@@ -72,6 +73,7 @@ import java.util.Locale
 import java.util.concurrent.Executors
 
 class CameraViewModel(private val activity: CameraActivity, private val app: Application) : AndroidViewModel(app) {
+    private val sharedPrefsManager = SharedPrefsManager.newInstance(app.applicationContext)
     private val outputDirectory: String by lazy {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             "${Environment.DIRECTORY_DCIM}/ProofMode/"
@@ -164,7 +166,9 @@ class CameraViewModel(private val activity: CameraActivity, private val app: App
 
 
 
-    var lensFacing: MutableLiveData<Int> = MutableLiveData(CameraSelector.LENS_FACING_BACK)
+    var lensFacing: MutableLiveData<Int> = MutableLiveData(
+        sharedPrefsManager.getInt(SharedPrefsManager.KEY_LENS_FACING, CameraSelector.LENS_FACING_BACK)
+    )
         private set
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var timerRunnable: Runnable
@@ -569,11 +573,13 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
 
 
     suspend fun switchLensFacing(lifecycleOwner: LifecycleOwner,cameraMode: CameraMode) {
-        lensFacing.value = if (lensFacing.value == CameraSelector.LENS_FACING_BACK) {
+        val newFacing = if (lensFacing.value == CameraSelector.LENS_FACING_BACK) {
             CameraSelector.LENS_FACING_FRONT
         } else {
             CameraSelector.LENS_FACING_BACK
         }
+        lensFacing.value = newFacing
+        sharedPrefsManager.putInt(SharedPrefsManager.KEY_LENS_FACING, newFacing)
         cameraProvider?.unbindAll()
         if (cameraMode == CameraMode.VIDEO) {
             bindUseCasesForVideo(lifecycleOwner)

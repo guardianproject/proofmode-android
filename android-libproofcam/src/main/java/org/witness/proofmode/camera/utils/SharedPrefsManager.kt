@@ -7,6 +7,8 @@ class SharedPrefsManager private constructor(private val context: Context) {
 
     companion object {
         private const val PREFERENCES = "sPrefs"
+        const val KEY_CAMERA_MODE = "camera_mode"
+        const val KEY_LENS_FACING = "lens_facing"
 
         @Synchronized
         fun newInstance(context: Context) = SharedPrefsManager(context)
@@ -19,4 +21,8 @@ class SharedPrefsManager private constructor(private val context: Context) {
     fun getBoolean(key: String, defValue: Boolean) = preferences.getBoolean(key, defValue)
 
     fun getInt(key: String, defValue: Int) = preferences.getInt(key, defValue)
+
+    fun putString(key: String, value: String) = preferences.edit().putString(key, value).apply()
+
+    fun getString(key: String, defValue: String) = preferences.getString(key, defValue) ?: defValue
 }
