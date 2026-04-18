@@ -40,6 +40,9 @@ private val permissions = mutableListOf(
     }
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         remove(Manifest.permission.READ_EXTERNAL_STORAGE)
+        add(Manifest.permission.READ_MEDIA_IMAGES)
+        add(Manifest.permission.READ_MEDIA_VIDEO)
+
     }
 }
 
@@ -68,8 +71,8 @@ fun CameraScreen(activity: CameraActivity, modifier: Modifier = Modifier, onClos
 
             }
 
-            Text(textToShow, style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center)
+            Text(textToShow, style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.Center, color = Color.White)
             Spacer(modifier = Modifier.height(10.dp))
             Button(onClick = { permissionsState.launchMultiplePermissionRequest() }) {
                 Text(stringResource(R.string.grant_permissions))
