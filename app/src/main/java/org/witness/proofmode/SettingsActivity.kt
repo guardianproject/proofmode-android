@@ -57,7 +57,14 @@ class SettingsActivity : AppCompatActivity() {
         updateUI()
         switchLocation.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
             if (isChecked) {
-                if (!askForPermission(
+                if (hasPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))||
+                    hasPermissions(this, arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION))
+                )
+                {
+                    mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_LOCATION, true).commit()
+                    refreshLocation()
+                }
+                else if (!askForPermission(
                         Manifest.permission.ACCESS_FINE_LOCATION,
                         REQUEST_CODE_LOCATION,
                         R.layout.permission_location
@@ -247,7 +254,9 @@ class SettingsActivity : AppCompatActivity() {
         super.onActivityResult(requestCode, resultCode, data)
         when (requestCode) {
             REQUEST_CODE_LOCATION -> {
-                if (hasPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))) {
+                if (hasPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))||
+                    hasPermissions(this, arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION))
+                    ) {
                     mPrefs.edit(commit = true) { putBoolean(ProofMode.PREF_OPTION_LOCATION, true) }
                     refreshLocation()
                 }
@@ -271,38 +280,11 @@ class SettingsActivity : AppCompatActivity() {
                 //only if the account is changed, should we change the credentials
                 if (!mPrefs.getString(PREF_CREDENTIALS_PRIMARY,"").equals(accountName)) {
                     mPrefs.edit(commit = true) { putString(PREF_CREDENTIALS_PRIMARY, accountName) }
-                    initContentCredentials(accountName)
                 }
 
             }
 
         }
-    }
-
-    fun initContentCredentials (accountName : String?) {
-
-        //TODO c2pa reimplement this
-        /**
-        val mPgpUtils = PgpUtils.getInstance();
-
-        val email = accountName;
-        var display : String? = null
-        val key : String? = "0x" + mPgpUtils?.publicKeyFingerprint
-        var uri : String? =  "https://keys.openpgp.org/search?q=" + mPgpUtils?.publicKeyFingerprint
-
-        if (email?.isNotEmpty() == true)
-        {
-            display = "${email.replace("@"," at ")}"
-            uri = "mailto://$email"
-        }
-
-        C2paUtils.setC2PAIdentity(display, uri, email, key)
-        if (email != null && key != null) {
-            C2paUtils.backupCredentials(this)
-            C2paUtils.resetCredentials(this)
-            C2paUtils.initCredentials(this, email, key)
-        }
-        **/
     }
 
     override fun onBackPressed() {
