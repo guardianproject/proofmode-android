@@ -70,10 +70,8 @@ class MainActivity : AppCompatActivity(),
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requiredPermissions = arrayOf(
                 Manifest.permission.ACCESS_MEDIA_LOCATION,
-                Manifest.permission.POST_NOTIFICATIONS,
                 Manifest.permission.READ_MEDIA_IMAGES,
-                Manifest.permission.READ_MEDIA_VIDEO,
-                Manifest.permission.ACCESS_FINE_LOCATION
+                Manifest.permission.READ_MEDIA_VIDEO
             )
         }
 
