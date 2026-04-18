@@ -56,7 +56,7 @@ class OnboardingActivity : AppCompatActivity(), OnboardingStepListener {
                 R.drawable.ic_ill_tut01,
                 0
             )
-        )
+        )/**
         fragmentList.add(
             StepFragment.newInstance(
                 R.string.onboarding_step2,
@@ -65,10 +65,10 @@ class OnboardingActivity : AppCompatActivity(), OnboardingStepListener {
                 R.drawable.ic_ill_tut02,
                 20
             )
-        )
+        )**/
         fragmentList.add(
             StepFragment.newInstance(
-                R.string.onboarding_step3,
+                R.string.onboarding_step2,
                 R.string.onboarding_step3_title,
                 R.string.onboarding_step3_content,
                 R.drawable.ic_ill_tut03,
@@ -77,7 +77,7 @@ class OnboardingActivity : AppCompatActivity(), OnboardingStepListener {
         )
         fragmentList.add(
             StepFragment.newInstance(
-                R.string.onboarding_step4,
+                R.string.onboarding_step3,
                 R.string.onboarding_step4_title,
                 R.string.onboarding_step4_content,
                 R.drawable.ic_ill_tut04,
