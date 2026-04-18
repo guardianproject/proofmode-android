@@ -63,9 +63,9 @@ public class ProofMode {
 
 
     public final static boolean PREF_OPTION_NOTARY_DEFAULT = true;
-    public final static boolean PREF_OPTION_LOCATION_DEFAULT = true;
+    public final static boolean PREF_OPTION_LOCATION_DEFAULT = false;
     public final static boolean PREF_OPTION_PHONE_DEFAULT = false;
-    public final static boolean PREF_OPTION_NETWORK_DEFAULT = true;
+    public final static boolean PREF_OPTION_NETWORK_DEFAULT = false;
 
     public final static boolean PREF_OPTION_CREDENTIALS_DEFAULT = true;
 

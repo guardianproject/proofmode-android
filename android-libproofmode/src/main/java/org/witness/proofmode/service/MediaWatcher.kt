@@ -1131,8 +1131,11 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
 
     fun checkPermissionForLocation(): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val result = mContext!!.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-            return result == PackageManager.PERMISSION_GRANTED
+            val resultFine = mContext!!.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+            val resultCoarse = mContext!!.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
+
+            return (resultFine == PackageManager.PERMISSION_GRANTED
+                    || resultCoarse == PackageManager.PERMISSION_GRANTED)
         }
         return true
     }
