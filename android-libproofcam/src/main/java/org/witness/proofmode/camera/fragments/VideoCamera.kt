@@ -1,5 +1,6 @@
 package org.witness.proofmode.camera.fragments
 
+import android.Manifest
 import androidx.activity.compose.BackHandler
 import androidx.camera.compose.CameraXViewfinder
 import androidx.camera.viewfinder.compose.MutableCoordinateTransformer
@@ -78,6 +79,9 @@ import androidx.lifecycle.asFlow
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.witness.proofmode.camera.R
@@ -88,7 +92,7 @@ import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.abs
 
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel = viewModel(),
                 lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current,
@@ -135,6 +139,13 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
         }
     }
     val elapsedTime by cameraViewModel.elapsedTime.asFlow().collectAsStateWithLifecycle("")
+
+    val audioPermissionState = rememberPermissionState(Manifest.permission.RECORD_AUDIO)
+    LaunchedEffect(Unit) {
+        if (!audioPermissionState.status.isGranted) {
+            audioPermissionState.launchPermissionRequest()
+        }
+    }
 
     surfaceRequest?.let { newRequest->
 
@@ -357,7 +368,11 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
 
                             IconButton(onClick = {
                                 if (recordingState == RecordingState.Idle || recordingState == RecordingState.Stopped){
-                                    cameraViewModel.startRecording()
+                                    if (!audioPermissionState.status.isGranted) {
+                                        audioPermissionState.launchPermissionRequest()
+                                    } else {
+                                        cameraViewModel.startRecording()
+                                    }
                                 } else {
                                     cameraViewModel.stopRecording()
                                 }

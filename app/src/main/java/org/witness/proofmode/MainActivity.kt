@@ -71,7 +71,8 @@ class MainActivity : AppCompatActivity(),
             requiredPermissions = arrayOf(
                 Manifest.permission.ACCESS_MEDIA_LOCATION,
                 Manifest.permission.READ_MEDIA_IMAGES,
-                Manifest.permission.READ_MEDIA_VIDEO
+                Manifest.permission.READ_MEDIA_VIDEO,
+                Manifest.permission.CAMERA
             )
         }
 
