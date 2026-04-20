@@ -30,4 +30,30 @@
 
     </PreferenceCategory>
 
+    <PreferenceCategory app:title="Identity Signing">
+
+        <SwitchPreferenceCompat
+            app:key="useCawgSigning"
+            app:title="Creators Assertion (CAWG)"
+            app:summaryOn="CAWG Signing Enabled"
+            app:summaryOff="CAWG Signing Disabled (COMING SOON)"
+            app:enabled="false"
+            app:defaultValue="false" />
+
+        <Preference
+            app:key="importCawg"
+            app:title="Import CAWG Credentials"
+            app:summary="Select Private Key and Certificate"
+            app:enabled="false"
+
+            />
+
+        <Preference
+            app:key="generateCawg"
+            app:title="Generate CAWG Credential"
+            app:summary="Generate Key and Cert Request"
+            app:enabled="false"
+            />
+    </PreferenceCategory>
+
 </PreferenceScreen>
