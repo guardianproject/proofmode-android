@@ -263,6 +263,7 @@ object Activities: ViewModel()
                 db.activitiesDao().deleteId(activity.id)
             }
 
+            DeletedStatusCache.clear()
             activities.clear()
             activities.addAll(db.activitiesDao().getAll())
         }
@@ -374,14 +375,35 @@ fun SnapshotStateList<ProofableItem>.withDeletedItemsRemoved(context: Context): 
     return this.filter { !it.isDeleted(context)}.toMutableStateList()
 }
 
+object DeletedStatusCache {
+    private val cache = mutableMapOf<String, Boolean>()
+
+    fun get(uri: Uri): Boolean? = cache[uri.toString()]
+
+    fun put(uri: Uri, deleted: Boolean) {
+        cache[uri.toString()] = deleted
+    }
+
+    fun clear() {
+        cache.clear()
+    }
+}
+
 fun ProofableItem.isDeleted(context: Context): Boolean {
-    try {
+    DeletedStatusCache.get(this.uri)?.let { return it }
+
+    val deleted = try {
         val inputStream: InputStream? = context.contentResolver.openInputStream(this.uri)
         if (inputStream != null) {
             inputStream.close()
-            return false
+            false
+        } else {
+            true
         }
     } catch (_: Exception) {
+        true
     }
-    return true
+
+    DeletedStatusCache.put(this.uri, deleted)
+    return deleted
 }

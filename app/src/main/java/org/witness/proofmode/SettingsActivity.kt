@@ -52,8 +52,6 @@ class SettingsActivity : AppCompatActivity() {
         switchAutoImport = binding.contentSettings.switchAutoImport
         switchAutoSync = binding.contentSettings.switchAutoSync
 
-
-        
         updateUI()
         switchLocation.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
             if (isChecked) {

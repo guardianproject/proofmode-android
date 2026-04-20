@@ -115,8 +115,6 @@ class MainActivity : AppCompatActivity(),
 
         }
 
-
-
     }
 
     private fun initUI () {

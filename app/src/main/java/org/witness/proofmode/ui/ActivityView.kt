@@ -39,6 +39,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -65,7 +66,6 @@ import androidx.core.net.toFile
 import coil.compose.AsyncImage
 import coil.decode.VideoFrameDecoder
 import coil.request.ImageRequest
-import coil.size.Size
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.witness.proofmode.MediaType
@@ -157,12 +157,10 @@ fun ProofableItemView(
         }
 
         filePath?.let {
-            // Check cache first
             val cachedResult = C2PAVerificationCache.get(filePath)
-            if (cachedResult != null && cachedResult != ValidationState.INVALID) {
+            if (cachedResult != null) {
                 c2paState = cachedResult
             } else {
-                // Perform check on IO dispatcher
                 val result = withContext(Dispatchers.IO) {
                     try {
                         val c2paMan = C2PAManager(context, PreferencesManager(context))
@@ -187,7 +185,6 @@ fun ProofableItemView(
                     if (isVideo) {
                         decoderFactory { result, options, _ -> VideoFrameDecoder(result.source, options) }
                     }
-                    size(Size.ORIGINAL)
                 }.build(),
             contentDescription = "Asset view",
             alignment = Alignment.Center,
@@ -362,11 +359,19 @@ fun MediaCapturedOrImportedActivityView(
     items: SnapshotStateList<ProofableItem>,
     capturedItems: Boolean
 ) {
+    val context = LocalContext.current
+    val rowsState = remember(items) {
+        derivedStateOf {
+            val valid = items.filter { !it.isDeleted(context) }
+            val deletedCount = items.size - valid.size
+            layoutRowsFrom(valid) to deletedCount
+        }
+    }
+    val (rows, deletedCount) = rowsState.value
+
     Column(verticalArrangement = Arrangement.spacedBy(ASSETS_GUTTER_SIZE.dp)) {
 
-        var stringId = R.plurals.you_captured_n_items
-        if (!capturedItems)
-            stringId = R.plurals.you_imported_n_items
+        val stringId = if (capturedItems) R.plurals.you_captured_n_items else R.plurals.you_imported_n_items
 
         Text(
             text = pluralStringResource(
@@ -379,17 +384,19 @@ fun MediaCapturedOrImportedActivityView(
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
-        val deletedItemsString = items.deletedItemsString()
-        if (deletedItemsString != null) {
+        if (deletedCount > 0) {
             Text(
-                text = deletedItemsString,
+                text = pluralStringResource(
+                    id = R.plurals.n_items_have_been_deleted_or_are_not_accessible,
+                    count = deletedCount,
+                    deletedCount
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.DarkGray,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
         }
 
-        val rows = layoutRows(items)
         rows.forEach { row ->
             when (row) {
                 is CapturedAssetRow.OneItem ->
@@ -408,22 +415,8 @@ fun MediaCapturedOrImportedActivityView(
     }
 }
 
-@Composable
-fun SnapshotStateList<ProofableItem>.deletedItemsString(): String? {
-    val countDeleted = this.filter { it.isDeleted(LocalContext.current) }.size
-    if (countDeleted > 0) {
-        return pluralStringResource(
-            id = R.plurals.n_items_have_been_deleted_or_are_not_accessible,
-            count = countDeleted,
-            countDeleted
-        )
-    }
-    return null
-}
-
-@Composable
-fun layoutRows(items: SnapshotStateList<ProofableItem>): MutableList<CapturedAssetRow> {
-    var array = items.withDeletedItemsRemoved().toList().reversed()
+fun layoutRowsFrom(items: List<ProofableItem>): List<CapturedAssetRow> {
+    var array = items.reversed()
     val rows: MutableList<CapturedAssetRow> = mutableListOf()
     while (array.isNotEmpty()) {
         array = if (array.size >= 7) {
@@ -447,6 +440,15 @@ fun layoutRows(items: SnapshotStateList<ProofableItem>): MutableList<CapturedAss
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MediaSharedActivityView(items: SnapshotStateList<ProofableItem>, fileName: String?) {
+    val context = LocalContext.current
+    val validState = remember(items) {
+        derivedStateOf {
+            val valid = items.filter { !it.isDeleted(context) }
+            valid to (items.size - valid.size)
+        }
+    }
+    val (validItems, deletedCount) = validState.value
+
     Column(verticalArrangement = Arrangement.spacedBy(ASSETS_GUTTER_SIZE.dp)) {
 
         Text(
@@ -460,17 +462,19 @@ fun MediaSharedActivityView(items: SnapshotStateList<ProofableItem>, fileName: S
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
-        val deletedItemsString = items.deletedItemsString()
-        if (deletedItemsString != null) {
+        if (deletedCount > 0) {
             Text(
-                text = deletedItemsString,
+                text = pluralStringResource(
+                    id = R.plurals.n_items_have_been_deleted_or_are_not_accessible,
+                    count = deletedCount,
+                    deletedCount
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.DarkGray,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
         }
 
-        val validItems = items.withDeletedItemsRemoved().toList()
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.padding(8.dp)
@@ -629,14 +633,14 @@ fun ActivitiesView(onAnyItemSelected: ((Boolean) -> Unit)? = null) {
                     ) {
 
 
-                        Activities.activities.reversed().forEachIndexed { index, activity ->
-                            stickyHeader(key = "header_${index}_${activity.id}") {
+                        Activities.activities.asReversed().forEach { activity ->
+                            stickyHeader(key = "header_${activity.id}") {
                                 ActivityDateView(
                                     date = activity.startTime,
                                     menu = activityMenu(activity)
                                 )
                             }
-                            item(key = "item_${index}_${activity.id}") {
+                            item(key = "item_${activity.id}") {
                                 ActivityView(activity = activity)
                             }
                         }
@@ -917,13 +921,16 @@ fun ActivityViewPreview() {
 @SuppressLint("SimpleDateFormat")
 @Composable
 fun Date.displayFormatted(): String {
-    val formatter =
-        if (DateUtils.isToday(this.time)) {
-            SimpleDateFormat(stringResource(id = R.string.date_display_days_since_today))
-        } else if (DateUtils.isToday(this.time + 24 * 60 * 60000)) {
-            SimpleDateFormat(stringResource(id = R.string.date_display_days_since_yesterday))
-        } else {
-            SimpleDateFormat(stringResource(id = R.string.date_display_days_since_other))
+    val todayPattern = stringResource(id = R.string.date_display_days_since_today)
+    val yesterdayPattern = stringResource(id = R.string.date_display_days_since_yesterday)
+    val otherPattern = stringResource(id = R.string.date_display_days_since_other)
+    val time = this.time
+    return remember(time, todayPattern, yesterdayPattern, otherPattern) {
+        val pattern = when {
+            DateUtils.isToday(time) -> todayPattern
+            DateUtils.isToday(time + 24 * 60 * 60000) -> yesterdayPattern
+            else -> otherPattern
         }
-    return formatter.format(this)
+        SimpleDateFormat(pattern).format(Date(time))
+    }
 }
