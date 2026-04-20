@@ -4,6 +4,7 @@ import android.Manifest
 import android.accounts.AccountManager
 import android.content.Intent
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.view.MenuItem
@@ -11,6 +12,7 @@ import android.widget.CheckBox
 import android.widget.CompoundButton
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceManager
 
 import org.witness.proofmode.PermissionActivity.Companion.hasPermissions
@@ -76,6 +78,8 @@ class SettingsActivity : AppCompatActivity() {
             }
             updateUI()
         }
+
+
         switchNetwork.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
             if (isChecked) {
                 if (!askForPermission(
@@ -205,6 +209,9 @@ class SettingsActivity : AppCompatActivity() {
                 ProofMode.PREF_OPTION_LOCATION,
                 ProofMode.PREF_OPTION_LOCATION_DEFAULT
             )
+
+        updateLocationDesc()
+
         switchNetwork.isChecked =
             mPrefs.getBoolean(
                 ProofMode.PREF_OPTION_NETWORK,
@@ -229,6 +236,31 @@ class SettingsActivity : AppCompatActivity() {
             mPrefs.getBoolean(ProofMode.PREFS_DOPROOF, false)
 
         updateCredentialsDesc()
+    }
+
+    private fun updateLocationDesc () {
+
+        val textLocationDesc = binding.contentSettings.textLocationDesc
+
+        val hasFineLocation = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        val hasCoarseLocation = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (hasFineLocation) {
+            // Precise location access (GPS)
+            textLocationDesc.text = getString(R.string.settings_location_desc)
+        } else if (hasCoarseLocation) {
+            // Only approximate location access
+            textLocationDesc.text = getString(R.string.settings_location_desc_approx)
+        } else {
+            // No location access
+
+            textLocationDesc.text = getString(R.string.settings_location_desc_none)
+        }
     }
 
     private fun updateCredentialsDesc() {

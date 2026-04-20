@@ -14,6 +14,9 @@
     <string name="settings_notary_desc">Registration with a third party that your media exists</string>
     <string name="settings_location">Location</string>
     <string name="settings_location_desc">GPS coordinates when media is taken</string>
+    <string name="settings_location_desc_approx">GPS coordinates APPROX ONLY</string>
+    <string name="settings_location_desc_none">NO PERMISSION GIVEN</string>
+
     <string name="settings_phone">Phone</string>
     <string name="settings_phone_desc">Identification number of your phone</string>
     <string name="settings_network">Network</string>

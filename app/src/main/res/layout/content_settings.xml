@@ -95,6 +95,7 @@
                     style="@style/SettingsOptionDescStyle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:id="@+id/textLocationDesc"
                     android:text="@string/settings_location_desc" />
             </LinearLayout>
 
