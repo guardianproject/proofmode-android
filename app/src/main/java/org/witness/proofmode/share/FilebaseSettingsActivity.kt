@@ -10,6 +10,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.PreferenceManager
 import org.witness.proofmode.R
 import org.witness.proofmode.databinding.ActivityFilebaseSettingsBinding
+import org.witness.proofmode.service.MediaWatcher
 import org.witness.proofmode.storage.FilebaseConfig
 import org.witness.proofmode.storage.FilebaseStorageProvider
 import org.witness.proofmode.storage.TestConnectionCallback
@@ -80,7 +81,8 @@ class FilebaseSettingsActivity : AppCompatActivity() {
         editSecretKey.setText(prefs.getString(FilebaseConfig.PREF_FILEBASE_SECRET_KEY, ""))
         editBucketName.setText(prefs.getString(FilebaseConfig.PREF_FILEBASE_BUCKET_NAME, ""))
         editEndpoint.setText(prefs.getString(FilebaseConfig.PREF_FILEBASE_ENDPOINT, "https://s3.filebase.com"))
-        
+        editRegion.setText(prefs.getString(FilebaseConfig.PREF_FILEBASE_REGION, "us-east-1"))
+
         enableConfigFields(switchFilebaseEnabled.isChecked)
     }
 
@@ -89,6 +91,7 @@ class FilebaseSettingsActivity : AppCompatActivity() {
         editSecretKey.isEnabled = enabled
         editBucketName.isEnabled = enabled
         editEndpoint.isEnabled = enabled
+        editRegion.isEnabled = enabled
         buttonTest.isEnabled = enabled
     }
 
@@ -98,6 +101,7 @@ class FilebaseSettingsActivity : AppCompatActivity() {
             secretKey = editSecretKey.text.toString().trim(),
             bucketName = editBucketName.text.toString().trim(),
             endpoint = editEndpoint.text.toString().trim(),
+            region = editRegion.text.toString().trim(),
             enabled = switchFilebaseEnabled.isChecked
         )
 
@@ -113,10 +117,11 @@ class FilebaseSettingsActivity : AppCompatActivity() {
             putString(FilebaseConfig.PREF_FILEBASE_SECRET_KEY, config.secretKey)
             putString(FilebaseConfig.PREF_FILEBASE_BUCKET_NAME, config.bucketName)
             putString(FilebaseConfig.PREF_FILEBASE_ENDPOINT, config.endpoint)
+            putString(FilebaseConfig.PREF_FILEBASE_REGION, config.region)
             apply()
         }
 
-        //val show = Toast.makeText(this, "Settings saved", Toast.LENGTH_SHORT).show()
+        MediaWatcher.getInstance(this)?.refreshStorageProvider(null)
 
         finish()
     }

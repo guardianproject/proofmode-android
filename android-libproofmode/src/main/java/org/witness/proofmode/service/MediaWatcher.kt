@@ -94,6 +94,13 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
             C2PAManager(mContext!!, PreferencesManager(mContext!!))
     }
 
+    public fun refreshStorageProvider (storageProvider: StorageProvider?) {
+        if (storageProvider != null) this.storageProvider = storageProvider
+        else this.storageProvider = createCompositeStorageProvider(mContext!!)
+
+    }
+
+
     private fun createCompositeStorageProvider(context: Context): StorageProvider {
         val primaryProvider = DefaultStorageProvider(context)
 
@@ -105,7 +112,8 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
                     config.accessKey,
                     config.secretKey,
                     config.bucketName,
-                    config.endpoint
+                    config.endpoint,
+                    config.region
                 )
                 return CompositeStorageProvider(primaryProvider, filebaseProvider)
             } catch (e: Exception) {
@@ -366,13 +374,14 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
         val showLocation = mPrefs!!.getBoolean(
             ProofMode.PREF_OPTION_LOCATION,
             ProofMode.PREF_OPTION_LOCATION_DEFAULT
-        ) && checkPermissionForLocation()
+        ) && checkPermissionForLocation(false)
+
         val autoNotarize =
             mPrefs!!.getBoolean(ProofMode.PREF_OPTION_NOTARY, ProofMode.PREF_OPTION_NOTARY_DEFAULT)
         val showMobileNetwork = mPrefs!!.getBoolean(
             ProofMode.PREF_OPTION_NETWORK,
             ProofMode.PREF_OPTION_NETWORK_DEFAULT
-        )
+        ) && checkPermissionForLocation(true)
 
         if (mediaHash != null) {
             try {
@@ -539,13 +548,13 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
         val showLocation = mPrefs!!.getBoolean(
             ProofMode.PREF_OPTION_LOCATION,
             ProofMode.PREF_OPTION_LOCATION_DEFAULT
-        ) && checkPermissionForLocation()
+        ) && checkPermissionForLocation(false)
         val autoNotarize =
             mPrefs!!.getBoolean(ProofMode.PREF_OPTION_NOTARY, ProofMode.PREF_OPTION_NOTARY_DEFAULT)
         val showMobileNetwork = mPrefs!!.getBoolean(
             ProofMode.PREF_OPTION_NETWORK,
             ProofMode.PREF_OPTION_NETWORK_DEFAULT
-        )
+        )&& checkPermissionForLocation(true)
 
         val mediaHash = HashUtils.getSHA256FromBytes(mediaBytes)
 
@@ -690,13 +699,15 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
         val showLocation = mPrefs!!.getBoolean(
             ProofMode.PREF_OPTION_LOCATION,
             ProofMode.PREF_OPTION_LOCATION_DEFAULT
-        ) && checkPermissionForLocation()
+        ) && checkPermissionForLocation(false)
         val autoNotarize =
             mPrefs!!.getBoolean(ProofMode.PREF_OPTION_NOTARY, ProofMode.PREF_OPTION_NOTARY_DEFAULT)
+
+        //this requires FINE location permission to get cell network info
         val showMobileNetwork = mPrefs!!.getBoolean(
             ProofMode.PREF_OPTION_NETWORK,
             ProofMode.PREF_OPTION_NETWORK_DEFAULT
-        )
+        )&& checkPermissionForLocation(true)
 
         var isMedia: InputStream = FileInputStream(fdMedia)
         val mediaHash = HashUtils.getSHA256FromFileContent(isMedia)
@@ -1134,13 +1145,20 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
         return false
     }
 
-    fun checkPermissionForLocation(): Boolean {
+    fun checkPermissionForLocation(fineOnly: Boolean): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val resultFine = mContext!!.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-            val resultCoarse = mContext!!.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
 
-            return (resultFine == PackageManager.PERMISSION_GRANTED
-                    || resultCoarse == PackageManager.PERMISSION_GRANTED)
+            if (fineOnly) {
+                return mContext!!.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+            } else {
+                val resultFine =
+                    mContext!!.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+                val resultCoarse =
+                    mContext!!.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
+
+                return (resultFine == PackageManager.PERMISSION_GRANTED
+                        || resultCoarse == PackageManager.PERMISSION_GRANTED)
+            }
         }
         return true
     }

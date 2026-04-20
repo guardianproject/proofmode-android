@@ -41,7 +41,8 @@ class StorageProviderManager private constructor() {
                     accessKey = filebaseConfig.accessKey,
                     secretKey = filebaseConfig.secretKey,
                     bucketName = filebaseConfig.bucketName,
-                    endpoint = filebaseConfig.endpoint
+                    endpoint = filebaseConfig.endpoint,
+                    region = filebaseConfig.region
                 )
                 Log.i(TAG, "Filebase storage provider initialized")
             } catch (e: Exception) {
