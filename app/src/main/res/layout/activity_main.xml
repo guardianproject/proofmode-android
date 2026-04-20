@@ -15,13 +15,45 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
+        <com.google.android.material.appbar.AppBarLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fitsSystemWindows="false"
+            android:background="@color/colorPrimaryDark"
+            >
+
+            <com.google.android.material.appbar.MaterialToolbar
+                android:id="@+id/toolbar"
+                android:layout_width="match_parent"
+                android:layout_height="?attr/actionBarSize"
+                app:theme="@style/ToolbarTheme" />
+
+        </com.google.android.material.appbar.AppBarLayout>
+
         <androidx.compose.ui.platform.ComposeView
             android:id="@+id/activityView"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
+        <!--
         <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/fab"
+            android:id="@+id/fabVideo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end|bottom"
+            android:src="@drawable/ic_video_settings"
+            android:backgroundTint="@color/colorPrimary"
+            app:tint="@color/white"
+            app:borderWidth="0dp"
+            android:layout_marginBottom="48dp"
+            android:layout_marginEnd="16dp"
+            app:elevation="6dp"
+            android:contentDescription="@string/camera"
+            android:visibility="gone"
+            />-->
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fabPhoto"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="end|bottom"

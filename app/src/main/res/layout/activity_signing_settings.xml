@@ -30,8 +30,11 @@
 
     </com.google.android.material.appbar.AppBarLayout>
 
-    <include
+    <LinearLayout
         android:id="@+id/content_settings"
-        layout="@layout/content_settings" />
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        />
 
 </LinearLayout>

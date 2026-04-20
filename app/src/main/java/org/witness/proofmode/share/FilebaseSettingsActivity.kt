@@ -9,6 +9,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.PreferenceManager
 import org.witness.proofmode.R
+import org.witness.proofmode.databinding.ActivityFilebaseSettingsBinding
 import org.witness.proofmode.storage.FilebaseConfig
 import org.witness.proofmode.storage.FilebaseStorageProvider
 import org.witness.proofmode.storage.TestConnectionCallback
@@ -22,15 +23,21 @@ class FilebaseSettingsActivity : AppCompatActivity() {
     private lateinit var editEndpoint: EditText
     private lateinit var buttonSave: Button
     private lateinit var buttonTest: Button
+    private lateinit var binding: ActivityFilebaseSettingsBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_filebase_settings)
+
+        binding = ActivityFilebaseSettingsBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         // Setup toolbar
+        setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.setDisplayShowHomeEnabled(true)
-        supportActionBar?.title = "Filebase Configuration"
+        binding.toolbar.setTitleTextColor(getColor(R.color.colorPrimaryDark))
+        binding.toolbar.setNavigationIconTint(getColor(R.color.colorPrimaryDark))
+        supportActionBar?.title = getString(R.string.auto_sync_title)
 
         // Initialize views
         switchFilebaseEnabled = findViewById(R.id.switchFilebaseEnabled)

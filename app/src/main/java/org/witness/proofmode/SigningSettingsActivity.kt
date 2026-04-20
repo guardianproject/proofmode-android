@@ -8,19 +8,30 @@ import androidx.preference.EditTextPreference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceManager
 import androidx.preference.SwitchPreferenceCompat
+import org.witness.proofmode.databinding.ActivitySettingsBinding
+import org.witness.proofmode.databinding.ActivitySigningSettingsBinding
 
 class SigningSettingsActivity : AppCompatActivity() {
+
+    private lateinit var binding: ActivitySigningSettingsBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        binding = ActivitySigningSettingsBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        // Setup toolbar
+        setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.setDisplayShowHomeEnabled(true)
+        binding.toolbar.setTitleTextColor(getColor(R.color.colorPrimaryDark))
+        binding.toolbar.setNavigationIconTint(getColor(R.color.colorPrimaryDark))
         supportActionBar?.title = getString(R.string.settings_signing_title)
 
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()
-                .replace(android.R.id.content, SigningPreferencesFragment())
+                .replace(R.id.content_settings, SigningPreferencesFragment())
                 .commit()
         }
     }

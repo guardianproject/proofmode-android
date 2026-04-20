@@ -53,6 +53,7 @@ import java.util.Date
 import java.util.UUID
 import androidx.core.content.edit
 import androidx.core.net.toUri
+import org.witness.proofmode.databinding.ActivityFilebaseSettingsBinding
 
 class MainActivity : AppCompatActivity(),
     ActivitiesViewDelegate {
@@ -60,7 +61,7 @@ class MainActivity : AppCompatActivity(),
     private lateinit var drawer: DrawerLayout
     private lateinit var drawerToggle: ActionBarDrawerToggle
     private lateinit var mainBinding: ActivityMainBinding
-    public lateinit var fab: FloatingActionButton
+    private lateinit var fabPhoto: FloatingActionButton
 
     private val ACTION_OPEN_CAMERA = "org.witness.proofmode.OPEN_CAMERA"
 
@@ -75,6 +76,7 @@ class MainActivity : AppCompatActivity(),
                 Manifest.permission.CAMERA
             )
         }
+
 
         mPrefs = PreferenceManager.getDefaultSharedPreferences(this)
 
@@ -121,9 +123,11 @@ class MainActivity : AppCompatActivity(),
 
         mainBinding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(mainBinding.root)
+
+        // Setup toolbar
+        setSupportActionBar(mainBinding.toolbar)
+        supportActionBar?.setDisplayShowHomeEnabled(false)
         supportActionBar?.title = getString(R.string.app_name)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true);
-        supportActionBar?.setHomeButtonEnabled(true);
 
         if (mPrefs.getBoolean("firsttime", true)) {
             startActivityForResult(Intent(this, OnboardingActivity::class.java), REQUEST_CODE_INTRO)
@@ -143,8 +147,8 @@ class MainActivity : AppCompatActivity(),
             handleNavMenu(menuItem)
         }
 
-        fab = findViewById<FloatingActionButton>(R.id.fab)
-        fab.setOnClickListener { view ->
+        fabPhoto = findViewById<FloatingActionButton>(R.id.fabPhoto)
+        fabPhoto.setOnClickListener { view ->
             openCamera()
         }
 
@@ -160,10 +164,14 @@ class MainActivity : AppCompatActivity(),
     }
 
     private fun itemsSelected(selected: Boolean) {
-        if (selected)
-            fab.visibility = View.GONE
-        else
-            fab.visibility = View.VISIBLE
+        if (selected) {
+            fabPhoto.visibility = View.GONE
+
+        }
+        else {
+            fabPhoto.visibility = View.VISIBLE
+
+        }
     }
 
     private class EventReceiver : BroadcastReceiver() {

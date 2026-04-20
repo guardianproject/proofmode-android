@@ -4,7 +4,7 @@
     <!-- A device that has any camera be it front, back or external will work. -->
     <uses-feature
         android:name="android.hardware.camera.any"
-        android:required="false" />
+        android:required="true" />
     <!--
  Required only if your app needs to access images or photos
      that other apps created.
@@ -72,7 +72,6 @@
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:screenOrientation="portrait"
             android:launchMode="singleInstance">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -86,24 +85,19 @@
         </activity>
         <activity
             android:name=".SettingsActivity"
-            android:label="@string/activity_settings_title"
-            android:screenOrientation="portrait" />
+            android:label="@string/activity_settings_title" />
         <activity
             android:name=".SigningSettingsActivity"
-            android:label="@string/settings_signing_title"
-            android:screenOrientation="portrait" />
+            android:label="@string/settings_signing_title"/>
         <activity
             android:name=".org.witness.proofmode.ui.DataLegendActivity"
-            android:label="@string/activity_datalegend_title"
-            android:screenOrientation="portrait" />
+            android:label="@string/activity_datalegend_title" />
         <activity
             android:name=".org.witness.proofmode.ui.DigitalSignaturesActivity"
-            android:label="@string/menu_digital_signatures"
-            android:screenOrientation="portrait" />
+            android:label="@string/menu_digital_signatures" />
         <activity
             android:name=".org.witness.proofmode.share.FilebaseSettingsActivity"
-            android:label="Filebase Settings"
-            android:screenOrientation="portrait" />
+            android:label="@string/auto_sync_title" />
 
         <receiver
             android:name=".org.witness.proofmode.util.OnBootReceiver"

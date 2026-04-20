@@ -39,9 +39,16 @@ class SettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivitySettingsBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // Setup toolbar
+        setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.setDisplayShowHomeEnabled(true)
-        supportActionBar?.setDisplayShowTitleEnabled(false)
+        supportActionBar?.setTitle("")
+        binding.toolbar.setTitleTextColor(getColor(R.color.colorPrimaryDark))
+        binding.toolbar.setNavigationIconTint(getColor(R.color.colorPrimaryDark))
+
+        //supportActionBar?.setDisplayShowTitleEnabled(false)
 
         mPrefs = PreferenceManager.getDefaultSharedPreferences(this)
         switchLocation = binding.contentSettings.switchLocation
