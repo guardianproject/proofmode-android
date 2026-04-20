@@ -5,6 +5,7 @@ data class FilebaseConfig(
     val secretKey: String,
     val bucketName: String,
     val endpoint: String = "https://s3.filebase.com",
+    val region: String = "us-east-1",
     val enabled: Boolean = false
 ) {
     
@@ -21,5 +22,7 @@ data class FilebaseConfig(
         const val PREF_FILEBASE_SECRET_KEY = "filebase_secret_key"
         const val PREF_FILEBASE_BUCKET_NAME = "filebase_bucket_name"
         const val PREF_FILEBASE_ENDPOINT = "filebase_endpoint"
+        const val PREF_FILEBASE_REGION = "filebase_region"
+
     }
 }

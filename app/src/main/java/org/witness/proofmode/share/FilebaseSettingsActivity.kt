@@ -21,6 +21,7 @@ class FilebaseSettingsActivity : AppCompatActivity() {
     private lateinit var editSecretKey: EditText
     private lateinit var editBucketName: EditText
     private lateinit var editEndpoint: EditText
+    private lateinit var editRegion: EditText
     private lateinit var buttonSave: Button
     private lateinit var buttonTest: Button
     private lateinit var binding: ActivityFilebaseSettingsBinding
@@ -45,6 +46,7 @@ class FilebaseSettingsActivity : AppCompatActivity() {
         editSecretKey = findViewById(R.id.editSecretKey)
         editBucketName = findViewById(R.id.editBucketName)
         editEndpoint = findViewById(R.id.editEndpoint)
+        editRegion = findViewById(R.id.editRegion)
         buttonSave = findViewById(R.id.buttonSave)
         buttonTest = findViewById(R.id.buttonTest)
 
@@ -126,7 +128,8 @@ class FilebaseSettingsActivity : AppCompatActivity() {
                         secretKey = editSecretKey.text.toString().trim(),
                         bucketName = editBucketName.text.toString().trim(),
                         endpoint = editEndpoint.text.toString().trim(),
-                        enabled = true
+                        region = editRegion.text.toString().trim(),
+                        enabled = true,
                 )
 
         if (!config.isValid()) {
@@ -149,7 +152,8 @@ class FilebaseSettingsActivity : AppCompatActivity() {
                             accessKey = config.accessKey,
                             secretKey = config.secretKey,
                             bucketName = config.bucketName,
-                            endpoint = config.endpoint
+                            endpoint = config.endpoint,
+                            region = config.region
                     )
 
             filebaseProvider.testConnection(
@@ -182,6 +186,7 @@ class FilebaseSettingsActivity : AppCompatActivity() {
                     }
             )
         } catch (e: Exception) {
+            e.printStackTrace()
             buttonTest.isEnabled = true
             buttonTest.text = "TEST CONNECTION"
             Toast.makeText(this, "Error creating test connection: ${e.message}", Toast.LENGTH_LONG)

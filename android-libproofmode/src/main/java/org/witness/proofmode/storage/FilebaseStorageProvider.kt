@@ -27,12 +27,13 @@ class FilebaseStorageProvider(
     private val accessKey: String,
     private val secretKey: String,
     private val bucketName: String,
-    private val endpoint: String = "https://s3.filebase.com"
+    private val endpoint: String = "https://s3.filebase.com",
+    private val region: String = "us-east-1"
 ) : StorageProvider {
 
     companion object {
         private const val TAG = "FilebaseStorageProvider"
-        private const val REGION = "us-east-1"
+    //    private const val REGION = "us-east-1"
         private const val SERVICE = "s3"
         private const val ALGORITHM = "AWS4-HMAC-SHA256"
         private const val DATE_FORMAT = "yyyyMMdd'T'HHmmss'Z'"
@@ -114,14 +115,14 @@ class FilebaseStorageProvider(
                     getPayloadHash(file)
 
             // Create string to sign
-            val credentialScope = "$dateStamp/$REGION/$SERVICE/aws4_request"
+            val credentialScope = "$dateStamp/$region/$SERVICE/aws4_request"
             val stringToSign = "$ALGORITHM\n" +
                     timestamp + "\n" +
                     credentialScope + "\n" +
                     sha256(canonicalRequest)
 
             // Calculate signature
-            val signature = calculateSignature(secretKey, dateStamp, REGION, SERVICE, stringToSign)
+            val signature = calculateSignature(secretKey, dateStamp, region, SERVICE, stringToSign)
 
             // Create authorization header
             val authorization = "$ALGORITHM Credential=$accessKey/$credentialScope, " +
@@ -260,7 +261,7 @@ class FilebaseStorageProvider(
                                         "UNSIGNED-PAYLOAD"
 
                         // Create string to sign
-                        val credentialScope = "$dateStamp/$REGION/$SERVICE/aws4_request"
+                        val credentialScope = "$dateStamp/$region/$SERVICE/aws4_request"
                         val stringToSign =
                                 "$ALGORITHM\n" +
                                         timestamp +
@@ -274,7 +275,7 @@ class FilebaseStorageProvider(
                                 calculateSignature(
                                         secretKey,
                                         dateStamp,
-                                        REGION,
+                                        region,
                                         SERVICE,
                                         stringToSign
                                 )

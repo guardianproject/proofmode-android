@@ -131,8 +131,13 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
                     FilebaseConfig.PREF_FILEBASE_ENDPOINT,
                     "https://s3.filebase.com"
                 )!!
+            val region: String =
+                mPrefs!!.getString(
+                    FilebaseConfig.PREF_FILEBASE_REGION,
+                    "us-west-1"
+                )!!
 
-            return FilebaseConfig(accessKey, secretKey, bucketName, endpoint, enabled)
+            return FilebaseConfig(accessKey, secretKey, bucketName, endpoint, region,enabled)
         }
 
     /*
