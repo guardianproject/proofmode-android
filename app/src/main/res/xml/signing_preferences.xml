@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory app:title="@string/settings_signing_mode_label">
+
+        <SwitchPreferenceCompat
+            app:key="useRemoteSigning"
+            app:title="@string/settings_signing_remote"
+            app:summaryOn="@string/settings_credentials_remote"
+            app:summaryOff="@string/settings_credentials_local"
+            app:defaultValue="true" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/settings_signing_signing_servers">
+
+        <EditTextPreference
+            app:key="proofSignServerUrl"
+            app:title="@string/settings_signing_proofsign_server"
+            app:useSimpleSummaryProvider="true"
+            app:defaultValue="https://proofsign.proofmode.org"
+            app:dialogTitle="@string/settings_signing_proofsign_server" />
+
+        <EditTextPreference
+            app:key="tsaServerUrl"
+            app:title="@string/settings_signing_tsa"
+            app:useSimpleSummaryProvider="true"
+            app:defaultValue="https://tsa.trufo.ai/"
+            app:dialogTitle="@string/settings_signing_tsa" />
+
+    </PreferenceCategory>
+
+</PreferenceScreen>

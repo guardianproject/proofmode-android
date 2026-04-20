@@ -10,7 +10,6 @@ import android.os.Bundle
 import android.view.MenuItem
 import android.widget.CheckBox
 import android.widget.CompoundButton
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceManager
@@ -124,28 +123,12 @@ class SettingsActivity : AppCompatActivity() {
 
                 switchAI.isEnabled = isChecked
 
-                if (isChecked)
+                if (isChecked) {
                     showIdentityChooser()
+                    startActivity(Intent(this, SigningSettingsActivity::class.java))
+                }
 
                 updateUI()
-            }
-
-            switchCredentials.setOnLongClickListener {
-                val currentRemote = mPrefs.getBoolean(
-                    ProofMode.PREF_OPTION_REMOTE_SIGNING,
-                    ProofMode.PREF_OPTION_REMOTE_SIGNING_DEFAULT
-                )
-                val newRemote = !currentRemote
-                mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_REMOTE_SIGNING, newRemote).commit()
-
-                val message = if (newRemote)
-                    R.string.settings_credentials_switched_remote
-                else
-                    R.string.settings_credentials_switched_local
-                Toast.makeText(this, message, Toast.LENGTH_LONG).show()
-
-                updateCredentialsDesc()
-                true
             }
 
             switchAI.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->

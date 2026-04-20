@@ -161,22 +161,23 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             // Create appropriate signer based on mode
             if (defaultSigner == null)
             {
+                val tsaUrl = resolveTsaUrl(signingMode)
                 if (signingMode == SigningMode.REMOTE) {
                     //we only allow C2PA on devices that have been patched within 90 days
                     if (checkOSSecurityPatchDate(90)) {
-                        defaultSigner = createSigner(signingMode, TSA_DEFAULT)
+                        defaultSigner = createSigner(signingMode, tsaUrl)
                     }
                     else
                     {
                         Timber.i("C2PA Disabled: OS Security Patches not updated within 90 days")
                         //fall back to using a local keystore signer as fallback
-                        defaultSigner = createSigner(SigningMode.KEYSTORE, TSA_DEFAULT)
+                        defaultSigner = createSigner(SigningMode.KEYSTORE, tsaUrl)
 
                     }
                 }
                 else
                 {
-                    defaultSigner = createSigner(signingMode, TSA_DEFAULT)
+                    defaultSigner = createSigner(signingMode, tsaUrl)
                 }
             }
 
@@ -427,7 +428,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
     private suspend fun createRemoteSigner(): Signer {
 
-        val configUrl = BuildConfig.SIGNING_SERVER_AND_ENDPOINT
+        val configUrl = resolveProofSignConfigUrl()
         val bearerToken = BuildConfig.SIGNING_SERVER_TOKEN
 
         Timber.d( "Creating WebServiceSigner with URL: $configUrl")
@@ -437,6 +438,33 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             WebServiceSigner(configurationURL = configUrl, bearerToken = bearerToken)
 
         return webServiceSigner.createSigner()
+    }
+
+    private fun resolveProofSignConfigUrl(): String {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        val base = prefs.getString(
+            ProofMode.PREF_OPTION_PROOFSIGN_SERVER,
+            ProofMode.PREF_OPTION_PROOFSIGN_SERVER_DEFAULT
+        )?.trim().orEmpty()
+        if (base.isEmpty()) return BuildConfig.SIGNING_SERVER_AND_ENDPOINT
+
+        val endpoint = BuildConfig.SIGNING_SERVER_ENDPOINT
+        val trimmedBase = base.trimEnd('/')
+        val normalizedEndpoint = if (endpoint.startsWith("/")) endpoint else "/$endpoint"
+        return trimmedBase + normalizedEndpoint
+    }
+
+    private fun resolveTsaUrl(mode: SigningMode): String {
+        if (mode == SigningMode.REMOTE) {
+            // Remote signing always uses the pinned TSA.
+            return ProofMode.PREF_OPTION_TSA_SERVER_DEFAULT
+        }
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        val configured = prefs.getString(
+            ProofMode.PREF_OPTION_TSA_SERVER,
+            ProofMode.PREF_OPTION_TSA_SERVER_DEFAULT
+        )?.trim().orEmpty()
+        return configured.ifEmpty { ProofMode.PREF_OPTION_TSA_SERVER_DEFAULT }
     }
 
     private fun createKeystoreKey(alias: String, useHardware: Boolean) {

@@ -332,10 +332,12 @@ class MainActivity : AppCompatActivity(),
             return true;
         }
 
+        /**
         if (id == R.id.action_share_photos) {
             showMediaPicker();
-        }
-        else if (id == R.id.menu_settings) {
+        }**/
+
+        if (id == R.id.menu_settings) {
             drawer.closeDrawer(GravityCompat.START)
             openSettings()
 	}
