@@ -27,21 +27,27 @@ import java.lang.reflect.InvocationTargetException
 
 class SocialImageUtil {
 
-    fun createImageCard (context: Context, sourceImage : Uri, verifyUrl: String?) : Uri {
+    fun createImageCard (context: Context, sourceImage : Uri, verifyUrl: String?) : Uri? {
 
         var ba = context.contentResolver.openInputStream(sourceImage)!!.readBytes()
         var bm = decodeBitmapWithRotation(ba)
-        val waterMark = BitmapFactory.decodeResource(context.getResources(), R.drawable.proofmode128)
-        var qrcode : Bitmap? = null
 
-        verifyUrl?.let {
-            qrcode = encodeAsBitmap(it, waterMark.width, waterMark.height)
+        bm?.let {
+            val waterMark =
+                BitmapFactory.decodeResource(context.getResources(), R.drawable.proofmode128)
+            var qrcode: Bitmap? = null
+
+            verifyUrl?.let {
+                qrcode = encodeAsBitmap(it, waterMark.width, waterMark.height)
+            }
+
+            bm = addWaterMark(context, bm, waterMark, qrcode, null)
+            var file = File.createTempFile("share", ".jpg");
+            bm.compress(Bitmap.CompressFormat.JPEG, 80, FileOutputStream(file))
+            return Uri.fromFile(file)
         }
 
-        bm = addWaterMark(context, bm, waterMark, qrcode,null)
-        var file = File.createTempFile("share",".jpg");
-        bm.compress(Bitmap.CompressFormat.JPEG,80,FileOutputStream(file))
-        return Uri.fromFile(file)
+        return null
 
     }
 
@@ -73,10 +79,14 @@ class SocialImageUtil {
         return result
     }
 
-    fun decodeBitmapWithRotation(picture: ByteArray): Bitmap {
+    fun decodeBitmapWithRotation(picture: ByteArray): Bitmap? {
         val bitmap = BitmapFactory.decodeByteArray(picture, 0, picture.size)
-        val matrix: Matrix = getBitmapRotation(picture)
-        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+        if (bitmap != null) {
+            val matrix: Matrix = getBitmapRotation(picture)
+            return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+        }
+        else
+            return null;
     }
 
     fun getBitmapRotation(picture: ByteArray): Matrix {

@@ -431,8 +431,11 @@ class ShareProofActivity : AppCompatActivity() {
                   var shareString = hash
                   lastMediaUri?.let { uri ->
                       val uriShareImage = SocialImageUtil().createImageCard(this, uri, "hash:" + shareString)
-                      shareUris.clear()
-                      shareUris.add(cleanUri(uriShareImage))
+
+                      if (uriShareImage != null) {
+                          shareUris.clear()
+                          shareUris.add(cleanUri(uriShareImage))
+                      }
                   }
 
                   shareMedia(
@@ -465,7 +468,10 @@ class ShareProofActivity : AppCompatActivity() {
                     lastMediaUri?.let { uri ->
                         val uriShareImage = SocialImageUtil().createImageCard(this@ShareProofActivity, uri, verifyUri)
 
-                        finalShareUris?.add(cleanUri(uriShareImage))
+                        if (uriShareImage != null)
+                            finalShareUris?.add(cleanUri(uriShareImage))
+                        else
+                            finalShareUris?.add(cleanUri(uri))
                     }
 
                     shareMedia(
@@ -490,7 +496,16 @@ class ShareProofActivity : AppCompatActivity() {
 
                             lastMediaUri?.let { uri ->
                                 val uriShareImage = SocialImageUtil().createImageCard(this@ShareProofActivity, uri, verifyUri)
-                                finalShareUris?.add(cleanUri(uriShareImage))
+
+                                if (uriShareImage != null) {
+                                    finalShareUris?.add(cleanUri(uriShareImage))
+                                }
+                                else
+                                {
+                                    finalShareUris?.add(cleanUri(uri))
+                                }
+
+
                             }
 
                             shareMedia(
