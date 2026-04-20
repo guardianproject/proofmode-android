@@ -253,7 +253,7 @@ class CameraViewModel(private val activity: CameraActivity, private val app: App
 
     suspend fun changeQuality(quality:Quality,lifecycleOwner: LifecycleOwner) {
         _selectedQuality.update{ quality}
-        cameraProvider?.unbind(videoCapture)
+        cameraProvider?.unbindAll()
         _previewAlpha.update { 0.5f }
         delay(800)
         _previewAlpha.update { 1f }
@@ -266,15 +266,19 @@ class CameraViewModel(private val activity: CameraActivity, private val app: App
                 _selectedQuality.value!!)))
             .build()
         videoCapture = VideoCapture.withOutput(recorder!!)
-        camera = cameraProvider!!.bindToLifecycle(lifecycleOwner = lifecycleOwner,CameraSelector.Builder().requireLensFacing(lensFacing.value?:CameraSelector.LENS_FACING_BACK).build(),
-            previewUseCase,videoCapture)
-        camera?.cameraInfo?.supportedFrameRateRanges.let { ranges->
-            _supportedFrameRates.update { ranges as Set<Range<Int>> }
+        try {
+            camera = cameraProvider!!.bindToLifecycle(lifecycleOwner = lifecycleOwner,CameraSelector.Builder().requireLensFacing(lensFacing.value?:CameraSelector.LENS_FACING_BACK).build(),
+                previewUseCase,videoCapture)
+            camera?.cameraInfo?.supportedFrameRateRanges.let { ranges->
+                _supportedFrameRates.update { ranges as Set<Range<Int>> }
 
+            }
+            zoomState = camera!!.cameraInfo.zoomState
+            cameraControl = camera?.cameraControl
+            cameraControl?.enableTorch(_torchOn.value)
+        } catch (ex: Exception) {
+            Timber.e(ex, "Failed to bind video capture with quality $quality")
         }
-        zoomState = camera!!.cameraInfo.zoomState
-        cameraControl = camera?.cameraControl
-        cameraControl?.enableTorch(_torchOn.value)
 
     }
 
