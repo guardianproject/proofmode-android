@@ -5,22 +5,23 @@ import android.accounts.AccountManager
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.view.MenuItem
 import android.widget.CheckBox
 import android.widget.CompoundButton
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import androidx.preference.PreferenceManager
-
 import org.witness.proofmode.PermissionActivity.Companion.hasPermissions
 import org.witness.proofmode.ProofMode.PREF_CREDENTIALS_PRIMARY
 import org.witness.proofmode.databinding.ActivitySettingsBinding
+import org.witness.proofmode.org.witness.proofmode.share.FilebaseSettingsActivity
 import org.witness.proofmode.storage.FilebaseConfig
 import org.witness.proofmode.util.GPSTracker
-import androidx.core.content.edit
-import org.witness.proofmode.org.witness.proofmode.share.FilebaseSettingsActivity
 
 
 class SettingsActivity : AppCompatActivity() {
@@ -61,6 +62,13 @@ class SettingsActivity : AppCompatActivity() {
         switchAutoSync = binding.contentSettings.switchAutoSync
 
         updateUI()
+        switchLocation.setOnLongClickListener { _ ->
+            val intent: Intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+            val uri = Uri.fromParts("package", packageName, null)
+            intent.data = uri
+            startActivity(intent)
+            true
+        }
         switchLocation.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
             if (isChecked) {
                 if (hasPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))||

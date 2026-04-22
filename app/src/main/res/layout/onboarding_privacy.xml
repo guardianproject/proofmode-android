@@ -70,14 +70,13 @@
             android:textAppearance="?android:attr/textAppearanceLarge"
             android:text="@string/onboarding_privacy_subtitle" />
 
-        <!--
         <TextView
             style="@style/OnboardingStepContentStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceLarge"
-            android:text="@string/onboarding_privacy_info" />
-            -->
+            android:text="@string/permission_location_info" />
+
 
         <LinearLayout
             android:layout_width="wrap_content"
