@@ -1,6 +1,6 @@
 [versions]
 # Kotlin & KSP
-keyattestation = "-SNAPSHOT"
+keyattestation = "main-SNAPSHOT"
 kotlin = "2.2.20"
 kotlin-serialization = "2.2.20"
 ksp = "2.3.2"
