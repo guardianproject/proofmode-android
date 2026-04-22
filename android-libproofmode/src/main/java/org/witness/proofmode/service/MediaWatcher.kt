@@ -790,7 +790,7 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
                                 try {
                                     storageProvider!!.saveStream(
                                         hash,
-                                        hash + '.' + ext,
+                                        "$hash.$ext",
                                         FileInputStream(fileTmp),
                                         object : StorageListener {
                                             override fun saveSuccessful(
@@ -1009,53 +1009,29 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
             }
         }
 
-        if (mediaPath != null) hmProof.put(
-            ProofModeV1Constants.FILE_MODIFIED,
-            df.format(Date(File(mediaPath).lastModified()))
-        )
+        if (mediaPath != null) hmProof[ProofModeV1Constants.FILE_MODIFIED] = df.format(Date(File(mediaPath).lastModified()))
 
-        hmProof.put(ProofModeV1Constants.PROOF_GENERATED, df.format(Date()))
+        hmProof[ProofModeV1Constants.PROOF_GENERATED] = df.format(Date())
 
-        hmProof.put(
-            ProofModeV1Constants.LANGUAGE,
-            DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_LANGUAGE)
-        )
-        hmProof.put(
-            ProofModeV1Constants.LOCALE,
-            DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_LOCALE)
-        )
+        hmProof[ProofModeV1Constants.LANGUAGE] = DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_LANGUAGE)
+        hmProof[ProofModeV1Constants.LOCALE] = DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_LOCALE)
 
         if (showDeviceIds) {
             try {
-                hmProof.put(ProofModeV1Constants.DEVICE_ID, DeviceInfo.getDeviceId(context))
-                hmProof.put(ProofModeV1Constants.WIFI_MAC, DeviceInfo.getWifiMacAddr())
-                hmProof.put(
-                    ProofModeV1Constants.I_PV_4,
-                    DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_IP_ADDRESS_IPV4)
-                )
-                hmProof.put(
-                    ProofModeV1Constants.I_PV_6,
-                    DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_IP_ADDRESS_IPV6)
-                )
-                hmProof.put(
-                    ProofModeV1Constants.NETWORK,
-                    DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_NETWORK)
-                )
-                hmProof.put(ProofModeV1Constants.DATA_TYPE, DeviceInfo.getDataType(context))
-                hmProof.put(ProofModeV1Constants.NETWORK_TYPE, DeviceInfo.getNetworkType(context))
+                hmProof[ProofModeV1Constants.DEVICE_ID] = DeviceInfo.getDeviceId(context)
+                hmProof[ProofModeV1Constants.WIFI_MAC] = DeviceInfo.getWifiMacAddr()
+                hmProof[ProofModeV1Constants.I_PV_4] = DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_IP_ADDRESS_IPV4)
+                hmProof[ProofModeV1Constants.I_PV_6] = DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_IP_ADDRESS_IPV6)
+                hmProof[ProofModeV1Constants.NETWORK] = DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_NETWORK)
+                hmProof[ProofModeV1Constants.DATA_TYPE] = DeviceInfo.getDataType(context)
+                hmProof[ProofModeV1Constants.NETWORK_TYPE] = DeviceInfo.getNetworkType(context)
             } catch (se: SecurityException) {
             }
         }
 
-        hmProof.put(
-            ProofModeV1Constants.HARDWARE,
-            DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_HARDWARE_MODEL)
-        )
-        hmProof.put(
-            ProofModeV1Constants.MANUFACTURER,
-            DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_MANUFACTURE)
-        )
-        hmProof.put(ProofModeV1Constants.SCREEN_SIZE, DeviceInfo.getDeviceInch(context))
+        hmProof[ProofModeV1Constants.HARDWARE] = DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_HARDWARE_MODEL)
+        hmProof[ProofModeV1Constants.MANUFACTURER] = DeviceInfo.getDeviceInfo(context, DeviceInfo.Device.DEVICE_MANUFACTURE)
+        hmProof[ProofModeV1Constants.SCREEN_SIZE] = DeviceInfo.getDeviceInch(context)
 
         if (showLocation) {
             val gpsTracker = GPSTracker(context)
@@ -1074,14 +1050,8 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
                 }
 
                 if (loc != null) {
-                    hmProof.put(
-                        ProofModeV1Constants.LOCATION_LATITUDE,
-                        loc.getLatitude().toString() + ""
-                    )
-                    hmProof.put(
-                        ProofModeV1Constants.LOCATION_LONGITUDE,
-                        loc.getLongitude().toString() + ""
-                    )
+                    hmProof[ProofModeV1Constants.LOCATION_LATITUDE] = loc.getLatitude().toString() + ""
+                    hmProof[ProofModeV1Constants.LOCATION_LONGITUDE] = loc.getLongitude().toString() + ""
                     hmProof.put(ProofModeV1Constants.LOCATION_PROVIDER, loc.getProvider())
                     hmProof.put(
                         ProofModeV1Constants.LOCATION_ACCURACY,
