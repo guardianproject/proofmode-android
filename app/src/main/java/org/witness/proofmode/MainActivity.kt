@@ -19,6 +19,7 @@ import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.toMutableStateList
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
@@ -629,6 +630,7 @@ class MainActivity : AppCompatActivity(),
 
         Activities.load(this)
         val activityView = findViewById<ComposeView>(R.id.activityView)
+
         activityView.setContent {
             ActivitiesView {
                 itemsSelected(it)

@@ -623,7 +623,6 @@ fun ActivitiesView(onAnyItemSelected: ((Boolean) -> Unit)? = null) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.White)
                 ) {
                     LazyColumn(
                         modifier = Modifier
