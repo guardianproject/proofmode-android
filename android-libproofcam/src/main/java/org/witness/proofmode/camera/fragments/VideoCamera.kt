@@ -12,9 +12,8 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.detectTransformGestures
-import androidx.compose.foundation.gestures.forEachGesture
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -45,7 +44,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.movableContentOf
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -88,7 +86,6 @@ import org.witness.proofmode.camera.R
 import org.witness.proofmode.camera.utils.getName
 import org.witness.proofmode.camera.utils.toIconRes
 import java.util.UUID
-import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.abs
 
 
@@ -112,7 +109,6 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
     val cameraQualities by cameraViewModel.cameraQualities.collectAsStateWithLifecycle()
     val selectedQuality by cameraViewModel.selectedQuality.collectAsStateWithLifecycle()
     val previewAlpha by cameraViewModel.previewAlpha.collectAsStateWithLifecycle()
-   var zoom by remember { mutableFloatStateOf(1f) }
 
     val ranges by cameraViewModel.supportedFrameRates.collectAsStateWithLifecycle()
 
@@ -172,74 +168,52 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                 CameraXViewfinder(surfaceRequest = newRequest, modifier = Modifier
                     .padding(paddingValues)
                     .fillMaxSize()
-                    .pointerInput(cameraViewModel, coordinateTransformer, zoom) {
-                        var currentZoom = zoom
+                    .pointerInput(cameraViewModel, coordinateTransformer) {
+                        awaitEachGesture {
+                            val firstDown = awaitFirstDown(requireUnconsumed = false)
 
-                        forEachGesture {
-                            awaitPointerEventScope {
-                                // Get the initial down event with at least one pointer
-                                val firstDown = awaitFirstDown(requireUnconsumed = false)
+                            var drag = Offset.Zero
+                            var pastTouchSlop = false
+                            val touchSlop = viewConfiguration.touchSlop
+                            var previousPinchDistance = 0f
+                            var isZooming = false
 
-                                // Track position for drag detection
-                                var drag = Offset.Zero
-                                var pastTouchSlop = false
-                                val touchSlop = viewConfiguration.touchSlop
+                            do {
+                                val event = awaitPointerEvent()
+                                val pressed = event.changes.filter { it.pressed }
 
-                                // Wait for additional pointer or movement
-                                do {
-                                    val event = awaitPointerEvent()
-                                    val currentPointers = event.changes.size
+                                if (pressed.size >= 2) {
+                                    val currentDistance =
+                                        (pressed[0].position - pressed[1].position).getDistance()
 
-                                    // Check if we have multiple pointers for zoom gesture
-                                    if (currentPointers >= 2) {
-                                        // Handle pinch-to-zoom
-                                        // Cancel drag detection
-                                        pastTouchSlop = false
+                                    if (!isZooming) {
+                                        isZooming = true
+                                        previousPinchDistance = currentDistance
                                         drag = Offset.Zero
-
-                                        try {
-                                            // Handle the zoom gesture using the built-in transform detection
-                                            scope.launch {
-                                                detectTransformGestures(
-                                                    onGesture = { _, _, gestureZoom, _ ->
-                                                        currentZoom *= gestureZoom
-                                                        cameraViewModel.pinchZoom(currentZoom)
-                                                    }
-                                                )
-                                                // If we reach here, zoom completed successfully
-                                                return@launch
-                                            }
-                                        } catch (e: CancellationException) {
-                                            // Transform gesture got canceled, continue with detection
+                                        pastTouchSlop = false
+                                    } else if (previousPinchDistance > 0f && currentDistance > 0f) {
+                                        val zoomDelta = currentDistance / previousPinchDistance
+                                        cameraViewModel.pinchZoom(zoomDelta)
+                                        previousPinchDistance = currentDistance
+                                    }
+                                    pressed.forEach { it.consume() }
+                                } else if (pressed.size == 1 && !isZooming) {
+                                    val pointer = pressed[0]
+                                    if (pointer.id == firstDown.id) {
+                                        drag += pointer.positionChange()
+                                        if (!pastTouchSlop && abs(drag.x) > touchSlop) {
+                                            pastTouchSlop = true
                                         }
-                                    } else if (currentPointers == 1) {
-                                        // Single pointer - could be tap or drag
-                                        val pointer = event.changes[0]
-
-                                        // Update accumulated drag
-                                        if (pointer.id == firstDown.id) {
-                                            drag += pointer.positionChange()
-
-                                            // Check if we've exceeded the touch slop threshold
-                                            if (!pastTouchSlop && abs(drag.x) > touchSlop) {
-                                                pastTouchSlop = true
-                                            }
-
-                                            // If we're in drag mode, consume the events
-                                            if (pastTouchSlop) {
-                                                pointer.consume()
-                                            }
+                                        if (pastTouchSlop) {
+                                            pointer.consume()
                                         }
                                     }
-                                } while (event.changes.any { it.pressed })
+                                }
+                            } while (event.changes.any { it.pressed })
 
-                                // After all pointers are up, decide what gesture it was
+                            if (!isZooming) {
                                 if (pastTouchSlop && abs(drag.x) > abs(drag.y)) {
-                                    // This was a horizontal drag
-                                    val dragAmount = drag.x
-                                    if (dragAmount < 0) {
-                                        // Left swipe
-                                        // check if camera is still recording
+                                    if (drag.x < 0) {
                                         if (recordingState == RecordingState.Recording) {
                                             cameraViewModel.stopRecording()
                                             onNavigateToPhotoCamera()
@@ -248,7 +222,6 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                                         }
                                     }
                                 } else if (!pastTouchSlop && drag.getDistance() < touchSlop) {
-                                    // This was a tap (minimal movement)
                                     val tapCoordinates = firstDown.position
                                     with(coordinateTransformer) {
                                         cameraViewModel.tapToFocus(tapCoordinates.transform())
