@@ -5,7 +5,14 @@
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="org.witness.proofmode.MainActivity">
+    tools:context="org.witness.proofmode.MainActivity"
+    >
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        />
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/layout_on"

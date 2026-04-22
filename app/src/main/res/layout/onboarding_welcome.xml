@@ -7,12 +7,13 @@
     android:descendantFocusability="beforeDescendants"
     android:focusable="true"
     android:focusableInTouchMode="true"
-    android:background="@color/onboarding_background">
+    android:background="@color/black">
     <ImageView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scaleType="centerCrop"
-        android:src="@drawable/ic_img_home_off"
+        android:src="@drawable/bg1"
+        android:alpha=".5"
         />
 
     <LinearLayout

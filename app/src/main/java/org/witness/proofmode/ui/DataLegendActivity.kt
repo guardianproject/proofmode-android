@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.os.Bundle
 import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
+import org.witness.proofmode.R
 import org.witness.proofmode.databinding.ActivityDataLegendBinding
 
 class DataLegendActivity : AppCompatActivity() {
@@ -14,6 +15,13 @@ class DataLegendActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityDataLegendBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        setSupportActionBar(binding.toolbar)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        supportActionBar?.setDisplayShowHomeEnabled(true)
+        supportActionBar?.setTitle("")
+        binding.toolbar.setTitleTextColor(getColor(R.color.colorPrimaryDark))
+        binding.toolbar.setNavigationIconTint(getColor(R.color.colorPrimaryDark))
 
         supportActionBar?.apply {
             setDisplayHomeAsUpEnabled(true)
