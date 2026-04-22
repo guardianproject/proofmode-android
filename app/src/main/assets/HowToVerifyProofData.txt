@@ -1,6 +1,10 @@
 Brief information on how to verify the media file, proof and signatures contained in a ProofMode ZIP file.
 Please visit https://proofmode.org/verify or email support@guardianproject.info for more information.
 
+Web-based verification is available at https://check.proofmode.org.
+
+Otherwise, you can use the following manual steps with open tooling:
+
 1) Import public key shared from ProofMode:
 
 gpg --import pubkey.asc
@@ -41,3 +45,6 @@ Primary key fingerprint: 094F 9BAE 1895 8C23 8F55  F793 560C C828 C726 365F
 (It can take awhile for the notarization timestamp to make its way fully to the Bitcoin blockchain)
 
 6) If a .GTS file is present, that is a Javascript Web Token signature from Google SafetyNet. You can decode the value of it here: https://jwt.io/
+
+7) If C2PA metadata was captured, you can use the c2patool command line to check for a VALID or TRUSTED status.
+Learn more at: https://opensource.contentauthenticity.org/docs/c2patool/
