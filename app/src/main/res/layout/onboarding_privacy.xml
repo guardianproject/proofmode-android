@@ -47,13 +47,14 @@
             android:textAppearance="?android:attr/textAppearanceLarge"
             android:text="@string/onboarding_privacy_title" />
 
+        <!--
         <TextView
             android:id="@+id/content"
             style="@style/OnboardingStepContentStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceLarge"
-            android:text="@string/onboarding_privacy_content" />
+            android:text="@string/onboarding_privacy_content" />-->
 
         <ImageView
             android:layout_width="20dp"
@@ -69,12 +70,14 @@
             android:textAppearance="?android:attr/textAppearanceLarge"
             android:text="@string/onboarding_privacy_subtitle" />
 
+        <!--
         <TextView
             style="@style/OnboardingStepContentStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceLarge"
             android:text="@string/onboarding_privacy_info" />
+            -->
 
         <LinearLayout
             android:layout_width="wrap_content"
