@@ -55,7 +55,7 @@
     <string name="activity_settings_title">CHOOSE YOUR SETTINGS</string>
     <string name="activity_datalegend_title">DATA LEGEND</string>
 
-    <string name="settings_title">Strengthen your media’s verifiability by adding data to your proof.</string>
+    <string name="settings_title">Strengthen your verifiability or privacy by controlling metadata.</string>
     <string name="settings_description">Tap the icons to add or remove.</string>
 
     <string name="onboarding_learn_more">Learn More</string>
@@ -227,7 +227,7 @@
     <string name="optional_filename">Optional Filename</string>
     <string name="set_a_custom_name_for_the_proof_zip">Set a custom name for the proof zip</string>
     <string name="filebase_ipfs_storage">Filebase IPFS AutoSync (BETA)</string>
-    <string name="filebase_ipfs_storage_description">Configure automatic upload of proof to Filebase. They will be automatically published to IPFS.</string>
+    <string name="filebase_ipfs_storage_description">Configure automatic upload of proof to Filebase.com. They will be automatically published to IPFS.</string>
     <string name="enable_filebase_upload">Enable Filebase Upload</string>
     <string name="access_key">Access Key</string>
     <string name="secret_key">Secret Key</string>
@@ -242,7 +242,7 @@
     <string name="proofcheck_verifier">ProofCheck Verifier</string>
     <string name="background_mode_info">Add proof to all new photos &amp; videos on this device</string>
     <string name="auto_sync_title">Auto Sync</string>
-    <string name="auto_sync_desc">Back-up proof data to the Filebase IPFS cloud service</string>
+    <string name="auto_sync_desc">Back-up proof data to the Filebase.com cloud</string>
     <string name="social">social</string>
     <string name="share_social">Shares just the media file with C2PA and a verify link for social networks</string>
     <string name="share_media">Share on Social</string>
