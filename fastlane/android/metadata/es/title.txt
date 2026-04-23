@@ -1,1 +1,1 @@
-ProofMode: Imágenes Verificadas
+Proofmode: Imágenes Verificadas
