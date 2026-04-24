@@ -3,6 +3,7 @@ package org.witness.proofmode.camera.fragments
 import androidx.camera.compose.CameraXViewfinder
 import androidx.camera.core.ImageCapture
 import androidx.camera.viewfinder.compose.MutableCoordinateTransformer
+import androidx.compose.foundation.Image
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -62,6 +63,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
@@ -149,7 +151,7 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                     .fillMaxSize()
                     .background(Color.Black)) {
                     val (viewFinder,topBAr, cancelButton,countDownStateView, bottomBg,captureButton,cameraSwitcher,galleryPreview,cameraText,
-                        flashModeRow) = createRefs()
+                        flashModeRow, logo, crLogo) = createRefs()
                     // Define guidelines for the grid (1/3 and 2/3 positions)
                     val vertical1 = createGuidelineFromStart(0.33f)
                     val vertical2 = createGuidelineFromStart(0.66f)
@@ -352,6 +354,30 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
 
                         }
                         .background(Color.Black.copy(alpha = 0.4f))
+                    )
+
+                    Image(
+                        painter = painterResource(R.drawable.proofmoderound),
+                        contentDescription = null,
+                        alpha = 0.5f,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .constrainAs(logo) {
+                                start.linkTo(parent.start, margin = 12.dp)
+                                bottom.linkTo(parent.bottom, margin = 36.dp)
+                            }
+                    )
+
+                    Image(
+                        painter = painterResource(R.drawable.crlogo),
+                        contentDescription = null,
+                        alpha = 0.5f,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .constrainAs(crLogo) {
+                                end.linkTo(parent.end, margin = 12.dp)
+                                bottom.linkTo(parent.bottom, margin = 36.dp)
+                            }
                     )
 
                     AnimatedVisibility(modifier = Modifier.constrainAs(captureButton) {

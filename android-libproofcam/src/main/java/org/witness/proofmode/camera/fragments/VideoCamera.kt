@@ -9,6 +9,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -337,6 +338,24 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                                 .background(Color.Black.copy(alpha = 0.4f))
                             )
 
+                            Image(
+                                painter = painterResource(R.drawable.proofmoderound),
+                                contentDescription = null,
+                                alpha  = 0.5f,
+                                modifier = Modifier
+                                    .layoutId("logo")
+                                    .size(32.dp)
+                            )
+
+                            Image(
+                                painter = painterResource(R.drawable.crlogo),
+                                contentDescription = null,
+                                alpha  = 0.5f,
+                                modifier = Modifier
+                                    .layoutId("crLogo")
+                                    .size(32.dp)
+                            )
+
 
 
                             IconButton(onClick = {
@@ -559,6 +578,8 @@ private fun portraitConstraints(): ConstraintSet {
         val galleryPreview = createRefFor("galleryPreview")
         val modeToggle = createRefFor("modeToggle")
         val chipTimer = createRefFor("chipTimer")
+        val logo = createRefFor("logo")
+        val crLogo = createRefFor("crLogo")
 
         // Guidelines
         val vertical1 = createGuidelineFromStart(0.33f)
@@ -613,6 +634,16 @@ private fun portraitConstraints(): ConstraintSet {
             top.linkTo(recordButton.bottom, 8.dp)
         }
 
+        constrain(logo) {
+            start.linkTo(parent.start, margin = 12.dp)
+            bottom.linkTo(parent.bottom, margin = 36.dp)
+        }
+
+        constrain(crLogo) {
+            end.linkTo(parent.end, margin = 12.dp)
+            bottom.linkTo(parent.bottom, margin = 36.dp)
+        }
+
         // Grid lines (optional, since they're visibility controlled)
         val verticalLine1 = createRefFor("verticalLine1")
         val verticalLine2 = createRefFor("verticalLine2")
@@ -647,6 +678,8 @@ private fun landscapeConstraints(): ConstraintSet {
         val galleryPreview = createRefFor("galleryPreview")
         val modeToggle = createRefFor("modeToggle")
         val chipTimer = createRefFor("chipTimer")
+        val logo = createRefFor("logo")
+        val crLogo = createRefFor("crLogo")
 
         // Guidelines
         val vertical1 = createGuidelineFromStart(0.33f)
@@ -699,6 +732,16 @@ private fun landscapeConstraints(): ConstraintSet {
             start.linkTo(recordButton.end, margin = 8.dp)
             top.linkTo(recordButton.top)
             bottom.linkTo(recordButton.bottom)
+        }
+
+        constrain(logo) {
+            start.linkTo(parent.start, margin = 12.dp)
+            bottom.linkTo(parent.bottom, margin = 36.dp)
+        }
+
+        constrain(crLogo) {
+            end.linkTo(parent.end, margin = 12.dp)
+            bottom.linkTo(parent.bottom, margin = 36.dp)
         }
 
         // Grid lines (optional, since they're visibility controlled)
