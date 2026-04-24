@@ -44,7 +44,7 @@
         <item name="android:textColor">@android:color/white</item>
         <item name="android:textAllCaps">true</item>
         <item name="android:gravity">center_horizontal</item>
-        <item name="android:fontFamily">@font/hurme</item>
+        <item name="android:fontFamily">@font/inter</item>
     </style>
 
     <style name="SubtitleStyle">
@@ -54,7 +54,7 @@
         <item name="android:textAllCaps">true</item>
         <item name="android:textStyle">bold</item>
         <item name="android:gravity">center_horizontal</item>
-        <item name="android:fontFamily">@font/hurme</item>
+        <item name="android:fontFamily">@font/inter</item>
     </style>
 
     <style name="ContentStyle">
@@ -97,7 +97,7 @@
         <item name="android:gravity">center</item>
         <item name="android:textAllCaps">true</item>
         <item name="actionMenuTextColor">@android:color/black</item>
-        <item name="android:fontFamily">@font/hurme</item>
+        <item name="android:fontFamily">@font/inter</item>
         <item name="android:textSize">@dimen/onboarding_info_size</item>
     </style>
 

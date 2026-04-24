@@ -60,8 +60,9 @@
 
     <string name="onboarding_learn_more">Learn More</string>
     <string name="onboarding_get_started">Get Started</string>
+    <string name="onboarding_intro_title">Media and reality, verified.</string>
 
-    <string name="onboarding_intro_title">A picture may be worth a thousand words, but proof that it’s real is priceless.</string>
+    <string name="onboarding_intro_title_old">A picture may be worth a thousand words, but proof that it’s real is priceless.</string>
     <string name="onboarding_intro_content">Proofmode captures information that makes your media more trustworthy.</string>
 
     <string name="onboarding_step1">Step 1</string>
