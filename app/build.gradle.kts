@@ -24,7 +24,7 @@ android {
     flavorDimensions += "default"
 
     productFlavors {
-        create("artwork") {
+        create("default") {
             dimension = "default"
         }
     }
