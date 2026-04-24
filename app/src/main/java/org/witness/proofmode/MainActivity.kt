@@ -262,7 +262,7 @@ class MainActivity : AppCompatActivity(),
     private fun setProofModeOn(isOn: Boolean) {
         if (isOn) {
             if (!askForPermissions(requiredPermissions, REQUEST_CODE_REQUIRED_PERMISSIONS)) {
-                mPrefs.edit { putBoolean(ProofMode.PREFS_DOPROOF, true) }
+              //  mPrefs.edit { putBoolean(ProofMode.PREFS_DOPROOF, true) }
                 //   updateOnOffState(true)
                 (application as ProofModeApp).init(this)
             }

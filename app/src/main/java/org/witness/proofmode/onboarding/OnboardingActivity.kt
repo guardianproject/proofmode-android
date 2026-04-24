@@ -19,7 +19,7 @@ class OnboardingActivity : AppCompatActivity(), OnboardingStepListener {
     private lateinit var indicator: DottedProgressView
     private lateinit var btnNext: ImageButton
     private var fragmentList: MutableList<Fragment> = ArrayList()
-    private var onlyTutorial = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityOnboardingBinding.inflate(layoutInflater)
@@ -30,6 +30,7 @@ class OnboardingActivity : AppCompatActivity(), OnboardingStepListener {
         indicator = binding.indicator
         btnNext = binding.btnNext
         fragmentList = ArrayList()
+        /**
         pager.addOnPageChangeListener(object : OnPageChangeListener {
             override fun onPageScrolled(i: Int, v: Float, i1: Int) {}
             override fun onPageSelected(i: Int) {
@@ -86,14 +87,14 @@ class OnboardingActivity : AppCompatActivity(), OnboardingStepListener {
         )
         if (!onlyTutorial) {
             fragmentList.add(PrivacyFragment.newInstance())
-        }
+        }**/
+        fragmentList.add(WelcomeFragment.newInstance())
 
-        // Set adapter
-        if (onlyTutorial) {
-            indicator.numberOfDots = fragmentList.size
-        } else {
-            indicator.numberOfDots = fragmentList.size - 2
-        }
+        fragmentList.add(PrivacyFragment.newInstance())
+
+
+        indicator.numberOfDots = fragmentList.size - 2
+
         indicator.currentDot = 0
         pager.offscreenPageLimit = fragmentList.size
         pager.adapter = OnboardingPagerAdapter(supportFragmentManager)
@@ -101,12 +102,7 @@ class OnboardingActivity : AppCompatActivity(), OnboardingStepListener {
     }
 
     private fun showHideIndicator() {
-        if (onlyTutorial) {
-            indicator.visibility = View.VISIBLE
-            btnNext.visibility = View.VISIBLE
-            pager.setAllowedSwipeDirection(NoSwipeViewPager.SwipeDirection.ALL)
-            return
-        }
+
         val lastItem = fragmentList.size - 1
         val currentItem = pager.currentItem
         indicator.visibility =
@@ -140,9 +136,6 @@ class OnboardingActivity : AppCompatActivity(), OnboardingStepListener {
     override fun onPreviousPressed() {
         if (pager.currentItem > 0) {
             pager.setCurrentItem(pager.currentItem - 1, true)
-        } else if (onlyTutorial) {
-            // Close
-            finish()
         }
     }
 
