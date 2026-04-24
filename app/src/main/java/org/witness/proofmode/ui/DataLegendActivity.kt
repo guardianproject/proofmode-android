@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.os.Bundle
 import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.ui.text.intl.Locale
 import org.witness.proofmode.R
 import org.witness.proofmode.databinding.ActivityDataLegendBinding
 
@@ -34,9 +35,21 @@ class DataLegendActivity : AppCompatActivity() {
             builtInZoomControls = false
             javaScriptEnabled = true
         }
+
+        var dlUrl = "file:///android_asset/datalegend/datalegend.html"
+        
+        try {
+            assets.open("datalegend/${ Locale.current.language}-datalegend.html")
+            dlUrl = "file:///android_asset/datalegend/${Locale.current.language}-datalegend.html"
+        }
+        catch (e: Exception ) {
+            //doesn't exist
+        }
+
+
         webView.apply {
             webViewClient = android.webkit.WebViewClient()
-            loadUrl("file:///android_asset/datalegend/datalegend.html")
+            loadUrl(dlUrl)
         }
     }
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
