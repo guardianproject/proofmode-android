@@ -39,6 +39,7 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
+import org.witness.proofmode.MainActivity
 import java.io.InputStream
 
 object ActivityConstants
@@ -211,6 +212,10 @@ object Activities: ViewModel()
             MainScope().launch {
                 activities.clear()
                 activities.addAll(allFromDb)
+                if (context is MainActivity)
+                {
+                    (context as MainActivity).checkNoPicsView()
+                }
             }
         }
     }

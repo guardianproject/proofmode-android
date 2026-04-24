@@ -105,7 +105,6 @@ object C2PAVerificationCache {
 interface ActivitiesViewDelegate {
     abstract fun openCamera()
     abstract fun shareItems(media: List<ProofableItem>, fileName: String?, shareText: String?)
-    abstract fun sharePublicKey(key: String)
     abstract fun clearItems(activity: Activity)
 
 }
@@ -873,36 +872,7 @@ fun activityMenu(activity: Activity): (@Composable() (BoxScope.() -> Unit))? {
                     )
                 }
 
-                is ActivityType.PublicKeyShared -> {
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                text = stringResource(id = R.string.re_share)
-                            )
-                        },
-                        onClick = {
-                            expanded = false
-                            (context as? ActivitiesViewDelegate)?.sharePublicKey(activity.type.key)
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                text = pluralStringResource(
-                                    id = R.plurals.clear_these_n_items,
-                                    count = 1
-                                )
-                            )
-                        },
-                        onClick = {
-                            expanded = false
-                            (context as? ActivitiesViewDelegate)?.clearItems(
-                                activity
-                            )
-                        }
-                    )
 
-                }
 
 
                 else -> {}

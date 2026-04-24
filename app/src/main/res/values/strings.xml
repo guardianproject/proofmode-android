@@ -253,5 +253,7 @@
     <string name="close">Close</string>
 
     <string name="c2pa_os_patch_level_error">C2PA Disabled: OS Security Patches not updated within 90 days</string>
+    <string name="no_proof_yet">No proof (yet)</string>
+    <string name="take_pictures_and_videos_and_they_will_show_up_here">Take pictures and videos and they will show up here</string>
 
 </resources>

@@ -173,9 +173,13 @@ class MainActivity : AppCompatActivity(),
             fabPhoto.visibility = View.VISIBLE
 
         }
+
     }
 
-    private class EventReceiver : BroadcastReceiver() {
+    private class EventReceiver (thisActivity: MainActivity) : BroadcastReceiver() {
+
+        val mActivity = thisActivity
+
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
 
@@ -184,6 +188,8 @@ class MainActivity : AppCompatActivity(),
                     if (uri != null && context != null) {
                         //proof generated update?
                     }
+
+                    mActivity.checkNoPicsView()
                 }
 
                 INTENT_ACTIVITY_ITEMS_SHARED -> {
@@ -211,7 +217,7 @@ class MainActivity : AppCompatActivity(),
         }
     }
 
-    private val eventReceiver = EventReceiver()
+    private val eventReceiver = EventReceiver(this)
 
     private fun showMediaPicker() {
         TedImagePicker.with(this).imageAndVideo().showVideoDuration(true).dropDownAlbum()
@@ -224,25 +230,6 @@ class MainActivity : AppCompatActivity(),
 
     }
 
-    /**
-    private fun addProofActivity(items: List<Uri>) {
-
-        Timber.d("addProofActivity: New Proof Items: ${items.size}")
-
-        val proofItems = ArrayList<ProofableItem>()
-        for (item in items) {
-            proofItems.add(ProofableItem(UUID.randomUUID().toString(), item))
-        }
-
-        val activity = Activity(
-            UUID.randomUUID().toString(),
-            ActivityType.MediaImported(
-                items = proofItems.toMutableStateList()
-            ),
-            Date()
-        )
-        Activities.addActivity(activity, this)
-    }**/
 
     private fun showShareProof(mediaList: List<Uri>) {
         val intentShare = Intent(this, ShareProofActivity::class.java)
@@ -282,7 +269,22 @@ class MainActivity : AppCompatActivity(),
             if (!activitiesLoaded) {
                 Activities.load(this)
                 activitiesLoaded = true
+
+              checkNoPicsView ()
+
             }
+        }
+    }
+
+    fun checkNoPicsView () {
+        if (Activities.activities.size == 0)
+        {
+            findViewById<View>(R.id.nopics).visibility = View.VISIBLE
+        }
+        else
+        {
+            findViewById<View>(R.id.nopics).visibility = View.GONE
+
         }
     }
 
@@ -371,25 +373,6 @@ class MainActivity : AppCompatActivity(),
         return askForPermissions(arrayOf(permission), requestCode)
     }
 
-    override fun sharePublicKey(pubKey: String) {
-        try {
-            val intent = Intent(Intent.ACTION_SEND)
-            intent.type = "text/plain"
-            intent.putExtra(Intent.EXTRA_TEXT, pubKey)
-            startActivity(intent)
-
-            // ACTION_SEND does not return a result, so just assume we shared ok
-            val activity = Activity(
-                UUID.randomUUID().toString(),
-                ActivityType.PublicKeyShared(key = pubKey),
-                Date()
-            )
-            Activities.addActivity(activity, this)
-        } catch (ioe: IOException) {
-            Timber.tag("Proofmode").e(ioe, "error publishing key")
-        }
-    }
-
     private fun openUrl(url: String) {
         val i = Intent(Intent.ACTION_VIEW)
         i.data = url.toUri()
@@ -453,6 +436,7 @@ class MainActivity : AppCompatActivity(),
                         ), Date()
                     ), this
                 )
+                checkNoPicsView()
             }
             if (data?.clipData != null) {
                 intentShare.action = Intent.ACTION_SEND_MULTIPLE
@@ -496,6 +480,7 @@ class MainActivity : AppCompatActivity(),
             if (!activitiesLoaded) {
                 Activities.load(this)
                 activitiesLoaded = true
+                checkNoPicsView()
             }
         }
     }
@@ -630,7 +615,7 @@ class MainActivity : AppCompatActivity(),
 
         Activities.load(this)
         val activityView = findViewById<ComposeView>(R.id.activityView)
-
+        checkNoPicsView()
         activityView.setContent {
             ActivitiesView {
                 itemsSelected(it)

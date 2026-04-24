@@ -16,15 +16,6 @@ import java.util.Date
 class ProofEventReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context?, intent: Intent?) {
 
-        /**
-        //got event
-        Toast.makeText(
-            context,
-            R.string.progress_generating_proof,
-            Toast.LENGTH_SHORT
-        ).show()
-            **/
-
         val uriMedia = intent?.getStringExtra(ProofMode.EVENT_PROOF_EXTRA_URI)
         val proofHash = intent?.getStringExtra(ProofMode.EVENT_PROOF_EXTRA_HASH)
 

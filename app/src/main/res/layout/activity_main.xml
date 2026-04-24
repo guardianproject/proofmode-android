@@ -38,6 +38,31 @@
             android:src="@drawable/texture_full_green"
             android:layout_marginTop="40dp"
             />
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center_vertical|center_horizontal"
+    android:visibility="gone"
+    android:id="@+id/nopics"
+    >
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/no_proof_yet"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+
+            />
+    <TextView
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:layout_width="300dp"
+        android:layout_height="wrap_content"
+        android:text="@string/take_pictures_and_videos_and_they_will_show_up_here"
+        android:textColor="@color/black"
+        android:textAllCaps="false"
+        android:gravity="center_horizontal"
+        />
+</LinearLayout>
 
         <androidx.compose.ui.platform.ComposeView
             android:id="@+id/activityView"
