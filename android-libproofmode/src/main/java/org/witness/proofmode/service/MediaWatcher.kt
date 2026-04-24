@@ -241,91 +241,104 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
                 var fileMediaOut = fileMedia
                 var doEmbed = true
                 var createdInProofmode = autogen
-                var vState : ValidationState? = ValidationState.TRUSTED
+                var vState: ValidationState? = ValidationState.TRUSTED
+                var doImport = true
 
                 if (!fileMediaOut.canWrite()) {
 
                     createdInProofmode = false
 
-                    val dateTime = Date().time
-                    fileMedia = File(outputDirectory, "$dateTime-${fileMedia.name}")
-                    mContext?.contentResolver?.openInputStream(actualUriMedia)?.copyTo(FileOutputStream(fileMedia))
-                    fileMediaOut = fileMedia
-                    actualUriMedia = Uri.fromFile(fileMedia)
-
                     try {
-
+                        val dateTime = Date().time
+                        fileMedia = File(outputDirectory, "$dateTime-${fileMedia.name}")
+                        mContext?.contentResolver?.openInputStream(actualUriMedia)
+                            ?.copyTo(FileOutputStream(fileMedia))
+                        fileMediaOut = fileMedia
+                        actualUriMedia = Uri.fromFile(fileMedia)
                         vState = mC2paManager?.validateSignedMedia(fileMedia.absolutePath)
 
                         //TODO: check manifest for any signs of AI
                         val manifestJSON = C2PA.readFile(fileMedia.absolutePath, null)
 
+                        if (manifestJSON != null && manifestJSON.contains("algorithmic|synthetic".toRegex(RegexOption.IGNORE_CASE))) {
+                           //AI detected
+                            fileMedia.delete()
+                            doImport = false
+                        }
 
-                    }catch (e :Exception )
-                    {
+                    } catch (e: Exception) {
                         //okay to throw exception, that means no C2PA
+                        doImport = false
+                        if (fileMedia?.exists() == true)
+                            fileMedia?.delete()
                     }
 
                 }
 
-                var signingMode = SigningMode.KEYSTORE
-                var useRemoteSigning = mPrefs?.getBoolean(
-                    ProofMode.PREF_OPTION_REMOTE_SIGNING,
-                    ProofMode.PREF_OPTION_REMOTE_SIGNING_DEFAULT
-                ) ?: true
+                if (doImport) {
+                    var signingMode = SigningMode.KEYSTORE
+                    var useRemoteSigning = mPrefs?.getBoolean(
+                        ProofMode.PREF_OPTION_REMOTE_SIGNING,
+                        ProofMode.PREF_OPTION_REMOTE_SIGNING_DEFAULT
+                    ) ?: true
 
-                if (useRemoteSigning)
-                    signingMode = SigningMode.REMOTE
-                else {
-                    val hasStrongBox: Boolean =
-                        mContext?.packageManager?.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE) == true
+                    if (useRemoteSigning)
+                        signingMode = SigningMode.REMOTE
+                    else {
+                        val hasStrongBox: Boolean =
+                            mContext?.packageManager?.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE) == true
 
-                    if (hasStrongBox)
-                        signingMode = SigningMode.HARDWARE
-                }
-
-                //only sign if the ingested media is validated by c2pa
-
-                if (vState != ValidationState.INVALID) {
-                    mC2paManager?.signMediaFile(
-                        signingMode,
-                        fileMedia,
-                        actualMimeType!!,
-                        fileMediaOut,
-                        doEmbed,
-                        createdInProofmode,
-                        hash
-                    );
-                }
-
-                try {
-
-                    val mediaHash = HashUtils.getSHA256FromFileContent(
-                        mContext!!.contentResolver.openInputStream(actualUriMedia)
-                    )
-
-                    if (mediaHash != null) {
-                        //send generated event
-
-                        if (createdInProofmode)
-                            intent.action = (ProofMode.EVENT_PROOF_GENERATED)
-                        else
-                            intent.action = (ProofMode.EVENT_PROOF_GENERATED_IMPORT)
-
-                        intent.putExtra(ProofMode.EVENT_PROOF_EXTRA_URI, actualUriMedia.toString())
-                        intent.putExtra(ProofMode.EVENT_PROOF_EXTRA_HASH, mediaHash)
-                        mContext!!.sendBroadcast(intent)
-
+                        if (hasStrongBox)
+                            signingMode = SigningMode.HARDWARE
                     }
 
-                    val resultHash = processUri(mContext!!, actualUriMedia, mediaHash, autogen, createdAt)
+                    //only sign if the ingested media is validated by c2pa
+
+                    if (vState != ValidationState.INVALID) {
+                        mC2paManager?.signMediaFile(
+                            signingMode,
+                            fileMedia,
+                            actualMimeType!!,
+                            fileMediaOut,
+                            doEmbed,
+                            createdInProofmode,
+                            hash
+                        );
+                    }
+
+                    try {
+
+                        val mediaHash = HashUtils.getSHA256FromFileContent(
+                            mContext!!.contentResolver.openInputStream(actualUriMedia)
+                        )
+
+                        if (mediaHash != null) {
+                            //send generated event
+
+                            if (createdInProofmode)
+                                intent.action = (ProofMode.EVENT_PROOF_GENERATED)
+                            else
+                                intent.action = (ProofMode.EVENT_PROOF_GENERATED_IMPORT)
+
+                            intent.putExtra(
+                                ProofMode.EVENT_PROOF_EXTRA_URI,
+                                actualUriMedia.toString()
+                            )
+                            intent.putExtra(ProofMode.EVENT_PROOF_EXTRA_HASH, mediaHash)
+                            mContext!!.sendBroadcast(intent)
+
+                        }
+
+                        val resultHash =
+                            processUri(mContext!!, actualUriMedia, mediaHash, autogen, createdAt)
 
 
-                } catch (exception: FileNotFoundException) {
-                    Timber.d(exception, "Couldn't process uri, as the file doesn't exist")
+                    } catch (exception: FileNotFoundException) {
+                        Timber.d(exception, "Couldn't process uri, as the file doesn't exist")
+                    }
+
+
                 }
-
-
             }
         }
 
