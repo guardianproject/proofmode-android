@@ -50,11 +50,11 @@
     <string name="got_it">கிடைத்தது</string>
     <string name="activity_settings_title">உங்கள் அமைப்புகளைத் தேர்வுசெய்க</string>
     <string name="activity_datalegend_title">தரவு புராணக்கதை</string>
-    <string name="settings_title">உங்கள் ஆதாரத்தில் தரவைச் சேர்ப்பதன் மூலம் உங்கள் ஊடகத்தின் சரிபார்ப்பை பலப்படுத்துங்கள்.</string>
+    <string name="settings_title">மெட்டாடேட்டாவைக் கட்டுப்படுத்துவதன் மூலம் உங்கள் சரிபார்ப்பு அல்லது தனியுரிமையைப் பலப்படுத்துங்கள்.</string>
     <string name="settings_description">சேர்க்க அல்லது அகற்ற ஐகான்களைத் தட்டவும்.</string>
     <string name="onboarding_learn_more">மேலும் அறிக</string>
     <string name="onboarding_get_started">தொடங்கவும்</string>
-    <string name="onboarding_intro_title">ஒரு படம் ஆயிரம் சொற்களுக்கு மதிப்புள்ளதாக இருக்கலாம், ஆனால் அது உண்மையானது என்பதற்கான சான்று விலைமதிப்பற்றது.</string>
+    <string name="onboarding_intro_title">ஊடகம் மற்றும் உண்மை, சரிபார்க்கப்பட்டது.</string>
     <string name="onboarding_intro_content">ப்ரூஃப்மோட் உங்கள் மீடியாவை மிகவும் நம்பகமானதாக மாற்றும் தகவலைப் பிடிக்கிறது.</string>
     <string name="onboarding_step1_title">ப்ரூப்மோட் கேமரா மூலம் ஆதாரத்தைப் பெறுவது எளிது!</string>
     <string name="onboarding_step1_content">ஆதாரத்தை உருவாக்கவும் சேமிக்கவும் ப்ரூஃப்மோட் பின்னணியில் செயல்படுகிறது. நீங்கள் சிறப்பு எதுவும் செய்ய வேண்டியதில்லை!</string>
@@ -123,7 +123,7 @@
     </plurals>
     <plurals name="you_captured_n_items">
         <item quantity="one">ஒரு பொருளைப் பிடித்துவிட்டீர்கள்</item>
-        <item quantity="other">நீங்கள் %d உருப்படிகளைக் கைப்பற்றியுள்ளீர்கள்</item>
+        <item quantity="other">%d உருப்படிகளை கைப்பற்றியுள்ளீர்கள்</item>
     </plurals>
     <plurals name="you_imported_n_items">
         <item quantity="one">நீங்கள் ஒரு பொருளை இறக்குமதி செய்துள்ளீர்கள்</item>
@@ -181,7 +181,7 @@
     <string name="set_a_custom_name_for_the_proof_zip">சான்று சிப்பிற்கு தனிப்பயன் பெயரை அமைக்கவும்</string>
     <string name="menu_import_creds">சான்றுகளை இறக்குமதி செய்...</string>
     <string name="filebase_ipfs_storage">ஃபைல்பேச் ஐபிஎஃப்எச் ஆட்டோசின்க் (பீட்டா)</string>
-    <string name="filebase_ipfs_storage_description">ஃபைல்பேசில் ஆதாரத்தின் தானியங்கு பதிவேற்றத்தை உள்ளமைக்கவும். அவை தானாகவே IPFS இல் வெளியிடப்படும்.</string>
+    <string name="filebase_ipfs_storage_description">Filebase.comஇல் ஆதாரத்தின் தானியங்கு பதிவேற்றத்தை உள்ளமைக்கவும். அவை தானாகவே IPFS இல் வெளியிடப்படும்.</string>
     <string name="enable_filebase_upload">கோப்பு அடிப்படை பதிவேற்றத்தை இயக்கு</string>
     <string name="access_key">அணுகல் விசை</string>
     <string name="secret_key">இரகசிய விசை</string>
@@ -196,16 +196,28 @@
     <string name="proofcheck_verifier">ProofCheck சரிபார்ப்பாளர்</string>
     <string name="background_mode_info">இந்தச் சாதனத்தில் உள்ள அனைத்து புதிய படங்கள் மற்றும் வீடியோக்களுக்கும் ஆதாரத்தைச் சேர்க்கவும்</string>
     <string name="auto_sync_title">தானியங்கு ஒத்திசைவு</string>
-    <string name="auto_sync_desc">ஃபைல்பேச் ஐபிஎஃப்எச் முகில் சேவைக்கான காப்புப் பிரதி ஆதாரத் தரவு</string>
+    <string name="auto_sync_desc">Filebase.com முகில் சேவைக்கான காப்புப் பிரதி ஆதாரத் தரவு</string>
     <string name="social">சமூக</string>
     <string name="share_social">C2PA உடன் மீடியா கோப்பையும் சமூக வலைப்பின்னல்களுக்கான சரிபார்ப்பு இணைப்பையும் பகிர்ந்து கொள்கிறது</string>
-    <string name="share_media">மீடியாவைப் பகிரவும்</string>
+    <string name="share_media">சமூகத்தில் பகிரவும்</string>
     <string name="share_using">பயன்படுத்தி பகிரவும்</string>
     <string name="verify_this_media_at">"இந்த ஊடகத்தைச் சரிபார்க்கவும்: "</string>
-    <string name="settings_credentials_remote">Proofmode.org வழியாக ரிமோட் கையொப்பமிடுதல்</string>
-    <string name="settings_credentials_local">தன்வய கையொப்பமிடப்பட்ட விசையைப் பயன்படுத்தி உள்ளக கையொப்பமிடுதல்</string>
+    <string name="settings_credentials_remote">ProofSign மூலம் தொலை கையொப்பமிடுதல்</string>
+    <string name="settings_credentials_local">தன்வய கையொப்பமிடப்பட்ட விசை மூலம் உள்ளக கையொப்பமிடுதல்</string>
     <string name="settings_credentials_switched_remote">Proofmode.org வழியாக ரிமோட் கையொப்பத்திற்கு மாறியது</string>
     <string name="settings_credentials_switched_local">தன்வய கையொப்பமிடப்பட்ட விசையைப் பயன்படுத்தி உள்ளக கையொப்பத்திற்கு மாற்றப்பட்டது</string>
     <string name="open">திற</string>
     <string name="close">மூடு</string>
+    <string name="settings_location_desc_approx">உலக இடம் காட்டும் அமைப்பு (இடம் காட்டி) ஆயத்தொலைவு தோராயமாக மட்டுமே</string>
+    <string name="settings_location_desc_none">எந்த அனுமதியும் வழங்கப்படவில்லை</string>
+    <string name="onboarding_intro_title_old">ஒரு படம் ஆயிரம் சொற்களுக்கு மதிப்புள்ளதாக இருக்கலாம், ஆனால் அது உண்மையானது என்பதற்கான சான்று விலைமதிப்பற்றது.</string>
+    <string name="settings_signing_title">கையெழுத்திடும் முறை</string>
+    <string name="settings_signing_mode_label">கையெழுத்திடும் முறை</string>
+    <string name="settings_signing_remote">தொலை கையொப்பம்</string>
+    <string name="settings_signing_signing_servers">கையொப்பமிடுதல் சேவையகங்கள்</string>
+    <string name="settings_signing_proofsign_server">ப்ரூஃப் சைன் சர்வர்</string>
+    <string name="settings_signing_tsa">நேர முத்திரை ஆணையம் (TSA)</string>
+    <string name="c2pa_os_patch_level_error">C2PA முடக்கப்பட்டது: OS பாதுகாப்பு இணைப்புகள் 90 நாட்களுக்குள் புதுப்பிக்கப்படவில்லை</string>
+    <string name="no_proof_yet">ஆதாரம் இல்லை (இன்னும்)</string>
+    <string name="take_pictures_and_videos_and_they_will_show_up_here">படங்கள் மற்றும் வீடியோக்களை எடுக்கவும், அவை இங்கே காண்பிக்கப்படும்</string>
 </resources>
