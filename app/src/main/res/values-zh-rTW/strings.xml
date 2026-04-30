@@ -14,4 +14,9 @@
     <string name="share_share_robust">分享</string>
     <string name="share_save_robust">儲存</string>
     <string name="share_upload_robust">上傳圖片</string>
+    <string name="video">影片</string>
+    <string name="settings_credentials">憑證</string>
+    <string name="next">下一個</string>
+    <string name="previous">上一個</string>
+    <string name="secret_key">密鑰</string>
 </resources>
