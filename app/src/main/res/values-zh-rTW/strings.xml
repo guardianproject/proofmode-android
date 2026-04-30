@@ -13,11 +13,13 @@
     <string name="share_mode_basic">基本</string>
     <string name="share_share_robust">分享</string>
     <string name="share_save_robust">儲存</string>
-    <string name="share_upload_robust">上傳圖片</string>
+    <string name="share_upload_robust">上傳</string>
     <string name="video">影片</string>
     <string name="settings_credentials">憑證</string>
     <string name="next">下一個</string>
     <string name="previous">上一個</string>
-    <string name="secret_key">密鑰</string>
-    <string name="filebase_test_connection">測試連接</string>
+    <string name="secret_key">秘密金鑰</string>
+    <string name="filebase_test_connection">測試連線</string>
+    <string name="camera">相機</string>
+    <string name="filebase_save_settings">儲存設定</string>
 </resources>
