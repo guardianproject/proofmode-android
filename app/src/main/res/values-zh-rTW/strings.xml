@@ -2,4 +2,16 @@
 <resources>
     <string name="got_it">記住了</string>
     <string name="app_name">Proofmode</string>
+    <string name="action_settings">設定</string>
+    <string name="settings_location">地點</string>
+    <string name="settings_phone">電話</string>
+    <string name="settings_network">網路</string>
+    <string name="onboarding_learn_more">了解更多</string>
+    <string name="onboarding_privacy_continue">繼續</string>
+    <string name="menu_home">首頁</string>
+    <string name="menu_settings">設定</string>
+    <string name="share_mode_basic">基本</string>
+    <string name="share_share_robust">分享</string>
+    <string name="share_save_robust">儲存</string>
+    <string name="share_upload_robust">上傳圖片</string>
 </resources>
