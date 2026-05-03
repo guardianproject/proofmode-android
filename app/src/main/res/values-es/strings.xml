@@ -227,7 +227,7 @@
     <string name="settings_signing_signing_servers">Servidores de firmado</string>
     <string name="settings_signing_proofsign_server">Servidor ProofSign</string>
     <string name="settings_signing_tsa">Sello de Hora de Autoridad (TSA)</string>
-    <string name="open">Abierto</string>
+    <string name="open">Abrir</string>
     <string name="close">Cerrar</string>
     <string name="c2pa_os_patch_level_error">C2PA Inhabilitado: Parches para Seguridad de SO no actualizado dentro de los 90 días</string>
     <string name="no_proof_yet">Sin prueba (aún)</string>
