@@ -214,4 +214,5 @@
     <string name="share_media">Comparte Multimedia</string>
     <string name="share_using">Compartir con</string>
     <string name="verify_this_media_at">"Verificar este archivo multimedia en: "</string>
+    <string name="onboarding_intro_title_old">Una imagen puede valer más que mil palabras, pero la prueba de que es real no tiene precio.</string>
 </resources>
