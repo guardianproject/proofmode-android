@@ -23,7 +23,7 @@
     <string name="generating_proof_notify">Generar pruebas...</string>
     <string name="inspect_photos">Inspeccionando Fotos</string>
     <string name="inspect_videos">Inspeccionando Videos</string>
-    <string name="select_app">SEleccionar la aplicacion para compartir la evidencia con ...</string>
+    <string name="select_app">Seleccione la aplicación para compartir prueba a...</string>
     <string name="independent_notary">Notarizacion independiente por Enigio TimeBeat :</string>
     <string name="packaging_proof">Colectando evidencia para compartir...</string>
     <string name="include_mobile_network">Red Movil Incluida</string>
