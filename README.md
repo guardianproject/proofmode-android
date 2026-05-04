@@ -1,8 +1,12 @@
 # Overview
 
-ProofMode is light, minimal "reboot" of our full encrypted, verified secure camera app, CameraV (https://guardianproject.info/apps/camerav). Our hope was to create a lightweight, almost invisible utility, that you can run all of the time on your phone, that automatically extra digital proof data to all photos and videos you take. This data can then be easily shared through a "Share Proof" share action, to anyone you choose.
+Proofmode is light, minimal "reboot" of our full encrypted, verified secure camera app, CameraV (https://guardianproject.info/apps/camerav). Our hope was to create a lightweight, almost invisible utility, that you can run all of the time on your phone, that automatically extra digital proof data to all photos and videos you take. This data can then be easily shared through a "Share Proof" share action, to anyone you choose.
 
-While we are very proud of the work we did with the CameraV and InformaCam projects, the end results was a complex application and proprietary data format that required a great deal of investment by any user or community that wished to adopt it. Furthermore, it was an app that you had to decide and remember to use, in a moment of crisis. With ProofMode, we both wanted to simplify the adoption of the tool, and make it nearly invisible to the end-user, while making it the adoption of the tool by organizations painless through simple formats like CSV and known formats like PGP signatures.
+While we are very proud of the work we did with the CameraV and InformaCam projects, the end results was a complex application and proprietary data format that required a great deal of investment by any user or community that wished to adopt it. Furthermore, it was an app that you had to decide and remember to use, in a moment of crisis. With Proofmode, we both wanted to simplify the adoption of the tool, and make it nearly invisible to the end-user, while making it the adoption of the tool by organizations painless through simple formats like CSV and known formats like PGP signatures.
+
+# C2PA Support and Conformance
+
+ProofMode 3.x is now fully [C2PA](https://c2pa.org) conformant, supporting the 2.3 specification release. For more information [view our Conformance Application](https://gitlab.com/guardianproject/proofmode/proofmode-c2pa-conformance/-/blob/main/Proofmode%20for%20Android/Proofmode%20for%20Android%20C2PA%20Security%20Conformance%20-%20ASSURANCE%20LEVEL%201%20-%20April%202026%20-%20v20260408.1.md?ref_type=heads) and learn more at [https://proofmode.org/c2pa](https://proofmode.org/c2pa)
 
 # Design Goals 
 
@@ -16,15 +20,15 @@ While we are very proud of the work we did with the CameraV and InformaCam proje
 
 # What It Does
 
-1. User installs ProofMode app
-2. ProofMode app automatically generates a private/public OpenPGP keypair as a persistent "proof" identity within the app
-3. When the user takes a photo or video, ProofMode wakes up, signs the new media file with their private key
+1. User installs Proofmode app
+2. Proofmode app automatically generates a private/public OpenPGP keypair as a persistent "proof" identity within the app
+3. When the user takes a photo or video, Proofmode wakes up, signs the new media file with their private key
 	* Additionally, a sensor data snapshot is taken to gather correlating proof. This is saved as a CSV file, and also signed with the OpenPGP key.
 4. If the user wants to share a specific photo or video as "proof", they can just select the "Share Proof" option from the Android global share menu from the Gallery or Photos app.
 	* This will then re-share the media file, plus all the related proof files and digital signatures, to the app of the users choice, along with a summary of when the file was created, what the public key identity is, and so on.
  	* The user can also select multiple photos and videos to "Share Proof" for, and create a batch of data, with correlating sensor data for all media files, combined together in a single log of an "event"
 5. The user can also choose to publish their public key on pgp.mit.edu directory from within the app menu, or directly share their public key with anyone who would need it for verifying digital signatures. 
-6. As the receiver of a ProofMode data set, you can verify the media file was not tampered with, verify the public key idenity of who signed the files, to see if it is consistent with what you expect, and examine all the correlating sensor data around the event, for extra context and evidence.
+6. As the receiver of a Proofmode data set, you can verify the media file was not tampered with, verify the public key idenity of who signed the files, to see if it is consistent with what you expect, and examine all the correlating sensor data around the event, for extra context and evidence.
 	* The CSV data can easily be imported into any spreadsheet or visualization type tool to create maps, charts, graphs, and other means of understanding the values included, over time, especially across multiple proof points of media
 
 # Screenshots
