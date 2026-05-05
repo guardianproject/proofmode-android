@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Proofmode</string>
-    <string name="action_settings">Configuracion</string>
+    <string name="action_settings">Ajustes</string>
     <string name="action_share_key">Compartir la clave pública...</string>
     <string name="action_publish_key">Publicar la clave pública...</string>
     <string name="action_about">Acerca de ProofMode </string>
