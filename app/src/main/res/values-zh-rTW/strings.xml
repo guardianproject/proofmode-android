@@ -24,4 +24,6 @@
     <string name="filebase_save_settings">儲存設定</string>
     <string name="open">開啟</string>
     <string name="close">關閉</string>
+    <string name="onboarding_get_started">開始使用</string>
+    <string name="bucket_name">儲存桶名稱</string>
 </resources>
