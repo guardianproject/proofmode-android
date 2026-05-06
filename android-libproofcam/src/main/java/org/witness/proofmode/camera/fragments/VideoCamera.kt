@@ -214,7 +214,7 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
 
                             if (!isZooming) {
                                 if (pastTouchSlop && abs(drag.x) > abs(drag.y)) {
-                                    if (drag.x < 0) {
+                                    if (drag.x > 0) {
                                         if (recordingState == RecordingState.Recording) {
                                             cameraViewModel.stopRecording()
                                             onNavigateToPhotoCamera()
