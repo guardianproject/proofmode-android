@@ -60,6 +60,7 @@ import org.witness.proofmode.org.witness.proofmode.ui.ActivityConstants.EXTRA_SH
 import org.witness.proofmode.org.witness.proofmode.ui.ActivityConstants.INTENT_ACTIVITY_ITEMS_SHARED
 import org.witness.proofmode.org.witness.proofmode.ui.ProofableItem
 import org.witness.proofmode.storage.DefaultStorageProvider
+import org.witness.proofmode.storage.FilebaseConfig
 import org.witness.proofmode.storage.StorageListener
 import org.witness.proofmode.storage.StorageProvider
 import org.witness.proofmode.storage.StorageProviderManager
@@ -214,8 +215,17 @@ class ShareProofActivity : AppCompatActivity() {
 
     fun clickShareSocial (button: View?) {
 
-        displayProgress("Preparing media for social share...")
-        shareSocialAsync()
+        val shareEnabled = mPrefs?.getBoolean(FilebaseConfig.PREF_FILEBASE_ENABLED, false);
+        val isImage = true;
+
+        if (shareEnabled == true && isImage) {
+                displayProgress("Preparing media for social share...")
+                shareSocialAsync()
+        }
+        else
+        {
+           // startActivity (this, FilebaseSettingsActivity.class);
+        }
 
     }
 
