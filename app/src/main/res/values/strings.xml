@@ -199,7 +199,7 @@
     <string name="cb_open_gallery">Navigate to Gallery</string>
     <string name="cb_switch">Switch between front and back cameras</string>
     <string name="cb_timer">Select a timer</string>
-    <string name="camera">Camera</string>
+    <string name="camera">Photo</string>
     <string name="video">Video</string>
     <string name="settings_credentials">Credentials</string>
     <string name="settings_credentials_desc">Add Content Credentials (C2PA) to photos &amp; videos</string>
