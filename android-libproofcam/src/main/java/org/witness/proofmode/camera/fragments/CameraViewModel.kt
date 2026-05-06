@@ -2,10 +2,12 @@
 
 package org.witness.proofmode.camera.fragments
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.ContentValues
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -170,16 +172,47 @@ class CameraViewModel(private val activity: CameraActivity, private val app: App
     private val _locationEnabled = MutableStateFlow(
         PreferenceManager.getDefaultSharedPreferences(app.applicationContext)
             .getBoolean(ProofMode.PREF_OPTION_LOCATION, ProofMode.PREF_OPTION_LOCATION_DEFAULT)
+                && hasLocationPermission()
     )
     val locationEnabled: StateFlow<Boolean> = _locationEnabled
 
+    private val _requestLocationPermission = MutableStateFlow(0)
+    val requestLocationPermission: StateFlow<Int> = _requestLocationPermission
+
+    fun hasLocationPermission(): Boolean {
+        val ctx = app.applicationContext
+        return ContextCompat.checkSelfPermission(
+            ctx, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(
+                    ctx, Manifest.permission.ACCESS_COARSE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED
+    }
+
     fun toggleLocationEnabled() {
-        val newValue = !_locationEnabled.value
+        if (_locationEnabled.value) {
+            setLocationEnabled(false)
+        } else {
+            if (hasLocationPermission()) {
+                setLocationEnabled(true)
+            } else {
+                _requestLocationPermission.update { it + 1 }
+            }
+        }
+    }
+
+    fun setLocationEnabled(enabled: Boolean) {
         PreferenceManager.getDefaultSharedPreferences(app.applicationContext)
             .edit()
-            .putBoolean(ProofMode.PREF_OPTION_LOCATION, newValue)
+            .putBoolean(ProofMode.PREF_OPTION_LOCATION, enabled)
             .apply()
-        _locationEnabled.value = newValue
+        _locationEnabled.value = enabled
+    }
+
+    fun refreshLocationPermissionState() {
+        val pref = PreferenceManager.getDefaultSharedPreferences(app.applicationContext)
+            .getBoolean(ProofMode.PREF_OPTION_LOCATION, ProofMode.PREF_OPTION_LOCATION_DEFAULT)
+        _locationEnabled.value = pref && hasLocationPermission()
     }
 
 

@@ -2,6 +2,8 @@ package org.witness.proofmode.camera.fragments
 
 import android.Manifest
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.compose.CameraXViewfinder
 import androidx.camera.viewfinder.compose.MutableCoordinateTransformer
 import androidx.compose.animation.AnimatedContent
@@ -111,6 +113,25 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
     val selectedQuality by cameraViewModel.selectedQuality.collectAsStateWithLifecycle()
     val previewAlpha by cameraViewModel.previewAlpha.collectAsStateWithLifecycle()
     val locationEnabled by cameraViewModel.locationEnabled.collectAsStateWithLifecycle()
+    val requestLocationPermission by cameraViewModel.requestLocationPermission.collectAsStateWithLifecycle()
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        val granted = results[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                results[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        cameraViewModel.setLocationEnabled(granted)
+    }
+    LaunchedEffect(requestLocationPermission) {
+        if (requestLocationPermission > 0) {
+            locationPermissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
+        }
+    }
 
     val ranges by cameraViewModel.supportedFrameRates.collectAsStateWithLifecycle()
 
