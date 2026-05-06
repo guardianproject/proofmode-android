@@ -164,6 +164,9 @@ class CameraViewModel(private val activity: CameraActivity, private val app: App
     private val _previewAlpha = MutableStateFlow(1f)
     val previewAlpha: StateFlow<Float> = _previewAlpha
 
+    private val _shutterFlashTrigger = MutableStateFlow(0)
+    val shutterFlashTrigger: StateFlow<Int> = _shutterFlashTrigger
+
 
 
     var lensFacing: MutableLiveData<Int> = MutableLiveData(
@@ -375,6 +378,8 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
 
 
     fun captureImage() {
+        _shutterFlashTrigger.update { it + 1 }
+
         val metadata = Metadata().apply {
             // Mirror image when using the front camera
             isReversedHorizontal =

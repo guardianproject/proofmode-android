@@ -6,6 +6,8 @@ import androidx.camera.viewfinder.compose.MutableCoordinateTransformer
 import androidx.compose.foundation.Image
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -100,6 +102,14 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
     val scope = rememberCoroutineScope()
     var showBSettingsBottomSheet by remember { mutableStateOf(false) }
     val previewAlpha by cameraViewModel.previewAlpha.collectAsStateWithLifecycle()
+    val shutterFlashTrigger by cameraViewModel.shutterFlashTrigger.collectAsStateWithLifecycle()
+    val shutterAlpha = remember { Animatable(0f) }
+    LaunchedEffect(shutterFlashTrigger) {
+        if (shutterFlashTrigger > 0) {
+            shutterAlpha.snapTo(0.85f)
+            shutterAlpha.animateTo(0f, animationSpec = tween(durationMillis = 220))
+        }
+    }
 
     val exposureState by cameraViewModel.exposureState.collectAsStateWithLifecycle()
     var showExposureIndicator by remember { mutableStateOf(false) }
@@ -238,6 +248,15 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                         }
                         .alpha(previewAlpha)
                     )
+
+                    if (shutterAlpha.value > 0f) {
+                        Box(
+                            modifier = Modifier
+                                .padding(paddingValues)
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = shutterAlpha.value))
+                        )
+                    }
 
                     AnimatedVisibility(visible = !showFlashModes && countDownState != CountDownState.Running,
                         modifier = Modifier
