@@ -167,6 +167,21 @@ class CameraViewModel(private val activity: CameraActivity, private val app: App
     private val _shutterFlashTrigger = MutableStateFlow(0)
     val shutterFlashTrigger: StateFlow<Int> = _shutterFlashTrigger
 
+    private val _locationEnabled = MutableStateFlow(
+        PreferenceManager.getDefaultSharedPreferences(app.applicationContext)
+            .getBoolean(ProofMode.PREF_OPTION_LOCATION, ProofMode.PREF_OPTION_LOCATION_DEFAULT)
+    )
+    val locationEnabled: StateFlow<Boolean> = _locationEnabled
+
+    fun toggleLocationEnabled() {
+        val newValue = !_locationEnabled.value
+        PreferenceManager.getDefaultSharedPreferences(app.applicationContext)
+            .edit()
+            .putBoolean(ProofMode.PREF_OPTION_LOCATION, newValue)
+            .apply()
+        _locationEnabled.value = newValue
+    }
+
 
 
     var lensFacing: MutableLiveData<Int> = MutableLiveData(

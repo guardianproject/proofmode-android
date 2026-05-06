@@ -102,6 +102,7 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
     val scope = rememberCoroutineScope()
     var showBSettingsBottomSheet by remember { mutableStateOf(false) }
     val previewAlpha by cameraViewModel.previewAlpha.collectAsStateWithLifecycle()
+    val locationEnabled by cameraViewModel.locationEnabled.collectAsStateWithLifecycle()
     val shutterFlashTrigger by cameraViewModel.shutterFlashTrigger.collectAsStateWithLifecycle()
     val shutterAlpha = remember { Animatable(0f) }
     LaunchedEffect(shutterFlashTrigger) {
@@ -271,12 +272,12 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                             .background(Color.Black.copy(alpha = 0.4f))
                             .padding(horizontal = 16.dp),
                             horizontalArrangement = Arrangement.SpaceEvenly) {
-                            IconButton(onClick = onClose) {
-
+                            IconButton(onClick = { cameraViewModel.toggleLocationEnabled() }) {
                                 Icon(
-                                    Icons.Filled.Close,
-                                    tint = Color.White,
-                                    contentDescription = null)
+                                    imageVector = ImageVector.vectorResource(R.drawable.ic_location),
+                                    tint = if (locationEnabled) Color.White else Color.White.copy(alpha = 0.4f),
+                                    contentDescription = stringResource(R.string.toggle_location_description)
+                                )
                             }
                             IconButton(onClick = {
                                 scope.launch {

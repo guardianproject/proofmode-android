@@ -110,6 +110,7 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
     val cameraQualities by cameraViewModel.cameraQualities.collectAsStateWithLifecycle()
     val selectedQuality by cameraViewModel.selectedQuality.collectAsStateWithLifecycle()
     val previewAlpha by cameraViewModel.previewAlpha.collectAsStateWithLifecycle()
+    val locationEnabled by cameraViewModel.locationEnabled.collectAsStateWithLifecycle()
 
     val ranges by cameraViewModel.supportedFrameRates.collectAsStateWithLifecycle()
 
@@ -243,11 +244,11 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                     val topBarButtons = remember {
                         movableContentOf{
                             IconButton(onClick = {
-                                onClose()
+                                cameraViewModel.toggleLocationEnabled()
                             }) {
-                                Icon(ImageVector.vectorResource(R.drawable.baseline_close_24),
-                                    tint = Color.White,
-                                    contentDescription = null)
+                                Icon(ImageVector.vectorResource(R.drawable.ic_location),
+                                    tint = if (locationEnabled) Color.White else Color.White.copy(alpha = 0.4f),
+                                    contentDescription = stringResource(R.string.toggle_location_description))
                             }
                             IconButton(onClick = {
                                 scope.launch {
