@@ -26,9 +26,9 @@
     <string name="share_upload_robust">上传</string>
     <string name="share_sign_robust">签名</string>
     <string name="re_share">重新分享</string>
-    <string name="camera">拍照</string>
+    <string name="camera">照片</string>
     <string name="title_activity">证据日志</string>
-    <string name="video">录像</string>
+    <string name="video">视频</string>
     <string name="permission_location_content">允许我们记录位置坐标。我们不会跟踪你，也不会以其他方式保存位置信息。</string>
     <string name="onboarding_privacy_info">Proofmode 会默认捕获您设备的身份信息。如果您不愿意，请前往设置将其关闭。</string>
     <string name="permission_location_info">如果你不想出于安全或隐私目的获取此信息，请不要允许对应权限。</string>
