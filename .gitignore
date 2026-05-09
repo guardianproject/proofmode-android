@@ -51,3 +51,5 @@ captures/
 
 # Secrets file (contains API keys and tokens)
 secrets.properties
+
+gradle-daemon-jvm.properties
