@@ -163,7 +163,7 @@
     <string name="cb_open_gallery">கேலரிக்கு செல்லவும்</string>
     <string name="cb_switch">முன் மற்றும் பின் கேமராக்களுக்கு இடையில் மாறவும்</string>
     <string name="cb_timer">டைமரைத் தேர்ந்தெடுக்கவும்</string>
-    <string name="camera">கேமரா</string>
+    <string name="camera">புகைப்படம்</string>
     <string name="video">ஒளிதோற்றம்</string>
     <string name="settings_credentials">நற்சான்றிதழ்கள்</string>
     <string name="settings_credentials_desc">புகைப்படங்கள் மற்றும் வீடியோக்களில் உள்ளடக்க சான்றுகளை (C2PA) சேர்க்கவும்</string>
