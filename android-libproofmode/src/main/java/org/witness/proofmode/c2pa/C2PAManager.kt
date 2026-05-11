@@ -35,17 +35,16 @@ import org.contentauth.c2pa.Signer
 import org.contentauth.c2pa.SigningAlgorithm
 import org.contentauth.c2pa.Stream
 import org.contentauth.c2pa.StrongBoxSigner
-import org.contentauth.c2pa.WebServiceSigner
-import org.contentauth.c2pa.manifest.ActionAssertion
 import org.contentauth.c2pa.manifest.AssertionDefinition
 import org.contentauth.c2pa.manifest.CawgTrainingMiningEntry
 import org.contentauth.c2pa.manifest.ClaimGeneratorInfo
 import org.contentauth.c2pa.manifest.ManifestDefinition
 import org.contentauth.c2pa.manifest.ManifestValidator
-import org.contentauth.c2pa.manifest.Relationship
 import org.json.JSONObject
 import org.witness.proofmode.ProofMode
 import org.witness.proofmode.ProofMode.PREF_OPTION_LOCATION
+import org.witness.proofmode.c2pa.proofsign.ProofSignC2PASigner
+import org.witness.proofmode.c2pa.proofsign.Result
 import org.witness.proofmode.c2pa.selfsign.CAWGIdentityManager
 import org.witness.proofmode.c2pa.selfsign.CertificateSigningService
 import org.witness.proofmode.crypto.HashUtils
@@ -219,7 +218,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             SigningMode.KEYSTORE -> createKeystoreSigner(tsaUrl)
             SigningMode.HARDWARE -> createHardwareSigner(tsaUrl)
             SigningMode.CUSTOM -> createCustomSigner(tsaUrl)
-            SigningMode.REMOTE -> createRemoteSigner()
+            SigningMode.REMOTE -> createProofSignSinger ()
         }
     }
 
@@ -426,6 +425,13 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         )
     }
 
+    private suspend fun createProofSignSinger (): Signer {
+        val configUrl = resolveProofSignConfigUrl()
+        val signer = ProofSignC2PASigner(context, configUrl)
+        return signer.createSigner()
+    }
+
+    /**
     private suspend fun createRemoteSigner(): Signer {
 
         val configUrl = resolveProofSignConfigUrl()
@@ -435,10 +441,12 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
         // Use the new WebServiceSigner class
         val webServiceSigner =
-            WebServiceSigner(configurationURL = configUrl, bearerToken = bearerToken)
+          WebServiceSigner(configurationURL = configUrl, bearerToken = bearerToken)
+
+
 
         return webServiceSigner.createSigner()
-    }
+    }**/
 
     private fun resolveProofSignConfigUrl(): String {
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)

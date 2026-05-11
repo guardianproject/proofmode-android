@@ -3,7 +3,6 @@ package org.witness.proofmode
 import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.preference.PreferenceManager
@@ -21,8 +20,8 @@ import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
 import org.witness.proofmode.c2pa.C2PAManager
 import org.witness.proofmode.c2pa.PreferencesManager
-import org.witness.proofmode.c2pa.ProofSignClient
-import org.witness.proofmode.c2pa.VerificationResult
+import org.witness.proofmode.c2pa.proofsign.ProofSignClient
+import org.witness.proofmode.c2pa.proofsign.Result
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.library.BuildConfig
 import org.witness.proofmode.notaries.OpenTimestampsNotarizationProvider
@@ -109,54 +108,43 @@ class ProofModeApp : Application(), Configuration.Provider {
 
         val conformant = checkC2PAConformance()
 
-        if (conformant) {
-
+        if (conformant)
             initProofSignClient()
-
-            /**
-            val client = ProofSignClient(
-            context = applicationContext,
-            BuildConfig.SIGNING_SERVER,
-            BuildConfig.CLOUD_INTEGRITY_PROJECT_NUMBER
-            )
-
-            client.verifyDevice { result ->
-
-            }
-
-            client.authenticatedRequest(
-            endpoint = "/api/v1/protected-endpoint",
-            method = "POST",
-            body = """{"data": "value"}"""
-            ) { result ->
-                when (result) {
-
-
-                else -> {}
-                }
-            }**/
-        }
 
     }
 
     fun initProofSignClient () {
 
-        val client = ProofSignClient(
+        val proofSignClient = ProofSignClient(
                    context = applicationContext,
                     serverUrl = BuildConfig.SIGNING_SERVER,
                     cloudProjectNumber = BuildConfig.CLOUD_INTEGRITY_PROJECT_NUMBER
                         )
 
-        if (!client.isVerificationValid()) {
+      //  if (!proofSignClient.isVerificationValid()) {
+        if (true) {
 
             Timber.d("Need to reverify with ProofSign server")
             // Initial verification (do this once or periodically)
-            client.verifyDevice { result ->
-                Timber.d("proofsign verification result: " + result)
+
+            proofSignClient.verifyDevice { result ->
+
+                when (result) {
+
+                    is Result.Success -> {
+                        Timber.d("ProofSign: VERIFIED")
+                    }
+                    is Result.Failure -> {
+                        Timber.d("ProofSign: FAILURE")
+                    }
+
+                    else -> {}
+                }
             }
+
         }
         else{
-            Timber.d("proofsign verification: valid")
+            Timber.d("ProofSign verification: valid")
         }
 
 
