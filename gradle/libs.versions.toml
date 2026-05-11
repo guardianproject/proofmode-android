@@ -1,9 +1,9 @@
 [versions]
 # Kotlin & KSP
 keyattestation = "main-SNAPSHOT"
-kotlin = "2.2.20"
-kotlin-serialization = "2.2.20"
-ksp = "2.3.2"
+kotlin = "2.3.21"
+kotlin-serialization = "2.3.21"
+ksp = "2.3.7"
 
 # Android SDK
 agp = "9.1.0"
