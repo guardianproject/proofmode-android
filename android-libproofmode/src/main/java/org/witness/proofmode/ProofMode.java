@@ -62,7 +62,7 @@ public class ProofMode {
     public final static boolean PREF_OPTION_REMOTE_SIGNING_DEFAULT = true;
 
     public final static String PREF_OPTION_PROOFSIGN_SERVER = "proofSignServerUrl";
-    public final static String PREF_OPTION_PROOFSIGN_SERVER_DEFAULT = "https://proofsign.proofmode.org";
+    public final static String PREF_OPTION_PROOFSIGN_SERVER_DEFAULT = "";
 
     public final static String PREF_OPTION_TSA_SERVER = "tsaServerUrl";
     public final static String PREF_OPTION_TSA_SERVER_DEFAULT = "https://tsa.trufo.ai/";

@@ -442,11 +442,13 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
     private fun resolveProofSignConfigUrl(): String {
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-        val base = prefs.getString(
+        var base = prefs.getString(
             ProofMode.PREF_OPTION_PROOFSIGN_SERVER,
             ProofMode.PREF_OPTION_PROOFSIGN_SERVER_DEFAULT
         )?.trim().orEmpty()
-        if (base.isEmpty()) return BuildConfig.SIGNING_SERVER_AND_ENDPOINT
+
+        if (base.isEmpty())
+            base = BuildConfig.SIGNING_SERVER
 
         val endpoint = BuildConfig.SIGNING_SERVER_ENDPOINT
         val trimmedBase = base.trimEnd('/')

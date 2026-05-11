@@ -61,7 +61,6 @@ class ProofModeApp : Application(), Configuration.Provider {
 
         StorageProviderManager.getInstance().initializeStorageProviders(this)
 
-        initProofSignClient()
     }
 
     //ensure this device has been updated with security patches within 90 days
@@ -87,8 +86,8 @@ class ProofModeApp : Application(), Configuration.Provider {
             mPgpUtils = PgpUtils.getInstance()
 
 
-            if(useContentCredentials())
-                    initContentCredentials()
+        //    if(useContentCredentials())
+          //          initContentCredentials()
 
 
         }
@@ -111,6 +110,9 @@ class ProofModeApp : Application(), Configuration.Provider {
         val conformant = checkC2PAConformance()
 
         if (conformant) {
+
+            initProofSignClient()
+
             /**
             val client = ProofSignClient(
             context = applicationContext,
@@ -127,11 +129,11 @@ class ProofModeApp : Application(), Configuration.Provider {
             method = "POST",
             body = """{"data": "value"}"""
             ) { result ->
-            when (result) {
+                when (result) {
 
 
-            else -> {}
-            }
+                else -> {}
+                }
             }**/
         }
 
@@ -141,15 +143,20 @@ class ProofModeApp : Application(), Configuration.Provider {
 
         val client = ProofSignClient(
                    context = applicationContext,
-                    serverUrl = BuildConfig.SIGNING_DEV_SERVER,
+                    serverUrl = BuildConfig.SIGNING_SERVER,
                     cloudProjectNumber = BuildConfig.CLOUD_INTEGRITY_PROJECT_NUMBER
                         )
 
         if (!client.isVerificationValid()) {
+
+            Timber.d("Need to reverify with ProofSign server")
             // Initial verification (do this once or periodically)
             client.verifyDevice { result ->
-                Timber.d("result: " + result)
+                Timber.d("proofsign verification result: " + result)
             }
+        }
+        else{
+            Timber.d("proofsign verification: valid")
         }
 
 

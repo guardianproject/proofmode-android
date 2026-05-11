@@ -537,7 +537,7 @@ class MainActivity : AppCompatActivity(),
 
         if ((application as ProofModeApp).useContentCredentials()) {
             intentCam.putExtra(PREF_OPTION_CREDENTIALS, true);
-            (application as ProofModeApp).initContentCredentials()
+          //  (application as ProofModeApp).initContentCredentials()
         }
         else
             intentCam.putExtra(PREF_OPTION_CREDENTIALS, false);
