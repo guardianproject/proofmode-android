@@ -429,9 +429,9 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
         _shutterFlashTrigger.update { it + 1 }
 
         val metadata = Metadata().apply {
+            isReversedHorizontal = false //do not mirror
             // Mirror image when using the front camera
-            isReversedHorizontal =
-                lensFacing.value == CameraSelector.LENS_FACING_FRONT
+            //    lensFacing.value == CameraSelector.LENS_FACING_FRONT
         }
 
         MediaStore.Images.Media.EXTERNAL_CONTENT_URI
