@@ -175,7 +175,7 @@
     <string name="settings_credentials">Credenciais</string>
     <string name="settings_credentials_desc">Adicionar credenciais de conteúdo (C2PA) a fotos e vídeos</string>
     <string name="settings_ai">Bloquear IA</string>
-    <string name="settings_ai_desc">Defina para não ser usado para treinamento de aprendizado de máquina</string>
+    <string name="settings_ai_desc">Defina para não ser usado para treino de aprendizado de máquina</string>
     <string name="default_share_text">Este é um ProofPack que contém ficheiros de média, metadados e assinaturas digitais. Saiba como verificar isto em https://proofmode.org/verify</string>
     <string name="title_activity_p2_pshare">P2PShareActivity</string>
     <string name="first_fragment_label">Primeiro fragmento</string>
