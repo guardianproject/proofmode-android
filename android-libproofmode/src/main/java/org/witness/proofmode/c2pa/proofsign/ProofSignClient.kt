@@ -212,8 +212,8 @@ class ProofSignClient(
     }
 
     private fun getAndIncrementCounter(): Long {
-        val counter = prefs.getLong(PREF_ASSERTION_COUNTER, 0)
-        prefs.edit().putLong(PREF_ASSERTION_COUNTER, counter + 1).apply()
+        val counter = prefs.getLong(PREF_ASSERTION_COUNTER, 0) + 1
+        prefs.edit().putLong(PREF_ASSERTION_COUNTER, counter).apply()
         return counter
     }
 
