@@ -122,7 +122,8 @@
         <activity
             android:name=".org.witness.proofmode.share.ShareProofActivity"
             android:exported="true"
-            android:label="@string/share_proof_action">
+            android:label="@string/share_proof_action"
+            android:launchMode="singleTop">
             <intent-filter>
                 <action
                     android:name="android.intent.action.SEND"

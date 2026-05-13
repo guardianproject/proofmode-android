@@ -113,6 +113,21 @@ class ShareProofActivity : AppCompatActivity() {
         mStorageProvider = DefaultStorageProvider(applicationContext)
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // Replace the activity's intent so subsequent calls to getIntent() see the new media.
+        // Without this, singleTop reuse keeps serving the original intent and we'd share the
+        // same proof over and over for new photos.
+        setIntent(intent)
+        resetShareState()
+    }
+
+    private fun resetShareState() {
+        hashCache.clear()
+        proofZipName = ""
+        baseDocumentTreeUri = null
+    }
+
     override fun onResume() {
         super.onResume()
 
