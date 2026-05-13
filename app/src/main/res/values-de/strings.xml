@@ -80,4 +80,5 @@
     <string name="cb_switch">Wechsle zwischen Front- und Rückkamera</string>
     <string name="activity_settings_title">WÄHLE DEINE EINSTELLUNGEN</string>
     <string name="onboarding_intro_content">ProofMode erfasst Informationen, die deine Medien vertrauenswürdiger machen.</string>
+    <string name="close">Schließen</string>
 </resources>
