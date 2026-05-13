@@ -20,6 +20,7 @@ import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
 import org.witness.proofmode.c2pa.C2PAManager
 import org.witness.proofmode.c2pa.PreferencesManager
+import org.witness.proofmode.c2pa.proofsign.AttestationMode
 import org.witness.proofmode.c2pa.proofsign.ProofSignClient
 import org.witness.proofmode.c2pa.proofsign.Result
 import org.witness.proofmode.crypto.pgp.PgpUtils
@@ -47,6 +48,11 @@ class ProofModeApp : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+
+        // Seed signing preferences from XML defaults so the configured server URL
+        // and other signing settings exist before any signing path reads them.
+        androidx.preference.PreferenceManager.setDefaultValues(this, R.xml.signing_preferences, false)
+
         init(this)
 
         //add google safetynet and opentimestamps
@@ -115,39 +121,34 @@ class ProofModeApp : Application(), Configuration.Provider {
 
     fun initProofSignClient () {
 
+        val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
+        val forceKeyAttestation = prefs.getBoolean(
+            ProofMode.PREF_OPTION_PROOFSIGN_FORCE_KEY_ATTESTATION,
+            ProofMode.PREF_OPTION_PROOFSIGN_FORCE_KEY_ATTESTATION_DEFAULT,
+        )
+        val serverUrl = prefs.getString(
+            ProofMode.PREF_OPTION_PROOFSIGN_SERVER,
+            getString(org.witness.proofmode.library.R.string.default_proofsign_server),
+        ).orEmpty().trim().trimEnd('/')
+
         val proofSignClient = ProofSignClient(
-                   context = applicationContext,
-                    serverUrl = BuildConfig.SIGNING_SERVER,
-                    cloudProjectNumber = BuildConfig.CLOUD_INTEGRITY_PROJECT_NUMBER
-                        )
+            context = applicationContext,
+            serverUrl = serverUrl,
+            cloudProjectNumber = BuildConfig.CLOUD_INTEGRITY_PROJECT_NUMBER,
+            mode = if (forceKeyAttestation) AttestationMode.KEY_ATTESTATION else AttestationMode.AUTO,
+        )
 
-      //  if (!proofSignClient.isVerificationValid()) {
-        if (true) {
-
+        if (!proofSignClient.isVerificationValid()) {
             Timber.d("Need to reverify with ProofSign server")
-            // Initial verification (do this once or periodically)
-
             proofSignClient.verifyDevice { result ->
-
                 when (result) {
-
-                    is Result.Success -> {
-                        Timber.d("ProofSign: VERIFIED")
-                    }
-                    is Result.Failure -> {
-                        Timber.d("ProofSign: FAILURE")
-                    }
-
-                    else -> {}
+                    is Result.Success -> Timber.d("ProofSign: VERIFIED (${result.data.verdict})")
+                    is Result.Failure -> Timber.d("ProofSign: FAILURE (${result.error})")
                 }
             }
-
-        }
-        else{
+        } else {
             Timber.d("ProofSign verification: valid")
         }
-
-
     }
 
 

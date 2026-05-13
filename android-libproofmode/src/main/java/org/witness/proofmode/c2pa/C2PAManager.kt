@@ -49,6 +49,7 @@ import org.witness.proofmode.c2pa.selfsign.CAWGIdentityManager
 import org.witness.proofmode.c2pa.selfsign.CertificateSigningService
 import org.witness.proofmode.crypto.HashUtils
 import org.witness.proofmode.library.BuildConfig
+import org.witness.proofmode.library.R
 import timber.log.Timber
 import java.io.ByteArrayInputStream
 import java.io.File
@@ -426,42 +427,17 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
     }
 
     private suspend fun createProofSignSinger (): Signer {
-        val configUrl = resolveProofSignConfigUrl()
-        val signer = ProofSignC2PASigner(context, configUrl)
+        val signer = ProofSignC2PASigner(context, resolveProofSignServerUrl())
         return signer.createSigner()
     }
 
-    /**
-    private suspend fun createRemoteSigner(): Signer {
-
-        val configUrl = resolveProofSignConfigUrl()
-        val bearerToken = BuildConfig.SIGNING_SERVER_TOKEN
-
-        Timber.d( "Creating WebServiceSigner with URL: $configUrl")
-
-        // Use the new WebServiceSigner class
-        val webServiceSigner =
-          WebServiceSigner(configurationURL = configUrl, bearerToken = bearerToken)
-
-
-
-        return webServiceSigner.createSigner()
-    }**/
-
-    private fun resolveProofSignConfigUrl(): String {
+    private fun resolveProofSignServerUrl(): String {
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-        var base = prefs.getString(
-            ProofMode.PREF_OPTION_PROOFSIGN_SERVER,
-            ProofMode.PREF_OPTION_PROOFSIGN_SERVER_DEFAULT
-        )?.trim().orEmpty()
-
-        if (base.isEmpty())
-            base = BuildConfig.SIGNING_SERVER
-
-        val endpoint = BuildConfig.SIGNING_SERVER_ENDPOINT
-        val trimmedBase = base.trimEnd('/')
-        val normalizedEndpoint = if (endpoint.startsWith("/")) endpoint else "/$endpoint"
-        return trimmedBase + normalizedEndpoint
+        val default = context.getString(R.string.default_proofsign_server)
+        return prefs.getString(ProofMode.PREF_OPTION_PROOFSIGN_SERVER, default)
+            ?.trim()
+            .orEmpty()
+            .trimEnd('/')
     }
 
     private fun resolveTsaUrl(mode: SigningMode): String {
