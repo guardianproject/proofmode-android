@@ -2,14 +2,18 @@ package org.witness.proofmode.c2pa.proofsign
 
 
 import android.content.Context
+import android.preference.PreferenceManager
 import android.util.Base64
 import kotlinx.serialization.Serializable
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.contentauth.c2pa.C2PAJson
 import org.contentauth.c2pa.Signer
 import org.contentauth.c2pa.SigningAlgorithm
+import org.witness.proofmode.ProofMode
 import org.witness.proofmode.library.BuildConfig
+import timber.log.Timber
 import java.util.concurrent.TimeUnit
 
 /**
@@ -20,7 +24,7 @@ import java.util.concurrent.TimeUnit
  * ```kotlin
  * val proofSignC2PASigner = ProofSignC2PASigner(
  *     context,
- *     configurationURL = "http://10.0.2.2:8080/api/v1/c2pa/configuration",
+ *     serverUrl = "https://proofsign.example.com",
  * )
  *
  * val signer = proofSignC2PASigner.createSigner()
@@ -28,13 +32,16 @@ import java.util.concurrent.TimeUnit
  */
 class ProofSignC2PASigner (
     private val context: Context,
-    private val configurationURL: String
+    private val serverUrl: String,
 ) {
+
+    private val configurationURL: String = serverUrl.trimEnd('/') + BuildConfig.SIGNING_SERVER_ENDPOINT
 
     private val proofSignClient = ProofSignClient(
         context = context,
-        serverUrl = BuildConfig.SIGNING_SERVER,
-        cloudProjectNumber = BuildConfig.CLOUD_INTEGRITY_PROJECT_NUMBER
+        serverUrl = serverUrl.trimEnd('/'),
+        cloudProjectNumber = BuildConfig.CLOUD_INTEGRITY_PROJECT_NUMBER,
+        mode = resolveAttestationMode(),
     )
 
     private val httpClient =
@@ -44,6 +51,14 @@ class ProofSignC2PASigner (
             .writeTimeout(30, TimeUnit.SECONDS)
             .build()
 
+    private fun resolveAttestationMode(): AttestationMode {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        val force = prefs.getBoolean(
+            ProofMode.PREF_OPTION_PROOFSIGN_FORCE_KEY_ATTESTATION,
+            ProofMode.PREF_OPTION_PROOFSIGN_FORCE_KEY_ATTESTATION_DEFAULT,
+        )
+        return if (force) AttestationMode.KEY_ATTESTATION else AttestationMode.AUTO
+    }
 
     /**
      * Creates a Signer instance configured for remote signing. This method fetches the
@@ -58,16 +73,26 @@ class ProofSignC2PASigner (
             algorithm = signingAlgorithm,
             certificateChainPEM = certificateChain,
             tsaURL = configuration.timestamp_url.takeIf { it.isNotEmpty() },
-        ) { data -> signData(data, configuration.signing_url) }
+        ) { data -> signData(data) }
     }
 
     private suspend fun fetchConfiguration(): SignerConfiguration {
+        val url = configurationURL.toHttpUrlOrNull()
+            ?.newBuilder()
+            ?.setQueryParameter("platform", "android")
+            ?.build()
+            ?: throw org.contentauth.c2pa.SignerException.InvalidResponse
+
+        Timber.d("ProofSign: GET %s", url)
+
         val requestBuilder =
-            Request.Builder().url(configurationURL).get().header("Accept", "application/json")
+            Request.Builder().url(url).get().header("Accept", "application/json")
 
         val response = httpClient.newCall(requestBuilder.build()).execute()
 
         if (!response.isSuccessful) {
+            val body = response.body?.string().orEmpty()
+            Timber.w("ProofSign: config fetch returned %d for %s — body=%s", response.code, url, body)
             throw org.contentauth.c2pa.SignerException.HttpError(response.code)
         }
 
@@ -87,24 +112,17 @@ class ProofSignC2PASigner (
         else -> throw SignerException.UnsupportedAlgorithm(algorithmString)
     }
 
-
-
-    private fun signData(data: ByteArray, signingURL: String): ByteArray {
-        // Auto-verify device if verification has expired or hasn't been done
+    private fun signData(data: ByteArray): ByteArray {
         if (!proofSignClient.isVerificationValid()) {
             val verifyLatch = java.util.concurrent.CountDownLatch(1)
             var verifyError: String? = null
 
             proofSignClient.verifyDevice { result ->
-
                 when (result) {
-
                     is Result.Success -> {}
                     is Result.Failure -> {
                         verifyError = result.error
                     }
-
-                    else -> {}
                 }
                 verifyLatch.countDown()
             }
@@ -124,16 +142,12 @@ class ProofSignC2PASigner (
 
         proofSignClient.signC2PAClaimWithDeviceAuth(dataToSignBase64) {
             when (it) {
-
                 is Result.Success -> {
-                signedData = Base64.decode(it.data.signature, Base64.NO_WRAP)
-
+                    signedData = Base64.decode(it.data.signature, Base64.NO_WRAP)
                 }
                 is Result.Failure -> {
                     signingError = it.error
                 }
-
-                else -> {}
             }
             latch.countDown()
         }
@@ -165,21 +179,15 @@ class ProofSignC2PASigner (
         val signing_url: String,
         val certificate_chain: String,
     )
-
-    @Serializable private data class SignRequest(val claim: String)
-
-    @Serializable private data class SignResponse(val signature: String)
 }
 
 /** Exceptions specific to signer operations */
 sealed class SignerException(message: String, cause: Throwable? = null) : Exception(message, cause) {
-    object InvalidURL : SignerException("Invalid URL")
     object InvalidResponse : SignerException("Invalid response from server")
     data class HttpError(val statusCode: Int, val body: String? = null) :
         SignerException("HTTP error: $statusCode${body?.let { " - $it" } ?: ""}")
     data class UnsupportedAlgorithm(val algorithm: String) :
         SignerException("Unsupported algorithm: $algorithm")
     object InvalidCertificateChain : SignerException("Invalid certificate chain")
-    object NoCertificatesFound : SignerException("No certificates found in chain")
     object InvalidSignature : SignerException("Invalid signature format")
 }

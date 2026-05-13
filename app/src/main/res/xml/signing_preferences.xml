@@ -18,7 +18,7 @@
             app:key="proofSignServerUrl"
             app:title="@string/settings_signing_proofsign_server"
             app:useSimpleSummaryProvider="true"
-            app:defaultValue="https://proofsign.proofmode.org"
+            app:defaultValue="@string/default_proofsign_server"
             app:dialogTitle="@string/settings_signing_proofsign_server" />
 
         <EditTextPreference
@@ -27,6 +27,13 @@
             app:useSimpleSummaryProvider="true"
             app:defaultValue="https://tsa.trufo.ai/"
             app:dialogTitle="@string/settings_signing_tsa" />
+
+        <SwitchPreferenceCompat
+            app:key="proofSignForceKeyAttestation"
+            app:title="Force Key Attestation"
+            app:summaryOn="Always use Android hardware key attestation"
+            app:summaryOff="Use Play Integrity when available"
+            app:defaultValue="false" />
 
     </PreferenceCategory>
 
