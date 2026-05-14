@@ -37,6 +37,10 @@ class ProofSignC2PASigner (
 
     private val configurationURL: String = serverUrl.trimEnd('/') + BuildConfig.SIGNING_SERVER_ENDPOINT
 
+    init {
+        Timber.d("ProofSignC2PASigner: serverUrl=%s configurationURL=%s", serverUrl, configurationURL)
+    }
+
     private val proofSignClient = ProofSignClient(
         context = context,
         serverUrl = serverUrl.trimEnd('/'),
