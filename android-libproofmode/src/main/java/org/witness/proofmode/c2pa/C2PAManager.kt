@@ -90,9 +90,9 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             timeZone = TimeZone.getTimeZone("UTC")
         }**/
 
-       private const val TSA_DIGICERT = "http://timestamp.digicert.com"
-    //    private const val TSA_SSLCOM = "https://api.c2patool.io/api/v1/timestamps/ecc"
-        private const val TSA_DEFAULT = TSA_DIGICERT
+      // private const val TSA_DIGICERT = "http://timestamp.digicert.com"
+        private const val TSA_SSLCOM = "http://ts-c2pa.ssl.com/ecc"
+        private const val TSA_DEFAULT = TSA_SSLCOM
 
 
     }
