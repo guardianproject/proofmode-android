@@ -18,7 +18,7 @@
             app:key="proofSignServerUrl"
             app:title="@string/settings_signing_proofsign_server"
             app:useSimpleSummaryProvider="true"
-            app:defaultValue="@string/default_proofsign_server"
+            app:defaultValue=""
             app:dialogTitle="@string/settings_signing_proofsign_server" />
 
         <EditTextPreference

@@ -344,9 +344,10 @@ class MainActivity : AppCompatActivity(),
         }
 
 
+        /**
         if (id == R.id.action_share_photos) {
             showMediaPicker();
-        }
+        }**/
 
         if (id == R.id.menu_settings) {
             drawer.closeDrawer(GravityCompat.START)

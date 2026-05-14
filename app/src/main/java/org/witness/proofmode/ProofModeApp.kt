@@ -128,7 +128,7 @@ class ProofModeApp : Application(), Configuration.Provider {
         )
         val serverUrl = prefs.getString(
             ProofMode.PREF_OPTION_PROOFSIGN_SERVER,
-            getString(org.witness.proofmode.library.R.string.default_proofsign_server),
+            BuildConfig.SIGNING_SERVER,
         ).orEmpty().trim().trimEnd('/')
 
         val proofSignClient = ProofSignClient(

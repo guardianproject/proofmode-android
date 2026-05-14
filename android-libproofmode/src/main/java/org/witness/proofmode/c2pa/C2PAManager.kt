@@ -1040,44 +1040,26 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
 
                 if (appSignatures != null) {
-                    put("proofmode:AppSignatures", buildJsonObject {
 
-                    for ( sig in appSignatures.apkContentsSigners)
-                    {
+                    put("proofmode:AppSignatures", buildJsonArray {
+                        for (sig in appSignatures.apkContentsSigners)
+                        {
+                            var rawCert = sig.toByteArray();
+                            var certStream = ByteArrayInputStream(rawCert);
+                            var certFactory = CertificateFactory.getInstance("X509");
+                            var cert =
+                                    certFactory.generateCertificate(certStream) as X509Certificate;
 
-                                var rawCert = sig.toByteArray();
-                                var certStream = ByteArrayInputStream(rawCert);
+                            val sb = StringBuilder()
+                            sb.append("-----BEGIN CERTIFICATE-----\n")
+                            sb.append(
+                                java.util.Base64.getEncoder().encodeToString(cert.encoded)
+                            )
+                            sb.append("-----END CERTIFICATE-----\n")
+                            add(sb.toString())
+                        }
+                    })
 
-                                try {
-                                    var certFactory = CertificateFactory.getInstance("X509");
-                                    var x509Cert =
-                                        certFactory.generateCertificate(certStream) as X509Certificate;
-
-                                    put ("proofmode:AppSignature",
-                                        buildJsonObject {
-                                            put(
-                                                "proofmode:AppCertificateSerialNumber",
-                                                x509Cert.serialNumber
-                                            );
-                                            put(
-                                                "proofmode:AppCertificateSubject",
-                                                x509Cert.subjectDN.name
-                                            );
-                                            put(
-                                                "proofmode:AppCertificateNotBefore",
-                                                x509Cert.notBefore.toString()
-                                            );
-
-                                            put("proofmode:AppCertificateSignature", sig.toCharsString())
-
-                                        })
-                                    } catch (e: CertificateException) {
-                                    // e.printStackTrace();
-                                }
-
-
-                     }
-                        })
                 }
 
                 val nonceOfIngredient = HashUtils.getSHA256FromFileContent(FileInputStream(inFile))
