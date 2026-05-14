@@ -52,7 +52,6 @@ class SigningSettingsActivity : AppCompatActivity() {
         SharedPreferences.OnSharedPreferenceChangeListener {
 
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
-            preferenceManager.sharedPreferencesName = null
             setPreferencesFromResource(R.xml.signing_preferences, rootKey)
             applyModeState()
         }

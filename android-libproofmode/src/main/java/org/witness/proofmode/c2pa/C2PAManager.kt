@@ -90,9 +90,9 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             timeZone = TimeZone.getTimeZone("UTC")
         }**/
 
-       private const val TSA_DIGICERT = "http://timestamp.digicert.com"
-    //    private const val TSA_SSLCOM = "https://api.c2patool.io/api/v1/timestamps/ecc"
-        private const val TSA_DEFAULT = TSA_DIGICERT
+      // private const val TSA_DIGICERT = "http://timestamp.digicert.com"
+        private const val TSA_SSLCOM = "http://ts-c2pa.ssl.com/ecc"
+        private const val TSA_DEFAULT = TSA_SSLCOM
 
 
     }
@@ -427,17 +427,21 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
     }
 
     private suspend fun createProofSignSinger (): Signer {
-        val signer = ProofSignC2PASigner(context, resolveProofSignServerUrl())
+        val resolved = resolveProofSignServerUrl()
+        Timber.d("ProofSign: createProofSignSinger using serverUrl=%s", resolved)
+        val signer = ProofSignC2PASigner(context, resolved)
         return signer.createSigner()
     }
 
     private fun resolveProofSignServerUrl(): String {
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
         val default = context.getString(R.string.default_proofsign_server)
-        return prefs.getString(ProofMode.PREF_OPTION_PROOFSIGN_SERVER, default)
-            ?.trim()
-            .orEmpty()
-            .trimEnd('/')
+        val raw = prefs.getString(ProofMode.PREF_OPTION_PROOFSIGN_SERVER, default)
+        Timber.d(
+            "ProofSign: resolveProofSignServerUrl pref[%s]=%s, default=%s",
+            ProofMode.PREF_OPTION_PROOFSIGN_SERVER, raw, default,
+        )
+        return raw?.trim().orEmpty().trimEnd('/')
     }
 
     private fun resolveTsaUrl(mode: SigningMode): String {
