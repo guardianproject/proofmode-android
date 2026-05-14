@@ -218,11 +218,11 @@ class ProofSignClient(
     }
 
     private fun getAndIncrementCounter(): Long = synchronized(counterLock) {
-        val counter = prefs.getLong(PREF_ASSERTION_COUNTER, 0)
+        val counter = prefs.getLong(PREF_ASSERTION_COUNTER, 0) +1
         // commit() persists synchronously so two concurrent calls can't both
         // observe the same value before the first write lands, and the counter
         // survives process death (preventing accidental reuse).
-        prefs.edit().putLong(PREF_ASSERTION_COUNTER, counter + 1).commit()
+        prefs.edit().putLong(PREF_ASSERTION_COUNTER, counter).commit()
         counter
     }
 
