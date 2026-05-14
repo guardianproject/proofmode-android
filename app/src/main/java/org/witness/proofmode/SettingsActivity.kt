@@ -61,6 +61,7 @@ class SettingsActivity : AppCompatActivity() {
         switchAutoImport = binding.contentSettings.switchAutoImport
         switchAutoSync = binding.contentSettings.switchAutoSync
 
+
         updateUI()
         switchLocation.setOnLongClickListener { _ ->
             val intent: Intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
@@ -232,6 +233,9 @@ class SettingsActivity : AppCompatActivity() {
 
         switchAutoImport.isChecked =
             mPrefs.getBoolean(ProofMode.PREFS_DOPROOF, false)
+
+        //disable auto import for now
+        switchAutoImport.isEnabled = false
 
         updateCredentialsDesc()
     }
