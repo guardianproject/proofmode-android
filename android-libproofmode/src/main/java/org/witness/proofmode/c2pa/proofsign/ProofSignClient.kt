@@ -94,9 +94,15 @@ class ProofSignClient(
         private const val KEYSTORE_ALIAS = "proofsign_device_key"
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
         private const val PLAY_STORE_PACKAGE = "com.android.vending"
+
+        // Process-wide lock for the assertion counter. Each /c2pa/sign uses a
+        // fresh ProofSignClient instance (see C2PAManager.createProofSignSinger),
+        // so the lock must live on the companion object, not on `this`.
+        private val counterLock = Any()
     }
 
     init {
+        Log.d(TAG, "ProofSignClient init: serverUrl=$serverUrl mode=$mode")
         invalidateIfServerChanged()
     }
 
@@ -211,10 +217,13 @@ class ProofSignClient(
         return Base64.getEncoder().encodeToString(signature.sign())
     }
 
-    private fun getAndIncrementCounter(): Long {
+    private fun getAndIncrementCounter(): Long = synchronized(counterLock) {
         val counter = prefs.getLong(PREF_ASSERTION_COUNTER, 0)
-        prefs.edit().putLong(PREF_ASSERTION_COUNTER, counter + 1).apply()
-        return counter
+        // commit() persists synchronously so two concurrent calls can't both
+        // observe the same value before the first write lands, and the counter
+        // survives process death (preventing accidental reuse).
+        prefs.edit().putLong(PREF_ASSERTION_COUNTER, counter + 1).commit()
+        counter
     }
 
     // endregion
@@ -275,9 +284,11 @@ class ProofSignClient(
     }
 
     private fun requestPlayIntegrityChallenge(deviceId: String): String? {
+        val url = "$serverUrl/api/v1/play_integrity/challenge"
+        Log.d(TAG, "POST $url")
         val json = JSONObject().apply { put("device_id", deviceId) }
         val request = Request.Builder()
-            .url("$serverUrl/api/v1/play_integrity/challenge")
+            .url(url)
             .post(json.toString().toRequestBody("application/json".toMediaType()))
             .build()
 
@@ -328,8 +339,10 @@ class ProofSignClient(
                 put("public_key", publicKey)
             }
 
+            val url = "$serverUrl/api/v1/play_integrity/verify"
+            Log.d(TAG, "POST $url")
             val request = Request.Builder()
-                .url("$serverUrl/api/v1/play_integrity/verify")
+                .url(url)
                 .post(json.toString().toRequestBody("application/json".toMediaType()))
                 .build()
 
@@ -387,8 +400,10 @@ class ProofSignClient(
                     put("certificate_chain", JSONArray(chainBase64))
                 }
 
+                val url = "$serverUrl/api/v1/key_attestation/register"
+                Log.d(TAG, "POST $url")
                 val request = Request.Builder()
-                    .url("$serverUrl/api/v1/key_attestation/register")
+                    .url(url)
                     .post(json.toString().toRequestBody("application/json".toMediaType()))
                     .build()
 
@@ -418,9 +433,11 @@ class ProofSignClient(
     }
 
     private fun requestKeyAttestationChallenge(deviceId: String): String? {
+        val url = "$serverUrl/api/v1/key_attestation/challenge"
+        Log.d(TAG, "POST $url")
         val json = JSONObject().apply { put("device_id", deviceId) }
         val request = Request.Builder()
-            .url("$serverUrl/api/v1/key_attestation/challenge")
+            .url(url)
             .post(json.toString().toRequestBody("application/json".toMediaType()))
             .build()
 
@@ -485,8 +502,10 @@ class ProofSignClient(
                     put("request_signature", requestSignature)
                 }
 
+                val url = "$serverUrl/api/v1/c2pa/sign"
+                Log.d(TAG, "POST $url (counter=$counter)")
                 val request = Request.Builder()
-                    .url("$serverUrl/api/v1/c2pa/sign")
+                    .url(url)
                     .post(json.toString().toRequestBody("application/json".toMediaType()))
                     .addHeader("Content-Type", "application/json")
                     .addHeader("X-Device-Platform", "android")
