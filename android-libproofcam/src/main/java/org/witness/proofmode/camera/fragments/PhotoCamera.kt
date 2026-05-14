@@ -452,8 +452,8 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                     AnimatedVisibility(modifier = Modifier .constrainAs(galleryPreview) {
                         top.linkTo(captureButton.top)
                         bottom.linkTo(captureButton.bottom)
-                        start.linkTo(captureButton.end)
-                        end.linkTo(parent.end)
+                        end.linkTo(captureButton.start)
+                        start.linkTo(parent.start)
                     }, visible = countDownState == CountDownState.Idle || countDownState == CountDownState.Completed){
                         Box(
                             modifier = Modifier
@@ -476,7 +476,7 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                                     ItemPreview(modifier = Modifier
                                         .matchParentSize()
                                         .clickable {
-                                            onNavigateToPreview()
+                                            onClose()
                                         }, media = media)
                                 } else {
                                     Icon(
@@ -495,8 +495,8 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                         modifier = Modifier.constrainAs(cameraSwitcher) {
                             top.linkTo(captureButton.top)
                             bottom.linkTo(captureButton.bottom)
-                            end.linkTo(captureButton.start)
-                            start.linkTo(parent.start)
+                            start.linkTo(captureButton.end)
+                            end.linkTo(parent.end)
                         }, visible = countDownState == CountDownState.Idle || countDownState == CountDownState.Completed) {
                         IconButton(onClick = {
                             scope.launch {

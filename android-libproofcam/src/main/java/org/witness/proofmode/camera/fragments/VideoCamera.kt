@@ -435,7 +435,7 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                                             ItemPreview(modifier = Modifier
                                                 .matchParentSize()
                                                 .clickable {
-                                                    onNavigateToPreview()
+                                                    onClose()
                                                 }
                                                 , media = media )
                                         } else {
@@ -639,15 +639,15 @@ private fun portraitConstraints(): ConstraintSet {
         constrain(galleryPreview) {
             top.linkTo(recordButton.top)
             bottom.linkTo(recordButton.bottom)
-            start.linkTo(recordButton.end)
-            end.linkTo(parent.end)
+            end.linkTo(recordButton.start)
+            start.linkTo(parent.start)
         }
 
         constrain(cameraSwitcher) {
             top.linkTo(recordButton.top)
             bottom.linkTo(recordButton.bottom)
-            end.linkTo(recordButton.start)
-            start.linkTo(parent.start)
+            start.linkTo(recordButton.end)
+            end.linkTo(parent.end)
         }
 
         constrain(modeToggle) {
@@ -731,8 +731,8 @@ private fun landscapeConstraints(): ConstraintSet {
         }
 
         constrain(galleryPreview) {
-            top.linkTo(parent.top)
-            bottom.linkTo(recordButton.top)
+            top.linkTo(recordButton.bottom)
+            bottom.linkTo(bottomBg.bottom)
             start.linkTo(recordButton.start)
             end.linkTo(recordButton.end)
         }
@@ -744,8 +744,8 @@ private fun landscapeConstraints(): ConstraintSet {
         }
 
         constrain(cameraSwitcher) {
-            top.linkTo(recordButton.bottom)
-            bottom.linkTo(bottomBg.bottom)
+            top.linkTo(parent.top)
+            bottom.linkTo(recordButton.top)
             end.linkTo(recordButton.end)
             start.linkTo(recordButton.start)
         }
