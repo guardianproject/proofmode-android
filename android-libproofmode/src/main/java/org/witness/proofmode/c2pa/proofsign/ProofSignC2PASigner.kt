@@ -33,9 +33,10 @@ import java.util.concurrent.TimeUnit
 class ProofSignC2PASigner (
     private val context: Context,
     private val serverUrl: String,
+    private val timestampUrlOverride: String
 ) {
 
-    private val configurationURL: String = serverUrl.trimEnd('/') + BuildConfig.SIGNING_SERVER_ENDPOINT
+    private val configurationURL: String = serverUrl.trimEnd('/') + BuildConfig.API_ENDPOINT
 
     init {
         Timber.d("ProofSignC2PASigner: serverUrl=%s configurationURL=%s", serverUrl, configurationURL)
@@ -73,10 +74,15 @@ class ProofSignC2PASigner (
         val signingAlgorithm = mapAlgorithm(configuration.algorithm)
         val certificateChain = parseCertificateChain(configuration.certificate_chain)
 
+        var configTsaUrl = configuration.timestamp_url.takeIf { it.isNotEmpty() }
+        if (timestampUrlOverride.isNotEmpty())
+            configTsaUrl = timestampUrlOverride
+
+        timestampUrlOverride
         return Signer.withCallback(
             algorithm = signingAlgorithm,
             certificateChainPEM = certificateChain,
-            tsaURL = configuration.timestamp_url.takeIf { it.isNotEmpty() },
+            tsaURL = configTsaUrl,
         ) { data -> signData(data) }
     }
 

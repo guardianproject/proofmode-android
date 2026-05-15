@@ -126,10 +126,13 @@ class ProofModeApp : Application(), Configuration.Provider {
             ProofMode.PREF_OPTION_PROOFSIGN_FORCE_KEY_ATTESTATION,
             ProofMode.PREF_OPTION_PROOFSIGN_FORCE_KEY_ATTESTATION_DEFAULT,
         )
-        val serverUrl = prefs.getString(
+        var serverUrl = prefs.getString(
             ProofMode.PREF_OPTION_PROOFSIGN_SERVER,
-            BuildConfig.SIGNING_SERVER,
+            "",
         ).orEmpty().trim().trimEnd('/')
+        
+        if (serverUrl.isEmpty())
+            serverUrl = BuildConfig.SIGNING_SERVER
 
         val proofSignClient = ProofSignClient(
             context = applicationContext,
