@@ -20,6 +20,7 @@ import org.witness.proofmode.crypto.HashUtils;
 
 import java.io.FileNotFoundException;
 import java.io.UnsupportedEncodingException;
+import java.lang.ref.WeakReference;
 import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -197,29 +198,25 @@ public class VerifyProofActivity extends AppCompatActivity {
 
     private static class VerifyProofTasks extends AsyncTask<Uri, Void, Boolean> {
 
-        private final VerifyProofActivity activity;
+        private final WeakReference<VerifyProofActivity> activityRef;
 
         VerifyProofTasks(VerifyProofActivity context) {
             super();
-            activity = context;
+            activityRef = new WeakReference<>(context);
         }
 
         protected Boolean doInBackground (Uri... params) {
 
             Uri proofZipUri = params[0];
+            VerifyProofActivity activity = activityRef.get();
 
-            if (proofZipUri != null)
+            if (proofZipUri != null && activity != null)
             {
-                //mediaUri = activity.cleanUri (mediaUri);
-
                 try {
-                   // InputStream is = activity.getContentResolver().openInputStream(proofZipUri);
-                    return ProofMode.verifyProofZip(activity, proofZipUri);
+                    return ProofMode.verifyProofZip(activity.getApplicationContext(), proofZipUri);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-
-
             }
 
             return false;
@@ -228,14 +225,17 @@ public class VerifyProofActivity extends AppCompatActivity {
 
         protected void onPostExecute(Boolean verified) {
 
+            VerifyProofActivity activity = activityRef.get();
+            if (activity == null || activity.isFinishing() || activity.isDestroyed()) {
+                return;
+            }
+
             if (verified)
             {
-                Toast.makeText(activity,activity.getString(R.string.proof_integrity_verified_success),Toast.LENGTH_LONG).show();
-
+                Toast.makeText(activity, activity.getString(R.string.proof_integrity_verified_success), Toast.LENGTH_LONG).show();
             }
             else {
-                Toast.makeText(activity, activity.getString(R.string.proof_integrity_verified_failed),Toast.LENGTH_LONG).show();
-
+                Toast.makeText(activity, activity.getString(R.string.proof_integrity_verified_failed), Toast.LENGTH_LONG).show();
             }
 
             activity.finish();
