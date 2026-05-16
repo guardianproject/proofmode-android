@@ -85,7 +85,10 @@ object SnapshotStateListOfCameraItemsSerializer :
 class SnapshotStateListSerializer<T>(private val dataSerializer: KSerializer<T>) : KSerializer<SnapshotStateList<T>> {
     override val descriptor: SerialDescriptor = dataSerializer.descriptor
     override fun serialize(encoder: Encoder, value: SnapshotStateList<T>) {
-        ListSerializer(dataSerializer).serialize(encoder, value as List<T>)
+        // Take a defensive copy so concurrent mutation on the main thread
+        // (e.g. another photo capture appending items while Room serializes
+        // on a background thread) can't trigger ConcurrentModificationException.
+        ListSerializer(dataSerializer).serialize(encoder, value.toList())
     }
     override fun deserialize(decoder: Decoder): SnapshotStateList<T> {
         val list = mutableStateListOf<T>()
