@@ -110,3 +110,13 @@
 -keep class * implements android.os.Parcelable {
   public static final android.os.Parcelable$Creator *;
 }
+
+# Rename proofsign internals — do NOT keep these names
+-keeppackagenames !org.witness.proofmode.c2pa.proofsign.**
+-repackageclasses 'pm'
+
+# Keep only what's needed for reflection-safe APIs
+-keep class org.witness.proofmode.c2pa.proofsign.Result { *; }
+
+# Obfuscate everything in proofsign package
+-keep,allowobfuscation class org.witness.proofmode.c2pa.proofsign.** { *; }
