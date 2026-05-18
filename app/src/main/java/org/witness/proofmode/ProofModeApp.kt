@@ -233,7 +233,8 @@ class ProofModeApp : Application(), Configuration.Provider {
 
     fun init(context: Context) {
 
-        Timber.plant(Timber.DebugTree())
+        if (BuildConfig.DEBUG)
+            Timber.plant(Timber.DebugTree())
 
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
         if (prefs.getBoolean(ProofMode.PREFS_DOPROOF, false)) {
