@@ -8,6 +8,7 @@ import android.os.Looper
 import android.preference.PreferenceManager
 import android.widget.Toast
 import androidx.work.Configuration
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -19,6 +20,7 @@ import org.bouncycastle.openpgp.PGPException
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
 import org.witness.proofmode.c2pa.C2PAManager
+import org.witness.proofmode.c2pa.DeviceIntegritySupport
 import org.witness.proofmode.c2pa.PreferencesManager
 import org.witness.proofmode.c2pa.proofsign.AttestationMode
 import org.witness.proofmode.c2pa.proofsign.ProofSignClient
@@ -114,6 +116,8 @@ class ProofModeApp : Application(), Configuration.Provider {
 
         val conformant = checkC2PAConformance()
 
+
+
         if (conformant)
             initProofSignClient()
 
@@ -142,11 +146,18 @@ class ProofModeApp : Application(), Configuration.Provider {
         )
 
         if (!proofSignClient.isVerificationValid()) {
-            Timber.d("Need to reverify with ProofSign server")
-            proofSignClient.verifyDevice { result ->
-                when (result) {
-                    is Result.Success -> Timber.d("ProofSign: VERIFIED (${result.data.verdict})")
-                    is Result.Failure -> Timber.d("ProofSign: FAILURE (${result.error})")
+
+            if (DeviceIntegritySupport().detectThreats(this))
+            {
+                Timber.w("Cannot reverify due to suspicious device state (USB, Developer mode, Frida)")
+            }
+            else {
+                Timber.w("Need to reverify with ProofSign server")
+                proofSignClient.verifyDevice { result ->
+                    when (result) {
+                        is Result.Success -> Timber.d("ProofSign: VERIFIED (${result.data.verdict})")
+                        is Result.Failure -> Timber.d("ProofSign: FAILURE (${result.error})")
+                    }
                 }
             }
         } else {

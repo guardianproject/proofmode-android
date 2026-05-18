@@ -54,6 +54,8 @@ import java.util.Date
 import java.util.UUID
 import androidx.core.content.edit
 import androidx.core.net.toUri
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import org.witness.proofmode.c2pa.DeviceIntegritySupport
 import org.witness.proofmode.databinding.ActivityFilebaseSettingsBinding
 
 class MainActivity : AppCompatActivity(),
@@ -118,6 +120,30 @@ class MainActivity : AppCompatActivity(),
 
         }
 
+        var dIntegrity = DeviceIntegritySupport()
+
+        if (dIntegrity.detectThreats(this))
+        {
+            //   Toast.makeText(this,"Developer mode is enabled",Toast.LENGTH_LONG).show()
+            showDialog("Warning","You have settings enabled (USB connected, Developer Mode) that could be used to compromise this device. This will degrade the trust of your signing.")
+
+        }
+
+    }
+
+
+    private fun showDialog (title: String, message: String) {
+
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setTitle(title)
+            .setMessage(message)
+            .setPositiveButton(android.R.string.ok) { dialog, which ->
+                // Handle Save
+
+            }
+            .create()
+
+        dialog.show()
     }
 
     private fun initUI () {
