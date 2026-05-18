@@ -109,10 +109,20 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </receiver>
+        <!--
+            MediaWatcher must NOT be exported. Its onReceive() reads the
+            intent's data / EXTRA_STREAM URI and calls ingestMedia(), which
+            hashes the referenced media and signs it with the user's PGP key.
+            Exporting it would let any installed app cause the user's identity
+            to vouch for attacker-supplied content. The UMS_CONNECTED /
+            UMS_DISCONNECTED actions are legacy system broadcasts that have
+            been effectively dead since pre-Kitkat; the in-app camera path
+            calls MediaWatcher.ingestMedia() directly, not via broadcast.
+        -->
         <receiver
             android:name=".service.MediaWatcher"
             android:enabled="true"
-            android:exported="true">
+            android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.UMS_CONNECTED" />
                 <action android:name="android.intent.action.UMS_DISCONNECTED" />
@@ -197,10 +207,18 @@
             android:exported="true"
             android:permission="android.permission.BIND_JOB_SERVICE" />
 
+        <!--
+            CameraEventReceiver hooks the long-deprecated NEW_PICTURE/NEW_VIDEO
+            broadcasts (removed from AOSP camera apps in API 24+, app minSdk
+            is 28). Its onReceive() is effectively a no-op today, but if it
+            were ever re-enabled an exported version would let other apps
+            trigger proof generation against arbitrary URIs. Keep it
+            unexported so a future un-comment doesn't reopen that surface.
+        -->
         <receiver
             android:name=".service.CameraEventReceiver"
             android:enabled="true"
-            android:exported="true">
+            android:exported="false">
             <intent-filter android:priority="10000">
                 <action android:name="com.android.camera.NEW_PICTURE" />
 
@@ -216,10 +234,18 @@
                 <data android:mimeType="video/*" />
             </intent-filter>
         </receiver>
+        <!--
+            ProofEventReceiver listens for PROOF_GENERATED[_IMPORT] and adds
+            entries to the in-app Activity feed. The sole producer is
+            MediaWatcher.sendBroadcast(), which targets us via setPackage().
+            Exported, it lets another app forge "proof generated" entries
+            with attacker-supplied URI + hash strings, which become phishing
+            anchors in the user's own history view.
+        -->
         <receiver
             android:name=".org.witness.proofmode.util.ProofEventReceiver"
             android:enabled="true"
-            android:exported="true">
+            android:exported="false">
             <intent-filter android:priority="10000">
                 <action android:name="org.witness.proofmode.PROOF_GENERATED" />
             </intent-filter>

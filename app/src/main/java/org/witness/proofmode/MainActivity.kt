@@ -88,6 +88,11 @@ class MainActivity : AppCompatActivity(),
         if (isOn)
             (application as ProofModeApp).init(this)
 
+        // All three of these custom actions are only ever broadcast by
+        // in-process senders (MediaWatcher.sendBroadcast with setPackage,
+        // ShareProofActivity's PendingIntent), so the receiver must be
+        // NOT_EXPORTED. Exported, any installed app could forge entries
+        // into the user's activity feed or spoof "proof generated" events.
         val intentFilter = IntentFilter("org.witness.proofmode.NEW_MEDIA")
         intentFilter.apply {
             addDataType("image/*")
@@ -96,17 +101,17 @@ class MainActivity : AppCompatActivity(),
 
         ContextCompat.registerReceiver(this,
             eventReceiver, intentFilter,
-            ContextCompat.RECEIVER_EXPORTED
+            ContextCompat.RECEIVER_NOT_EXPORTED
         )
 
         ContextCompat.registerReceiver(this,
             eventReceiver, IntentFilter(EVENT_PROOF_GENERATED),
-            ContextCompat.RECEIVER_EXPORTED
+            ContextCompat.RECEIVER_NOT_EXPORTED
         )
 
         ContextCompat.registerReceiver(this,
             eventReceiver, IntentFilter(INTENT_ACTIVITY_ITEMS_SHARED),
-            ContextCompat.RECEIVER_EXPORTED
+            ContextCompat.RECEIVER_NOT_EXPORTED
         )
 
         initUI()
