@@ -28,13 +28,6 @@
             app:defaultValue="https://tsa.trufo.ai/"
             app:dialogTitle="@string/settings_signing_tsa" />
 
-        <SwitchPreferenceCompat
-            app:key="proofSignForceKeyAttestation"
-            app:title="Force Key Attestation"
-            app:summaryOn="Always use Android hardware key attestation"
-            app:summaryOff="Use Play Integrity when available"
-            app:defaultValue="false" />
-
     </PreferenceCategory>
 
     <PreferenceCategory app:title="Identity Signing">

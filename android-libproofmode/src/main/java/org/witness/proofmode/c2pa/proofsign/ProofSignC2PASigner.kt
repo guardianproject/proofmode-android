@@ -2,7 +2,6 @@ package org.witness.proofmode.c2pa.proofsign
 
 
 import android.content.Context
-import android.preference.PreferenceManager
 import android.util.Base64
 import kotlinx.serialization.Serializable
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
@@ -11,7 +10,6 @@ import okhttp3.Request
 import org.contentauth.c2pa.C2PAJson
 import org.contentauth.c2pa.Signer
 import org.contentauth.c2pa.SigningAlgorithm
-import org.witness.proofmode.ProofMode
 import org.witness.proofmode.library.BuildConfig
 import timber.log.Timber
 import java.util.concurrent.TimeUnit
@@ -45,7 +43,6 @@ class ProofSignC2PASigner (
         context = context,
         serverUrl = serverUrl.trimEnd('/'),
         cloudProjectNumber = BuildConfig.CLOUD_INTEGRITY_PROJECT_NUMBER,
-        mode = resolveAttestationMode(),
     )
 
     private val httpClient =
@@ -54,15 +51,6 @@ class ProofSignC2PASigner (
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
             .build()
-
-    private fun resolveAttestationMode(): AttestationMode {
-        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-        val force = prefs.getBoolean(
-            ProofMode.PREF_OPTION_PROOFSIGN_FORCE_KEY_ATTESTATION,
-            ProofMode.PREF_OPTION_PROOFSIGN_FORCE_KEY_ATTESTATION_DEFAULT,
-        )
-        return if (force) AttestationMode.KEY_ATTESTATION else AttestationMode.AUTO
-    }
 
     /**
      * Creates a Signer instance configured for remote signing. This method fetches the
@@ -117,7 +105,7 @@ class ProofSignC2PASigner (
     }
 
     private fun signData(data: ByteArray): ByteArray {
-        if (!proofSignClient.isVerificationValid()) {
+        if (!proofSignClient.isDeviceRegistered()) {
             val verifyLatch = java.util.concurrent.CountDownLatch(1)
             var verifyError: String? = null
 

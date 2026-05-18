@@ -3,18 +3,24 @@ package org.witness.proofmode.c2pa.proofsign
 /**
  * ProofSign Android Client.
  *
- * Two device-auth registration paths, both backed by an EC P-256 keypair held in
- * the Android Keystore under `proofsign_device_key`. Once registered, per-request
- * signing is identical: each /api/v1/c2pa/sign call carries a signature over
- * "deviceId|counter|timestamp|claim" using the device key.
+ * Remote signing requires Google Play Integrity. The device registers a
+ * hardware key-attested EC P-256 keypair (Android Keystore alias
+ * `proofsign_device_key`) once with the server via Android key attestation;
+ * thereafter every /api/v1/c2pa/sign call carries:
  *
- *  - Play Integrity (default): registers the device key via Google Play
- *    Integrity. Requires the Play Store on device.
+ *   - a device-key signature over the ASCII string
+ *     `device_id|timestamp|claimBinding`, attributing the sign to the
+ *     registered key, and
+ *   - a fresh Standard Play Integrity token whose requestHash is the same
+ *     `claimBinding`.
  *
- *  - Key Attestation (fallback / forced): registers the device key by
- *    presenting an Android hardware key attestation cert chain. Used when
- *    Play Integrity is unavailable (e.g. de-Googled devices) or when the
- *    caller passes mode = AttestationMode.KEY_ATTESTATION.
+ * `claimBinding` is the single canonical claim digest shared by both bindings
+ * (and, server-side, by the iOS App Attest path): `Base64Std(SHA-256(
+ * base64Decode(claim)))` — over the decoded claim bytes. Computed once and
+ * reused, so there is no string-vs-decoded asymmetry (GP-132/GP-133).
+ *
+ * Devices without Play Services never reach this client — the caller falls
+ * back to local signing; see [ProofSignClient.isPlayIntegrityAvailable].
  */
 
 import android.content.Context
@@ -23,14 +29,16 @@ import android.content.pm.PackageManager
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Log
-import com.google.android.play.core.integrity.IntegrityManager
 import com.google.android.play.core.integrity.IntegrityManagerFactory
-import com.google.android.play.core.integrity.IntegrityTokenRequest
-import com.google.android.play.core.integrity.IntegrityTokenResponse
+import com.google.android.play.core.integrity.StandardIntegrityManager
+import com.google.android.play.core.integrity.StandardIntegrityManager.PrepareIntegrityTokenRequest
+import com.google.android.play.core.integrity.StandardIntegrityManager.StandardIntegrityToken
+import com.google.android.play.core.integrity.StandardIntegrityManager.StandardIntegrityTokenProvider
+import com.google.android.play.core.integrity.StandardIntegrityManager.StandardIntegrityTokenRequest
 import java.io.IOException
-import java.security.KeyPair
 import java.security.KeyPairGenerator
 import java.security.KeyStore
+import java.security.MessageDigest
 import java.security.PrivateKey
 import java.security.Signature
 import java.security.cert.X509Certificate
@@ -38,10 +46,13 @@ import java.security.spec.ECGenParameterSpec
 import java.util.UUID
 import java.util.Base64
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -55,20 +66,12 @@ sealed class Result<out T> {
     data class Failure(val error: String, val exception: Exception? = null) : Result<Nothing>()
 }
 
-enum class AttestationMode {
-    /** Decide automatically: Play Integrity if available, otherwise Key Attestation. */
-    AUTO,
-    /** Force the Key Attestation path even when Play Integrity is available (for testing). */
-    KEY_ATTESTATION,
-}
-
 data class VerificationResult(val deviceId: String, val verdict: String)
 
 class ProofSignClient(
     private val context: Context,
     private val serverUrl: String,
     private val cloudProjectNumber: String,
-    private val mode: AttestationMode = AttestationMode.AUTO,
 ) {
     private val client =
         OkHttpClient.Builder()
@@ -80,45 +83,56 @@ class ProofSignClient(
     private val prefs: SharedPreferences =
         context.getSharedPreferences("proofsign_prefs", Context.MODE_PRIVATE)
 
-    private val integrityManager: IntegrityManager = IntegrityManagerFactory.create(context)
+    private val standardIntegrityManager: StandardIntegrityManager =
+        IntegrityManagerFactory.createStandard(context)
+
+    /** Cached, warmed Standard Play Integrity provider. Dropped on request failure. */
+    @Volatile
+    private var tokenProvider: StandardIntegrityTokenProvider? = null
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     companion object {
         private const val TAG = "ProofSignClient"
         private const val PREF_DEVICE_ID = "device_id"
-        private const val PREF_VERIFICATION_EXPIRES = "verification_expires"
-        private const val PREF_ASSERTION_COUNTER = "assertion_counter"
+        private const val PREF_DEVICE_REGISTERED = "device_registered"
         private const val PREF_LAST_SERVER_URL = "last_server_url"
-        private const val VERIFICATION_VALIDITY_DAYS = 7
         private const val KEYSTORE_ALIAS = "proofsign_device_key"
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
         private const val PLAY_STORE_PACKAGE = "com.android.vending"
 
-        // Process-wide lock for the assertion counter. Each /c2pa/sign uses a
-        // fresh ProofSignClient instance (see C2PAManager.createProofSignSinger),
-        // so the lock must live on the companion object, not on `this`.
-        private val counterLock = Any()
+        /**
+         * Whether this device can use Play Integrity (Play Store present).
+         * Remote signing requires this; callers MUST fall back to local
+         * signing when it returns false (no-Play devices never contact the
+         * ProofSign server).
+         */
+        fun isPlayIntegrityAvailable(context: Context): Boolean =
+            try {
+                context.packageManager.getPackageInfo(PLAY_STORE_PACKAGE, 0)
+                true
+            } catch (_: PackageManager.NameNotFoundException) {
+                false
+            }
     }
 
     init {
-        Log.d(TAG, "ProofSignClient init: serverUrl=$serverUrl mode=$mode")
+        Log.d(TAG, "ProofSignClient init: serverUrl=$serverUrl")
         invalidateIfServerChanged()
     }
 
     /**
-     * If the configured server URL has changed since the last registration,
-     * drop the cached verification + assertion counter so the next signing
-     * attempt re-registers this device against the new server.
+     * If the configured server URL changed since the last registration, drop
+     * the cached registration so the next signing attempt re-registers this
+     * device against the new server.
      */
     private fun invalidateIfServerChanged() {
         val lastUrl = prefs.getString(PREF_LAST_SERVER_URL, null)
         if (lastUrl != serverUrl) {
-            Log.d(TAG, "Server URL changed (was=$lastUrl now=$serverUrl) — invalidating cached verification")
+            Log.d(TAG, "Server URL changed (was=$lastUrl now=$serverUrl) — invalidating registration")
             prefs.edit()
                 .putString(PREF_LAST_SERVER_URL, serverUrl)
-                .remove(PREF_VERIFICATION_EXPIRES)
-                .putLong(PREF_ASSERTION_COUNTER, 0)
+                .putBoolean(PREF_DEVICE_REGISTERED, false)
                 .apply()
         }
     }
@@ -132,43 +146,14 @@ class ProofSignClient(
         return deviceId
     }
 
-    fun isVerificationValid(): Boolean {
-        val expiresAt = prefs.getLong(PREF_VERIFICATION_EXPIRES, 0)
-        return System.currentTimeMillis() < expiresAt
+    /** Whether this device has completed key-attestation registration with the current server. */
+    fun isDeviceRegistered(): Boolean = prefs.getBoolean(PREF_DEVICE_REGISTERED, false)
+
+    private fun persistRegistration() {
+        prefs.edit().putBoolean(PREF_DEVICE_REGISTERED, true).apply()
     }
 
     // region: device keypair
-
-    /**
-     * Returns the existing device keypair, generating a non-attested one if none exists.
-     * The Play Integrity path uses this directly. The Key Attestation path replaces the
-     * key with an attested one via [generateAttestedKeyPair].
-     */
-    private fun getOrCreateKeyPair(): KeyPair {
-        val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
-        keyStore.load(null)
-
-        if (keyStore.containsAlias(KEYSTORE_ALIAS)) {
-            val privateKey = keyStore.getKey(KEYSTORE_ALIAS, null) as PrivateKey
-            val publicKey = keyStore.getCertificate(KEYSTORE_ALIAS).publicKey
-            return KeyPair(publicKey, privateKey)
-        }
-
-        val keyPairGenerator = KeyPairGenerator.getInstance(
-            KeyProperties.KEY_ALGORITHM_EC,
-            ANDROID_KEYSTORE,
-        )
-        val spec = KeyGenParameterSpec.Builder(
-            KEYSTORE_ALIAS,
-            KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY,
-        )
-            .setDigests(KeyProperties.DIGEST_SHA256)
-            .setAlgorithmParameterSpec(ECGenParameterSpec("secp256r1"))
-            .build()
-
-        keyPairGenerator.initialize(spec)
-        return keyPairGenerator.generateKeyPair()
-    }
 
     /**
      * Replace the device keypair with one bound to [challenge], returning its
@@ -201,11 +186,6 @@ class ProofSignClient(
         return chain.map { it as X509Certificate }
     }
 
-    private fun getPublicKeyBase64(): String {
-        val keyPair = getOrCreateKeyPair()
-        return Base64.getEncoder().encodeToString(keyPair.public.encoded)
-    }
-
     private fun signWithDeviceKey(data: ByteArray): String {
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
         keyStore.load(null)
@@ -217,169 +197,17 @@ class ProofSignClient(
         return Base64.getEncoder().encodeToString(signature.sign())
     }
 
-    private fun getAndIncrementCounter(): Long = synchronized(counterLock) {
-        val counter = prefs.getLong(PREF_ASSERTION_COUNTER, 0)
-        // commit() persists synchronously so two concurrent calls can't both
-        // observe the same value before the first write lands, and the counter
-        // survives process death (preventing accidental reuse).
-        prefs.edit().putLong(PREF_ASSERTION_COUNTER, counter + 1).commit()
-        counter
-    }
-
     // endregion
 
-    // region: verification
+    // region: registration (key attestation)
 
     /**
-     * Register this device with the server. Picks the path according to [mode]
-     * and Play Store availability.
+     * Register this device with the server by presenting an Android hardware
+     * key attestation certificate chain. This is the universal identity
+     * bootstrap and only ever runs on the remote path (Play Integrity-capable
+     * devices — gated by the caller via [isPlayIntegrityAvailable]).
      */
     fun verifyDevice(callback: (Result<VerificationResult>) -> Unit) {
-        val useKeyAttestation =
-            mode == AttestationMode.KEY_ATTESTATION || !isPlayIntegrityAvailable()
-
-        if (useKeyAttestation) {
-            verifyViaKeyAttestation(callback)
-        } else {
-            verifyViaPlayIntegrity(callback)
-        }
-    }
-
-    private fun isPlayIntegrityAvailable(): Boolean {
-        return try {
-            context.packageManager.getPackageInfo(PLAY_STORE_PACKAGE, 0)
-            true
-        } catch (_: PackageManager.NameNotFoundException) {
-            false
-        }
-    }
-
-    // region: play integrity path
-
-    private fun verifyViaPlayIntegrity(callback: (Result<VerificationResult>) -> Unit) {
-        scope.launch {
-            try {
-                val deviceId = getDeviceId()
-                val nonce = requestPlayIntegrityChallenge(deviceId)
-                    ?: return@launch dispatch(
-                        callback,
-                        Result.Failure("Failed to obtain Play Integrity challenge"),
-                    )
-
-                requestIntegrityToken(nonce) { tokenResult ->
-                    when (tokenResult) {
-                        is Result.Success -> {
-                            scope.launch {
-                                postPlayIntegrityVerification(deviceId, tokenResult.data, nonce, callback)
-                            }
-                        }
-                        is Result.Failure -> dispatch(callback, tokenResult)
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Play Integrity verification failed", e)
-                dispatch(callback, Result.Failure("Verification failed: ${e.message}", e))
-            }
-        }
-    }
-
-    private fun requestPlayIntegrityChallenge(deviceId: String): String? {
-        val url = "$serverUrl/api/v1/play_integrity/challenge"
-        Log.d(TAG, "POST $url")
-        val json = JSONObject().apply { put("device_id", deviceId) }
-        val request = Request.Builder()
-            .url(url)
-            .post(json.toString().toRequestBody("application/json".toMediaType()))
-            .build()
-
-        client.newCall(request).execute().use { response ->
-            val body = response.body?.string().orEmpty()
-            if (!response.isSuccessful) {
-                Log.e(TAG, "Play Integrity challenge request failed (${response.code}): $body")
-                return null
-            }
-            return JSONObject(body).optString("challenge").takeIf { it.isNotEmpty() }
-        }
-    }
-
-    private fun requestIntegrityToken(nonce: String, callback: (Result<String>) -> Unit) {
-        val request = IntegrityTokenRequest.builder()
-            .setCloudProjectNumber(cloudProjectNumber.toLong())
-            .setNonce(nonce)
-            .build()
-
-        integrityManager.requestIntegrityToken(request)
-            .addOnSuccessListener { response: IntegrityTokenResponse ->
-                callback(Result.Success(response.token()))
-            }
-            .addOnFailureListener { exception ->
-                Log.e(TAG, "Failed to get integrity token", exception)
-                callback(
-                    Result.Failure(
-                        "Failed to get integrity token: ${exception.message}",
-                        exception as? Exception,
-                    ),
-                )
-            }
-    }
-
-    private suspend fun postPlayIntegrityVerification(
-        deviceId: String,
-        token: String,
-        nonce: String,
-        callback: (Result<VerificationResult>) -> Unit,
-    ) {
-        try {
-            val publicKey = getPublicKeyBase64()
-            val json = JSONObject().apply {
-                put("device_id", deviceId)
-                put("integrity_token", token)
-                put("nonce", nonce)
-                put("package_name", context.packageName)
-                put("public_key", publicKey)
-            }
-
-            val url = "$serverUrl/api/v1/play_integrity/verify"
-            Log.d(TAG, "POST $url")
-            val request = Request.Builder()
-                .url(url)
-                .post(json.toString().toRequestBody("application/json".toMediaType()))
-                .build()
-
-            client.newCall(request).execute().use { response ->
-                val body = response.body?.string().orEmpty()
-                if (!response.isSuccessful) {
-                    dispatch(callback, Result.Failure(parseErrorMessage(body, response.code)))
-                    return
-                }
-
-                val responseJson = JSONObject(body)
-                val deviceVerdict = responseJson.optJSONObject("device_integrity")
-                    ?.optJSONArray("deviceRecognitionVerdict")
-                    ?.let { arr -> (0 until arr.length()).map(arr::getString).joinToString(", ") }
-                    ?: "UNKNOWN"
-                val appVerdict = responseJson.optJSONObject("app_integrity")
-                    ?.optString("appRecognitionVerdict", "UNKNOWN")
-                    ?: "UNKNOWN"
-                val verdict = "Device: $deviceVerdict, App: $appVerdict"
-
-                persistVerification()
-                dispatch(callback, Result.Success(VerificationResult(deviceId, verdict)))
-            }
-        } catch (e: IOException) {
-            Log.e(TAG, "Network error during Play Integrity verification", e)
-            dispatch(callback, Result.Failure("Network error: ${e.message}", e))
-        } catch (e: Exception) {
-            Log.e(TAG, "Play Integrity server verification failed", e)
-            dispatch(callback, Result.Failure("Server verification failed: ${e.message}", e))
-        }
-    }
-
-    // endregion
-
-    // region: key attestation path
-
-    private fun verifyViaKeyAttestation(callback: (Result<VerificationResult>) -> Unit) {
         scope.launch {
             try {
                 val deviceId = getDeviceId()
@@ -390,9 +218,7 @@ class ProofSignClient(
                     )
 
                 val chain = generateAttestedKeyPair(challenge.toByteArray())
-                val chainBase64 = chain.map {
-                    Base64.getEncoder().encodeToString(it.encoded)
-                }
+                val chainBase64 = chain.map { Base64.getEncoder().encodeToString(it.encoded) }
 
                 val json = JSONObject().apply {
                     put("device_id", deviceId)
@@ -417,9 +243,10 @@ class ProofSignClient(
                     val responseJson = JSONObject(body)
                     val securityLevel = responseJson.optString("security_level", "UNKNOWN")
                     val osVersion = responseJson.optString("os_version", "")
-                    val verdict = "KeyAttestation: $securityLevel${if (osVersion.isNotEmpty()) ", OS: $osVersion" else ""}"
+                    val verdict = "KeyAttestation: $securityLevel" +
+                        if (osVersion.isNotEmpty()) ", OS: $osVersion" else ""
 
-                    persistVerification()
+                    persistRegistration()
                     dispatch(callback, Result.Success(VerificationResult(deviceId, verdict)))
                 }
             } catch (e: IOException) {
@@ -453,57 +280,131 @@ class ProofSignClient(
 
     // endregion
 
-    private fun persistVerification() {
-        val expiresAt = System.currentTimeMillis() + VERIFICATION_VALIDITY_DAYS * 24L * 60L * 60L * 1000L
-        prefs.edit().putLong(PREF_VERIFICATION_EXPIRES, expiresAt).apply()
+    // region: standard play integrity
+
+    /**
+     * Returns a cached [StandardIntegrityTokenProvider], preparing one if
+     * needed. Google recommends keeping the provider warm and refreshing it
+     * on failure (see [requestIntegrityToken]).
+     */
+    private suspend fun getTokenProvider(): StandardIntegrityTokenProvider {
+        tokenProvider?.let { return it }
+        return suspendCancellableCoroutine { cont ->
+            standardIntegrityManager.prepareIntegrityToken(
+                PrepareIntegrityTokenRequest.builder()
+                    .setCloudProjectNumber(cloudProjectNumber.toLong())
+                    .build(),
+            )
+                .addOnSuccessListener { provider ->
+                    tokenProvider = provider
+                    cont.resume(provider)
+                }
+                .addOnFailureListener { e ->
+                    cont.resumeWithException(e)
+                }
+        }
     }
+
+    /**
+     * Requests a Standard Play Integrity token whose requestHash binds the
+     * verdict to [requestHash]. On failure the cached provider is dropped so
+     * the next attempt re-prepares it.
+     */
+    private suspend fun requestIntegrityToken(requestHash: String): String {
+        val provider = getTokenProvider()
+        return try {
+            suspendCancellableCoroutine { cont ->
+                provider.request(
+                    StandardIntegrityTokenRequest.builder()
+                        .setRequestHash(requestHash)
+                        .build(),
+                )
+                    .addOnSuccessListener { token: StandardIntegrityToken ->
+                        cont.resume(token.token())
+                    }
+                    .addOnFailureListener { e ->
+                        cont.resumeWithException(e)
+                    }
+            }
+        } catch (e: Exception) {
+            tokenProvider = null
+            throw e
+        }
+    }
+
+    /**
+     * Standard padded Base64 of SHA-256([bytes]). Used for the Standard Play
+     * Integrity requestHash, which the server recomputes over the DECODED
+     * claim bytes (`base64Decode(claim)`) and compares by exact string match,
+     * so this MUST be the standard alphabet with `=` padding.
+     */
+    private fun sha256Base64(bytes: ByteArray): String =
+        Base64.getEncoder().encodeToString(
+            MessageDigest.getInstance("SHA-256").digest(bytes),
+        )
 
     // endregion
 
     // region: signing
 
     /**
-     * Sign a C2PA claim using the device's registered keypair.
+     * Sign a C2PA claim using the device's registered key plus a fresh,
+     * claim-bound Standard Play Integrity token.
      *
-     * If the server responds 428 (random integrity re-challenge — Play Integrity
-     * devices only), re-runs [verifyDevice] once and retries.
+     * Requires [isDeviceRegistered]; the caller must have completed
+     * [verifyDevice] first. Posts `claim`, `device_id`, `timestamp` (epoch
+     * millis, required for server freshness + part of the signed payload),
+     * the device-key signature over `device_id|timestamp|claimBinding`, and a
+     * Standard Play Integrity token whose requestHash is that same
+     * `claimBinding` (= `Base64(SHA-256(base64Decode(claim)))`). The server
+     * recomputes the one binding and rejects on any mismatch.
      */
     fun signC2PAClaimWithDeviceAuth(
         claim: String,
         callback: (Result<C2PABearerSignature>) -> Unit,
     ) {
-        signC2PAClaimWithDeviceAuth(claim, isRetry = false, callback = callback)
-    }
-
-    private fun signC2PAClaimWithDeviceAuth(
-        claim: String,
-        isRetry: Boolean,
-        callback: (Result<C2PABearerSignature>) -> Unit,
-    ) {
         scope.launch {
             try {
-                if (!isVerificationValid()) {
-                    dispatch(callback, Result.Failure("Device verification expired. Call verifyDevice() first"))
+                if (!isDeviceRegistered()) {
+                    dispatch(callback, Result.Failure("Device not registered. Call verifyDevice() first"))
                     return@launch
                 }
 
                 val deviceId = getDeviceId()
-                val counter = getAndIncrementCounter()
                 val timestamp = System.currentTimeMillis()
-                val dataToSign = "$deviceId|$counter|$timestamp|$claim"
-                val requestSignature = signWithDeviceKey(dataToSign.toByteArray())
+                // One canonical claim binding, shared by the device signature
+                // and the Standard token requestHash (GP-132/GP-133): the
+                // server's `claim_binding(binding_bytes)` =
+                // Base64Std(SHA-256(base64Decode(claim))).
+                val claimBinding = sha256Base64(Base64.getDecoder().decode(claim))
+                // Device signature is over device_id|timestamp|claimBinding
+                // (proofmode sign::play_integrity::sign_device_request, post
+                // GP-132 — the claim component is the canonical binding, not
+                // the raw base64 claim string).
+                val deviceSignature = signWithDeviceKey("$deviceId|$timestamp|$claimBinding".toByteArray())
+                val requestHash = claimBinding
+
+                val integrityToken = try {
+                    requestIntegrityToken(requestHash)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to get integrity token", e)
+                    dispatch(callback, Result.Failure("Failed to get integrity token: ${e.message}", e))
+                    return@launch
+                }
 
                 val json = JSONObject().apply {
                     put("claim", claim)
                     put("platform", "android")
-                    put("token", deviceId)
-                    put("counter", counter)
+                    put("device_id", deviceId)
                     put("timestamp", timestamp)
-                    put("request_signature", requestSignature)
+                    // Server's canonical field is `request_signature`;
+                    // `device_signature` is accepted as a serde alias.
+                    put("device_signature", deviceSignature)
+                    put("integrity_token", integrityToken)
                 }
 
                 val url = "$serverUrl/api/v1/c2pa/sign"
-                Log.d(TAG, "POST $url (counter=$counter)")
+                Log.d(TAG, "POST $url")
                 val request = Request.Builder()
                     .url(url)
                     .post(json.toString().toRequestBody("application/json".toMediaType()))
@@ -513,32 +414,11 @@ class ProofSignClient(
 
                 client.newCall(request).execute().use { response ->
                     val body = response.body?.string().orEmpty()
-                    when {
-                        response.isSuccessful -> {
-                            val signature = C2PABearerSignature(JSONObject(body).getString("signature"))
-                            dispatch(callback, Result.Success(signature))
-                        }
-
-                        response.code == 428 && !isRetry -> {
-                            Log.i(TAG, "Server requested fresh integrity verification")
-                            verifyDevice { verifyResult ->
-                                when (verifyResult) {
-                                    is Result.Success ->
-                                        signC2PAClaimWithDeviceAuth(claim, isRetry = true, callback = callback)
-                                    is Result.Failure ->
-                                        dispatch(
-                                            callback,
-                                            Result.Failure("Integrity re-verification failed: ${verifyResult.error}"),
-                                        )
-                                }
-                            }
-                        }
-
-                        response.code == 428 && isRetry -> {
-                            dispatch(callback, Result.Failure("Device integrity verification failed"))
-                        }
-
-                        else -> dispatch(callback, Result.Failure(parseErrorMessage(body, response.code)))
+                    if (response.isSuccessful) {
+                        val signature = C2PABearerSignature(JSONObject(body).getString("signature"))
+                        dispatch(callback, Result.Success(signature))
+                    } else {
+                        dispatch(callback, Result.Failure(parseErrorMessage(body, response.code)))
                     }
                 }
             } catch (e: IOException) {
