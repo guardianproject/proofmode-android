@@ -1047,21 +1047,20 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
         hmProof[ProofModeV1Constants.SCREEN_SIZE] = DeviceInfo.getDeviceInch(context)
 
         if (showLocation) {
-            val gpsTracker = GPSTracker(context)
-
-            if (gpsTracker.canGetLocation()) {
-                var loc = gpsTracker.getLocation()
-
-                var waitIdx = 0
-                while (loc == null && waitIdx < 3) {
-                    waitIdx++
-                    try {
-                        Thread.sleep(500)
-                    } catch (e: Exception) {
-                    }
+            // Reuse the long-lived tracker started in ProofMode.startLocationListener
+            // so we can pick up callback-delivered fixes. The previous per-capture
+            // tracker had no listener registered, making the retry loop a no-op.
+            var loc = ProofMode.getLatestLocation(context)
+            var canGetLocation = loc != null
+            if (loc == null) {
+                val gpsTracker = GPSTracker(context)
+                canGetLocation = gpsTracker.canGetLocation()
+                if (canGetLocation) {
                     loc = gpsTracker.getLocation()
                 }
+            }
 
+            if (canGetLocation) {
                 if (loc != null) {
                     hmProof[ProofModeV1Constants.LOCATION_LATITUDE] = loc.getLatitude().toString() + ""
                     hmProof[ProofModeV1Constants.LOCATION_LONGITUDE] = loc.getLongitude().toString() + ""

@@ -1,25 +1,20 @@
 package org.witness.proofmode.util;
 
 
-import org.witness.proofmode.service.ProofModeV1Constants;
-
 import android.Manifest;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.provider.Settings;
-import android.util.Log;
 
 import androidx.core.app.ActivityCompat;
-
-import java.util.HashMap;
 
 import timber.log.Timber;
 
@@ -40,11 +35,9 @@ public final class GPSTracker implements LocationListener {
     double latitude; // latitude
     double longitude; // longitude
 
-    // The minimum distance to change Updates in meters
-    private static final long MIN_DISTANCE_CHANGE_FOR_UPDATES = 1; // 10 meters
-
-    // The minimum time between updates in milliseconds
-    private static final long MIN_TIME_BW_UPDATES = 1; // 1 minute
+    // Minimum interval and displacement for location updates.
+    private static final long MIN_TIME_BW_UPDATES_MS = 60_000;
+    private static final float MIN_DISTANCE_CHANGE_FOR_UPDATES_M = 0f;
 
     // Declaring a Location Manager
     protected LocationManager locationManager;
@@ -61,26 +54,27 @@ public final class GPSTracker implements LocationListener {
 
     public void updateLocation () {
 
-        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                || ActivityCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        boolean hasFine = ActivityCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+        boolean hasCoarse = ActivityCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+        if (!hasFine && !hasCoarse) {
             Timber.d("permission not granted for location check");
             return;
         }
 
         Timber.d("enabling location listener updates");
 
-        // getting GPS status
-        isGPSEnabled = locationManager
-                .isProviderEnabled(LocationManager.GPS_PROVIDER);
+        isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+        isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
 
-        // getting network status
-        isNetworkEnabled = locationManager
-                .isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-
-        if (isGPSEnabled)
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,60000,0,this);
-        else if (isNetworkEnabled)
-            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER,60000,0,this);
+        // GPS_PROVIDER requires ACCESS_FINE_LOCATION; subscribing without it throws SecurityException.
+        if (hasFine && isGPSEnabled) {
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
+                    MIN_TIME_BW_UPDATES_MS, MIN_DISTANCE_CHANGE_FOR_UPDATES_M, this);
+        }
+        if (isNetworkEnabled) {
+            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER,
+                    MIN_TIME_BW_UPDATES_MS, MIN_DISTANCE_CHANGE_FOR_UPDATES_M, this);
+        }
     }
 
     public void stopUpdateLocation () {
@@ -93,67 +87,60 @@ public final class GPSTracker implements LocationListener {
      */
     public Location getLocation() {
 
-        //only return null if both are not granted
-        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                && ActivityCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        boolean hasFine = ActivityCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+        boolean hasCoarse = ActivityCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+        if (!hasFine && !hasCoarse) {
             Timber.d("permission not granted for location check");
             return null;
         }
 
-        // getting GPS status
-        isGPSEnabled = locationManager
-                .isProviderEnabled(LocationManager.GPS_PROVIDER);
+        isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+        isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
 
-        // getting network status
-        isNetworkEnabled = locationManager
-                .isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-
-        if (!isGPSEnabled && !isNetworkEnabled) {
-            // no network provider is enabled
-        } else if (locationManager != null) {
+        if ((isGPSEnabled || isNetworkEnabled) && locationManager != null) {
             this.canGetLocation = true;
 
-            //first try network based location
-            if (isNetworkEnabled) {
-                location = null;
-                location = locationManager
-                        .getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+            // Start from whatever the listener has already cached, then merge in
+            // any last-known fixes that are better. Don't unconditionally overwrite
+            // — that would discard fresh callback-delivered fixes.
+            Location best = location;
 
-                if (location != null) {
-                    latitude = location.getLatitude();
-                    longitude = location.getLongitude();
-                }
+            if (isNetworkEnabled) {
+                best = pickBetter(best, locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER));
+            }
+            // GPS_PROVIDER requires ACCESS_FINE_LOCATION.
+            if (hasFine && isGPSEnabled) {
+                best = pickBetter(best, locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER));
             }
 
-            // if true GPS Enabled get lat/long using GPS Services
-            if (isGPSEnabled) {
-
-                Location locationGps = locationManager
-                        .getLastKnownLocation(LocationManager.GPS_PROVIDER);
-
-                if (location == null) {
-                    //if no network location, then def use this
-                    location = locationGps;
-
-                    if (location != null) {
-                        latitude = location.getLatitude();
-                        longitude = location.getLongitude();
-                    }
-                }
-                else {
-                    //if network location accuracy is a bigger distance range than GPS, then use GPS instead
-                    if ( (locationGps != null) && location.getAccuracy() > locationGps.getAccuracy())
-                    {
-                        location = locationGps;
-                        latitude = location.getLatitude();
-                        longitude = location.getLongitude();
-                    }
-
-                }
+            location = best;
+            if (location != null) {
+                latitude = location.getLatitude();
+                longitude = location.getLongitude();
             }
         }
 
         return location;
+    }
+
+    // Picks the "better" of two locations, preferring a significantly fresher fix
+    // and otherwise the more accurate one. Modeled on the standard Android
+    // isBetterLocation pattern.
+    private static Location pickBetter(Location a, Location b) {
+        if (a == null) return b;
+        if (b == null) return a;
+        long nowNanos = SystemClock.elapsedRealtimeNanos();
+        long ageA = nowNanos - a.getElapsedRealtimeNanos();
+        long ageB = nowNanos - b.getElapsedRealtimeNanos();
+        long twoMinNanos = 2L * 60L * 1_000_000_000L;
+        if (ageB - ageA > twoMinNanos) return a;
+        if (ageA - ageB > twoMinNanos) return b;
+        if (a.hasAccuracy() && b.hasAccuracy()) {
+            return a.getAccuracy() <= b.getAccuracy() ? a : b;
+        }
+        if (a.hasAccuracy()) return a;
+        if (b.hasAccuracy()) return b;
+        return ageA <= ageB ? a : b;
     }
 
     /**
@@ -239,6 +226,14 @@ public final class GPSTracker implements LocationListener {
 
     @Override
     public void onLocationChanged(Location location) {
+        if (location == null) return;
+        // Merge against any existing cached fix so a worse provider can't
+        // displace a better one just because it fired more recently.
+        this.location = pickBetter(this.location, location);
+        if (this.location != null) {
+            this.latitude = this.location.getLatitude();
+            this.longitude = this.location.getLongitude();
+        }
     }
 
     @Override
