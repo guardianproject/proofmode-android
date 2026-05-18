@@ -38,7 +38,6 @@ import com.google.android.play.core.integrity.StandardIntegrityManager.StandardI
 import java.io.IOException
 import java.security.KeyPairGenerator
 import java.security.KeyStore
-import java.security.MessageDigest
 import java.security.PrivateKey
 import java.security.Signature
 import java.security.cert.X509Certificate
@@ -332,17 +331,6 @@ class ProofSignClient(
         }
     }
 
-    /**
-     * Standard padded Base64 of SHA-256([bytes]). Used for the Standard Play
-     * Integrity requestHash, which the server recomputes over the DECODED
-     * claim bytes (`base64Decode(claim)`) and compares by exact string match,
-     * so this MUST be the standard alphabet with `=` padding.
-     */
-    private fun sha256Base64(bytes: ByteArray): String =
-        Base64.getEncoder().encodeToString(
-            MessageDigest.getInstance("SHA-256").digest(bytes),
-        )
-
     // endregion
 
     // region: signing
@@ -373,15 +361,13 @@ class ProofSignClient(
                 val deviceId = getDeviceId()
                 val timestamp = System.currentTimeMillis()
                 // One canonical claim binding, shared by the device signature
-                // and the Standard token requestHash (GP-132/GP-133): the
-                // server's `claim_binding(binding_bytes)` =
-                // Base64Std(SHA-256(base64Decode(claim))).
-                val claimBinding = sha256Base64(Base64.getDecoder().decode(claim))
-                // Device signature is over device_id|timestamp|claimBinding
-                // (proofmode sign::play_integrity::sign_device_request, post
-                // GP-132 — the claim component is the canonical binding, not
-                // the raw base64 claim string).
-                val deviceSignature = signWithDeviceKey("$deviceId|$timestamp|$claimBinding".toByteArray())
+                // and the Standard token requestHash (GP-132/GP-133), pinned
+                // cross-language by claim_binding_vectors.json (see
+                // [ClaimBinding] / ClaimBindingConformanceTest).
+                val claimBinding = ClaimBinding.claimBinding(Base64.getDecoder().decode(claim))
+                val signingInput =
+                    ClaimBinding.deviceRequestSigningInput(deviceId, timestamp, claimBinding)
+                val deviceSignature = signWithDeviceKey(signingInput.toByteArray())
                 val requestHash = claimBinding
 
                 val integrityToken = try {
