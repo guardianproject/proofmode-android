@@ -92,7 +92,7 @@ inside the target process.
 
 ### 5. Inline syscall integrity
 
-`check_syscall_hook()` is the hardest of the five to defeat. It opens
+`check_syscall_hook()` is one of the two hardest to defeat. It opens
 `/proc/self/maps` two ways:
 
 ```c
@@ -108,6 +108,49 @@ instruction reaches the kernel unmodified.
 Bypassed by: a hook that intercepts at the SVC / syscall-instruction level
 (seccomp-bpf, ptrace, kernel module). Those approaches are much higher
 effort and usually leave their own fingerprints.
+
+### 6. Timing-side-channel detector
+
+`check_timing_hook()` exploits the fact that Frida's `Interceptor` adds a
+trampoline + JavaScript callback to every hooked call. That overhead is
+enormous (hundreds of nanoseconds to several microseconds) relative to a
+trivial syscall like `getpid()`. We measure it with a comparative loop:
+
+```c
+long t_libc = time_libc_getpid(5000);              // for (...) getpid();
+long t_raw  = time_raw_getpid(5000);               // for (...) syscall(SYS_getpid);
+return t_libc > t_raw * 4;                         // libc must not exceed 4x raw
+```
+
+Both loops perform the same kernel work, so on an unhooked device the
+libc version is within ~2x of the raw version (the small delta is the libc
+prologue). A hooked libc `getpid()` typically runs 5–50x slower than the
+raw syscall, easily clearing the 4x threshold.
+
+Why a *ratio* and not a fixed nanosecond threshold:
+
+- A fixed `THRESHOLD_NS` calibrated on a Pixel will false-positive on a
+  budget device and miss hooks on a flagship.
+- A fixed threshold needs re-tuning whenever the NDK changes the libc
+  wrapper, the kernel changes syscall fast-path latency, or someone runs
+  on an emulator.
+- The ratio is dimensionless: it only changes when the libc wrapper
+  itself changes relative to the raw syscall — which is precisely what a
+  hook causes.
+
+Implementation details that matter:
+
+- 200-iteration warmup before the timed runs to prime caches and branch
+  predictors.
+- 3 trials, taking the **minimum** of each measurement — scheduler
+  preemption only inflates measurements, never deflates them, so the min
+  is the cleanest signal.
+- `volatile` sinks on the return values so the optimizer can't hoist the
+  calls out of the loop.
+
+Bypassed by: a hook that *adds no measurable latency*. This is very hard
+in practice for Frida — even a no-op `Interceptor.attach(..., {})` callback
+crosses the JNI bridge into V8 and back.
 
 ## Build / packaging notes
 
