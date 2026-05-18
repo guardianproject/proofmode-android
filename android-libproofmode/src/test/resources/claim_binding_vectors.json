@@ -1,0 +1,9 @@
+{
+  "_comment": "Canonical claim-binding known-answer vector. SHARED, cross-language anti-drift fixture for proofmode-rust, proofmode-android (Kotlin), proofmode-ios (Swift) and proofsign-rust. Every implementation MUST reproduce these exact values. claim_binding = Base64Std(SHA-256(binding_bytes)). binding_bytes derivation rule (one rule for both payload types): c2pa = the base64-decoded claim bytes; csr = the PEM UTF-8 bytes (no decode). The device-request signature is an ECDSA-P256 DER signature over device_signature_payload. Do NOT edit any value here without updating every consumer in lockstep; this file is the durable anti-drift mechanism.",
+  "binding_bytes_hex": "7468652d633270612d636c61696d",
+  "binding_bytes_utf8": "the-c2pa-claim",
+  "claim_binding": "Ldub2JpuKXpK9hq4buXf5O9syXKZmBQDTZTwbp1iE1g=",
+  "device_id": "device-abc",
+  "timestamp_millis": 1737000000000,
+  "device_signature_payload": "device-abc|1737000000000|Ldub2JpuKXpK9hq4buXf5O9syXKZmBQDTZTwbp1iE1g="
+}

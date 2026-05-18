@@ -44,6 +44,7 @@ import org.json.JSONObject
 import org.witness.proofmode.ProofMode
 import org.witness.proofmode.ProofMode.PREF_OPTION_LOCATION
 import org.witness.proofmode.c2pa.proofsign.ProofSignC2PASigner
+import org.witness.proofmode.c2pa.proofsign.ProofSignClient
 import org.witness.proofmode.c2pa.proofsign.Result
 import org.witness.proofmode.c2pa.selfsign.CAWGIdentityManager
 import org.witness.proofmode.c2pa.selfsign.CertificateSigningService
@@ -163,8 +164,14 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             {
                 val tsaUrl = resolveTsaUrl(signingMode)
                 if (signingMode == SigningMode.REMOTE) {
+                    if (!ProofSignClient.isPlayIntegrityAvailable(context)) {
+                        // Remote signing requires Play Integrity. No-Play devices
+                        // never contact the server — sign locally instead.
+                        Timber.i("C2PA: Play Integrity unavailable; using local keystore signer (no remote signing)")
+                        defaultSigner = createSigner(SigningMode.KEYSTORE, tsaUrl)
+                    }
                     //we only allow C2PA on devices that have been patched within 90 days
-                    if (checkOSSecurityPatchDate(90)) {
+                    else if (checkOSSecurityPatchDate(90)) {
                         defaultSigner = createSigner(signingMode, tsaUrl)
                     }
                     else
