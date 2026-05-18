@@ -29,6 +29,7 @@ import org.witness.proofmode.c2pa.PreferencesManager
 import org.witness.proofmode.c2pa.SigningMode
 import org.witness.proofmode.c2pa.ValidationState
 import org.witness.proofmode.crypto.HashUtils
+import org.witness.proofmode.crypto.pgp.PassphraseKeystore
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.notarization.NotarizationListener
 import org.witness.proofmode.notarization.NotarizationProvider
@@ -85,10 +86,10 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
         if (storageProvider != null) this.storageProvider = storageProvider
         else this.storageProvider = createCompositeStorageProvider(mContext!!)
 
-        mPassphrase = mPrefs!!.getString(
-            ProofModeConstants.PREFS_KEY_PASSPHRASE,
-            ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
-        )
+        // PGP passphrase lives wrapped under an AndroidKeyStore KEK, never in
+        // cleartext SharedPreferences. ProofModeApp.initPgpKey() is the migration
+        // owner; here we just read whatever it has provisioned.
+        mPassphrase = PassphraseKeystore.getOrCreatePassphrase(context!!)
 
         if (mC2paManager == null) mC2paManager =
             C2PAManager(mContext!!, PreferencesManager(mContext!!))

@@ -307,12 +307,81 @@ public class PgpUtils {
         return fileSecKeyRing.exists() && filePubKeyRing.exists();
     }
 
+    /**
+     * Try to extract the private key from the on-disk secret keyring using
+     * {@code passphrase}. Returns true iff the passphrase decrypts the keyring.
+     * Used by {@code ProofModeApp.provisionPassphrase} to reconcile the
+     * keystore-wrapped passphrase store with the keyring's actual encryption.
+     *
+     * Read-only and does not touch the {@link PgpUtils} singleton — safe to
+     * call before/independent of {@link #init(Context, String)}.
+     */
+    public static boolean canDecryptKeyring(Context context, String passphrase) {
+        File fileSecKeyRing = new File(context.getFilesDir(), FILE_SECRET_KEY_RING);
+        if (!fileSecKeyRing.exists() || passphrase == null) return false;
+        try (ArmoredInputStream sin = new ArmoredInputStream(new FileInputStream(fileSecKeyRing))) {
+            PGPSecretKeyRing testSkr = new PGPSecretKeyRing(sin, new BcKeyFingerprintCalculator());
+            PBESecretKeyDecryptor dec = new BcPBESecretKeyDecryptorBuilder(
+                    new BcPGPDigestCalculatorProvider()).build(passphrase.toCharArray());
+            testSkr.getSecretKey().extractPrivateKey(dec);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     public void resetCrypto (Context context) {
         File fileSecKeyRing = new File(context.getFilesDir(),FILE_SECRET_KEY_RING);
         File filePubKeyRing = new File(context.getFilesDir(),FILE_PUBLIC_KEY_RING);
         fileSecKeyRing.delete();
         filePubKeyRing.delete();
         pgpSec = null;
+    }
+
+    /**
+     * Re-encrypt the on-disk secret keyring under {@code newPassphrase}.
+     * Atomic via temp-file + rename. Updates the in-memory singleton on
+     * success so subsequent signing operations use the rewritten keyring.
+     *
+     * Returns false on any failure; the caller should keep using the old
+     * passphrase in that case.
+     */
+    public synchronized boolean changePassphrase(Context context, String oldPassphrase, String newPassphrase) {
+        try {
+            File fileSecKeyRing = new File(context.getFilesDir(), FILE_SECRET_KEY_RING);
+            if (!fileSecKeyRing.exists()) return false;
+
+            PGPSecretKeyRing currentSkr;
+            try (ArmoredInputStream sin = new ArmoredInputStream(new FileInputStream(fileSecKeyRing))) {
+                currentSkr = new PGPSecretKeyRing(sin, new BcKeyFingerprintCalculator());
+            }
+
+            PBESecretKeyDecryptor oldDecryptor = new BcPBESecretKeyDecryptorBuilder(
+                    new BcPGPDigestCalculatorProvider()).build(oldPassphrase.toCharArray());
+            PGPDigestCalculator sha256Calc = new BcPGPDigestCalculatorProvider().get(HashAlgorithmTags.SHA256);
+            PBESecretKeyEncryptor newEncryptor = new BcPBESecretKeyEncryptorBuilder(
+                    PGPEncryptedData.AES_256, sha256Calc, 0xc0
+            ).build(newPassphrase.toCharArray());
+
+            PGPSecretKeyRing rewritten = PGPSecretKeyRing.copyWithNewPassword(
+                    currentSkr, oldDecryptor, newEncryptor);
+
+            File tmp = new File(context.getFilesDir(), FILE_SECRET_KEY_RING + ".tmp");
+            try (ArmoredOutputStream sout = new ArmoredOutputStream(new FileOutputStream(tmp))) {
+                rewritten.encode(sout);
+            }
+            if (!tmp.renameTo(fileSecKeyRing)) {
+                tmp.delete();
+                return false;
+            }
+
+            this.skr = rewritten;
+            this.pgpSec = rewritten.getSecretKey();
+            return true;
+        } catch (Exception e) {
+            Log.e("PGP", "passphrase migration failed", e);
+            return false;
+        }
     }
 
     public static void setKeyid (String email) {
