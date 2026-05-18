@@ -1,6 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Each entry below is the minimum scope FileProvider needs to hand out
+    URIs to legitimately shared content. Do NOT widen these to path="/"
+    or path=".": every URI we issue grants the recipient read access to
+    every sibling under the same root, including pkr.asc / pub.asc, the
+    Android Keystore-wrapped passphrase blob in shared_prefs (well — it
+    isn't reached through these paths, but the principle holds), and the
+    *.cert / *.key files written next to the keyring.
+-->
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
-    <external-path name="external_files" path="."/>
-    <cache-path name="cache" path="/" />
-    <files-path name="files" path="/" />
+
+    <!--
+        Proof artefacts written by DefaultStorageProvider:
+        <filesDir>/proofmode/<sha256>/{...csv,...json,...asc,...ots}.
+        Deliberately scoped to the "proofmode/" subtree so that pkr.asc,
+        pub.asc, and *.cert / *.key files sitting at the top of <filesDir>
+        remain unreachable via the FileProvider.
+    -->
+    <files-path name="proof_artefacts" path="proofmode/" />
+
+    <!--
+        Ephemeral share artefacts: zip bundles under <cacheDir>/zips/,
+        batchproof.csv files at the cache root, and share*.jpg temp files
+        produced by SocialImageUtil via File.createTempFile (java.io.tmpdir
+        on Android resolves to <cacheDir>). No long-lived secrets live in
+        the cache dir, so the wider scope here is acceptable.
+    -->
+    <cache-path name="share_cache" path="/" />
+
+    <!--
+        Camera output written by the in-app CameraX capture path
+        (MediaWatcher.outputDirectory): public DCIM/ProofMode/ on shared
+        storage. Scoped to that single subdir, not the whole external root.
+    -->
+    <external-path name="camera_output" path="DCIM/ProofMode/" />
+
 </paths>
