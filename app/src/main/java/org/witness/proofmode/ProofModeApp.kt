@@ -51,6 +51,9 @@ class ProofModeApp : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
 
+        if (DeviceIntegritySupport().isEnvironmentCompromised())
+            System.exit(0)
+
         // Seed signing preferences from XML defaults so the configured server URL
         // and other signing settings exist before any signing path reads them.
         androidx.preference.PreferenceManager.setDefaultValues(this, R.xml.signing_preferences, false)
@@ -67,6 +70,7 @@ class ProofModeApp : Application(), Configuration.Provider {
         }
 
         StorageProviderManager.getInstance().initializeStorageProviders(this)
+
 
     }
 

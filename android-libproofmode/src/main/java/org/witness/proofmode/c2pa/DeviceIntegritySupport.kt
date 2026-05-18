@@ -12,9 +12,16 @@ import java.net.Socket
 
 class DeviceIntegritySupport {
 
+    private external fun nativeIsEnvironmentCompromised(): Boolean
+
     fun detectThreats (context: Context): Boolean {
         return isUsbConnected(context) || isDeveloperAttackSurfaceOpen(context) || isFridaPresent()
     }
+
+    fun isEnvironmentCompromised (): Boolean {
+        return nativeIsEnvironmentCompromised()
+    }
+
 
 
     fun isUsbConnected(context: Context): Boolean {
@@ -52,19 +59,31 @@ class DeviceIntegritySupport {
     }
 
     fun isFridaPresent(): Boolean {
-        // Check open ports
+        // Native checks are harder for Frida to hook than the JVM equivalents:
+        // /proc/self/maps via fopen, /proc/net/tcp[6] port scan, and a
+        // /proc/self/task comm-name scan for injected helper threads.
+        if (nativeAvailable && runCatching { nativeIsEnvironmentCompromised() }.getOrDefault(false)) {
+            return true
+        }
+
+        // JVM-side fallback (trivially hookable, but cheap belt-and-suspenders).
         try {
             Socket("127.0.0.1", 27042).use { return true }
         } catch (_: Exception) {}
 
         var foundFrida = false
-        // Check /proc/self/maps for injected libraries
         File("/proc/self/maps").forEachLine { line ->
             if (line.contains("frida") || line.contains("gum-js")) {
                 foundFrida = true
             }
         }
         return foundFrida
+    }
+
+    companion object {
+        private val nativeAvailable: Boolean = runCatching {
+            System.loadLibrary("dintegrity")
+        }.isSuccess
     }
 
 }
