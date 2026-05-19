@@ -179,6 +179,65 @@ scan. The fallback is trivially defeated by Frida (just hook
 `java.net.Socket` and `java.io.File`), but it costs almost nothing and
 provides a result when the native lib is absent or blocked.
 
+## Capture-authorization gate (signing-oracle defense)
+
+Detection alone does not stop the published Frida oracle attack
+(`sign_proofmode.py` + `frida_proofsign.js`): an attacker who reflectively
+instantiates `ProofSignClient` and calls `signC2PAClaimWithDeviceAuth()`
+can produce valid C2PA signatures for arbitrary media that ProofMode never
+captured. Play Integrity and Key Attestation only prove the device is
+genuine and the app is installed; they do not prove that the bytes being
+signed correspond to a real capture event in this app.
+
+The defense is a per-capture authorization nonce, threaded through the
+signing path as three concentric gates.
+
+### CaptureAuthority
+
+`android-libproofmode/.../c2pa/proofsign/CaptureAuthority.kt` issues
+single-use 32-byte nonces, each bound at issue time to the SHA-256 digest
+of the captured file. Nonces expire after 60 seconds and the outstanding
+set is capped at 16 (oldest evicted). Binding to the file digest (not raw
+bytes) means the same guarantee applies to multi-hundred-MB video files
+without holding them in memory; binding to digest rather than URI/path
+means an attacker who swaps file contents between issue and consume sees
+the digests diverge and the gate close.
+
+### Three concentric gates
+
+| Gate | File | What it catches |
+| ---- | ---- | --------------- |
+| Outer | `CameraViewModel.sendLocalCameraEvent` issues the nonce; `MediaWatcher.ingestMedia` refuses to attempt C2PA at all when nonce is null. | Non-camera callers (MediaStore observers, public `ProofMode.java` API, gallery imports) — they get the PGP/hash sidecar only, no C2PA claim. |
+| Middle | `C2PAManager.signMediaFile` is the *only* place that calls `CaptureAuthority.consumeNonce(...)`. It throws `UnauthorizedCaptureException` synchronously if the nonce is missing, expired, used, or bound to a different digest. On success it wraps `signStream(...)` in `CaptureAuthority.enterSigningScope(digest, ...)`. | Frida calls that skip `MediaWatcher` and invoke `signMediaFile` directly. |
+| Inner | `ProofSignC2PASigner.signData` and `ProofSignClient.signC2PAClaimWithDeviceAuth` both check `CaptureAuthority.currentAuthorizedDigest()` and throw if it is null. The `ThreadLocal` is only populated inside `enterSigningScope`. | The *published* attack: `Java.use('org.witness.proofmode.c2pa.proofsign.ProofSignClient').signC2PAClaimWithDeviceAuth(...)` invoked directly from Frida. The attacker's thread has no signing scope; the synchronous throw lands in the Frida agent rather than reaching the server. |
+
+### Behaviour change worth knowing
+
+Under this gate **only** files coming through `CameraViewModel.sendLocalCameraEvent`
+produce C2PA claims. Four other in-tree callers of `ingestMedia` now
+produce PGP/hash sidecar only and no C2PA signature:
+
+- `PhotosContentWorker.kt` / `PhotosContentJob.java` (system-camera auto-detect)
+- `VideosContentWorker.kt` / `VideosContentJob.java` (same for video)
+- `ProofMode.java` public library API
+
+This is intentional — those paths never observed the capture event and
+cannot honestly claim camera provenance. If any of them needs C2PA, it
+must grow its own legitimate-capture story that issues a nonce.
+
+### What still gets through
+
+A sufficiently determined attacker who *also* hooks the camera capture
+path (intercepts `sendLocalCameraEvent`, supplies attacker-controlled
+image bytes, lets the legitimate `issueNonce` fire) can still mint a
+valid signature for their own content. That bypass is several orders of
+magnitude harder than the documented attack, requires precise timing
+against a real capture event, and leaves much more forensic signal. The
+complementary defense is the server-side claim-binding contract
+([sketch in proofmode-hardening/patches/server-contract/SERVER_CONTRACT.md](../../Downloads/ph/proofmode-hardening/patches/server-contract/SERVER_CONTRACT.md))
+that requires the server's Play-Integrity-bound nonce to be bound to the
+claim content — making content-swap detectable server-side as well.
+
 ## Future hardening to consider
 
 - Hash the in-memory `.text` segments of critical libs (`libdintegrity.so`,

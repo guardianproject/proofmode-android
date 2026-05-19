@@ -111,6 +111,15 @@ class ProofSignC2PASigner (
     }
 
     private fun signData(data: ByteArray): ByteArray {
+        // Inner gate: refuse if this thread was not opened into a signing
+        // scope by C2PAManager.signMediaFile. A direct Frida call into this
+        // method (e.g. via a held c2pa-rs Signer reference) bypasses the
+        // outer gates but has no authorized digest on this thread.
+        if (CaptureAuthority.currentAuthorizedDigest() == null) {
+            throw UnauthorizedCaptureException(
+                "ProofSignC2PASigner.signData called outside an authorized capture-signing scope"
+            )
+        }
         if (!proofSignClient.isDeviceRegistered()) {
             val verifyLatch = java.util.concurrent.CountDownLatch(1)
             var verifyError: String? = null

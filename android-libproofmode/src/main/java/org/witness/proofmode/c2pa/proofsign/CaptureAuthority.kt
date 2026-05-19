@@ -96,6 +96,47 @@ object CaptureAuthority {
         "issued_total" to issuedCount.get(),
     )
 
+    /**
+     * Per-thread authorization scope, set after a nonce is successfully
+     * consumed and held only for the duration of the actual signing call.
+     *
+     * This is the second layer of defense: even if an attacker reaches the
+     * inner signing methods directly (Frida's typical
+     * `Java.use('...ProofSignClient').signC2PAClaimWithDeviceAuth(...)`),
+     * those methods refuse to proceed unless [currentAuthorizedDigest]
+     * returns non-null on the calling thread. The only way to populate it
+     * is through [enterSigningScope], which is only called by the
+     * in-tree signing path after a valid nonce.
+     */
+    private val activeDigest = ThreadLocal<ByteArray?>()
+
+    /**
+     * Run [block] with the calling thread marked as authorized to sign
+     * content whose digest is [fileDigest]. The scope is torn down in a
+     * finally so an exception in [block] does not leave the thread
+     * permanently authorized.
+     */
+    inline fun <T> enterSigningScope(fileDigest: ByteArray, block: () -> T): T {
+        val previous = activeDigestThreadLocal.get()
+        activeDigestThreadLocal.set(fileDigest)
+        try {
+            return block()
+        } finally {
+            if (previous == null) activeDigestThreadLocal.remove()
+            else activeDigestThreadLocal.set(previous)
+        }
+    }
+
+    @PublishedApi
+    internal val activeDigestThreadLocal: ThreadLocal<ByteArray?> get() = activeDigest
+
+    /**
+     * Returns the digest of the file the calling thread is currently
+     * authorized to sign, or null if no signing scope is active.
+     * Inner signing methods consult this and refuse if it is null.
+     */
+    fun currentAuthorizedDigest(): ByteArray? = activeDigest.get()
+
     private fun reapExpired() {
         val cutoff = System.currentTimeMillis() - NONCE_TTL_MS
         outstanding.entries.removeAll { it.value.issuedAtMs < cutoff }

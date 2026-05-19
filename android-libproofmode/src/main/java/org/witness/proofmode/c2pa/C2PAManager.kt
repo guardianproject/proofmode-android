@@ -43,7 +43,9 @@ import org.contentauth.c2pa.manifest.ManifestValidator
 import org.json.JSONObject
 import org.witness.proofmode.ProofMode
 import org.witness.proofmode.ProofMode.PREF_OPTION_LOCATION
+import org.witness.proofmode.c2pa.proofsign.CaptureAuthority
 import org.witness.proofmode.c2pa.proofsign.ProofSignC2PASigner
+import org.witness.proofmode.c2pa.proofsign.UnauthorizedCaptureException
 import org.witness.proofmode.c2pa.proofsign.ProofSignClient
 import org.witness.proofmode.c2pa.proofsign.Result
 import org.witness.proofmode.c2pa.selfsign.CAWGIdentityManager
@@ -106,7 +108,33 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         trustConfig = InputStreamReader(context.assets.open("trustConfig.txt")).readText()
     }
 
-    suspend fun signMediaFile(signingMode: SigningMode, inFile: File, contentType: String, outFile: File, doEmbed: Boolean = true, wasCreated: Boolean = true, hash: String?): Result<Stream> = withContext(Dispatchers.IO) {
+    suspend fun signMediaFile(
+        signingMode: SigningMode,
+        inFile: File,
+        contentType: String,
+        outFile: File,
+        doEmbed: Boolean = true,
+        wasCreated: Boolean = true,
+        hash: String?,
+        captureNonce: ByteArray? = null,
+        captureFileDigest: ByteArray? = null,
+    ): Result<Stream> = withContext(Dispatchers.IO) {
+        // Capture-authorization gate: a Frida-driven oracle attack reaches
+        // this method without a nonce, or with a nonce that does not match
+        // the file's actual contents. Consume the nonce here (not in
+        // MediaWatcher) so this method is the single point that authorizes
+        // signing — anyone calling it directly must already hold a valid
+        // (nonce, digest) pair.
+        if (captureNonce == null || captureFileDigest == null) {
+            throw UnauthorizedCaptureException(
+                "signMediaFile requires a capture-authorization nonce bound to the file digest"
+            )
+        }
+        if (!CaptureAuthority.consumeNonce(captureNonce, captureFileDigest)) {
+            throw UnauthorizedCaptureException(
+                "capture nonce invalid, expired, or does not match file digest"
+            )
+        }
         try {
 
 
@@ -186,21 +214,28 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             }
 
             defaultSigner?.let {
-                // Sign the image using C2PA library
+                // Sign the image using C2PA library. We open a thread-local
+                // signing scope bound to the file digest so the inner signing
+                // callbacks (ProofSignC2PASigner.signData,
+                // ProofSignClient.signC2PAClaimWithDeviceAuth) can verify
+                // they were reached through this authorized path and refuse
+                // a direct Frida invocation that skips this method.
                 val fileStream = FileStream(inFile)
                 val outStream = FileStream(outFile)
 
-                signStream(
-                    inFile.name,
-                    fileStream,
-                    contentType,
-                    outStream,
-                    manifestJSON,
-                    it,
-                    doEmbed,
-                    wasCreated,
-                    hash
-                )
+                CaptureAuthority.enterSigningScope(captureFileDigest) {
+                    signStream(
+                        inFile.name,
+                        fileStream,
+                        contentType,
+                        outStream,
+                        manifestJSON,
+                        it,
+                        doEmbed,
+                        wasCreated,
+                        hash
+                    )
+                }
                 Timber.d("Signed file size: ${outFile.length()} bytes")
 
                 // Verify the signed image

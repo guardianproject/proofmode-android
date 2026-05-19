@@ -299,33 +299,31 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
                     // Non-camera callers (gallery imports, MediaStore observers,
                     // public ProofMode API) pass null and get the PGP/hash
                     // sidecar only — they cannot mint a C2PA camera-provenance
-                    // claim. Camera-originated calls pass a nonce that was
-                    // bound at capture time to the file's SHA-256 digest; we
-                    // re-hash the file we're about to sign and refuse if the
-                    // digests diverge (content swap) or the nonce was already
-                    // used / has expired.
-                    val captureAuthorized: Boolean = if (captureNonce == null) {
-                        false
-                    } else {
+                    // claim. Camera-originated calls pass a nonce bound at
+                    // capture time to the file's SHA-256 digest. We compute
+                    // the digest here and pass both into signMediaFile, which
+                    // is the single point that consumes the nonce and opens a
+                    // thread-local signing scope around the inner signer
+                    // callbacks. signMediaFile throws UnauthorizedCaptureException
+                    // synchronously if anything is wrong.
+                    if (captureNonce != null && vState != ValidationState.INVALID) {
                         val fileDigestBytes = MessageDigest.getInstance("SHA-256")
                             .digest(fileMedia.readBytes())
-                        val ok = CaptureAuthority.consumeNonce(captureNonce, fileDigestBytes)
-                        if (!ok) {
-                            Timber.w("C2PA signing refused: invalid/expired capture nonce or digest mismatch for ${fileMedia.name}")
+                        try {
+                            mC2paManager?.signMediaFile(
+                                signingMode,
+                                fileMedia,
+                                actualMimeType!!,
+                                fileMediaOut,
+                                doEmbed,
+                                createdInProofmode,
+                                hash,
+                                captureNonce,
+                                fileDigestBytes,
+                            );
+                        } catch (e: org.witness.proofmode.c2pa.proofsign.UnauthorizedCaptureException) {
+                            Timber.w(e, "C2PA signing refused by capture-authority gate for ${fileMedia.name}")
                         }
-                        ok
-                    }
-
-                    if (captureAuthorized && vState != ValidationState.INVALID) {
-                        mC2paManager?.signMediaFile(
-                            signingMode,
-                            fileMedia,
-                            actualMimeType!!,
-                            fileMediaOut,
-                            doEmbed,
-                            createdInProofmode,
-                            hash
-                        );
                     }
 
                     try {

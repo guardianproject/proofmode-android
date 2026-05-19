@@ -351,6 +351,17 @@ class ProofSignClient(
         claim: String,
         callback: (Result<C2PABearerSignature>) -> Unit,
     ) {
+        // Defense against the documented Frida oracle attack: an attacker
+        // who Java.use()s this class and invokes this method directly never
+        // traversed the camera capture path and never entered an authorized
+        // signing scope. We check synchronously, before launching the
+        // coroutine, so the throw reaches the attacker rather than being
+        // swallowed by coroutine machinery.
+        if (CaptureAuthority.currentAuthorizedDigest() == null) {
+            throw UnauthorizedCaptureException(
+                "signC2PAClaimWithDeviceAuth called outside an authorized capture-signing scope"
+            )
+        }
         scope.launch {
             try {
                 if (!isDeviceRegistered()) {
