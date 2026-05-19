@@ -96,6 +96,11 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
             C2PAManager(mContext!!, PreferencesManager(mContext!!))
     }
 
+    public fun resetC2PA () {
+        C2PAManager(mContext!!, PreferencesManager(mContext!!))
+
+    }
+
     public fun refreshStorageProvider (storageProvider: StorageProvider?) {
         if (storageProvider != null) this.storageProvider = storageProvider
         else this.storageProvider = createCompositeStorageProvider(mContext!!)

@@ -12,6 +12,7 @@ import androidx.preference.SwitchPreference
 import androidx.preference.SwitchPreferenceCompat
 import org.witness.proofmode.databinding.ActivitySettingsBinding
 import org.witness.proofmode.databinding.ActivitySigningSettingsBinding
+import org.witness.proofmode.service.MediaWatcher
 
 class SigningSettingsActivity : AppCompatActivity() {
 
@@ -90,6 +91,8 @@ class SigningSettingsActivity : AppCompatActivity() {
 
             val tsaPref = findPreference<EditTextPreference>(ProofMode.PREF_OPTION_TSA_SERVER)
             tsaPref?.isEnabled = !isRemote
+
+            MediaWatcher.getInstance(activity)?.resetC2PA()
 
         }
     }
