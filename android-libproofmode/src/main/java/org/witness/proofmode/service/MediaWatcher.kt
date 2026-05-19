@@ -28,6 +28,7 @@ import org.witness.proofmode.c2pa.C2PAManager
 import org.witness.proofmode.c2pa.PreferencesManager
 import org.witness.proofmode.c2pa.SigningMode
 import org.witness.proofmode.c2pa.ValidationState
+import org.witness.proofmode.c2pa.proofsign.CaptureAuthority
 import org.witness.proofmode.crypto.HashUtils
 import org.witness.proofmode.crypto.pgp.PassphraseKeystore
 import org.witness.proofmode.crypto.pgp.PgpUtils
@@ -212,7 +213,8 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
         fun processUriDone(hash: String?)
     }
 
-    fun ingestMedia (uriMediaSource: Uri, autogen: Boolean, createdAt: Date?, mimeType: String?, hash: String?)  {
+    @JvmOverloads
+    fun ingestMedia (uriMediaSource: Uri, autogen: Boolean, createdAt: Date?, mimeType: String?, hash: String?, captureNonce: ByteArray? = null)  {
         val intent = Intent()
         intent.setPackage("org.witness.proofmode")
         var actualUriMedia = uriMediaSource
@@ -293,9 +295,28 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
                             signingMode = SigningMode.HARDWARE
                     }
 
-                    //only sign if the ingested media is validated by c2pa
+                    // C2PA signing is gated by a capture-authorization nonce.
+                    // Non-camera callers (gallery imports, MediaStore observers,
+                    // public ProofMode API) pass null and get the PGP/hash
+                    // sidecar only — they cannot mint a C2PA camera-provenance
+                    // claim. Camera-originated calls pass a nonce that was
+                    // bound at capture time to the file's SHA-256 digest; we
+                    // re-hash the file we're about to sign and refuse if the
+                    // digests diverge (content swap) or the nonce was already
+                    // used / has expired.
+                    val captureAuthorized: Boolean = if (captureNonce == null) {
+                        false
+                    } else {
+                        val fileDigestBytes = MessageDigest.getInstance("SHA-256")
+                            .digest(fileMedia.readBytes())
+                        val ok = CaptureAuthority.consumeNonce(captureNonce, fileDigestBytes)
+                        if (!ok) {
+                            Timber.w("C2PA signing refused: invalid/expired capture nonce or digest mismatch for ${fileMedia.name}")
+                        }
+                        ok
+                    }
 
-                    if (vState != ValidationState.INVALID) {
+                    if (captureAuthorized && vState != ValidationState.INVALID) {
                         mC2paManager?.signMediaFile(
                             signingMode,
                             fileMedia,

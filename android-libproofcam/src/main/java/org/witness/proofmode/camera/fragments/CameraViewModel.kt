@@ -65,10 +65,12 @@ import org.witness.proofmode.camera.utils.SharedPrefsManager
 import org.witness.proofmode.camera.utils.getMediaFlow
 import org.witness.proofmode.camera.utils.getSupportedQualities
 import org.witness.proofmode.camera.utils.isUltraHdrSupported
+import org.witness.proofmode.c2pa.proofsign.CaptureAuthority
 import org.witness.proofmode.service.MediaWatcher.Companion.getInstance
 import timber.log.Timber
 import java.io.File
 import java.io.FileNotFoundException
+import java.security.MessageDigest
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -599,10 +601,23 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
             e.printStackTrace()
         }
 
+        // Issue a capture-authorization nonce bound to the SHA-256 of the
+        // file CameraX just wrote. The nonce travels with ingestMedia() and
+        // is consumed in MediaWatcher before the C2PA signing call. An
+        // attacker who drives signing via Frida without going through this
+        // capture path will not have a valid nonce, and signing is refused.
+        val captureNonce: ByteArray? = try {
+            val digest = computeFileDigest(newMediaFile)
+            digest?.let { CaptureAuthority.issueNonce(it) }
+        } catch (e: Exception) {
+            Timber.w(e, "failed to issue capture nonce for $newMediaFile")
+            null
+        }
+
         if (cameraEventType == CameraEventType.NEW_VIDEO) {
 
             if (!prefs.getBoolean(ProofMode.PREFS_DOPROOF,false))
-                 mw?.ingestMedia(newMediaFile, true, null, "video/mp4", null)
+                 mw?.ingestMedia(newMediaFile, true, null, "video/mp4", null, captureNonce)
 
 
         } else {
@@ -621,11 +636,25 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
             }
 
             if (!prefs.getBoolean(ProofMode.PREFS_DOPROOF,false))
-                mw?.ingestMedia(newMediaFile, true, null, "image/jpeg", null)
+                mw?.ingestMedia(newMediaFile, true, null, "image/jpeg", null, captureNonce)
 
         }
 
 
+    }
+
+    private fun computeFileDigest(uri: Uri): ByteArray? {
+        val md = MessageDigest.getInstance("SHA-256")
+        val input = app.contentResolver.openInputStream(uri) ?: return null
+        input.use { stream ->
+            val buf = ByteArray(64 * 1024)
+            while (true) {
+                val n = stream.read(buf)
+                if (n <= 0) break
+                md.update(buf, 0, n)
+            }
+        }
+        return md.digest()
     }
 
 
