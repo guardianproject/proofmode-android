@@ -500,14 +500,14 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
     private fun resolveTsaUrl(mode: SigningMode): String {
         if (mode == SigningMode.REMOTE) {
             // Remote signing always uses the pinned TSA.
-            return ProofMode.PREF_OPTION_TSA_SERVER_DEFAULT
+            return BuildConfig.TSA_SERVER
         }
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
         val configured = prefs.getString(
             ProofMode.PREF_OPTION_TSA_SERVER,
-            ProofMode.PREF_OPTION_TSA_SERVER_DEFAULT
+            BuildConfig.TSA_SERVER
         )?.trim().orEmpty()
-        return configured.ifEmpty { ProofMode.PREF_OPTION_TSA_SERVER_DEFAULT }
+        return configured.ifEmpty { BuildConfig.TSA_SERVER }
     }
 
     private fun createKeystoreKey(alias: String, useHardware: Boolean) {

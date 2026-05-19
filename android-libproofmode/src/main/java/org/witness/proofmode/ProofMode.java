@@ -64,8 +64,6 @@ public class ProofMode {
     public final static String PREF_OPTION_PROOFSIGN_SERVER = "proofSignServerUrl";
 
     public final static String PREF_OPTION_TSA_SERVER = "tsaServerUrl";
-    public final static String PREF_OPTION_TSA_SERVER_DEFAULT = "https://tsa.trufo.ai/";
-
 
     public final static boolean PREF_OPTION_NOTARY_DEFAULT = true;
     public final static boolean PREF_OPTION_LOCATION_DEFAULT = false;
