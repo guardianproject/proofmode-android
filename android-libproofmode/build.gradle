@@ -33,12 +33,8 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            buildConfigField("String", "SIGNING_SERVER_ENDPOINT", "\"/api/v1/c2pa/configuration\"")
-            buildConfigField("String", "TSA_SERVER", "\"http://ts.ssl.com\"")
         }
         debug {
-            buildConfigField("String", "SIGNING_SERVER_ENDPOINT", "\"/api/v1/c2pa/configuration\"")
-            buildConfigField("String", "TSA_SERVER", "\"http://ts.ssl.com\"")
         }
     }
     lint {
