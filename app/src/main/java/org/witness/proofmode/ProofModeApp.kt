@@ -241,7 +241,7 @@ class ProofModeApp : Application(), Configuration.Provider {
         }
 
         val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
-        val serverUrl = prefs.getString(
+        var serverUrl = prefs.getString(
             ProofMode.PREF_OPTION_PROOFSIGN_SERVER,
             "",
         ).orEmpty().trim().trimEnd('/')
