@@ -91,6 +91,9 @@ dependencies {
     // Required -- JUnit 4 framework
     androidTestImplementation libs.junit
 
+    // JVM unit tests (e.g. cross-language claim-binding conformance)
+    testImplementation libs.junit
+
     implementation libs.bouncycastle.bcpkix
 
     // Testing-only dependencies

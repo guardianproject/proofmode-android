@@ -20,7 +20,6 @@ import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
 import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
 import org.witness.proofmode.c2pa.C2PAManager
 import org.witness.proofmode.c2pa.PreferencesManager
-import org.witness.proofmode.c2pa.proofsign.AttestationMode
 import org.witness.proofmode.c2pa.proofsign.ProofSignClient
 import org.witness.proofmode.c2pa.proofsign.Result
 import org.witness.proofmode.crypto.pgp.PgpUtils
@@ -121,11 +120,14 @@ class ProofModeApp : Application(), Configuration.Provider {
 
     fun initProofSignClient () {
 
+        // Remote signing requires Play Integrity. No-Play devices never contact
+        // the ProofSign server (they sign locally), so skip eager registration.
+        if (!ProofSignClient.isPlayIntegrityAvailable(applicationContext)) {
+            Timber.d("ProofSign: Play Integrity unavailable; skipping registration (local signing only)")
+            return
+        }
+
         val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
-        val forceKeyAttestation = prefs.getBoolean(
-            ProofMode.PREF_OPTION_PROOFSIGN_FORCE_KEY_ATTESTATION,
-            ProofMode.PREF_OPTION_PROOFSIGN_FORCE_KEY_ATTESTATION_DEFAULT,
-        )
         val serverUrl = prefs.getString(
             ProofMode.PREF_OPTION_PROOFSIGN_SERVER,
             getString(org.witness.proofmode.library.R.string.default_proofsign_server),
@@ -135,19 +137,18 @@ class ProofModeApp : Application(), Configuration.Provider {
             context = applicationContext,
             serverUrl = serverUrl,
             cloudProjectNumber = BuildConfig.CLOUD_INTEGRITY_PROJECT_NUMBER,
-            mode = if (forceKeyAttestation) AttestationMode.KEY_ATTESTATION else AttestationMode.AUTO,
         )
 
-        if (!proofSignClient.isVerificationValid()) {
-            Timber.d("Need to reverify with ProofSign server")
+        if (!proofSignClient.isDeviceRegistered()) {
+            Timber.d("Need to register device with ProofSign server")
             proofSignClient.verifyDevice { result ->
                 when (result) {
-                    is Result.Success -> Timber.d("ProofSign: VERIFIED (${result.data.verdict})")
+                    is Result.Success -> Timber.d("ProofSign: REGISTERED (${result.data.verdict})")
                     is Result.Failure -> Timber.d("ProofSign: FAILURE (${result.error})")
                 }
             }
         } else {
-            Timber.d("ProofSign verification: valid")
+            Timber.d("ProofSign registration: valid")
         }
     }
 

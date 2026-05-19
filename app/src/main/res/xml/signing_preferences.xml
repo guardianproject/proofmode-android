@@ -25,15 +25,8 @@
             app:key="tsaServerUrl"
             app:title="@string/settings_signing_tsa"
             app:useSimpleSummaryProvider="true"
-            app:defaultValue="https://tsa.trufo.ai/"
+            app:defaultValue=""
             app:dialogTitle="@string/settings_signing_tsa" />
-
-        <SwitchPreferenceCompat
-            app:key="proofSignForceKeyAttestation"
-            app:title="Force Key Attestation"
-            app:summaryOn="Always use Android hardware key attestation"
-            app:summaryOff="Use Play Integrity when available"
-            app:defaultValue="false" />
 
     </PreferenceCategory>
 
