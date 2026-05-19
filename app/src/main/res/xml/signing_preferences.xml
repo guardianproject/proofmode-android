@@ -25,7 +25,7 @@
             app:key="tsaServerUrl"
             app:title="@string/settings_signing_tsa"
             app:useSimpleSummaryProvider="true"
-            app:defaultValue="https://tsa.trufo.ai/"
+            app:defaultValue=""
             app:dialogTitle="@string/settings_signing_tsa" />
 
     </PreferenceCategory>
