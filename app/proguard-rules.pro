@@ -74,8 +74,30 @@
 -dontwarn com.google.protobuf.ProtocolMessageEnum
 
 ####
--keep class org.**  { *; }
--keep class org.spongycastle.**
+# Crypto / signing / framework subpackages that ARE looked up by name
+# (JNI from c2pa-rs, internal class-name lookups in BouncyCastle, etc.) —
+# these must keep their class names.
+-keep class org.spongycastle.** { *; }
+# org.bouncycastle.** and org.contentauth.c2pa.** are kept by the
+# c2pa-android library's consumer-rules.pro; do not duplicate here.
+
+# ProofMode subpackages that are referenced reflectively, declared in the
+# manifest, exposed as a library API, or otherwise need stable names.
+# proofsign is deliberately excluded — see the obfuscation block below.
+-keep class org.witness.proofmode.* { *; }
+-keep class org.witness.proofmode.c2pa.* { *; }
+-keep class org.witness.proofmode.c2pa.custom.** { *; }
+-keep class org.witness.proofmode.c2pa.selfsign.** { *; }
+-keep class org.witness.proofmode.camera.** { *; }
+-keep class org.witness.proofmode.crypto.** { *; }
+-keep class org.witness.proofmode.notaries.** { *; }
+-keep class org.witness.proofmode.notarization.** { *; }
+-keep class org.witness.proofmode.onboarding.** { *; }
+-keep class org.witness.proofmode.service.** { *; }
+-keep class org.witness.proofmode.share.** { *; }
+-keep class org.witness.proofmode.storage.** { *; }
+-keep class org.witness.proofmode.ui.** { *; }
+-keep class org.witness.proofmode.util.** { *; }
 
 -keep public class * extends android.app.Activity
 -keep public class * extends android.app.Application
@@ -111,12 +133,25 @@
   public static final android.os.Parcelable$Creator *;
 }
 
-# Rename proofsign internals — do NOT keep these names
+# ----------------------------------------------------------------------
+# proofsign obfuscation — the Frida agent's published attack hardcodes
+# class names like ProofSignClient, signC2PAClaimWithDeviceAuth,
+# Result$Success, AttestationMode, CaptureAuthority. Renaming these in
+# release builds breaks the Java.use() lookups the agent depends on.
+# ----------------------------------------------------------------------
+
+# Allow the proofsign package to be renamed but keep its members reachable.
+# This sub-package is intentionally NOT covered by the broad keeps above.
 -keeppackagenames !org.witness.proofmode.c2pa.proofsign.**
 -repackageclasses 'pm'
-
-# Keep only what's needed for reflection-safe APIs
--keep class org.witness.proofmode.c2pa.proofsign.Result { *; }
-
-# Obfuscate everything in proofsign package
 -keep,allowobfuscation class org.witness.proofmode.c2pa.proofsign.** { *; }
+
+# kotlinx.serialization needs the generated $$serializer and Companion
+# accessors to be reachable for the @Serializable SignerConfiguration in
+# ProofSignC2PASigner. These rules are obfuscation-safe (they keep
+# *members* by signature, not the class name).
+-keep,includedescriptorclasses class org.witness.proofmode.c2pa.proofsign.**$$serializer { *; }
+-keepclassmembers class org.witness.proofmode.c2pa.proofsign.** {
+    *** Companion;
+    kotlinx.serialization.KSerializer serializer(...);
+}
