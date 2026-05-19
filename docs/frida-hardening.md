@@ -238,6 +238,203 @@ complementary defense is the server-side claim-binding contract
 that requires the server's Play-Integrity-bound nonce to be bound to the
 claim content — making content-swap detectable server-side as well.
 
+## Runtime integrity recheck at signing time
+
+The native checks in `DeviceIntegritySupport.isEnvironmentCompromised()`
+historically ran only at `ProofModeApp.onCreate` and
+`CameraActivity.onCreate`, with `System.exit(0)` on a hit. The published
+attack flow specifically defeats that: launch ProofMode first (so
+`onCreate` runs clean), *then* start `frida-server`, *then* attach. After
+startup, nothing rechecks.
+
+The runtime recheck closes this gap. Two entry points now call
+`isEnvironmentCompromised()` synchronously at the top, throwing
+`CompromisedEnvironmentException` on a hit:
+
+- `C2PAManager.signMediaFile` — covers all signing modes (KEYSTORE,
+  HARDWARE, REMOTE), so it gates local signers too.
+- `ProofSignClient.signC2PAClaimWithDeviceAuth` — fires *before*
+  `scope.launch`, so the throw is delivered synchronously to a direct
+  Frida invocation rather than being swallowed by coroutine machinery.
+
+`MediaWatcher.ingestMedia` catches `CompromisedEnvironmentException` the
+same way it catches `UnauthorizedCaptureException` — the compromised
+device still gets a PGP/hash sidecar, just not a C2PA claim.
+
+Cost: roughly 10–25 ms per sign (mostly the timing probe at 30k
+syscalls), against a multi-hundred-ms server round trip. Negligible.
+
+## R8 obfuscation of the proofsign package
+
+The published attack agent hardcodes class and method names that R8 was
+*intended* to obfuscate. A previous proguard rule `-keep class org.**`
+was over-broad and overrode the more specific
+`-keep,allowobfuscation class org.witness.proofmode.c2pa.proofsign.**`
+(R8 applies the strictest constraint when multiple rules match). The
+proofsign package therefore kept its original names in release builds.
+
+The proguard rules were reworked in `app/proguard-rules.pro` to:
+
+- Replace the over-broad keep with subpackage-specific keeps for
+  everything in `org.witness.proofmode.*` *except* `proofsign`.
+- Add kotlinx.serialization rules for the `@Serializable`
+  `SignerConfiguration` so JSON deserialization keeps working with
+  obfuscated names.
+- Leave the existing `-keep,allowobfuscation` rule in place so the
+  package's classes are kept (no shrinking) but renamed.
+
+After the change, the R8 mapping shows the attack-targeted symbols are
+fully obfuscated:
+
+| Original | Obfuscated |
+| -------- | ---------- |
+| `ProofSignClient` | `org.witness.proofmode.c2pa.proofsign.e` |
+| `ProofSignClient.signC2PAClaimWithDeviceAuth` | `e.y(String, Function1)` |
+| `ProofSignClient.verifyDevice` | `e.A(Function1)` |
+| `Result` / `Result$Success` / `Result$Failure` | `f` / `f$b` / `f$a` |
+| `C2PABearerSignature` | `a` |
+| `CaptureAuthority` | `b` |
+| `ClaimBinding` | `c` |
+| `CompromisedEnvironmentException` | `d` |
+
+The Frida agent's hardcoded `Java.use('...ProofSignClient')` now throws
+`ClassNotFoundException`, and even after recovering the renamed class,
+`.signC2PAClaimWithDeviceAuth(...)` is `NoSuchMethodError` (the method
+is now `.y(...)`).
+
+## Defense stack against the published attack
+
+In execution order, the gates the published `sign_proofmode.py` +
+`frida_proofsign.js` hits against a hardened release build:
+
+1. `Java.use('org.witness.proofmode.c2pa.proofsign.ProofSignClient')` →
+   **`ClassNotFoundException`** (class renamed by R8 to `…proofsign.e`).
+2. Even after recovering the name, the agent's 4-arg
+   `.$new(ctx, url, project, mode)` →
+   **`NoSuchMethodError`** (the current constructor is 3-arg;
+   `AttestationMode` is dead-code-eliminated and absent from the build).
+3. Even after fixing the constructor, `signC2PAClaimWithDeviceAuth` →
+   renamed to `y`, **`NoSuchMethodError`**.
+4. Even after finding `y`, the first line throws
+   **`CompromisedEnvironmentException`** because the runtime integrity
+   recheck sees the Frida agent in `/proc/self/maps`, a `gum-js` thread,
+   a hooked libc, or a timing anomaly.
+5. Even after hooking `isEnvironmentCompromised` to return false, the
+   next line throws **`UnauthorizedCaptureException`** because the
+   `CaptureAuthority` `ThreadLocal` is empty on the Frida thread.
+6. Even after hooking `currentAuthorizedDigest` to return non-null,
+   each new hook is itself a Frida fingerprint that future timing /
+   maps / syscall-integrity checks (run on each sign) can pick up — and
+   the attacker now needs to maintain multiple hooks in sync.
+
+## Known leaks and future work
+
+These are the residual weaknesses in the current design, in roughly
+descending order of how much they matter.
+
+### Kotlin internal getter exposes the ThreadLocal directly
+
+`CaptureAuthority.enterSigningScope` is `inline`, which prevents Frida
+from calling it directly at runtime (inline functions have no JVM method
+to hook). But the underlying `ThreadLocal` is reachable through the
+`@PublishedApi internal val activeDigestThreadLocal` getter, which
+Kotlin compiles to a public JVM method with a mangled name like
+`getActiveDigestThreadLocal$android_libproofmode_release`. A
+sophisticated attacker can call that getter, `.set(fakeDigest)`, and
+bypass the inner gate without hooking anything.
+
+Possible fixes:
+- Move `activeDigest` storage into the native lib so there is no JVM
+  ThreadLocal to manipulate. The Kotlin side calls a JNI method to
+  read/write it; the native side stores it in TLS keyed by `gettid()`.
+- Or wrap the ThreadLocal value in a small opaque token that includes
+  an HMAC over `(threadId, digest, salt)` where the salt lives only in
+  native memory — `.set()` from Frida can't produce a valid token
+  because it doesn't know the salt.
+
+### Native checks are callable through JVM wrappers
+
+`isEnvironmentCompromised()` is a Kotlin method that calls the JNI
+`nativeIsEnvironmentCompromised()` underneath. Frida hooks JVM methods,
+not native functions, so `.implementation = function() { return false; }`
+on the Kotlin wrapper bypasses every native check at once.
+
+Fix: invoke the native function from a *native* caller in the signing
+path rather than from Kotlin. Concretely, the signing gates would call
+into a small native function that runs `nativeIsEnvironmentCompromised()`
+internally and then makes a follow-on JNI call to set the
+`CaptureAuthority` scope. Frida can still hook the outer signing method,
+but the native-to-native call is not interceptable through
+`Java.use(...).implementation`.
+
+### Server has no claim-binding contract
+
+Every defense above is in-process and falls if a determined attacker
+patches enough of it (kernel-level hook, custom Frida build, repacked
+APK with our code stripped out). The only defense that doesn't depend
+on the client being uncompromised is server-side claim binding: the
+ProofSign server's Play-Integrity-nonce becomes bound to a hash of the
+actual claim content, and the server refuses to sign content that
+wasn't pre-committed.
+
+The sketch is at
+[proofmode-hardening/patches/server-contract/SERVER_CONTRACT.md](../../Downloads/ph/proofmode-hardening/patches/server-contract/SERVER_CONTRACT.md).
+This is a server-team task, not a client one, and is the single
+highest-leverage outstanding hardening.
+
+### Obfuscation leak: `ProofSignC2PASigner` + `SignerConfiguration`
+
+The kotlinx.serialization keep rule
+`-keep,includedescriptorclasses class **$$serializer { *; }`
+transitively pins `ProofSignC2PASigner$SignerConfiguration` (the
+`@Serializable` outer holder) and its enclosing
+`ProofSignC2PASigner` class. Their names survive R8 unchanged:
+
+```
+ProofSignC2PASigner                          -> ProofSignC2PASigner
+ProofSignC2PASigner$SignerConfiguration      -> …$SignerConfiguration
+```
+
+The attack agent doesn't reference these classes, so the leak is not
+*functionally* exploited. But a fingerprint-scanning attacker can use
+the surviving names as a foothold to locate the renamed neighbours
+(`ProofSignClient`, `CaptureAuthority`) in the .dex.
+
+Fix: move `SignerConfiguration` to a top-level file in a different
+package (e.g. `org.witness.proofmode.c2pa.config`), so the
+`**$$serializer` rule no longer transitively pins anything adjacent to
+`ProofSignClient`.
+
+### `verifyDevice` is intentionally ungated
+
+The capture-authorization gate covers signing; it deliberately does not
+cover `verifyDevice`, which is the device-registration / re-attestation
+flow. A Frida-driven `verifyDevice` call costs the attacker nothing
+useful by itself — it does not produce a signature — but it does let
+them observe the Play Integrity / Key Attestation flow and exercise the
+device-key. If we ever change the registration flow such that
+`verifyDevice` returns or persists sensitive state, this gate must be
+added.
+
+### Camera-pipeline hook bypass
+
+Documented above under "What still gets through": an attacker who
+hooks `CameraViewModel.sendLocalCameraEvent` to inject attacker-chosen
+image bytes will receive a legitimately-issued nonce and produce a
+valid signature. The fix is the server-side claim binding listed above;
+no client-side fix can fully close this, because the attacker is by
+construction inside the trust boundary at that point.
+
+### Mapping file is a forensic asset
+
+R8 produces `app/build/outputs/mapping/release/mapping.txt`. If this
+file leaks to an attacker, every R8-renamed symbol becomes a one-shot
+lookup. The mapping file is a build artefact, not a runtime asset, so
+the fix is operational: gate it in CI (do not publish it alongside the
+APK), and rotate the mapping each release by enabling
+`-classobfuscationdictionary` / `-packageobfuscationdictionary` so old
+mappings stop being useful.
+
 ## Future hardening to consider
 
 - Hash the in-memory `.text` segments of critical libs (`libdintegrity.so`,
