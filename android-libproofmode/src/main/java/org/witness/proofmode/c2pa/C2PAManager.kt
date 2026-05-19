@@ -1154,24 +1154,36 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             { Instant.now() }                     // Time source
         )
 
-        /// Verify an attestation certificate chain
-        when (val result = verifier.verify(certificateChain)) {
-
-            is com.android.keyattestation.verifier.VerificationResult.Success -> {
-                // Access verified information
-                val publicKey = result.publicKey
-                val securityLevel = result.securityLevel
-                val verifiedBootState = result.verifiedBootState
-                val deviceInformation = result.deviceInformation
-
-                return true
-            }
-            else -> {
-
-                return false
-
-            }
+        val result = verifier.verify(certificateChain)
+        if (result !is com.android.keyattestation.verifier.VerificationResult.Success) {
+            Timber.w("Key attestation chain rejected: %s", result::class.simpleName)
+            return false
         }
+
+        // SOFTWARE means the attestation itself was produced by software with no
+        // TEE/StrongBox guarantee — i.e. it cannot vouch for "trusted hardware".
+        if (result.securityLevel == com.android.keyattestation.verifier.SecurityLevel.SOFTWARE) {
+            Timber.w("Key attestation rejected: securityLevel=SOFTWARE (no hardware backing)")
+            return false
+        }
+
+        // VERIFIED is the only state that proves dm-verity passed and the bootloader
+        // was locked with the OEM key. SELF_SIGNED = user replaced the verified-boot
+        // key (custom ROM); UNVERIFIED = unlocked bootloader; FAILED = boot verification
+        // failed. None of these are acceptable for an evidentiary "trusted hardware" claim.
+        if (result.verifiedBootState != com.android.keyattestation.verifier.VerifiedBootState.VERIFIED) {
+            Timber.w("Key attestation rejected: verifiedBootState=%s", result.verifiedBootState)
+            return false
+        }
+
+        // Defense in depth: even if verifiedBootState reports VERIFIED, the bootloader
+        // must currently be locked. A rebooted-then-unlocked device can otherwise slip past.
+        if (!result.deviceLocked) {
+            Timber.w("Key attestation rejected: deviceLocked=false")
+            return false
+        }
+
+        return true
     }
 
     /**

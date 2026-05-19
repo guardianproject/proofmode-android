@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import org.witness.proofmode.ProofMode.PREF_OPTION_BLOCK_AI
+import org.witness.proofmode.c2pa.DeviceIntegritySupport
 import org.witness.proofmode.camera.fragments.CameraScreen
 
 
@@ -24,6 +25,9 @@ class CameraActivity : ComponentActivity(), SensorEventListener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        if (DeviceIntegritySupport().isEnvironmentCompromised())
+            System.exit(0)
 
         val window = window
        window.decorView.setBackgroundColor(android.graphics.Color.BLACK)

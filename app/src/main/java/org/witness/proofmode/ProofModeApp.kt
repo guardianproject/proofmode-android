@@ -8,6 +8,7 @@ import android.os.Looper
 import android.preference.PreferenceManager
 import android.widget.Toast
 import androidx.work.Configuration
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -16,12 +17,12 @@ import org.acra.config.mailSender
 import org.acra.data.StringFormat
 import org.acra.ktx.initAcra
 import org.bouncycastle.openpgp.PGPException
-import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE
-import org.witness.proofmode.ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
 import org.witness.proofmode.c2pa.C2PAManager
+import org.witness.proofmode.c2pa.DeviceIntegritySupport
 import org.witness.proofmode.c2pa.PreferencesManager
 import org.witness.proofmode.c2pa.proofsign.ProofSignClient
 import org.witness.proofmode.c2pa.proofsign.Result
+import org.witness.proofmode.crypto.pgp.PassphraseKeystore
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.library.BuildConfig
 import org.witness.proofmode.notaries.OpenTimestampsNotarizationProvider
@@ -30,7 +31,6 @@ import org.witness.proofmode.storage.StorageProviderManager
 import timber.log.Timber
 import java.io.IOException
 import java.util.concurrent.Executors
-import kotlin.random.Random
 
 
 private var mPgpUtils: PgpUtils? = null
@@ -48,22 +48,39 @@ class ProofModeApp : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
 
+        if (DeviceIntegritySupport().isEnvironmentCompromised())
+            System.exit(0)
+
         // Seed signing preferences from XML defaults so the configured server URL
         // and other signing settings exist before any signing path reads them.
         androidx.preference.PreferenceManager.setDefaultValues(this, R.xml.signing_preferences, false)
+
+        mPrefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
+
+        // Reconcile the keystore-wrapped passphrase with the on-disk keyring
+        // *before* anything else can touch PassphraseKeystore. If init(this)
+        // runs first it ends up calling MediaWatcher.getInstance() (when
+        // PREFS_DOPROOF is true), which would call getOrCreatePassphrase()
+        // and auto-generate a passphrase that doesn't match the existing
+        // legacy keyring — producing PGP checksum-mismatch crashes on sign.
+        // This is fast: no 4096-bit RSA generation here, only file checks,
+        // a PBE test-decrypt, and (on migration) an in-memory keyring rewrite.
+        provisionPassphrase()
 
         init(this)
 
         //add google safetynet and opentimestamps
         addDefaultNotarizationProviders()
 
-        mPrefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
-
         GlobalScope.launch(Dispatchers.IO) {
+            // Slow path (4096-bit RSA × 2 on a fresh install) goes on IO.
+            // By now provisionPassphrase has guaranteed the wrapper holds
+            // whatever passphrase the keyring will need.
             initPgpKey()
         }
 
         StorageProviderManager.getInstance().initializeStorageProviders(this)
+
 
     }
 
@@ -82,20 +99,114 @@ class ProofModeApp : Application(), Configuration.Provider {
         return conformant
     }
 
+    /**
+     * Synchronous reconciliation of the on-disk keyring with the keystore-
+     * wrapped passphrase store. Idempotent and self-healing: detects three
+     * states and converges all of them to "wrapper holds a passphrase that
+     * actually decrypts the keyring."
+     *
+     *  1. No keyring on disk: persist a fresh passphrase so [initPgpKey]
+     *     creates the keyring under it.
+     *  2. Keyring exists, wrapper empty: legacy install — figure out which
+     *     passphrase the keyring is actually encrypted with (try the legacy
+     *     "password" default and the historical pgpkp pref), migrate to a
+     *     fresh wrapped passphrase, scrub the legacy plaintext pref.
+     *  3. Keyring exists, wrapper holds something: verify the wrapped
+     *     passphrase decrypts the keyring. If not (e.g. an earlier buggy
+     *     build of this code stored a fresh passphrase before migration ran),
+     *     fall through to the legacy-recovery path.
+     *
+     * Must be called before any other component touches PassphraseKeystore
+     * (i.e. before init(this) → MediaWatcher.getInstance), otherwise the
+     * first reader auto-generates a passphrase that doesn't match the
+     * keyring and provisioning loses the race.
+     */
+    private fun provisionPassphrase() {
+        try {
+            val keyringExists = PgpUtils.keyRingExists(this)
+            if (!keyringExists) {
+                // Fresh install. Persist now so MediaWatcher / initPgpKey
+                // both see the same passphrase, and initPgpKey creates the
+                // keyring under it.
+                PassphraseKeystore.getOrCreatePassphrase(this)
+                return
+            }
+
+            // Keyring exists. Figure out which passphrase actually decrypts it.
+            val stored = if (PassphraseKeystore.hasPassphrase(this))
+                PassphraseKeystore.getOrCreatePassphrase(this) else null
+            if (stored != null && PgpUtils.canDecryptKeyring(this, stored)) {
+                // Healthy steady state.
+                return
+            }
+
+            // Either no wrapper yet, or wrapper holds the wrong passphrase
+            // (broken earlier build). Probe the legacy candidates.
+            val legacyDefault = ProofModeConstants.PREFS_KEY_PASSPHRASE_DEFAULT
+            val legacyPref = mPrefs.getString(ProofModeConstants.PREFS_KEY_PASSPHRASE, null)
+
+            val workingLegacy = sequenceOf(legacyDefault, legacyPref)
+                .filterNotNull()
+                .firstOrNull { PgpUtils.canDecryptKeyring(this, it) }
+
+            if (workingLegacy == null) {
+                Timber.e("On-disk PGP keyring decrypts with no known passphrase; cannot auto-recover")
+                // Don't leave the wrapper in a state that pretends a working
+                // passphrase exists — sign attempts should fail loudly rather
+                // than appear to succeed with a non-verifiable signature.
+                return
+            }
+
+            val fresh = PassphraseKeystore.generatePassphrase()
+            try {
+                PgpUtils.init(this, workingLegacy)
+                mPgpUtils = PgpUtils.getInstance()
+                val migrated = mPgpUtils?.changePassphrase(this, workingLegacy, fresh) == true
+                if (migrated) {
+                    PassphraseKeystore.storePassphrase(this, fresh)
+                    mPrefs.edit().remove(ProofModeConstants.PREFS_KEY_PASSPHRASE).apply()
+                    Timber.i("Migrated PGP keyring to keystore-wrapped passphrase")
+                } else {
+                    // Rewrite failed — pin the wrapper to the legacy passphrase
+                    // that actually decrypts the keyring so signs work. Better
+                    // a weak passphrase that signs than a strong one that crashes.
+                    PassphraseKeystore.storePassphrase(this, workingLegacy)
+                    Timber.w("PGP keyring rewrite failed; pinning wrapper to legacy passphrase")
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "PGP migration failed; pinning wrapper to legacy passphrase")
+                PassphraseKeystore.storePassphrase(this, workingLegacy)
+            }
+        } catch (e: Exception) {
+            // Defensive: provisionPassphrase runs in onCreate and must not
+            // bring the app down. A failure here means downstream signs will
+            // surface their own error, which is recoverable; an exception
+            // escaping onCreate is not.
+            Timber.e(e, "provisionPassphrase failed")
+        }
+    }
+
     fun initPgpKey () {
+        if (mPgpUtils != null) return
 
-        if (mPgpUtils == null) {
-
-            PgpUtils.init(this, mPrefs.getString(PREFS_KEY_PASSPHRASE, PREFS_KEY_PASSPHRASE_DEFAULT))
-            mPgpUtils = PgpUtils.getInstance()
-
-
-        //    if(useContentCredentials())
-          //          initContentCredentials()
-
-
+        // Apply any stored email-as-key-id before the keyring is generated.
+        // (Previously this lived in the dead else-branch of checkAndGeneratePublicKey;
+        // moving it here is the only way it can actually influence keyring creation.)
+        val accountEmail = mPrefs.getString(ProofMode.PREF_CREDENTIALS_PRIMARY, "")
+        if (!accountEmail.isNullOrEmpty()) {
+            PgpUtils.setKeyid(accountEmail)
         }
 
+        // provisionPassphrase has already reconciled the wrapper with the
+        // on-disk keyring, so we just read whichever passphrase it parked there.
+        val passphrase = PassphraseKeystore.getOrCreatePassphrase(this)
+
+        try {
+            PgpUtils.init(this, passphrase)
+            mPgpUtils = PgpUtils.getInstance()
+        } catch (e: Exception) {
+            Timber.e(e, "PgpUtils init failed")
+        }
     }
 
     public fun useContentCredentials () : Boolean {
@@ -112,6 +223,8 @@ class ProofModeApp : Application(), Configuration.Provider {
     fun initContentCredentials () {
 
         val conformant = checkC2PAConformance()
+
+
 
         if (conformant)
             initProofSignClient()
@@ -143,11 +256,18 @@ class ProofModeApp : Application(), Configuration.Provider {
         )
 
         if (!proofSignClient.isDeviceRegistered()) {
-            Timber.d("Need to register device with ProofSign server")
-            proofSignClient.verifyDevice { result ->
-                when (result) {
-                    is Result.Success -> Timber.d("ProofSign: REGISTERED (${result.data.verdict})")
-                    is Result.Failure -> Timber.d("ProofSign: FAILURE (${result.error})")
+
+            if (DeviceIntegritySupport().detectThreats(this))
+            {
+                Timber.w("Cannot reverify due to suspicious device state (USB, Developer mode, Frida)")
+            }
+            else {
+                Timber.d("Need to register device with ProofSign server")
+                proofSignClient.verifyDevice { result ->
+                    when (result) {
+                        is Result.Success -> Timber.d("ProofSign: VERIFIED (${result.data.verdict})")
+                        is Result.Failure -> Timber.d("ProofSign: FAILURE (${result.error})")
+                    }
                 }
             }
         } else {
@@ -158,30 +278,11 @@ class ProofModeApp : Application(), Configuration.Provider {
 
     fun checkAndGeneratePublicKey() {
         Executors.newSingleThreadExecutor().execute {
-
-            //Background work here
-            var pubKey: String? = null
             try {
-                val prefs = PreferenceManager.getDefaultSharedPreferences(this)
-
-                if (PgpUtils.keyRingExists(this)) {
-                    pubKey = mPgpUtils?.publicKeyFingerprint
-                }
-                else
-                {
-                    var newPassPhrase = getRandPassword(12)
-                    prefs.edit().putString(PREFS_KEY_PASSPHRASE,newPassPhrase).commit()
-
-
-                    var accountEmail = prefs.getString(ProofMode.PREF_CREDENTIALS_PRIMARY, "")
-                    if (accountEmail?.isNotEmpty() == true) {
-                        PgpUtils.setKeyid(accountEmail)
-                    }
-
-                    pubKey = mPgpUtils?.publicKeyFingerprint
-
-                }
-
+                // initPgpKey is idempotent and the single owner of keyring
+                // creation, legacy migration, and passphrase provisioning.
+                initPgpKey()
+                mPgpUtils?.publicKeyFingerprint
             } catch (e: PGPException) {
                 Timber.e(e, "error getting public key")
                 showToastMessage(getString(R.string.pub_key_gen_error))
@@ -190,22 +291,6 @@ class ProofModeApp : Application(), Configuration.Provider {
                 showToastMessage(getString(R.string.pub_key_gen_error))
             }
         }
-    }
-
-    fun getRandPassword(n: Int): String
-    {
-        val characterSet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-        val random = Random(System.nanoTime())
-        val password = StringBuilder()
-
-        for (i in 0 until n)
-        {
-            val rIndex = random.nextInt(characterSet.length)
-            password.append(characterSet[rIndex])
-        }
-
-        return password.toString()
     }
 
     private fun showToastMessage(message: String) {
@@ -219,7 +304,8 @@ class ProofModeApp : Application(), Configuration.Provider {
 
     fun init(context: Context) {
 
-        Timber.plant(Timber.DebugTree())
+        if (BuildConfig.DEBUG)
+            Timber.plant(Timber.DebugTree())
 
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
         if (prefs.getBoolean(ProofMode.PREFS_DOPROOF, false)) {
