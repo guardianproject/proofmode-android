@@ -125,14 +125,6 @@ class MainActivity : AppCompatActivity(),
 
         }
 
-        var dIntegrity = DeviceIntegritySupport()
-
-        if (dIntegrity.detectThreats(this))
-        {
-            //   Toast.makeText(this,"Developer mode is enabled",Toast.LENGTH_LONG).show()
-            showDialog("Warning","You have settings enabled (USB connected, Developer Mode) that could be used to compromise this device. This will degrade the trust of your signing.")
-
-        }
 
     }
 

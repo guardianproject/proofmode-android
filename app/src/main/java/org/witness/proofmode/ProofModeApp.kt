@@ -31,6 +31,7 @@ import org.witness.proofmode.storage.StorageProviderManager
 import timber.log.Timber
 import java.io.IOException
 import java.util.concurrent.Executors
+import kotlin.system.exitProcess
 
 
 private var mPgpUtils: PgpUtils? = null
@@ -48,8 +49,16 @@ class ProofModeApp : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
 
-        if (DeviceIntegritySupport().isEnvironmentCompromised())
-            System.exit(0)
+        //aggressively stop people trying to instrument the app
+        var dIntMan = DeviceIntegritySupport()
+        if (dIntMan.isEnvironmentCompromised())
+            exitProcess(0)
+
+        //and do not allow developer mode
+        if(!BuildConfig.DEBUG && dIntMan.isDeveloperAttackSurfaceOpen(this)) {
+            Toast.makeText(this, getString(R.string.security_warning_usb),Toast.LENGTH_LONG).show()
+            exitProcess(0)
+        }
 
         // Seed signing preferences from XML defaults so the configured server URL
         // and other signing settings exist before any signing path reads them.
