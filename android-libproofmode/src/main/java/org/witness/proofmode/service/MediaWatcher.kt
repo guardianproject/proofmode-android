@@ -323,6 +323,8 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
                             );
                         } catch (e: org.witness.proofmode.c2pa.proofsign.UnauthorizedCaptureException) {
                             Timber.w(e, "C2PA signing refused by capture-authority gate for ${fileMedia.name}")
+                        } catch (e: org.witness.proofmode.c2pa.proofsign.CompromisedEnvironmentException) {
+                            Timber.w(e, "C2PA signing refused: runtime environment is compromised (${fileMedia.name})")
                         }
                     }
 

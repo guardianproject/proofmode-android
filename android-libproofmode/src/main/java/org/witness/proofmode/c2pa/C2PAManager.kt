@@ -44,6 +44,7 @@ import org.json.JSONObject
 import org.witness.proofmode.ProofMode
 import org.witness.proofmode.ProofMode.PREF_OPTION_LOCATION
 import org.witness.proofmode.c2pa.proofsign.CaptureAuthority
+import org.witness.proofmode.c2pa.proofsign.CompromisedEnvironmentException
 import org.witness.proofmode.c2pa.proofsign.ProofSignC2PASigner
 import org.witness.proofmode.c2pa.proofsign.UnauthorizedCaptureException
 import org.witness.proofmode.c2pa.proofsign.ProofSignClient
@@ -119,6 +120,16 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         captureNonce: ByteArray? = null,
         captureFileDigest: ByteArray? = null,
     ): Result<Stream> = withContext(Dispatchers.IO) {
+        // Runtime integrity recheck. The startup checks in
+        // ProofModeApp.onCreate / CameraActivity.onCreate are bypassed by an
+        // attacker who attaches Frida AFTER launch; rechecking here closes
+        // that gap. Inexpensive (~10ms of /proc reads + a timing probe)
+        // relative to the network signing roundtrip.
+        if (DeviceIntegritySupport().isEnvironmentCompromised()) {
+            throw CompromisedEnvironmentException(
+                "signMediaFile refused: runtime environment is compromised"
+            )
+        }
         // Capture-authorization gate: a Frida-driven oracle attack reaches
         // this method without a nonce, or with a nonce that does not match
         // the file's actual contents. Consume the nonce here (not in

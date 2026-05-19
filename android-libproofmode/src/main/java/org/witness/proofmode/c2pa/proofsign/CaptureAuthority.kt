@@ -154,3 +154,10 @@ object CaptureAuthority {
 
 /** Thrown when a signing request lacks a valid capture-authorization nonce. */
 class UnauthorizedCaptureException(message: String) : SecurityException(message)
+
+/**
+ * Thrown when a signing entry point detects that the runtime environment has
+ * been compromised (Frida injected, debugger attached, suspicious threads,
+ * libc hooks, etc.) at the moment of signing — not just at app startup.
+ */
+class CompromisedEnvironmentException(message: String) : SecurityException(message)

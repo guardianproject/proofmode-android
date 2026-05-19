@@ -351,6 +351,14 @@ class ProofSignClient(
         claim: String,
         callback: (Result<C2PABearerSignature>) -> Unit,
     ) {
+        // Runtime integrity recheck — the startup check in onCreate is
+        // bypassed by an attacker who attaches Frida AFTER launch. Runs the
+        // native /proc/self/maps + port + thread + syscall + timing probes.
+        if (org.witness.proofmode.c2pa.DeviceIntegritySupport().isEnvironmentCompromised()) {
+            throw CompromisedEnvironmentException(
+                "signC2PAClaimWithDeviceAuth refused: runtime environment is compromised"
+            )
+        }
         // Defense against the documented Frida oracle attack: an attacker
         // who Java.use()s this class and invokes this method directly never
         // traversed the camera capture path and never entered an authorized
