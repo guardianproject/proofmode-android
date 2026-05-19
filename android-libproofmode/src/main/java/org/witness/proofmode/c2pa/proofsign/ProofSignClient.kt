@@ -196,6 +196,14 @@ class ProofSignClient(
         return Base64.getEncoder().encodeToString(signature.sign())
     }
 
+    /** Decode a hex string (server-issued KA challenge) into its raw bytes. */
+    private fun hexDecode(hex: String): ByteArray {
+        require(hex.length % 2 == 0) { "Challenge is not valid hex (odd length)" }
+        return ByteArray(hex.length / 2) { i ->
+            hex.substring(i * 2, i * 2 + 2).toInt(16).toByte()
+        }
+    }
+
     // endregion
 
     // region: registration (key attestation)
@@ -216,7 +224,12 @@ class ProofSignClient(
                         Result.Failure("Failed to obtain key attestation challenge"),
                     )
 
-                val chain = generateAttestedKeyPair(challenge.toByteArray())
+                // The server issues the challenge as hex(rand[32]); proofmode
+                // binds the DECODED challenge bytes into the attestation cert,
+                // so embed hexDecode(challenge) — not the hex string's ASCII.
+                // The register body still sends the original hex string (the
+                // server matches that against its challenge table).
+                val chain = generateAttestedKeyPair(hexDecode(challenge))
                 val chainBase64 = chain.map { Base64.getEncoder().encodeToString(it.encoded) }
 
                 val json = JSONObject().apply {
