@@ -89,9 +89,6 @@ class SigningSettingsActivity : AppCompatActivity() {
             findPreference<EditTextPreference>(ProofMode.PREF_OPTION_PROOFSIGN_SERVER)
                 ?.isEnabled = isRemote
 
-            val tsaPref = findPreference<EditTextPreference>(ProofMode.PREF_OPTION_TSA_SERVER)
-            tsaPref?.isEnabled = !isRemote
-
             MediaWatcher.getInstance(activity)?.resetC2PA()
 
         }

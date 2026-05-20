@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -614,6 +615,33 @@ fun ActivitiesView(onAnyItemSelected: ((Boolean) -> Unit)? = null) {
             )
         }
     }
+    val listState = rememberLazyListState()
+
+    // New activities are appended to Activities.activities and rendered in
+    // reverse (asReversed()), so the newest entry sits at index 0. Track the
+    // total media count — across batched captures, not just the activity count,
+    // since rapid captures merge into the most-recent activity — and scroll to
+    // the top whenever it grows, so freshly captured/imported media is visible
+    // without a manual tap or scroll.
+    val totalItemCount by remember {
+        derivedStateOf {
+            Activities.activities.sumOf { activity ->
+                when (val type = activity.type) {
+                    is ActivityType.MediaCaptured -> type.items.size
+                    is ActivityType.MediaImported -> type.items.size
+                    is ActivityType.MediaShared -> type.items.size
+                    is ActivityType.PublicKeyShared -> 1
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(totalItemCount) {
+        if (totalItemCount > 0) {
+            listState.animateScrollToItem(0)
+        }
+    }
+
     CompositionLocalProvider(LocalSelectionHandler provides selectionHandler) {
         MaterialTheme() {
             Box(
@@ -624,6 +652,7 @@ fun ActivitiesView(onAnyItemSelected: ((Boolean) -> Unit)? = null) {
                         .fillMaxSize()
                 ) {
                     LazyColumn(
+                        state = listState,
                         modifier = Modifier
                             .padding(10.dp)
                             .weight(1f),

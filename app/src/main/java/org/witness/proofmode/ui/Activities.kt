@@ -229,33 +229,35 @@ object Activities: ViewModel()
     fun addActivity(activity: Activity, context: Context) {
         val db = getDB(context)
 
-        val lastActivity = activities.lastOrNull()
-        if (activity.type is ActivityType.MediaCaptured && lastActivity != null && lastActivity.type is ActivityType.MediaCaptured && (lastActivity.startTime.time + timeBatchWindow) >= activity.startTime.time) {
-            // If within the same minute, add it to the same "batch" as the previous one.
-
-            for (pItem in activity.type.items)
-            {
-                if (!lastActivity.type.items.any{ it.uri == pItem.uri})
-                {
-                    lastActivity.type.items.add(pItem)
+        // SnapshotStateList writes must happen on the main thread for Compose to
+        // schedule a recomposition. addActivity is frequently invoked from a
+        // background/broadcast callback (MediaWatcher -> ProofEventReceiver), so
+        // marshal the in-memory mutation onto the main thread the same way
+        // load() does; otherwise the Activities feed only refreshes once the
+        // user taps or scrolls. The DB writes are suspend calls that Room
+        // dispatches to its own executor.
+        MainScope().launch {
+            val lastActivity = activities.lastOrNull()
+            if (activity.type is ActivityType.MediaCaptured && lastActivity != null && lastActivity.type is ActivityType.MediaCaptured && (lastActivity.startTime.time + timeBatchWindow) >= activity.startTime.time) {
+                // If within the same batch window, add it to the same "batch" as the previous one.
+                for (pItem in activity.type.items) {
+                    if (!lastActivity.type.items.any { it.uri == pItem.uri }) {
+                        lastActivity.type.items.add(pItem)
+                    }
                 }
-            }
 
-           // lastActivity.type.items += activity.type.items
-            viewModelScope.launch {
                 if (db.activitiesDao().activityFromProofableItemId(activity.id) == null)
                     db.activitiesDao().update(lastActivity)
-            }
-        } else {
-            activities.add(activity)
-            viewModelScope.launch {
+            } else {
+                activities.add(activity)
                 if (db.activitiesDao().activityFromProofableItemId(activity.id) == null)
                     db.activitiesDao().insert(activity)
             }
+
+            if (context is MainActivity) {
+                context.checkNoPicsView()
+            }
         }
-
-
-
     }
 
     fun clearActivity (id: String, context: Context) {
