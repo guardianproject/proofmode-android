@@ -55,6 +55,9 @@
 
     <uses-permission android:name="android.permission.GET_ACCOUNTS" />
 
+    <uses-permission android:name="android.permission.DETECT_SCREEN_CAPTURE" />
+    <uses-permission android:name="android.permission.DETECT_SCREEN_RECORDING" />
+
     <application
         android:name=".ProofModeApp"
         android:allowBackup="false"

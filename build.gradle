@@ -25,8 +25,7 @@ allprojects {
 
         maven { url "https://jitpack.io" }
 
-
-
+        maven { url "https://europe-west3-maven.pkg.dev/talsec-artifact-repository/freerasp" }
     }
 
 

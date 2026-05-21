@@ -8,6 +8,11 @@ import android.os.Looper
 import android.preference.PreferenceManager
 import android.widget.Toast
 import androidx.work.Configuration
+import com.aheaditec.talsec_security.security.api.SuspiciousAppInfo
+import com.aheaditec.talsec_security.security.api.Talsec
+import com.aheaditec.talsec_security.security.api.TalsecConfig
+import com.aheaditec.talsec_security.security.api.TalsecMode
+import com.aheaditec.talsec_security.security.api.ThreatListener
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -17,6 +22,9 @@ import org.acra.config.mailSender
 import org.acra.data.StringFormat
 import org.acra.ktx.initAcra
 import org.bouncycastle.openpgp.PGPException
+import org.witness.proofmode.ProofModeApp.Companion.EXPECTED_PACKAGE_NAME
+import org.witness.proofmode.ProofModeApp.Companion.EXPECTED_SIGNING_CERTIFICATE_HASH_BASE64
+import org.witness.proofmode.ProofModeApp.Companion.IS_PROD
 import org.witness.proofmode.c2pa.C2PAManager
 import org.witness.proofmode.c2pa.DeviceIntegritySupport
 import org.witness.proofmode.c2pa.PreferencesManager
@@ -49,6 +57,131 @@ class ProofModeApp : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
 
+        val config = TalsecConfig.Builder(
+            EXPECTED_PACKAGE_NAME,
+            EXPECTED_SIGNING_CERTIFICATE_HASH_BASE64)
+            .watcherMail(WATCHER_MAIL)
+         //   .supportedAlternativeStores(SUPPORTED_ALTERNATIVE_STORES)
+            .prod(IS_PROD)
+            .killOnBypass(KILL_ON_BYPASS)
+            .build()
+
+        val threatDetectedListener = object : ThreatListener.ThreatDetected() {
+
+            override fun onRootDetected() {
+                println("onRootDetected")
+                exitProcess(0)
+
+            }
+
+            override fun onDebuggerDetected() {
+                println("onDebuggerDetected")
+
+                if (!BuildConfig.DEBUG) {
+                    showWarning("No debugging allowed");
+                    exitProcess(0)
+                }
+            }
+
+            override fun onEmulatorDetected() {
+                println("onEmulatorDetected")
+                if (!BuildConfig.DEBUG) {
+                    showWarning("Emulators are not supported");
+                    exitProcess(0)
+
+                }
+
+            }
+
+            override fun onTamperDetected() {
+                println("onTamperDetected")
+
+                if (!BuildConfig.DEBUG) {
+                    showWarning("Tampering detected");
+                    exitProcess(0)
+                }
+
+            }
+
+            override fun onUntrustedInstallationSourceDetected() {
+                println("onUntrustedInstallationSourceDetected")
+
+                if (!BuildConfig.DEBUG) {
+                    showWarning("Untrusted installation source detected");
+                    exitProcess(0)
+                }
+            }
+
+            override fun onHookDetected() {
+                println("onHookDetected")
+                showWarning("Ye olde Captain Hook, eh?!");
+                exitProcess(0)
+
+            }
+
+            override fun onDeviceBindingDetected() {
+                println("onDeviceBindingDetected")
+            }
+
+            override fun onObfuscationIssuesDetected() {
+                println("onObfuscationIssueDetected")
+                showWarning("Obfuscation issue detected");
+                exitProcess(0)
+            }
+
+            override fun onScreenshotDetected() {
+                println("onScreenshotDetected")
+            }
+
+            override fun onScreenRecordingDetected() {
+                println("onScreenRecordingDetected")
+            }
+
+            override fun onMultiInstanceDetected() {
+                println("onMultiInstanceDetected")
+
+                showWarning("Multiple instances detected");
+                exitProcess(0)
+
+            }
+
+            override fun onUnsecureWifiDetected() {
+                println("onUnsecureWifiDetected")
+            }
+
+            override fun onTimeSpoofingDetected() {
+                println("onTimeSpoofingDetected")
+                showWarning("Timespoofing detected");
+                exitProcess(0)
+
+            }
+
+            override fun onLocationSpoofingDetected() {
+                println("onLocationSpoofingDetected")
+                showWarning("Location spoofing detected");
+                exitProcess(0)
+
+            }
+
+            override fun onAutomationDetected() {
+                println("onAutomationDetected")
+                showWarning("Automation detected");
+                exitProcess(0)
+
+            }
+
+            override fun onMalwareDetected(suspiciousApps: List<SuspiciousAppInfo>) {
+                println("onMalwareDetected")
+                showWarning("Malware detected");
+                exitProcess(0)
+
+            }
+        }
+
+        ThreatListener(threatDetectedListener).registerListener(this)
+        Talsec.start(this, config, TalsecMode.BACKGROUND)
+
+
         //aggressively stop people trying to instrument the app
         var dIntMan = DeviceIntegritySupport()
         if (dIntMan.isEnvironmentCompromised())
@@ -56,8 +189,8 @@ class ProofModeApp : Application(), Configuration.Provider {
 
         //and do not allow developer mode
         if(!BuildConfig.DEBUG && dIntMan.isDeveloperAttackSurfaceOpen(this)) {
-            Toast.makeText(this, getString(R.string.security_warning_usb),Toast.LENGTH_LONG).show()
-            exitProcess(0)
+          //  Toast.makeText(this, getString(R.string.security_warning_usb),Toast.LENGTH_LONG).show()
+            //exitProcess(0)
         }
 
         // Seed signing preferences from XML defaults so the configured server URL
@@ -90,6 +223,11 @@ class ProofModeApp : Application(), Configuration.Provider {
 
         StorageProviderManager.getInstance().initializeStorageProviders(this)
 
+
+    }
+
+    fun showWarning (message: String) {
+        Toast.makeText(applicationContext,message,Toast.LENGTH_LONG).show();
 
     }
 
@@ -418,8 +556,17 @@ class ProofModeApp : Application(), Configuration.Provider {
     }
 
 
-
-    companion object {
-        const val TAG = "ProofMode"
+    private companion object {
+        private const val EXPECTED_PACKAGE_NAME = "org.witness.proofmode" // Don't use Context.getPackageName!
+        private val EXPECTED_SIGNING_CERTIFICATE_HASH_BASE64 = arrayOf(
+            "8AaiBIHHGmkN4C44WrDJ+krBJFJA9oECaCcDugZWhno="
+        ) // Replace with your release (!) signing certificate hashes
+        private const val WATCHER_MAIL = "nathan@proofmode.org"
+        private val SUPPORTED_ALTERNATIVE_STORES = arrayOf(
+            "com.sec.android.app.samsungapps"
+            // add other stores, such as the Samsung Galaxy Store
+        )
+        private const val IS_PROD = true
+        private const val KILL_ON_BYPASS = true
     }
 }
