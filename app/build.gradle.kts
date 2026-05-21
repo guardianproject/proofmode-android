@@ -38,8 +38,8 @@ android {
         applicationId = "org.witness.proofmode"
         minSdk = 28
         targetSdk = 36
-        versionCode = 30420200
-        versionName = "3.0.4-BETA-2"
+        versionCode = 30420300
+        versionName = "3.0.4-BETA-3"
         multiDexEnabled = true
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
