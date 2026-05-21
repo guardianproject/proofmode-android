@@ -9,6 +9,10 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/syscall.h>
+#include <sys/ptrace.h>
+#include <sys/wait.h>
+#include <pthread.h>
+#include <stdint.h>
 #include <android/log.h>
 
 static int check_frida_maps(void) {
@@ -278,6 +282,132 @@ __attribute__((unused)) static void terminate_now(void) {
     _exit(0);
 }
 
+#ifdef PROOFMODE_LETHAL_INTEGRITY
+/*
+ * Self-ptrace anti-debug watchdog (release builds only).
+ *
+ * On Linux/Android a task can have at most one tracer. We fork a child that
+ * immediately PTRACE_ATTACHes back to us: while it holds that slot, no other
+ * debugger — frida-server's ptrace injector, gdb, lldb — can attach. A monitor
+ * thread in the parent waits on the child and kills the process if the child
+ * ever dies (i.e. someone tore the watchdog off). This complements the
+ * maps/thread checks, which cover the LD_PRELOAD / repackaged-gadget path that
+ * does not use ptrace.
+ *
+ * Adapted from a public technique (CC BY-SA 4.0, stackoverflow.com/a/59467654)
+ * and hardened for production:
+ *   - the forked child uses only async-signal-safe calls (no fopen/snprintf),
+ *     since it runs after fork() from the multithreaded JVM;
+ *   - real signals are forwarded on PTRACE_CONT so the parent's own handlers
+ *     still fire — critically ART's implicit null-check SIGSEGV/SIGBUS;
+ *   - a kernel-policy attach failure with no debugger present (e.g. Yama
+ *     ptrace_scope=1) degrades gracefully instead of killing a real user's app.
+ *
+ * Caveat: while we hold our own tracer slot, the OS crash handler (debuggerd)
+ * cannot attach to produce a full native tombstone — native crash reports may
+ * be degraded on release builds.
+ */
+#define WATCHDOG_EXIT_BENIGN   13   /* ptrace policy-blocked, no debugger */
+#define WATCHDOG_EXIT_DEBUGGER 42   /* a debugger was already attached    */
+
+static volatile pid_t g_watchdog_child = -1;
+
+/*
+ * Async-signal-safe check for whether `pid` has a tracer, by scanning
+ * /proc/<pid>/status for a nonzero TracerPid. Runs in the forked child, where
+ * libc stdio/heap (fopen, snprintf) are unsafe, so we hand-build the path and
+ * use raw open/read. strstr is pure (no locks/heap) and safe here.
+ */
+static int pid_is_traced(pid_t pid) {
+    char path[64];
+    int i = 0;
+    for (const char *p = "/proc/"; *p; p++) path[i++] = *p;
+    char digits[16];
+    int n = 0;
+    unsigned int v = (unsigned int)pid;
+    if (v == 0) digits[n++] = '0';
+    while (v > 0) { digits[n++] = (char)('0' + (v % 10)); v /= 10; }
+    while (n > 0) path[i++] = digits[--n];
+    for (const char *p = "/status"; *p; p++) path[i++] = *p;
+    path[i] = '\0';
+
+    int fd = open(path, O_RDONLY | O_CLOEXEC);
+    if (fd < 0) return 0;
+    char buf[1024];
+    ssize_t got = read(fd, buf, sizeof(buf) - 1);
+    close(fd);
+    if (got <= 0) return 0;
+    buf[got] = '\0';
+
+    const char *t = strstr(buf, "TracerPid:");
+    if (!t) return 0;
+    t += 10;
+    while (*t == ' ' || *t == '\t') t++;
+    return (*t >= '1' && *t <= '9');
+}
+
+/* The watchdog child. Never returns — always _exit()s with a status the
+ * parent's monitor thread interprets. */
+static void watchdog_child(pid_t ppid) {
+    if (ptrace(PTRACE_ATTACH, ppid, NULL, NULL) != 0) {
+        /* Could not attach. If the parent is already traced, that is exactly
+         * the attack we defend against -> signal a kill. Otherwise the kernel
+         * policy forbade the self-attach with no debugger present -> degrade
+         * gracefully so we never kill a legitimate user's app. */
+        if (pid_is_traced(ppid)) _exit(WATCHDOG_EXIT_DEBUGGER);
+        _exit(WATCHDOG_EXIT_BENIGN);
+    }
+
+    int status;
+    waitpid(ppid, &status, 0);            /* consume the initial attach SIGSTOP */
+    ptrace(PTRACE_CONT, ppid, NULL, NULL);
+
+    /* Hold the tracer slot for the life of the parent. */
+    while (waitpid(ppid, &status, 0) == ppid) {
+        if (WIFEXITED(status) || WIFSIGNALED(status)) _exit(0);  /* parent gone */
+        if (WIFSTOPPED(status)) {
+            int sig = WSTOPSIG(status);
+            /* Forward real signals so the parent's handlers run (ART relies on
+             * SIGSEGV/SIGBUS for implicit null checks); swallow the trace-
+             * control signals so we don't re-stop or loop the parent. */
+            if (sig == SIGSTOP || sig == SIGTRAP) sig = 0;
+            ptrace(PTRACE_CONT, ppid, NULL, (void *)(intptr_t)sig);
+        }
+    }
+    _exit(0);
+}
+
+/* Parent-side monitor: kills the app if the watchdog dies abnormally. */
+static void *watchdog_monitor(void *arg) {
+    (void)arg;
+    if (g_watchdog_child <= 0) return NULL;
+    int status;
+    waitpid(g_watchdog_child, &status, 0);
+    /* The watchdog should outlive everything but the parent itself. A benign
+     * exit means ptrace was merely policy-blocked (no debugger) -> leave the
+     * app alone. Any other death means a debugger was detected or the watchdog
+     * was forcibly removed -> terminate. */
+    if (WIFEXITED(status) && WEXITSTATUS(status) == WATCHDOG_EXIT_BENIGN)
+        return NULL;
+    terminate_now();
+    return NULL;
+}
+
+/* Fork the watchdog and start its monitor. Safe to call once at load. */
+static void arm_anti_debug(void) {
+    pid_t pid = fork();
+    if (pid < 0) return;          /* fork failed: skip rather than misbehave */
+    if (pid == 0) {
+        watchdog_child(getppid());
+        _exit(0);                 /* unreachable */
+    }
+    g_watchdog_child = pid;
+    pthread_t t;
+    if (pthread_create(&t, NULL, watchdog_monitor, NULL) == 0)
+        pthread_detach(t);
+}
+#endif /* PROOFMODE_LETHAL_INTEGRITY */
+
 /*
  * Load-time tripwire. Runs the deterministic, low-false-positive detectors:
  * root plus the file/thread/port/map/syscall Frida checks. The timing probe
@@ -312,6 +442,13 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
             "integrity tripwire fired at load (non-lethal: debug build)");
 #endif
     }
+#ifdef PROOFMODE_LETHAL_INTEGRITY
+    /* Arm the self-ptrace watchdog: occupy our own tracer slot so no debugger
+     * (frida-server inject / gdb / lldb) can attach later, and kill the process
+     * if one is detected or the watchdog is torn off. Release builds only, so
+     * native debugging under Android Studio still works in debug builds. */
+    arm_anti_debug();
+#endif
     return JNI_VERSION_1_6;
 }
 
