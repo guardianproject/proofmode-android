@@ -128,9 +128,11 @@ class ProofModeApp : Application(), Configuration.Provider {
             }
 
             override fun onObfuscationIssuesDetected() {
-                println("onObfuscationIssueDetected")
-                showWarning("Obfuscation issue detected");
-                exitProcess(0)
+                if (!BuildConfig.DEBUG) {
+                    println("onObfuscationIssueDetected")
+                    showWarning("Obfuscation issue detected");
+                    exitProcess(0)
+                }
             }
 
             override fun onScreenshotDetected() {
@@ -570,6 +572,8 @@ class ProofModeApp : Application(), Configuration.Provider {
             // tripwire (lethal in release) — at the earliest point our own
             // code executes. The load is runCatching-guarded inside
             // DeviceIntegritySupport, so a missing .so cannot brick startup.
+            System.loadLibrary("dintegrity")
+
             DeviceIntegritySupport.ensureNativeLoaded()
         }
 
