@@ -6,8 +6,10 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <time.h>
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/syscall.h>
+#include <android/log.h>
 
 static int check_frida_maps(void) {
     FILE *f = fopen("/proc/self/maps", "r");
@@ -221,6 +223,96 @@ static int check_timing_hook(void) {
 
     if (raw_best <= 0) return 0;  /* clock skew or measurement failure */
     return libc_best > raw_best * ratio_threshold;
+}
+
+/*
+ * Native root detection. We stat the canonical su / root-manager binaries
+ * and the control directories of the common rooting frameworks (Magisk,
+ * KernelSU, APatch). This is deliberately conservative: it keys on superuser
+ * *tooling*, not on "non-stock ROM" signals like ro.build.tags=test-keys, so
+ * users on signed custom ROMs (e.g. GrapheneOS) that are not actually rooted
+ * are NOT flagged. Limitations: an unprivileged process cannot search some
+ * paths under /data/adb (mode 700), and modern Magisk DenyList can hide su
+ * from these probes — Play Integrity (verified server-side) remains the
+ * authoritative root signal. This is a cheap, hard-to-hook first line.
+ */
+static int check_root(void) {
+    static const char *const root_paths[] = {
+        "/system/bin/su",
+        "/system/xbin/su",
+        "/system/sbin/su",
+        "/sbin/su",
+        "/su/bin/su",
+        "/vendor/bin/su",
+        "/data/local/su",
+        "/data/local/bin/su",
+        "/data/local/xbin/su",
+        "/system/bin/.ext/.su",
+        "/system/usr/we-need-root/su-backup",
+        "/system/app/Superuser.apk",
+        "/system/app/SuperSU",
+        "/system/xbin/daemonsu",
+        "/system/bin/magisk",
+        "/system/xbin/magisk",
+        "/sbin/.magisk",
+        "/data/adb/magisk",
+        "/data/adb/magisk.db",
+        "/data/adb/modules",
+        "/data/adb/ksu",   /* KernelSU */
+        "/data/adb/ap",    /* APatch   */
+    };
+    for (size_t i = 0; i < sizeof(root_paths) / sizeof(root_paths[0]); i++) {
+        if (access(root_paths[i], F_OK) == 0) return 1;
+    }
+    return 0;
+}
+
+/*
+ * Immediate, silent process termination. SIGKILL cannot be caught, blocked,
+ * or ignored; _exit() is a belt-and-suspenders fallback. We deliberately
+ * avoid exit()/abort() so that no atexit handlers, static destructors, or
+ * "app keeps stopping" crash dialog run — the process simply disappears.
+ */
+__attribute__((unused)) static void terminate_now(void) {
+    kill(getpid(), SIGKILL);
+    _exit(0);
+}
+
+/*
+ * Load-time tripwire. Runs the deterministic, low-false-positive detectors:
+ * root plus the file/thread/port/map/syscall Frida checks. The timing probe
+ * is intentionally excluded here — it is device- and load-dependent and thus
+ * the wrong thing to make lethal at startup. The full set (timing included)
+ * still runs on demand via nativeIsEnvironmentCompromised() at signing time.
+ */
+static int integrity_tripwire(void) {
+    return check_root()           ||
+           check_frida_maps()     ||
+           check_anon_exec_maps() ||
+           check_frida_port()     ||
+           check_frida_threads()  ||
+           check_syscall_hook();
+}
+
+/*
+ * JNI_OnLoad runs inside System.loadLibrary("dintegrity"), before the JVM
+ * binds any native method and before any app startup code that follows the
+ * load. In release builds (PROOFMODE_LETHAL_INTEGRITY) a tripped detector
+ * kills the process here, in native code, leaving no JVM-visible verdict for
+ * Frida to hook and no branch to patch. Debug builds only log, so local
+ * development, CI, and emulators (which often look "rooted") stay usable.
+ */
+JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
+    (void)vm; (void)reserved;
+    if (integrity_tripwire()) {
+#ifdef PROOFMODE_LETHAL_INTEGRITY
+        terminate_now();
+#else
+        __android_log_print(ANDROID_LOG_WARN, "dintegrity",
+            "integrity tripwire fired at load (non-lethal: debug build)");
+#endif
+    }
+    return JNI_VERSION_1_6;
 }
 
 JNIEXPORT jboolean JNICALL

@@ -57,6 +57,10 @@ class ProofModeApp : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
 
+        // Note: libdintegrity is already loaded by ProofModeApp's static
+        // (companion) initializer, which runs JNI_OnLoad's root/Frida tripwire
+        // before this point. See the companion object below.
+
         val config = TalsecConfig.Builder(
             EXPECTED_PACKAGE_NAME,
             EXPECTED_SIGNING_CERTIFICATE_HASH_BASE64)
@@ -557,6 +561,18 @@ class ProofModeApp : Application(), Configuration.Provider {
 
 
     private companion object {
+        init {
+            // Static (class-load) initializer — the Kotlin equivalent of
+            // Java's `static { System.loadLibrary(...) }`. This runs when the
+            // ProofModeApp class is initialized, before the Application is
+            // constructed and thus before attachBaseContext()/onCreate(). It
+            // forces libdintegrity to load — running JNI_OnLoad's root/Frida
+            // tripwire (lethal in release) — at the earliest point our own
+            // code executes. The load is runCatching-guarded inside
+            // DeviceIntegritySupport, so a missing .so cannot brick startup.
+            DeviceIntegritySupport.ensureNativeLoaded()
+        }
+
         private const val EXPECTED_PACKAGE_NAME = "org.witness.proofmode" // Don't use Context.getPackageName!
         private val EXPECTED_SIGNING_CERTIFICATE_HASH_BASE64 = arrayOf(
             "8AaiBIHHGmkN4C44WrDJ+krBJFJA9oECaCcDugZWhno="

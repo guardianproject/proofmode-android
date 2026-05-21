@@ -84,6 +84,16 @@ class DeviceIntegritySupport {
         private val nativeAvailable: Boolean = runCatching {
             System.loadLibrary("dintegrity")
         }.isSuccess
+
+        /**
+         * Forces libdintegrity to load now — which runs its JNI_OnLoad
+         * load-time integrity tripwire (root + instrumentation checks) —
+         * instead of lazily on the first native call. In release builds the
+         * tripwire kills the process from native code if it detects root or
+         * Frida. Call this as early as possible in Application startup.
+         */
+        @JvmStatic
+        fun ensureNativeLoaded(): Boolean = nativeAvailable
     }
 
 }
