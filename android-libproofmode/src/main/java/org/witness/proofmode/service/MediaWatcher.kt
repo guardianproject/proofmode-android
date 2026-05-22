@@ -97,8 +97,7 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
     }
 
     public fun resetC2PA () {
-        C2PAManager(mContext!!, PreferencesManager(mContext!!))
-
+        mC2paManager = C2PAManager(mContext!!, PreferencesManager(mContext!!))
     }
 
     public fun refreshStorageProvider (storageProvider: StorageProvider?) {

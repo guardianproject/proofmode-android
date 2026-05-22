@@ -70,9 +70,7 @@ class SigningSettingsActivity : AppCompatActivity() {
         }
 
         override fun onSharedPreferenceChanged(prefs: SharedPreferences?, key: String?) {
-            if (key == ProofMode.PREF_OPTION_REMOTE_SIGNING) {
-                applyModeState()
-            }
+            applyModeState()
         }
 
         private fun applyModeState() {
