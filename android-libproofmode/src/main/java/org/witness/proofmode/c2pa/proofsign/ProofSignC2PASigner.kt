@@ -115,23 +115,6 @@ class ProofSignC2PASigner (
 
     private fun signData(data: ByteArray): ByteArray {
 
-        //First check if this is a friend of the Elves and Dwarves
-        var apiToken = ""
-
-        if (Native.nativePing() != null)
-        {
-            apiToken = Native.nativeToken("mellon");
-
-            if (!BuildConfig.DEBUG) {
-                if (apiToken.isEmpty()) {
-                    //   Log.i("ProofSignC2PA", "durin stands: apiToken is empty")
-                    throw SignerException.HttpError(
-                        -1,
-                        "Security gate failure: native token missing"
-                    )
-                }
-            }
-        }
 
        // Log.i("ProofSignC2PA", "During welcomes: $apiToken")
 
@@ -149,25 +132,15 @@ class ProofSignC2PASigner (
             val verifyLatch = java.util.concurrent.CountDownLatch(1)
             var verifyError: String? = null
 
-            proofSignClient.verifyDevice(apiToken) { result -> when (result) {
+            proofSignClient.verifyDevice() { result -> when (result) {
                                          is Result.Success -> {}
                                          is Result.Failure -> {
                                              verifyError = result.error
                                          }
                                      }
-                                 verifyLatch.countDown()}
+                                 verifyLatch.countDown()
+            }
 
-
-        /**
-         * callback = result ->
-         *                 when (result) {
-         *                     is Result.Success -> {}
-         *                     is Result.Failure -> {
-         *                         verifyError = result.error
-         *                     }
-         *                 }
-         *                 verifyLatch.countDown()
-         */
 
         if (!verifyLatch.await(60, java.util.concurrent.TimeUnit.SECONDS)) {
                 throw SignerException.HttpError(-1, "Device verification timed out")

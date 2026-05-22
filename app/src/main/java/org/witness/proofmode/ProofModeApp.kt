@@ -424,20 +424,8 @@ class ProofModeApp : Application(), Configuration.Provider {
             }
             else {
 
-                var apiToken = ""
-
-                if (Native.nativePing() != null)
-                {
-                    apiToken = Native.nativeToken("mellon");
-                    if (apiToken.isEmpty())
-                    {
-                        //   Log.i("ProofSignC2PA", "durin stands: apiToken is empty")
-                        throw SignerException.HttpError(-1, "Security gate failure: native token missing")
-                    }
-                }
-
                 Timber.i("Need to register device with ProofSign server")
-                proofSignClient.verifyDevice (apiToken) { result ->
+                proofSignClient.verifyDevice () { result ->
                     when (result) {
                         is Result.Success -> Timber.i("ProofSign: VERIFIED (${result.data.verdict})")
                         is Result.Failure -> Timber.d("ProofSign: FAILURE (${result.error})")

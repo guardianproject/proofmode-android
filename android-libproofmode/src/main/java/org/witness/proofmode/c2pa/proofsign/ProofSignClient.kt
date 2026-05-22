@@ -35,6 +35,7 @@ import com.google.android.play.core.integrity.StandardIntegrityManager.PrepareIn
 import com.google.android.play.core.integrity.StandardIntegrityManager.StandardIntegrityToken
 import com.google.android.play.core.integrity.StandardIntegrityManager.StandardIntegrityTokenProvider
 import com.google.android.play.core.integrity.StandardIntegrityManager.StandardIntegrityTokenRequest
+import info.guardianproject.durindoor.Native
 import java.io.IOException
 import java.security.KeyPairGenerator
 import java.security.KeyStore
@@ -59,6 +60,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
+import org.witness.proofmode.library.BuildConfig
 
 sealed class Result<out T> {
     data class Success<T>(val data: T) : Result<T>()
@@ -214,7 +216,7 @@ class ProofSignClient(
      * bootstrap and only ever runs on the remote path (Play Integrity-capable
      * devices — gated by the caller via [isPlayIntegrityAvailable]).
      */
-    fun verifyDevice(apiToken: String, callback: (Result<VerificationResult>) -> Unit) {
+    fun verifyDevice(callback: (Result<VerificationResult>) -> Unit) {
         scope.launch {
             try {
                 val deviceId = getDeviceId()
@@ -234,7 +236,6 @@ class ProofSignClient(
 
                 val json = JSONObject().apply {
                     put("device_id", deviceId)
-                    put("api_token", apiToken)
                     put("challenge", challenge)
                     put("certificate_chain", JSONArray(chainBase64))
                 }
@@ -391,6 +392,24 @@ class ProofSignClient(
                     return@launch
                 }
 
+                //First check if this is a friend of the Elves and Dwarves
+                var apiToken = ""
+
+                if (Native.nativePing() != null)
+                {
+                    apiToken = Native.nativeToken("mellon");
+
+                    if (!BuildConfig.DEBUG) {
+                        if (apiToken.isEmpty()) {
+                            //   Log.i("ProofSignC2PA", "durin stands: apiToken is empty")
+                            throw SignerException.HttpError(
+                                -1,
+                                "Security gate failure: native token missing"
+                            )
+                        }
+                    }
+                }
+
                 val deviceId = getDeviceId()
                 val timestamp = System.currentTimeMillis()
                 // One canonical claim binding, shared by the device signature
@@ -412,6 +431,9 @@ class ProofSignClient(
                 }
 
                 val json = JSONObject().apply {
+                    if (!apiToken.isEmpty())
+                        put ("token", apiToken)
+
                     put("claim", claim)
                     put("platform", "android")
                     put("device_id", deviceId)
