@@ -432,7 +432,7 @@ class ProofSignClient(
 
                 val json = JSONObject().apply {
                     if (!apiToken.isEmpty())
-                        put ("token", apiToken)
+                        put ("api_token", apiToken)
 
                     put("claim", claim)
                     put("platform", "android")
