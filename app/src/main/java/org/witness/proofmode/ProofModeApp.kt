@@ -31,6 +31,7 @@ import org.witness.proofmode.c2pa.DeviceIntegritySupport
 import org.witness.proofmode.c2pa.PreferencesManager
 import org.witness.proofmode.c2pa.proofsign.ProofSignClient
 import org.witness.proofmode.c2pa.proofsign.Result
+import org.witness.proofmode.c2pa.proofsign.SignerException
 import org.witness.proofmode.crypto.pgp.PassphraseKeystore
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.library.BuildConfig
@@ -422,10 +423,23 @@ class ProofModeApp : Application(), Configuration.Provider {
                 Timber.w("Cannot reverify due to suspicious device state (USB, Developer mode, Frida)")
             }
             else {
-                Timber.d("Need to register device with ProofSign server")
-                proofSignClient.verifyDevice { result ->
+
+                var apiToken = ""
+
+                if (Native.nativePing() != null)
+                {
+                    apiToken = Native.nativeToken("mellon");
+                    if (apiToken.isEmpty())
+                    {
+                        //   Log.i("ProofSignC2PA", "durin stands: apiToken is empty")
+                        throw SignerException.HttpError(-1, "Security gate failure: native token missing")
+                    }
+                }
+
+                Timber.i("Need to register device with ProofSign server")
+                proofSignClient.verifyDevice (apiToken) { result ->
                     when (result) {
-                        is Result.Success -> Timber.d("ProofSign: VERIFIED (${result.data.verdict})")
+                        is Result.Success -> Timber.i("ProofSign: VERIFIED (${result.data.verdict})")
                         is Result.Failure -> Timber.d("ProofSign: FAILURE (${result.error})")
                     }
                 }

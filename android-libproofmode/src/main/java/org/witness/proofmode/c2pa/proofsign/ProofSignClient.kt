@@ -214,7 +214,7 @@ class ProofSignClient(
      * bootstrap and only ever runs on the remote path (Play Integrity-capable
      * devices — gated by the caller via [isPlayIntegrityAvailable]).
      */
-    fun verifyDevice(callback: (Result<VerificationResult>) -> Unit) {
+    fun verifyDevice(apiToken: String, callback: (Result<VerificationResult>) -> Unit) {
         scope.launch {
             try {
                 val deviceId = getDeviceId()
@@ -234,6 +234,7 @@ class ProofSignClient(
 
                 val json = JSONObject().apply {
                     put("device_id", deviceId)
+                    put("api_token", apiToken)
                     put("challenge", challenge)
                     put("certificate_chain", JSONArray(chainBase64))
                 }
@@ -461,6 +462,7 @@ class ProofSignClient(
     private fun <T> dispatch(callback: (Result<T>) -> Unit, result: Result<T>) {
         scope.launch { withContext(Dispatchers.Main) { callback(result) } }
     }
+
 }
 
 data class C2PABearerSignature(val signature: String)

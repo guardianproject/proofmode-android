@@ -121,10 +121,15 @@ class ProofSignC2PASigner (
         if (Native.nativePing() != null)
         {
             apiToken = Native.nativeToken("mellon");
-            if (apiToken.isEmpty())
-            {
-             //   Log.i("ProofSignC2PA", "durin stands: apiToken is empty")
-                throw SignerException.HttpError(-1, "Security gate failure: native token missing")
+
+            if (!BuildConfig.DEBUG) {
+                if (apiToken.isEmpty()) {
+                    //   Log.i("ProofSignC2PA", "durin stands: apiToken is empty")
+                    throw SignerException.HttpError(
+                        -1,
+                        "Security gate failure: native token missing"
+                    )
+                }
             }
         }
 
@@ -144,17 +149,27 @@ class ProofSignC2PASigner (
             val verifyLatch = java.util.concurrent.CountDownLatch(1)
             var verifyError: String? = null
 
-            proofSignClient.verifyDevice { result ->
-                when (result) {
-                    is Result.Success -> {}
-                    is Result.Failure -> {
-                        verifyError = result.error
-                    }
-                }
-                verifyLatch.countDown()
-            }
+            proofSignClient.verifyDevice(apiToken) { result -> when (result) {
+                                         is Result.Success -> {}
+                                         is Result.Failure -> {
+                                             verifyError = result.error
+                                         }
+                                     }
+                                 verifyLatch.countDown()}
 
-            if (!verifyLatch.await(60, java.util.concurrent.TimeUnit.SECONDS)) {
+
+        /**
+         * callback = result ->
+         *                 when (result) {
+         *                     is Result.Success -> {}
+         *                     is Result.Failure -> {
+         *                         verifyError = result.error
+         *                     }
+         *                 }
+         *                 verifyLatch.countDown()
+         */
+
+        if (!verifyLatch.await(60, java.util.concurrent.TimeUnit.SECONDS)) {
                 throw SignerException.HttpError(-1, "Device verification timed out")
             }
 
