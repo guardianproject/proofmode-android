@@ -6,6 +6,7 @@ import android.content.SharedPreferences
 import android.os.Handler
 import android.os.Looper
 import android.preference.PreferenceManager
+import android.util.Log
 import android.widget.Toast
 import androidx.work.Configuration
 import com.aheaditec.talsec_security.security.api.SuspiciousAppInfo
@@ -13,7 +14,7 @@ import com.aheaditec.talsec_security.security.api.Talsec
 import com.aheaditec.talsec_security.security.api.TalsecConfig
 import com.aheaditec.talsec_security.security.api.TalsecMode
 import com.aheaditec.talsec_security.security.api.ThreatListener
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import info.guardianproject.durindoor.Native
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -187,7 +188,6 @@ class ProofModeApp : Application(), Configuration.Provider {
         ThreatListener(threatDetectedListener).registerListener(this)
         Talsec.start(this, config, TalsecMode.BACKGROUND)
 
-
         //aggressively stop people trying to instrument the app
         var dIntMan = DeviceIntegritySupport()
         if (dIntMan.isEnvironmentCompromised())
@@ -229,6 +229,13 @@ class ProofModeApp : Application(), Configuration.Provider {
 
         StorageProviderManager.getInstance().initializeStorageProviders(this)
 
+       // Log.i("Proofmode","checking with durin")
+        var isDurin = when {
+            !Native.loaded -> "Gate sealed: library refused to load."
+            else -> runCatching { Native.nativePing() }
+                .getOrElse { "native methods unregistered" }
+        }
+      //  Log.i("Proofmode","what durin said: $isDurin")
 
     }
 
@@ -575,6 +582,7 @@ class ProofModeApp : Application(), Configuration.Provider {
             System.loadLibrary("dintegrity")
 
             DeviceIntegritySupport.ensureNativeLoaded()
+
         }
 
         private const val EXPECTED_PACKAGE_NAME = "org.witness.proofmode" // Don't use Context.getPackageName!

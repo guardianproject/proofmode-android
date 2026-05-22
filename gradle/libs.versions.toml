@@ -1,5 +1,6 @@
 [versions]
 # Kotlin & KSP
+durindoor = "0.0.3"
 keyattestation = "main-SNAPSHOT"
 kotlin = "2.3.21"
 kotlin-serialization = "2.3.21"
@@ -9,6 +10,7 @@ ksp = "2.3.7"
 agp = "9.1.0"
 compileSdk = "36"
 minSdk = "28"
+talsecsecurityCommunity = "18.0.2"
 targetSdk = "36"
 
 # AndroidX Core
@@ -145,6 +147,7 @@ androidx-work-runtime = { module = "androidx.work:work-runtime", version.ref = "
 androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
 
 # Coroutines
+durindoor = { module = "info.guardianproject:durindoor", version.ref = "durindoor" }
 keyattestation = { module = "com.github.android:keyattestation", version.ref = "keyattestation" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-coroutines-guava = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-guava", version.ref = "coroutines" }
@@ -172,6 +175,7 @@ bouncycastle-bcpkix = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref 
 google-material = { module = "com.google.android.material:material", version.ref = "material" }
 
 # Logging
+talsecsecurity-community = { module = "com.aheaditec.talsec.security:TalsecSecurity-Community", version.ref = "talsecsecurityCommunity" }
 timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
 
 # Crash reporting

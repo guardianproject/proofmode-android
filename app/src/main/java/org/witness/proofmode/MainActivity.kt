@@ -55,8 +55,6 @@ import java.util.UUID
 import androidx.core.content.edit
 import androidx.core.net.toUri
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import org.witness.proofmode.c2pa.DeviceIntegritySupport
-import org.witness.proofmode.databinding.ActivityFilebaseSettingsBinding
 
 class MainActivity : AppCompatActivity(),
     ActivitiesViewDelegate {

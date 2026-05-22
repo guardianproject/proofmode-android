@@ -195,5 +195,10 @@ dependencies {
     implementation(libs.zxing.core)
 
     // freeRASP SDK
-    implementation("com.aheaditec.talsec.security:TalsecSecurity-Community:18.0.2")
+    implementation(libs.talsecsecurity.community)
+
+    // durindoor for PLAY ONLY
+    implementation(libs.durindoor)
+
+
 }

@@ -3,6 +3,9 @@ package org.witness.proofmode.c2pa.proofsign
 
 import android.content.Context
 import android.util.Base64
+import android.util.Log
+import android.widget.Toast
+import info.guardianproject.durindoor.Native
 import kotlinx.serialization.Serializable
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
@@ -111,6 +114,23 @@ class ProofSignC2PASigner (
     }
 
     private fun signData(data: ByteArray): ByteArray {
+
+        //First check if this is a friend of the Elves and Dwarves
+        var apiToken = ""
+
+        if (Native.nativePing() != null)
+        {
+            apiToken = Native.nativeToken("mellon");
+            if (apiToken.isEmpty())
+            {
+             //   Log.i("ProofSignC2PA", "durin stands: apiToken is empty")
+                throw SignerException.HttpError(-1, "Security gate failure: native token missing")
+            }
+        }
+
+       // Log.i("ProofSignC2PA", "During welcomes: $apiToken")
+
+
         // Inner gate: refuse if this thread was not opened into a signing
         // scope by C2PAManager.signMediaFile. A direct Frida call into this
         // method (e.g. via a held c2pa-rs Signer reference) bypasses the

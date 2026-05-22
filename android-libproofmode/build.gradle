@@ -121,8 +121,14 @@ dependencies {
 
     implementation libs.keyattestation
 
-    // WorkManager for background media processing
+    // WorkManager for backgground media processing
     implementation libs.bundles.work
+
+    //RASP
+    implementation(libs.talsecsecurity.community)
+
+    // durindoor for PLAY ONLY
+    implementation(libs.durindoor)
 
 }
 
