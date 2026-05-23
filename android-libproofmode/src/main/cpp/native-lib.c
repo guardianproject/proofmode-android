@@ -425,6 +425,31 @@ static int integrity_tripwire(void) {
 }
 
 /*
+ * ELF library constructor. Entries in .init_array run during dlopen(), as the
+ * dynamic linker finishes mapping libdintegrity — before JNI_OnLoad and before
+ * whoever triggered the load (our ProofModeApp companion-object loader, or the
+ * framework, were this lib ever named by a NativeActivity) regains control.
+ * This is the earliest point our own code executes in the process, so it is
+ * where the lethal tripwire belongs. JNI_OnLoad re-runs the same tripwire as a
+ * cheap second checkpoint in case .init_array execution is tampered with.
+ *
+ * We deliberately do NOT fork the anti-debug watchdog here: forking under the
+ * linker lock during dlopen is unsafe. That stays in JNI_OnLoad, which the JVM
+ * invokes at a settled point after the load completes.
+ */
+__attribute__((constructor))
+static void dintegrity_ctor(void) {
+    if (integrity_tripwire()) {
+#ifdef PROOFMODE_LETHAL_INTEGRITY
+        terminate_now();
+#else
+        __android_log_print(ANDROID_LOG_WARN, "dintegrity",
+            "integrity tripwire fired at ctor (non-lethal: debug build)");
+#endif
+    }
+}
+
+/*
  * JNI_OnLoad runs inside System.loadLibrary("dintegrity"), before the JVM
  * binds any native method and before any app startup code that follows the
  * load. In release builds (PROOFMODE_LETHAL_INTEGRITY) a tripped detector
