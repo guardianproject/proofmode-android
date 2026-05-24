@@ -601,6 +601,18 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
             e.printStackTrace()
         }
 
+        // Tell the Activities feed about this capture immediately, before any
+        // (potentially slow) proof generation runs, so the item shows up right
+        // away as PENDING. Proof status updates follow via PROOF_START /
+        // PROOF_GENERATED keyed on this same media URI. Package-targeted so it
+        // reaches our unexported ProofEventReceiver only.
+        app.sendBroadcast(
+            Intent(ProofMode.EVENT_MEDIA_CAPTURED).apply {
+                setPackage(app.packageName)
+                putExtra(ProofMode.EVENT_PROOF_EXTRA_URI, newMediaFile.toString())
+            }
+        )
+
         // Issue a capture-authorization nonce bound to the SHA-256 of the
         // file CameraX just wrote. The nonce travels with ingestMedia() and
         // is consumed in MediaWatcher before the C2PA signing call. An

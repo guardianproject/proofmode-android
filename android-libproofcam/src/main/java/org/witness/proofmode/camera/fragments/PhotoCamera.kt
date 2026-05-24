@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Settings
@@ -183,7 +184,7 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                 ConstraintLayout(modifier = Modifier
                     .fillMaxSize()
                     .background(Color.Black)) {
-                    val (viewFinder,topBAr, cancelButton,countDownStateView, bottomBg,captureButton,cameraSwitcher,galleryPreview,cameraText,
+                    val (viewFinder, topScrim, topBAr, cancelButton, countDownStateView, bottomBg, captureButton, cameraSwitcher, galleryPreview, cameraText,
                         flashModeRow, logo, crLogo) = createRefs()
                     // Define guidelines for the grid (1/3 and 2/3 positions)
                     val vertical1 = createGuidelineFromStart(0.33f)
@@ -281,6 +282,18 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                         )
                     }
 
+                    // Subtle top scrim so the controls stay legible over any scene
+                    Box(modifier = Modifier
+                        .fillMaxWidth()
+                        .height(140.dp)
+                        .constrainAs(topScrim) {
+                            top.linkTo(parent.top)
+                            start.linkTo(parent.start)
+                            end.linkTo(parent.end)
+                        }
+                        .background(topScrimBrush)
+                    )
+
                     AnimatedVisibility(visible = !showFlashModes && countDownState != CountDownState.Running,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -291,13 +304,12 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                             }){
                         Row(modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color.Black.copy(alpha = 0.4f))
                             .padding(horizontal = 16.dp),
                             horizontalArrangement = Arrangement.SpaceEvenly) {
                             IconButton(onClick = { cameraViewModel.toggleLocationEnabled() }) {
                                 Icon(
                                     imageVector = ImageVector.vectorResource(R.drawable.ic_location),
-                                    tint = if (locationEnabled) Color.White else Color.White.copy(alpha = 0.4f),
+                                    tint = if (locationEnabled) AccentGreen else InactiveWhite,
                                     contentDescription = stringResource(R.string.toggle_location_description)
                                 )
                             }
@@ -346,8 +358,7 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
 
                         }){
                         Row(modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Color.Black.copy(alpha = 0.4f)),
+                            .fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceEvenly) {
                             IconButton(onClick = {
                                 cameraViewModel.toggleFlashMode(ImageCapture.FLASH_MODE_OFF,lifecycleOwner)
@@ -355,7 +366,7 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                             }) {
                                 Icon(
                                     ImageVector.vectorResource(R.drawable.ic_flash_off) ,
-                                    tint = if (flashMode == ImageCapture.FLASH_MODE_OFF) Color.Red else Color.White,
+                                    tint = if (flashMode == ImageCapture.FLASH_MODE_OFF) AccentGreen else Color.White,
                                     contentDescription = stringResource(R.string.turn_off_flash_description)
                                 )
 
@@ -366,7 +377,7 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                             }) {
                                 Icon(
                                     ImageVector.vectorResource(R.drawable.ic_flash_auto) ,
-                                    tint = if (flashMode == ImageCapture.FLASH_MODE_AUTO) Color.Red else Color.White,
+                                    tint = if (flashMode == ImageCapture.FLASH_MODE_AUTO) AccentGreen else Color.White,
                                     contentDescription = stringResource(R.string.turn_flash_on_auto_description)
                                 )
 
@@ -378,7 +389,7 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                             }) {
                                 Icon(
                                     ImageVector.vectorResource(R.drawable.ic_flash_on) ,
-                                    tint = if (flashMode == ImageCapture.FLASH_MODE_ON) Color.Red else Color.White,
+                                    tint = if (flashMode == ImageCapture.FLASH_MODE_ON) AccentGreen else Color.White,
                                     contentDescription = stringResource(R.string.turn_flash_on_description)
                                 )
 
@@ -395,7 +406,7 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                             end.linkTo(parent.end)
 
                         }
-                        .background(Color.Black.copy(alpha = 0.4f))
+                        .background(bottomScrimBrush)
                     )
 
                     Image(
@@ -429,24 +440,16 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                         end.linkTo(bottomBg.end)
                         verticalBias = 0.2f
                     }, visible = countDownState == CountDownState.Idle || countDownState == CountDownState.Completed){
-                        IconButton(onClick = {
-                            if(cameraDelay == CameraDelay.Zero){
-                                cameraViewModel.captureImage()
-                            } else {
-                                countDownState = CountDownState.Running
-                            }
-
-                        },
-                            modifier = Modifier
-                                .size(64.dp)
-                                .background(Color.White, CircleShape)
-                                .clip(CircleShape)
-                        ) {
-                            if (cameraDelay !=CameraDelay.Zero){
-                                Text(text = "${cameraDelay.value}", textAlign = TextAlign.Center, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
-                            }
-
-                        }
+                        ShutterButton(
+                            onClick = {
+                                if (cameraDelay == CameraDelay.Zero) {
+                                    cameraViewModel.captureImage()
+                                } else {
+                                    countDownState = CountDownState.Running
+                                }
+                            },
+                            label = if (cameraDelay != CameraDelay.Zero) "${cameraDelay.value}" else null
+                        )
                     }
 
                     AnimatedVisibility(modifier = Modifier .constrainAs(galleryPreview) {
@@ -456,14 +459,7 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                         start.linkTo(parent.start)
                     }, visible = countDownState == CountDownState.Idle || countDownState == CountDownState.Completed){
                         Box(
-                            modifier = Modifier
-
-                                .size(48.dp)
-                                .background(Color(0xFF444444), CircleShape)
-                                .clip(CircleShape)
-                                .border(width = 2.dp, color = Color.White, shape = CircleShape)
-
-
+                            modifier = Modifier.secondaryControl()
                         ) {
                             AnimatedContent(
                                 targetState = thumbPreviewUri,
@@ -504,10 +500,7 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                             }
 
                         },
-                            modifier = Modifier
-                                .size(48.dp)
-                                .background(Color(0xFF444444), CircleShape)
-                                .clip(CircleShape)
+                            modifier = Modifier.secondaryControl()
                         ) {
                             Icon(imageVector = ImageVector.vectorResource(R.drawable.ic_switch),
                                 tint = Color.White,
@@ -527,10 +520,7 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                         .shadow(8.dp, CircleShape), visible = countDownState == CountDownState.Running) {
                         IconButton(onClick = {
                             countDownState = CountDownState.Cancelled
-                        }, modifier = Modifier
-                            .size(64.dp)
-                            .background(Color.Black, CircleShape)
-                            .clip(CircleShape)
+                        }, modifier = Modifier.secondaryControl(64.dp)
                         ) {
                             Icon(Icons.Filled.Close, tint = Color.White, contentDescription = null)
                         }
@@ -620,7 +610,7 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                     .offset((-24).dp, (-24).dp)
             ) {
                 Spacer(modifier = Modifier
-                    .border(2.dp, Color.White, CircleShape)
+                    .border(1.5.dp, AccentGreen, CircleShape)
                     .size(48.dp)
                     .shadow(elevation = 8.dp))
             }
@@ -630,8 +620,12 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                     showBSettingsBottomSheet = false
                 }, sheetState = settingsSheetState) {
 
-                    Text("Camera Settings", style = MaterialTheme.typography.titleMedium)
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        "Camera Settings",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     Row(modifier = Modifier
                         .fillMaxWidth()
@@ -670,13 +664,13 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                                 cameraViewModel.updateCameraDelay(theDelay)
                             }, modifier = Modifier
                                 .size(36.dp)
-                                .background(Color(0xFF444444), CircleShape)
+                                .background(Color.White.copy(alpha = 0.1f), CircleShape)
                                 .clip(CircleShape)
                             ){
                                 Icon(
                                     theDelay.toVectorIcon(),
                                     contentDescription = "${theDelay.value} seconds delay",
-                                    tint = if (cameraDelay == theDelay) Color.Red else Color.White,
+                                    tint = if (cameraDelay == theDelay) AccentGreen else Color.White,
                                 )
                             }
                             Spacer(modifier = Modifier.width(8.dp))
@@ -694,10 +688,11 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                     showExposureIndicator = false
                 }) {
                     Column (modifier = Modifier
-                        .background(MaterialTheme.colorScheme.onBackground)
-                        .padding(4.dp),
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(CameraSurface)
+                        .padding(horizontal = 20.dp, vertical = 16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally){
-                        Text("Exposure:${currentSliderPosition.toInt()}", style = MaterialTheme.typography.titleMedium.copy(color = MaterialTheme.colorScheme.primary))
+                        Text("Exposure: ${currentSliderPosition.toInt()}", style = MaterialTheme.typography.titleMedium.copy(color = AccentGreen))
                         Spacer(modifier = Modifier.height(10.dp))
                         Slider(
                             valueRange = lowerSliderRange..upperSliderRange,

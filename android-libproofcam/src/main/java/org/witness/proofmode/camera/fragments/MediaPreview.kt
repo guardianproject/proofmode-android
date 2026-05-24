@@ -83,11 +83,11 @@ fun MediaPreview(viewModel: CameraViewModel, modifier: Modifier = Modifier,
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Go back")
             }
         },
-            colors = TopAppBarDefaults.topAppBarColors(containerColor = ColorPrimary,
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = CameraBlack,
                 navigationIconContentColor = Color.White,
                 titleContentColor = Color.White))
     }, bottomBar = {
-        BottomAppBar(containerColor = MaterialTheme.colorScheme.onSurface) {
+        BottomAppBar(containerColor = CameraBlack) {
             Row(horizontalArrangement = Arrangement.SpaceEvenly,
                 modifier = Modifier.fillMaxWidth()) {
                 IconButton(onClick = {

@@ -283,6 +283,16 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
                 }
 
                 if (doImport) {
+                    // Proof generation is starting: let the Activities feed flip
+                    // the already-visible capture to its "generating" state. Keyed
+                    // by the same media URI used for the EVENT_PROOF_GENERATED
+                    // broadcast below. Imports have no pending feed item, so this
+                    // is a harmless no-op for them.
+                    Intent(ProofMode.EVENT_PROOF_START).apply {
+                        setPackage("org.witness.proofmode")
+                        putExtra(ProofMode.EVENT_PROOF_EXTRA_URI, actualUriMedia.toString())
+                    }.also { mContext!!.sendBroadcast(it) }
+
                     var signingMode = SigningMode.KEYSTORE
                     var useRemoteSigning = mPrefs?.getBoolean(
                         ProofMode.PREF_OPTION_REMOTE_SIGNING,

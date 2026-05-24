@@ -71,6 +71,7 @@ import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.round
 import androidx.constraintlayout.compose.ConstraintLayout
@@ -268,7 +269,7 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                                 cameraViewModel.toggleLocationEnabled()
                             }) {
                                 Icon(ImageVector.vectorResource(R.drawable.ic_location),
-                                    tint = if (locationEnabled) Color.White else Color.White.copy(alpha = 0.4f),
+                                    tint = if (locationEnabled) AccentGreen else InactiveWhite,
                                     contentDescription = stringResource(R.string.toggle_location_description))
                             }
                             IconButton(onClick = {
@@ -294,7 +295,7 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                             }) {
                                 Icon(imageVector = if (torchOn) ImageVector.vectorResource(R.drawable.ic_flash_on)
                                 else ImageVector.vectorResource(R.drawable.ic_flash_off),
-                                    tint = Color.White,contentDescription = if (torchOn) stringResource(
+                                    tint = if (torchOn) AccentGreen else Color.White,contentDescription = if (torchOn) stringResource(
                                         R.string.turn_flash_off
                                     ) else stringResource(R.string.turn_flash_on)
                                 )
@@ -311,7 +312,17 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                             // Common modifier for grid lines
                             val lineModifier = Modifier
                                 .alpha(if (showGridLines) 1f else 0f)
-                                .background(Color.White.copy(alpha = 0.5f))
+                                .background(GridLine)
+
+                            // Subtle top scrim so the controls stay legible over any scene
+                            Box(modifier = Modifier
+                                .layoutId("topScrim")
+                                .then(
+                                    if (isPortrait) Modifier.fillMaxWidth().height(140.dp)
+                                    else Modifier.fillMaxHeight().width(140.dp)
+                                )
+                                .background(topScrimBrush)
+                            )
 
                             AnimatedVisibility(visible = (recordingState == RecordingState.Idle || recordingState == RecordingState.Stopped),
                                 enter = fadeIn(),
@@ -326,7 +337,6 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                                 if(isPortrait){
                                     Row(modifier = Modifier
                                         .fillMaxWidth()
-                                        .background(Color.Black.copy(alpha = 0.4f))
                                         .padding(horizontal = 16.dp),
                                         horizontalArrangement = Arrangement.SpaceEvenly) {
                                         topBarButtons()
@@ -334,7 +344,6 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                                 } else {
                                     Column(modifier = Modifier
                                         .fillMaxHeight()
-                                        .background(Color.Black.copy(alpha = 0.4f))
                                         .padding(horizontal = 16.dp),
                                         verticalArrangement = Arrangement.SpaceEvenly
                                     ) {
@@ -357,7 +366,7 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                                     if (isPortrait) Modifier.fillMaxWidth().height(dimensionResource(R.dimen.transparent_view_height))
                                     else Modifier.fillMaxHeight().width(dimensionResource(R.dimen.transparent_view_height))
                                 )
-                                .background(Color.Black.copy(alpha = 0.4f))
+                                .background(bottomScrimBrush)
                             )
 
                             Image(
@@ -380,50 +389,28 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
 
 
 
-                            IconButton(onClick = {
-                                if (recordingState == RecordingState.Idle || recordingState == RecordingState.Stopped){
-                                    if (!audioPermissionState.status.isGranted) {
-                                        audioPermissionState.launchPermissionRequest()
+                            RecordButton(
+                                modifier = Modifier.layoutId("recordButton"),
+                                isRecording = recordingState == RecordingState.Recording || recordingState == RecordingState.Paused,
+                                onClick = {
+                                    if (recordingState == RecordingState.Idle || recordingState == RecordingState.Stopped) {
+                                        if (!audioPermissionState.status.isGranted) {
+                                            audioPermissionState.launchPermissionRequest()
+                                        } else {
+                                            cameraViewModel.startRecording()
+                                        }
                                     } else {
-                                        cameraViewModel.startRecording()
+                                        cameraViewModel.stopRecording()
                                     }
-                                } else {
-                                    cameraViewModel.stopRecording()
                                 }
-
-                            },
-                                modifier = Modifier
-                                    .layoutId("recordButton")
-                                    .size(64.dp)
-                                    .background(Color.Red, CircleShape)
-                                    .clip(CircleShape)
-                            ) {
-                                Icon(
-                                    imageVector = if (recordingState == RecordingState.Idle || recordingState == RecordingState.Stopped)
-                                        ImageVector.vectorResource(R.drawable.ic_take_video)
-                                        else ImageVector.vectorResource(R.drawable.ic_stop_circle),
-                                    tint = Color.Red,
-                                    contentDescription = if (recordingState == RecordingState.Idle) stringResource(
-                                        R.string.record_video
-                                    ) else stringResource(R.string.stop_recording)
-                                )
-                            }
+                            )
 
                             AnimatedVisibility(visible = recordingState != RecordingState.Recording,
                                 enter = fadeIn(),
                                 exit = fadeOut(),
                                 modifier = Modifier.layoutId("galleryPreview")){
                                 Box(
-                                    modifier = Modifier
-                                        .size(48.dp)
-                                        .background(Color(0xFF444444), CircleShape)
-                                        .clip(CircleShape)
-                                        .border(
-                                            width = 2.dp,
-                                            color = Color.White,
-                                            shape = CircleShape
-                                        )
-
+                                    modifier = Modifier.secondaryControl()
                                 ) {
                                     AnimatedContent(targetState = thumbPreviewUri,
                                         transitionSpec = {
@@ -463,10 +450,7 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                                     }
 
                                 },
-                                    modifier = Modifier
-                                        .size(48.dp)
-                                        .background(Color(0xFF444444), CircleShape)
-                                        .clip(CircleShape)
+                                    modifier = Modifier.secondaryControl()
                                 ) {
                                     Icon(imageVector = ImageVector.vectorResource(R.drawable.ic_switch),
                                         tint = Color.White,
@@ -538,7 +522,7 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                     .offset((-24).dp, (-24).dp)
             ) {
                 Spacer(modifier = Modifier
-                    .border(2.dp, Color.White, CircleShape)
+                    .border(1.5.dp, AccentGreen, CircleShape)
                     .size(48.dp)
                     .shadow(elevation = 8.dp))
             }
@@ -548,8 +532,12 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                     showBSettingsBottomSheet = false
                 }, sheetState = settingsSheetState) {
 
-                    Text(stringResource(R.string.video_settings), style = MaterialTheme.typography.headlineMedium)
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        stringResource(R.string.video_settings),
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     Row(modifier = Modifier
                         .fillMaxWidth()
@@ -573,9 +561,9 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
 
                             }, modifier = Modifier
                                 .size(36.dp)
-                                .background(Color(0xFF444444), CircleShape)) {
+                                .background(Color.White.copy(alpha = 0.1f), CircleShape)) {
                                 Icon(painter = painterResource(it.toIconRes()), contentDescription = it.getName(),
-                                    tint = if (selectedQuality == it) Color.Red else Color.White )
+                                    tint = if (selectedQuality == it) AccentGreen else Color.White )
                             }
                             Spacer(modifier = Modifier.width(5.dp))
                         }
@@ -593,6 +581,7 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
 
 private fun portraitConstraints(): ConstraintSet {
     return ConstraintSet {
+        val topScrim = createRefFor("topScrim")
         val topBar = createRefFor("topBar")
         val bottomBg = createRefFor("bottomBg")
         val recordButton = createRefFor("recordButton")
@@ -610,6 +599,12 @@ private fun portraitConstraints(): ConstraintSet {
         val horizontal2 = createGuidelineFromTop(0.66f)
 
         // Constraints
+        constrain(topScrim) {
+            top.linkTo(parent.top)
+            start.linkTo(parent.start)
+            end.linkTo(parent.end)
+        }
+
         constrain(topBar) {
             top.linkTo(parent.top, margin = 60.dp)
             start.linkTo(parent.start)
@@ -693,6 +688,7 @@ private fun portraitConstraints(): ConstraintSet {
 
 private fun landscapeConstraints(): ConstraintSet {
     return ConstraintSet {
+        val topScrim = createRefFor("topScrim")
         val topBar = createRefFor("topBar")
         val bottomBg = createRefFor("bottomBg")
         val recordButton = createRefFor("recordButton")
@@ -710,6 +706,12 @@ private fun landscapeConstraints(): ConstraintSet {
         val horizontal2 = createGuidelineFromTop(0.66f)
 
         // Constraints
+        constrain(topScrim) {
+            top.linkTo(parent.top)
+            bottom.linkTo(parent.bottom)
+            start.linkTo(parent.start)
+        }
+
         constrain(topBar) {
             top.linkTo(parent.top)
             bottom.linkTo(parent.bottom)

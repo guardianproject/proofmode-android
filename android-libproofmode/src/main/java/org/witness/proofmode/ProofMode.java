@@ -87,6 +87,10 @@ public class ProofMode {
     public final static String C2PA_CERT_FILE = "c2paidentity.cert";
     public final static String PREFS_DOPROOF = "doProof";
 
+    // Fired by the camera the instant a capture is written, before any proof
+    // work begins, so the Activities feed can show the item immediately.
+    public final static String EVENT_MEDIA_CAPTURED = "org.witness.proofmode.MEDIA_CAPTURED";
+    // Fired by MediaWatcher when proof generation (signing) actually starts.
     public final static String EVENT_PROOF_START = "org.witness.proofmode.PROOF_START";
     public final static String EVENT_PROOF_GENERATED = "org.witness.proofmode.PROOF_GENERATED";
     public final static String EVENT_PROOF_GENERATED_IMPORT = "org.witness.proofmode.PROOF_GENERATED_IMPORT";

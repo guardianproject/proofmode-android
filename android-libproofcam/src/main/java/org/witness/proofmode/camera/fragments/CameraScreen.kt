@@ -52,31 +52,33 @@ fun CameraScreen(activity: CameraActivity, modifier: Modifier = Modifier, onClos
     val viewModel: CameraViewModel = CameraViewModel(activity, activity.application)
     val navController = rememberNavController()
     val permissionsState = rememberMultiplePermissionsState(permissions)
-    if (permissionsState.allPermissionsGranted) {
-        CameraNavigation(navController = navController, viewModel = viewModel, lifecycleOwner = lifecycleOwner,onClosed = onClose)
-    } else {
-        Column(modifier = modifier
-            .fillMaxSize()
-            .background((colorResource(R.color.colorPrimaryDark)))
-            .wrapContentSize()
-            .widthIn(480.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally) {
+    CameraTheme {
+        if (permissionsState.allPermissionsGranted) {
+            CameraNavigation(navController = navController, viewModel = viewModel, lifecycleOwner = lifecycleOwner,onClosed = onClose)
+        } else {
+            Column(modifier = modifier
+                .fillMaxSize()
+                .background(CameraBlack)
+                .wrapContentSize()
+                .widthIn(480.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally) {
 
-            val textToShow = if(permissionsState.shouldShowRationale) {
-                stringResource(R.string.permissions_rationale)
-            } else {
-                stringResource(R.string.message_no_permissions)
+                val textToShow = if(permissionsState.shouldShowRationale) {
+                    stringResource(R.string.permissions_rationale)
+                } else {
+                    stringResource(R.string.message_no_permissions)
+
+                }
+
+                Text(textToShow, style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center, color = Color.White)
+                Spacer(modifier = Modifier.height(10.dp))
+                Button(onClick = { permissionsState.launchMultiplePermissionRequest() }) {
+                    Text(stringResource(R.string.grant_permissions))
+                }
 
             }
-
-            Text(textToShow, style = MaterialTheme.typography.titleMedium,
-                textAlign = TextAlign.Center, color = Color.White)
-            Spacer(modifier = Modifier.height(10.dp))
-            Button(onClick = { permissionsState.launchMultiplePermissionRequest() }) {
-                Text(stringResource(R.string.grant_permissions))
-            }
-
         }
     }
 }

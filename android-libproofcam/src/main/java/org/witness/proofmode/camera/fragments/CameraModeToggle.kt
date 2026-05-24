@@ -26,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import org.witness.proofmode.camera.R
 
 enum class CameraModeSelection {
@@ -54,7 +55,7 @@ fun CameraModeToggle(
             .width(toggleWidth)
             .height(toggleHeight)
             .clip(RoundedCornerShape(24.dp))
-            .background(Color.Black.copy(alpha = 0.6f))
+            .background(Color.Black.copy(alpha = 0.5f))
     ) {
         // Sliding indicator background
         Box(
@@ -64,7 +65,7 @@ fun CameraModeToggle(
                 .offset(x = indicatorOffset)
                 .padding(4.dp)
                 .clip(RoundedCornerShape(20.dp))
-                .background(Color.White.copy(alpha = 0.2f))
+                .background(Color.White.copy(alpha = 0.14f))
         )
 
         // Labels row
@@ -90,8 +91,9 @@ fun CameraModeToggle(
                 Text(
                     text = stringResource(R.string.camera),
                     style = MaterialTheme.typography.labelLarge.copy(
-                        color = if (selectedMode == CameraModeSelection.PHOTO) Color.White else Color.White.copy(alpha = 0.6f),
-                        fontWeight = if (selectedMode == CameraModeSelection.PHOTO) FontWeight.Bold else FontWeight.Normal
+                        color = if (selectedMode == CameraModeSelection.PHOTO) AccentGreen else InactiveWhite,
+                        fontWeight = if (selectedMode == CameraModeSelection.PHOTO) FontWeight.Bold else FontWeight.Normal,
+                        letterSpacing = 1.sp
                     ),
                     textAlign = TextAlign.Center
                 )
@@ -113,8 +115,9 @@ fun CameraModeToggle(
                 Text(
                     text = stringResource(R.string.video),
                     style = MaterialTheme.typography.labelLarge.copy(
-                        color = if (selectedMode == CameraModeSelection.VIDEO) Color.White else Color.White.copy(alpha = 0.6f),
-                        fontWeight = if (selectedMode == CameraModeSelection.VIDEO) FontWeight.Bold else FontWeight.Normal
+                        color = if (selectedMode == CameraModeSelection.VIDEO) AccentGreen else InactiveWhite,
+                        fontWeight = if (selectedMode == CameraModeSelection.VIDEO) FontWeight.Bold else FontWeight.Normal,
+                        letterSpacing = 1.sp
                     ),
                     textAlign = TextAlign.Center
                 )
