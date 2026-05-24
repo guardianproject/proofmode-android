@@ -50,18 +50,41 @@ object ActivityConstants
     const val EXTRA_SHARE_TEXT = "shareText"
 }
 
+// Lifecycle of a captured item's proof. Defaults to GENERATED so that rows
+// persisted before this field existed (which were only ever written *after*
+// proof completed) deserialize as already-generated rather than stuck pending.
+// Camera captures are explicitly constructed PENDING and advance from there.
 @Serializable
-data class  ProofableItem(val id: String, @Serializable(with = UriSerializer::class) val uri: Uri)
+enum class ProofStatus {
+    @SerialName("pending") PENDING,        // captured, proof not started
+    @SerialName("generating") GENERATING,  // signing/proof in progress
+    @SerialName("generated") GENERATED      // proof complete
+}
+
+// Top-level (no `this` capture) so it is safe to call from the ProofableItem
+// Parcelable constructor delegation. Unknown/missing names fall back to
+// GENERATED to match the serialization default.
+private fun proofStatusFromName(name: String?): ProofStatus =
+    ProofStatus.values().firstOrNull { it.name == name } ?: ProofStatus.GENERATED
+
+@Serializable
+data class  ProofableItem(
+    val id: String,
+    @Serializable(with = UriSerializer::class) val uri: Uri,
+    val proofStatus: ProofStatus = ProofStatus.GENERATED
+)
     : Parcelable {
     constructor(parcel: Parcel) : this(
         id = parcel.readString() ?: "",
-        uri = checkNotNull(parcel.readParcelable(Uri::class.java.classLoader))
+        uri = checkNotNull(parcel.readParcelable(Uri::class.java.classLoader)),
+        proofStatus = proofStatusFromName(parcel.readString())
     ) {
     }
 
     override fun writeToParcel(parcel: Parcel, flags: Int) {
         parcel.writeString(id)
         parcel.writeParcelable(uri, flags)
+        parcel.writeString(proofStatus.name)
     }
 
     override fun describeContents(): Int {
@@ -257,6 +280,88 @@ object Activities: ViewModel()
             if (context is MainActivity) {
                 context.checkNoPicsView()
             }
+        }
+    }
+
+    // Items that carry a proof lifecycle (captured/imported/shared media).
+    private fun proofItemsOf(activity: Activity): SnapshotStateList<ProofableItem>? =
+        when (val t = activity.type) {
+            is ActivityType.MediaCaptured -> t.items
+            is ActivityType.MediaImported -> t.items
+            is ActivityType.MediaShared -> t.items
+            is ActivityType.PublicKeyShared -> null
+        }
+
+    // Locate a live in-memory item by its (stable) media URI. Must be called on
+    // the main thread since it reads the Compose snapshot list.
+    private fun findItemByUri(uriString: String): Pair<Activity, Int>? {
+        for (activity in activities) {
+            val items = proofItemsOf(activity) ?: continue
+            val idx = items.indexOfFirst { it.uri.toString() == uriString }
+            if (idx >= 0) return activity to idx
+        }
+        return null
+    }
+
+    // Step 1 of the capture lifecycle: show the freshly-captured media right
+    // away, before any proof work, as a PENDING item. The real SHA-256 hash is
+    // not known yet (C2PA embedding will change the bytes), so the URI doubles
+    // as the placeholder id until markProofGenerated assigns the real hash.
+    fun addCapturedPending(uriString: String, context: Context) {
+        addActivity(
+            Activity(
+                uriString,
+                ActivityType.MediaCaptured(
+                    items = mutableStateListOf(
+                        ProofableItem(uriString, Uri.parse(uriString), ProofStatus.PENDING)
+                    )
+                ),
+                Date()
+            ),
+            context
+        )
+    }
+
+    // Step 2: signing/proof generation has started for this URI. Only advances
+    // an item that already exists (i.e. a camera capture); imports have no
+    // pending row and are intentionally left untouched here.
+    fun markProofGenerating(uriString: String, context: Context) {
+        val db = getDB(context)
+        MainScope().launch {
+            val (activity, idx) = findItemByUri(uriString) ?: return@launch
+            val items = proofItemsOf(activity) ?: return@launch
+            // Don't regress a completed item if events arrive out of order.
+            if (items[idx].proofStatus == ProofStatus.GENERATED) return@launch
+            items[idx] = items[idx].copy(proofStatus = ProofStatus.GENERATING)
+            db.activitiesDao().update(activity)
+        }
+    }
+
+    // Step 3: proof is complete. Flip the existing pending item to GENERATED and
+    // stamp it with the real hash. If no pending item exists (gallery import, or
+    // the capture event was missed) fall back to creating a fresh GENERATED item
+    // — preserving the previous behaviour for those paths.
+    fun markProofGenerated(uriString: String, hash: String, imported: Boolean, context: Context) {
+        val db = getDB(context)
+        MainScope().launch {
+            val found = findItemByUri(uriString)
+            if (found != null) {
+                val (activity, idx) = found
+                val items = proofItemsOf(activity)
+                if (items != null) {
+                    items[idx] = items[idx].copy(id = hash, proofStatus = ProofStatus.GENERATED)
+                    db.activitiesDao().update(activity)
+                    if (context is MainActivity) context.checkNoPicsView()
+                    return@launch
+                }
+            }
+
+            val item = ProofableItem(hash, Uri.parse(uriString), ProofStatus.GENERATED)
+            val type = if (imported)
+                ActivityType.MediaImported(items = mutableStateListOf(item))
+            else
+                ActivityType.MediaCaptured(items = mutableStateListOf(item))
+            addActivity(Activity(uriString, type, Date()), context)
         }
     }
 

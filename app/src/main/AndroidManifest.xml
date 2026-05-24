@@ -227,17 +227,25 @@
             </intent-filter>
         </receiver>
         <!--
-            ProofEventReceiver listens for PROOF_GENERATED[_IMPORT] and adds
-            entries to the in-app Activity feed. The sole producer is
-            MediaWatcher.sendBroadcast(), which targets us via setPackage().
-            Exported, it lets another app forge "proof generated" entries
-            with attacker-supplied URI + hash strings, which become phishing
+            ProofEventReceiver drives the in-app Activity feed across the whole
+            capture lifecycle: MEDIA_CAPTURED (item appears immediately),
+            PROOF_START (signing in progress), and PROOF_GENERATED[_IMPORT]
+            (proof complete). The sole producers are the in-app camera and
+            MediaWatcher.sendBroadcast(), which target us via setPackage().
+            Exported, it lets another app forge feed entries with
+            attacker-supplied URI + hash strings, which become phishing
             anchors in the user's own history view.
         -->
         <receiver
             android:name=".org.witness.proofmode.util.ProofEventReceiver"
             android:enabled="true"
             android:exported="false">
+            <intent-filter android:priority="10000">
+                <action android:name="org.witness.proofmode.MEDIA_CAPTURED" />
+            </intent-filter>
+            <intent-filter android:priority="10000">
+                <action android:name="org.witness.proofmode.PROOF_START" />
+            </intent-filter>
             <intent-filter android:priority="10000">
                 <action android:name="org.witness.proofmode.PROOF_GENERATED" />
             </intent-filter>

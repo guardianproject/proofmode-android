@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -144,8 +145,17 @@ fun ProofableItemView(
     var c2paState by remember { mutableStateOf(ValidationState.INVALID) }
     val uri = item.uri
 
-    // Perform C2PA check asynchronously with caching
-    LaunchedEffect(uri) {
+    // Perform C2PA check asynchronously with caching. Keyed on proofStatus too:
+    // while an item is PENDING/GENERATING its file isn't signed yet, so we skip
+    // validation (otherwise we'd cache INVALID against the unsigned file and the
+    // CR badge would never appear). Once it flips to GENERATED the effect re-runs
+    // and validates the now-signed file.
+    LaunchedEffect(uri, item.proofStatus) {
+        if (item.proofStatus != ProofStatus.GENERATED) {
+            c2paState = ValidationState.INVALID
+            return@LaunchedEffect
+        }
+
         var filePath : String? = ""
 
         if (uri.scheme == "file")
@@ -248,6 +258,49 @@ fun ProofableItemView(
                     .padding(8.dp)
                     .size(24.dp)
             )
+        }
+
+        // Proof lifecycle badge, top-start corner — the same spot the CR badge
+        // lands in once verified, so the indicator progresses in one place:
+        // clock (pending) -> spinner (generating) -> CR (generated). These
+        // states are mutually exclusive in time, so they never overlap the CR.
+        when (item.proofStatus) {
+            ProofStatus.PENDING -> {
+                Icon(
+                    imageVector = ImageVector.vectorResource(R.drawable.ic_proof_pending),
+                    contentDescription = "Proof pending",
+                    tint = Color.White,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(2.dp)
+                        .background(
+                            color = Color.Black.copy(alpha = 0.6f),
+                            shape = RoundedCornerShape(2.dp)
+                        )
+                        .padding(1.dp)
+                        .size(24.dp)
+                )
+            }
+
+            ProofStatus.GENERATING -> {
+                CircularProgressIndicator(
+                    color = Color.White,
+                    strokeWidth = 2.dp,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(2.dp)
+                        .background(
+                            color = Color.Black.copy(alpha = 0.6f),
+                            shape = RoundedCornerShape(2.dp)
+                        )
+                        .padding(4.dp)
+                        .size(18.dp)
+                )
+            }
+
+            ProofStatus.GENERATED -> {
+                // No pending badge; the CR badge above appears once verified.
+            }
         }
     }
 

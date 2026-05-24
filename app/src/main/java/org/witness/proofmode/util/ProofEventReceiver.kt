@@ -3,58 +3,39 @@ package org.witness.proofmode.org.witness.proofmode.util
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
-import androidx.compose.runtime.mutableStateListOf
 import org.witness.proofmode.org.witness.proofmode.ui.Activities
-import org.witness.proofmode.org.witness.proofmode.ui.Activity
-import org.witness.proofmode.org.witness.proofmode.ui.ActivityType
 import org.witness.proofmode.ProofMode
-import org.witness.proofmode.org.witness.proofmode.ui.ProofableItem
 import timber.log.Timber
-import java.util.Date
 
 class ProofEventReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context?, intent: Intent?) {
 
-        val uriMedia = intent?.getStringExtra(ProofMode.EVENT_PROOF_EXTRA_URI)
-        val proofHash = intent?.getStringExtra(ProofMode.EVENT_PROOF_EXTRA_HASH)
+        if (context == null || intent == null) return
 
-        var proofImported = intent?.action.equals(ProofMode.EVENT_PROOF_GENERATED_IMPORT)
+        val uriMedia = intent.getStringExtra(ProofMode.EVENT_PROOF_EXTRA_URI) ?: return
+        val proofHash = intent.getStringExtra(ProofMode.EVENT_PROOF_EXTRA_HASH)
 
-        uriMedia?.let {
+        when (intent.action) {
+            // Capture written: show it in the feed immediately as PENDING.
+            ProofMode.EVENT_MEDIA_CAPTURED ->
+                Activities.addCapturedPending(uriMedia, context)
 
-            if (context != null && proofHash != null) {
+            // Signing started: advance the existing item to GENERATING.
+            ProofMode.EVENT_PROOF_START ->
+                Activities.markProofGenerating(uriMedia, context)
 
-                if (Activities.getProofableItem(context, proofHash).isEmpty()) {
-
-                    if (proofImported)
-                    {
-                        Activities.addActivity(
-                            Activity(
-                                it, ActivityType.MediaImported(
-                                    items = mutableStateListOf(
-                                        ProofableItem(proofHash, Uri.parse(it))
-                                    )
-                                ), Date()
-                            ), context
-                        )
-                    }
-                    else {
-                        Activities.addActivity(
-                            Activity(
-                                it, ActivityType.MediaCaptured(
-                                    items = mutableStateListOf(
-                                        ProofableItem(proofHash, Uri.parse(it))
-                                    )
-                                ), Date()
-                            ), context
-                        )
-                    }
+            // Proof complete: flip the item to GENERATED with its real hash, or
+            // create it if this URI was never seen (e.g. gallery import).
+            ProofMode.EVENT_PROOF_GENERATED,
+            ProofMode.EVENT_PROOF_GENERATED_IMPORT -> {
+                if (proofHash != null) {
+                    val imported = intent.action == ProofMode.EVENT_PROOF_GENERATED_IMPORT
+                    Activities.markProofGenerated(uriMedia, proofHash, imported, context)
                 }
             }
-
-            Timber.tag("ProofEventReceiver").i("New Proof Event: %s", it)
         }
+
+        Timber.tag("ProofEventReceiver").i("Proof Event %s: %s", intent.action, uriMedia)
     }
 
 }
