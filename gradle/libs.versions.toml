@@ -1,6 +1,6 @@
 [versions]
 # Kotlin & KSP
-durindoor = "0.0.3"
+durindoor = "0.0.4"
 keyattestation = "main-SNAPSHOT"
 kotlin = "2.3.21"
 kotlin-serialization = "2.3.21"
