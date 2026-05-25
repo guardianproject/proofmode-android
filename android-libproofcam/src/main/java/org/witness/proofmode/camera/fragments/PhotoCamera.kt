@@ -1,6 +1,7 @@
 package org.witness.proofmode.camera.fragments
 
 import android.Manifest
+import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.compose.CameraXViewfinder
@@ -96,6 +97,7 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                 onNavigateToPreview: () -> Unit,
                 onClose:()-> Unit = {}) {
 
+    val context = LocalContext.current
     val thumbPreviewUri by cameraViewModel.thumbPreviewUri.collectAsStateWithLifecycle()
     val surfaceRequest by cameraViewModel.surfaceRequest.collectAsStateWithLifecycle()
     var showGridLines:Boolean by remember {
@@ -411,7 +413,7 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
 
                     Image(
                         painter = painterResource(R.drawable.proofmoderound),
-                        contentDescription = null,
+                        contentDescription = "ProofMode settings",
                         alpha = 0.5f,
                         modifier = Modifier
                             .size(36.dp)
@@ -419,17 +421,31 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                                 start.linkTo(parent.start, margin = 12.dp)
                                 bottom.linkTo(parent.bottom, margin = 36.dp)
                             }
+                            .clickable {
+                                context.startActivity(
+                                    Intent().setClassName(
+                                        context, "org.witness.proofmode.SettingsActivity"
+                                    )
+                                )
+                            }
                     )
 
                     Image(
                         painter = painterResource(R.drawable.crlogo),
-                        contentDescription = null,
+                        contentDescription = "Content Credentials signing settings",
                         alpha = 0.5f,
                         modifier = Modifier
                             .size(36.dp)
                             .constrainAs(crLogo) {
                                 end.linkTo(parent.end, margin = 12.dp)
                                 bottom.linkTo(parent.bottom, margin = 36.dp)
+                            }
+                            .clickable {
+                                context.startActivity(
+                                    Intent().setClassName(
+                                        context, "org.witness.proofmode.SigningSettingsActivity"
+                                    )
+                                )
                             }
                     )
 

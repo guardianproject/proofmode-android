@@ -42,6 +42,7 @@ fun CameraModeToggle(
     val toggleWidth = 160.dp
     val toggleHeight = 40.dp
     val indicatorWidth = toggleWidth / 2
+    val haptics = rememberCameraHaptics()
 
     // Animate the indicator offset: 0dp for PHOTO (left), half width for VIDEO (right)
     val indicatorOffset by animateDpAsState(
@@ -84,6 +85,7 @@ fun CameraModeToggle(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null
                     ) {
+                        if (selectedMode != CameraModeSelection.PHOTO) haptics.tick()
                         onModeSelected(CameraModeSelection.PHOTO)
                     },
                 contentAlignment = Alignment.Center
@@ -108,6 +110,7 @@ fun CameraModeToggle(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null
                     ) {
+                        if (selectedMode != CameraModeSelection.VIDEO) haptics.tick()
                         onModeSelected(CameraModeSelection.VIDEO)
                     },
                 contentAlignment = Alignment.Center

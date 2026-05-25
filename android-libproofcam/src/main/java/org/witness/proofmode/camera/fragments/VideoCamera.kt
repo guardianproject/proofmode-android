@@ -1,6 +1,7 @@
 package org.witness.proofmode.camera.fragments
 
 import android.Manifest
+import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -67,6 +68,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -101,6 +103,7 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                 onNavigateBack: (() -> Unit)? = null,
                 onNavigateToPreview: () -> Unit,
                 onClose:()-> Unit = {}) {
+    val context = LocalContext.current
     val surfaceRequest by cameraViewModel.surfaceRequest.collectAsStateWithLifecycle()
     var showGridLines:Boolean by rememberSaveable {
         mutableStateOf(false)
@@ -371,20 +374,34 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
 
                             Image(
                                 painter = painterResource(R.drawable.proofmoderound),
-                                contentDescription = null,
+                                contentDescription = "ProofMode settings",
                                 alpha  = 0.5f,
                                 modifier = Modifier
                                     .layoutId("logo")
                                     .size(32.dp)
+                                    .clickable {
+                                        context.startActivity(
+                                            Intent().setClassName(
+                                                context, "org.witness.proofmode.SettingsActivity"
+                                            )
+                                        )
+                                    }
                             )
 
                             Image(
                                 painter = painterResource(R.drawable.crlogo),
-                                contentDescription = null,
+                                contentDescription = "Content Credentials signing settings",
                                 alpha  = 0.5f,
                                 modifier = Modifier
                                     .layoutId("crLogo")
                                     .size(32.dp)
+                                    .clickable {
+                                        context.startActivity(
+                                            Intent().setClassName(
+                                                context, "org.witness.proofmode.SigningSettingsActivity"
+                                            )
+                                        )
+                                    }
                             )
 
 

@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -50,11 +51,17 @@ fun ShutterButton(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
+    val haptics = rememberCameraHaptics()
     val coreScale by animateFloatAsState(
         targetValue = if (isPressed) 0.82f else 1f,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
         label = "shutterCoreScale"
     )
+
+    // A crisp tick the instant the shutter is pressed, synced with the scale-down.
+    LaunchedEffect(isPressed) {
+        if (isPressed) haptics.capture()
+    }
 
     Box(
         modifier = modifier
@@ -100,6 +107,12 @@ fun RecordButton(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
+    val haptics = rememberCameraHaptics()
+
+    // Same press tick as the shutter, on both record start and stop.
+    LaunchedEffect(isPressed) {
+        if (isPressed) haptics.capture()
+    }
 
     val innerSize by animateDpAsState(
         targetValue = if (isRecording) 30.dp else ShutterCore,
