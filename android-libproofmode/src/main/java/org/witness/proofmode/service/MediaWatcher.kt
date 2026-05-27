@@ -218,11 +218,12 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
     }
 
     @JvmOverloads
-    fun ingestMedia (uriMediaSource: Uri, autogen: Boolean, createdAt: Date?, mimeType: String?, hash: String?, captureNonce: ByteArray? = null)  {
+    fun ingestMedia (uriMediaSource: Uri, autogen: Boolean, createdAt: Date?, mimeType: String?, inputHash: String?, captureNonce: ByteArray? = null)  {
         val intent = Intent()
         intent.setPackage("org.witness.proofmode")
         var actualUriMedia = uriMediaSource
 
+        var mediaHash = inputHash
 
         CoroutineScope(Dispatchers.IO).launch {
 
@@ -309,6 +310,11 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
                             signingMode = SigningMode.HARDWARE
                     }
 
+                    if (mediaHash.isNullOrEmpty())
+                        mediaHash = HashUtils.getSHA256FromFileContent(
+                        mContext!!.contentResolver.openInputStream(actualUriMedia)
+                    )
+
                     // C2PA signing is gated by a capture-authorization nonce.
                     // Non-camera callers (gallery imports, MediaStore observers,
                     // public ProofMode API) pass null and get the PGP/hash
@@ -331,7 +337,7 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
                                 fileMediaOut,
                                 doEmbed,
                                 createdInProofmode,
-                                hash,
+                                mediaHash,
                                 captureNonce,
                                 fileDigestBytes,
                             );
@@ -344,9 +350,7 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
 
                     try {
 
-                        val mediaHash = HashUtils.getSHA256FromFileContent(
-                            mContext!!.contentResolver.openInputStream(actualUriMedia)
-                        )
+
 
                         if (mediaHash != null) {
                             //send generated event

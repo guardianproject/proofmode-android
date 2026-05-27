@@ -116,7 +116,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         outFile: File,
         doEmbed: Boolean = true,
         wasCreated: Boolean = true,
-        hash: String?,
+        hash: String,
         captureNonce: ByteArray? = null,
         captureFileDigest: ByteArray? = null,
     ): Result<Stream> = withContext(Dispatchers.IO) {
@@ -167,9 +167,11 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             if (showLocation == true)
                 location = ProofMode.getLatestLocation(context);
 
+            val certChain = getDeviceAttestationCertChain(hash)
+
             var listAssertions = ArrayList<AssertionDefinition>()
 
-            listAssertions.add(createProofmodeAssertion(context, inFile))
+            listAssertions.add(createProofmodeAssertion(context, inFile, certChain))
 
             if (wasCreated) {
                 //only add these for items we create
@@ -207,7 +209,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                         defaultSigner = createSigner(SigningMode.KEYSTORE, tsaUrl)
                     }
                     //we only allow C2PA on devices that have been patched within 90 days
-                    else if (checkOSSecurityPatchDate(90)) {
+                    else if (checkOSSecurityPatchDate(90, certChain)) {
                         defaultSigner = createSigner(signingMode, tsaUrl)
                     }
                     else
@@ -218,7 +220,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
                     }
                 }
-                else
+                else //local signing
                 {
                     defaultSigner = createSigner(signingMode, tsaUrl)
                 }
@@ -1071,7 +1073,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         return result
     }
 
-    private fun createProofmodeAssertion(context: Context, inFile: File): AssertionDefinition {
+    private fun createProofmodeAssertion(context: Context, inFile: File, certChain: ArrayList<X509Certificate>?): AssertionDefinition {
 
         var appSignatures = context.packageManager.getPackageInfo(context.packageName, PackageManager.GET_SIGNING_CERTIFICATES).signingInfo;
 
@@ -1116,8 +1118,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                 }
 
                 val nonceOfIngredient = HashUtils.getSHA256FromFileContent(FileInputStream(inFile))
-                val certChain = getDeviceAttestationCertChain(nonceOfIngredient)
-                if (certChain.isNotEmpty())
+                if (certChain?.isNotEmpty() == true)
                 {
 
                     if (verifyAttestationCertificateChain(certChain)) {
@@ -1154,7 +1155,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         return formatter.format(date)
     }
 
-    fun getDeviceAttestationCertChain (nonceOfIngredient: String): ArrayList<X509Certificate> {
+    fun getDeviceAttestationCertChain (nonceOfIngredient: String): ArrayList<X509Certificate>? {
 
         val keyAlias = "attested_key"
         val keyGen = KeyPairGenerator.getInstance(
@@ -1271,10 +1272,9 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         }
     }
 
-    fun checkOSSecurityPatchDate(withinDaysLimit: Int): Boolean {
+    fun checkOSSecurityPatchDate(withinDaysLimit: Int, certChain: ArrayList<X509Certificate>?): Boolean {
 
-        val certChain = getDeviceAttestationCertChain("checkOSSecurityPatchDate")
-        if (certChain.isNotEmpty()) {
+        if (certChain?.isNotEmpty() == true) {
 
             if (verifyAttestationCertificateChain(certChain)) {
 
