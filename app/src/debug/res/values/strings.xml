@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Overrides the launcher label for the side-by-side debug build only. -->
+    <string name="app_name">PMDEBUG</string>
+</resources>

@@ -63,21 +63,35 @@ class ProofModeApp : Application(), Configuration.Provider {
         // (companion) initializer, which runs JNI_OnLoad's root/Frida tripwire
         // before this point. See the companion object below.
 
+        // The side-by-side debug build runs under a .debug-suffixed package and
+        // is signed with the local debug keystore, so the hardcoded release
+        // package/cert would always read as "repackaged". Point the expected
+        // package at the actual (suffixed) applicationId for debug, and run
+        // Talsec in non-prod / no-kill mode so the build is usable for testing.
+        // ".debug" mirrors the applicationIdSuffix in app/build.gradle.kts.
+        // Built from the constant (not getPackageName()) to keep the release
+        // path tamper-resistant; the debug branch is only taken in debug builds.
+        val expectedPackageName =
+            if (BuildConfig.DEBUG) "$EXPECTED_PACKAGE_NAME.debug" else EXPECTED_PACKAGE_NAME
+        val isProd = IS_PROD && !BuildConfig.DEBUG
+        val killOnBypass = KILL_ON_BYPASS && !BuildConfig.DEBUG
+
         val config = TalsecConfig.Builder(
-            EXPECTED_PACKAGE_NAME,
+            expectedPackageName,
             EXPECTED_SIGNING_CERTIFICATE_HASH_BASE64)
             .watcherMail(WATCHER_MAIL)
          //   .supportedAlternativeStores(SUPPORTED_ALTERNATIVE_STORES)
-            .prod(IS_PROD)
-            .killOnBypass(KILL_ON_BYPASS)
+            .prod(isProd)
+            .killOnBypass(killOnBypass)
             .build()
 
         val threatDetectedListener = object : ThreatListener.ThreatDetected() {
 
             override fun onRootDetected() {
                 println("onRootDetected")
-                exitProcess(0)
-
+                if (!BuildConfig.DEBUG) {
+                    exitProcess(0)
+                }
             }
 
             override fun onDebuggerDetected() {
@@ -120,9 +134,10 @@ class ProofModeApp : Application(), Configuration.Provider {
 
             override fun onHookDetected() {
                 println("onHookDetected")
-                showWarning("Ye olde Captain Hook, eh?!");
-                exitProcess(0)
-
+                if (!BuildConfig.DEBUG) {
+                    showWarning("Ye olde Captain Hook, eh?!");
+                    exitProcess(0)
+                }
             }
 
             override fun onDeviceBindingDetected() {
@@ -148,9 +163,10 @@ class ProofModeApp : Application(), Configuration.Provider {
             override fun onMultiInstanceDetected() {
                 println("onMultiInstanceDetected")
 
-                showWarning("Multiple instances detected");
-                exitProcess(0)
-
+                if (!BuildConfig.DEBUG) {
+                    showWarning("Multiple instances detected");
+                    exitProcess(0)
+                }
             }
 
             override fun onUnsecureWifiDetected() {
@@ -159,30 +175,34 @@ class ProofModeApp : Application(), Configuration.Provider {
 
             override fun onTimeSpoofingDetected() {
                 println("onTimeSpoofingDetected")
-                showWarning("Timespoofing detected");
-                exitProcess(0)
-
+                if (!BuildConfig.DEBUG) {
+                    showWarning("Timespoofing detected");
+                    exitProcess(0)
+                }
             }
 
             override fun onLocationSpoofingDetected() {
                 println("onLocationSpoofingDetected")
-                showWarning("Location spoofing detected");
-                exitProcess(0)
-
+                if (!BuildConfig.DEBUG) {
+                    showWarning("Location spoofing detected");
+                    exitProcess(0)
+                }
             }
 
             override fun onAutomationDetected() {
                 println("onAutomationDetected")
-                showWarning("Automation detected");
-                exitProcess(0)
-
+                if (!BuildConfig.DEBUG) {
+                    showWarning("Automation detected");
+                    exitProcess(0)
+                }
             }
 
             override fun onMalwareDetected(suspiciousApps: List<SuspiciousAppInfo>) {
                 println("onMalwareDetected")
-                showWarning("Malware detected");
-                exitProcess(0)
-
+                if (!BuildConfig.DEBUG) {
+                    showWarning("Malware detected");
+                    exitProcess(0)
+                }
             }
         }
 
@@ -191,7 +211,7 @@ class ProofModeApp : Application(), Configuration.Provider {
 
         //aggressively stop people trying to instrument the app
         var dIntMan = DeviceIntegritySupport()
-        if (dIntMan.isEnvironmentCompromised())
+        if (!BuildConfig.DEBUG && dIntMan.isEnvironmentCompromised())
             exitProcess(0)
 
         //and do not allow developer mode
@@ -249,7 +269,8 @@ class ProofModeApp : Application(), Configuration.Provider {
     fun checkC2PAConformance () : Boolean {
 
         val c2paMan = C2PAManager(this, PreferencesManager(this))
-        val conformant = c2paMan.checkOSSecurityPatchDate(90)
+        val certChain = c2paMan.getDeviceAttestationCertChain("test")
+        val conformant = c2paMan.checkOSSecurityPatchDate(90, certChain)
 
         if (!conformant)
         {

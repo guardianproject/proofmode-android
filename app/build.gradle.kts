@@ -62,6 +62,14 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Install side-by-side with the official release build.
+            // Package becomes org.witness.proofmode.debug; FileProvider
+            // authorities use ${applicationId}, so they adapt automatically.
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+            isMinifyEnabled = false
+        }
         release {
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
