@@ -32,6 +32,7 @@ import org.witness.proofmode.c2pa.proofsign.CaptureAuthority
 import org.witness.proofmode.crypto.HashUtils
 import org.witness.proofmode.crypto.pgp.PassphraseKeystore
 import org.witness.proofmode.crypto.pgp.PgpUtils
+import org.witness.proofmode.library.BuildConfig
 import org.witness.proofmode.notarization.NotarizationListener
 import org.witness.proofmode.notarization.NotarizationProvider
 import org.witness.proofmode.storage.CompositeStorageProvider
@@ -220,7 +221,11 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
     @JvmOverloads
     fun ingestMedia (uriMediaSource: Uri, autogen: Boolean, createdAt: Date?, mimeType: String?, inputHash: String?, captureNonce: ByteArray? = null)  {
         val intent = Intent()
-        intent.setPackage("org.witness.proofmode")
+
+        val EXPECTED_PACKAGE_NAME = "org.witness.proofmode"
+        val expectedPackageName =
+            if (BuildConfig.DEBUG) "${EXPECTED_PACKAGE_NAME}.debug" else EXPECTED_PACKAGE_NAME
+        intent.setPackage(expectedPackageName)
         var actualUriMedia = uriMediaSource
 
         var mediaHash = inputHash
@@ -290,7 +295,7 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
                     // broadcast below. Imports have no pending feed item, so this
                     // is a harmless no-op for them.
                     Intent(ProofMode.EVENT_PROOF_START).apply {
-                        setPackage("org.witness.proofmode")
+                        setPackage(expectedPackageName)
                         putExtra(ProofMode.EVENT_PROOF_EXTRA_URI, actualUriMedia.toString())
                     }.also { mContext!!.sendBroadcast(it) }
 

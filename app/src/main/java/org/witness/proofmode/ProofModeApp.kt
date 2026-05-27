@@ -608,7 +608,7 @@ class ProofModeApp : Application(), Configuration.Provider {
 
         }
 
-        private const val EXPECTED_PACKAGE_NAME = "org.witness.proofmode" // Don't use Context.getPackageName!
+        public const val EXPECTED_PACKAGE_NAME = "org.witness.proofmode" // Don't use Context.getPackageName!
         private val EXPECTED_SIGNING_CERTIFICATE_HASH_BASE64 = arrayOf(
             "8AaiBIHHGmkN4C44WrDJ+krBJFJA9oECaCcDugZWhno="
         ) // Replace with your release (!) signing certificate hashes
