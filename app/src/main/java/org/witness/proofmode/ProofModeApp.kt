@@ -59,18 +59,6 @@ class ProofModeApp : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
 
-        // Note: libdintegrity is already loaded by ProofModeApp's static
-        // (companion) initializer, which runs JNI_OnLoad's root/Frida tripwire
-        // before this point. See the companion object below.
-
-        // The side-by-side debug build runs under a .debug-suffixed package and
-        // is signed with the local debug keystore, so the hardcoded release
-        // package/cert would always read as "repackaged". Point the expected
-        // package at the actual (suffixed) applicationId for debug, and run
-        // Talsec in non-prod / no-kill mode so the build is usable for testing.
-        // ".debug" mirrors the applicationIdSuffix in app/build.gradle.kts.
-        // Built from the constant (not getPackageName()) to keep the release
-        // path tamper-resistant; the debug branch is only taken in debug builds.
         val expectedPackageName =
             if (BuildConfig.DEBUG) "$EXPECTED_PACKAGE_NAME.debug" else EXPECTED_PACKAGE_NAME
         val isProd = IS_PROD && !BuildConfig.DEBUG
@@ -250,13 +238,11 @@ class ProofModeApp : Application(), Configuration.Provider {
 
         StorageProviderManager.getInstance().initializeStorageProviders(this)
 
-       // Log.i("Proofmode","checking with durin")
-        var isDurin = when {
-            !Native.loaded -> "Gate sealed: library refused to load."
+        var isNative = when {
+            !Native.loaded -> "DD library refused to load."
             else -> runCatching { Native.nativePing() }
-                .getOrElse { "native methods unregistered" }
+                .getOrElse { "DD native methods unregistered" }
         }
-      //  Log.i("Proofmode","what durin said: $isDurin")
 
     }
 
@@ -274,8 +260,12 @@ class ProofModeApp : Application(), Configuration.Provider {
 
         if (!conformant)
         {
-            // this is obnoxious to show the user right now. we will indicate this in other parts of the app
-          //  showToastMessage(getString(R.string.c2pa_os_patch_level_error))
+		//set to local signing only
+		        mPrefs?.edit()?.putBoolean(
+                        ProofMode.PREF_OPTION_REMOTE_SIGNING,
+                        false
+                    )?.commit()
+
         }
 
         return conformant
@@ -406,8 +396,6 @@ class ProofModeApp : Application(), Configuration.Provider {
 
         val conformant = checkC2PAConformance()
 
-
-
         if (conformant)
             initProofSignClient()
 
@@ -419,6 +407,13 @@ class ProofModeApp : Application(), Configuration.Provider {
         // the ProofSign server (they sign locally), so skip eager registration.
         if (!ProofSignClient.isPlayIntegrityAvailable(applicationContext)) {
             Timber.d("ProofSign: Play Integrity unavailable; skipping registration (local signing only)")
+
+            //set to local signing only
+            mPrefs?.edit()?.putBoolean(
+                ProofMode.PREF_OPTION_REMOTE_SIGNING,
+                false
+            )?.commit()
+
             return
         }
 
@@ -495,17 +490,6 @@ class ProofModeApp : Application(), Configuration.Provider {
 
             ProofMode.initBackgroundService(this)
 
-            /**
-            val intentService = Intent(context, ProofService::class.java)
-            intentService.action = ProofService.ACTION_START
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                ProofMode.initBackgroundService(this)
-                if (startService) context.startForegroundService(intentService)
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intentService)
-            } else {
-                context.startService(intentService)
-            }**/
 
         }
 
@@ -594,18 +578,7 @@ class ProofModeApp : Application(), Configuration.Provider {
 
     private companion object {
         init {
-            // Static (class-load) initializer — the Kotlin equivalent of
-            // Java's `static { System.loadLibrary(...) }`. This runs when the
-            // ProofModeApp class is initialized, before the Application is
-            // constructed and thus before attachBaseContext()/onCreate(). It
-            // forces libdintegrity to load — running JNI_OnLoad's root/Frida
-            // tripwire (lethal in release) — at the earliest point our own
-            // code executes. The load is runCatching-guarded inside
-            // DeviceIntegritySupport, so a missing .so cannot brick startup.
-            System.loadLibrary("dintegrity")
-
             DeviceIntegritySupport.ensureNativeLoaded()
-
         }
 
         public const val EXPECTED_PACKAGE_NAME = "org.witness.proofmode" // Don't use Context.getPackageName!

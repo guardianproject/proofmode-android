@@ -7,19 +7,19 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.BatteryManager
 import android.provider.Settings
+import info.guardianproject.durindoor.Native
 import java.io.File
 import java.net.Socket
 
 class DeviceIntegritySupport {
-
-    private external fun nativeIsEnvironmentCompromised(): Boolean
 
     fun detectThreats (context: Context): Boolean {
         return isUsbConnected(context) || isDeveloperAttackSurfaceOpen(context) || isFridaPresent()
     }
 
     fun isEnvironmentCompromised (): Boolean {
-        return nativeIsEnvironmentCompromised()
+        return nativeAvailable &&
+            runCatching { Native.nativeIsEnvironmentCompromised() }.getOrDefault(false)
     }
 
 
@@ -61,8 +61,9 @@ class DeviceIntegritySupport {
     fun isFridaPresent(): Boolean {
         // Native checks are harder for Frida to hook than the JVM equivalents:
         // /proc/self/maps via fopen, /proc/net/tcp[6] port scan, and a
-        // /proc/self/task comm-name scan for injected helper threads.
-        if (nativeAvailable && runCatching { nativeIsEnvironmentCompromised() }.getOrDefault(false)) {
+        // /proc/self/task comm-name scan for injected helper threads. These now
+        // live in the closed-source durindoor library (info.guardianproject:durindoor).
+        if (nativeAvailable && runCatching { Native.nativeIsEnvironmentCompromised() }.getOrDefault(false)) {
             return true
         }
 
@@ -81,16 +82,18 @@ class DeviceIntegritySupport {
     }
 
     companion object {
-        private val nativeAvailable: Boolean = runCatching {
-            System.loadLibrary("dintegrity")
-        }.isSuccess
+        // Touching durindoor's Native triggers its System.loadLibrary("durindoor"),
+        // which runs the load-time integrity tripwire. Native.loaded is false if
+        // the .so is absent (e.g. an unshipped ABI) or refused to load.
+        private val nativeAvailable: Boolean = runCatching { Native.loaded }.getOrDefault(false)
 
         /**
-         * Forces libdintegrity to load now — which runs its JNI_OnLoad
-         * load-time integrity tripwire (root + instrumentation checks) —
-         * instead of lazily on the first native call. In release builds the
-         * tripwire kills the process from native code if it detects root or
-         * Frida. Call this as early as possible in Application startup.
+         * Forces libdurindoor to load now — which runs its .init_array /
+         * JNI_OnLoad load-time integrity tripwire (root + instrumentation
+         * checks) and arms the anti-debug watchdog — instead of lazily on the
+         * first native call. In release builds the tripwire kills the process
+         * from native code if it detects root or Frida. Call this as early as
+         * possible in Application startup.
          */
         @JvmStatic
         fun ensureNativeLoaded(): Boolean = nativeAvailable
