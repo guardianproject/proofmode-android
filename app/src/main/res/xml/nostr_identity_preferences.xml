@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory app:title="@string/nostr_identity_current_label">
+
+        <Preference
+            app:key="nostrNpub"
+            app:title="@string/nostr_identity_npub_title"
+            app:summary="@string/nostr_identity_none" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/nostr_identity_manage_label">
+
+        <EditTextPreference
+            app:key="nostrImportNsec"
+            app:persistent="false"
+            app:title="@string/nostr_identity_import_title"
+            app:summary="@string/nostr_identity_import_summary"
+            app:dialogTitle="@string/nostr_identity_import_title"
+            app:dialogMessage="@string/nostr_identity_import_dialog" />
+
+        <Preference
+            app:key="nostrGenerate"
+            app:title="@string/nostr_identity_generate_title"
+            app:summary="@string/nostr_identity_generate_summary" />
+
+        <Preference
+            app:key="nostrBackup"
+            app:title="@string/nostr_identity_backup_title"
+            app:summary="@string/nostr_identity_backup_summary" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/nostr_identity_remote_label">
+
+        <Preference
+            app:key="nostrAmber"
+            app:title="@string/nostr_identity_amber_title"
+            app:summary="@string/nostr_identity_amber_summary"
+            app:enabled="false" />
+
+    </PreferenceCategory>
+
+</PreferenceScreen>

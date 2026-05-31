@@ -126,10 +126,10 @@ class SettingsActivity : AppCompatActivity() {
             updateUI()
         }
 
-        switchNotarize.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
-            mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_NOTARY, isChecked)
-                .commit()
-            updateUI()
+        // The Notary cell opens the dedicated Notary settings screen (master enable +
+        // per-provider toggles + Nostr identity); the checkbox is a read-only indicator.
+        binding.contentSettings.cellNotary.setOnClickListener {
+            startActivity(Intent(this, NotarySettingsActivity::class.java))
         }
 
         if (Build.SUPPORTED_64_BIT_ABIS.isNotEmpty()) {

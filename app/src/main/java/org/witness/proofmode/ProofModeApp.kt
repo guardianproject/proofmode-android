@@ -35,6 +35,7 @@ import org.witness.proofmode.c2pa.proofsign.SignerException
 import org.witness.proofmode.crypto.pgp.PassphraseKeystore
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.library.BuildConfig
+import org.witness.proofmode.notaries.NostrNotarizationProvider
 import org.witness.proofmode.notaries.OpenTimestampsNotarizationProvider
 import org.witness.proofmode.notarization.NotarizationProvider
 import org.witness.proofmode.storage.StorageProviderManager
@@ -566,7 +567,16 @@ class ProofModeApp : Application(), Configuration.Provider {
         try {
             //this may not be included in the current build
             Class.forName("com.eternitywall.ots.OpenTimestamps")
-            val nProvider: NotarizationProvider = OpenTimestampsNotarizationProvider()
+            val nProvider: NotarizationProvider = OpenTimestampsNotarizationProvider(this)
+            ProofMode.addNotarizationProvider(this, nProvider)
+        } catch (e: ClassNotFoundException) {
+            //class not available
+        }
+
+        try {
+            //this may not be included in the current build
+            Class.forName("rust.nostr.sdk.Keys")
+            val nProvider: NotarizationProvider = NostrNotarizationProvider(this)
             ProofMode.addNotarizationProvider(this, nProvider)
         } catch (e: ClassNotFoundException) {
             //class not available

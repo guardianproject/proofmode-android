@@ -2,6 +2,9 @@ package org.witness.proofmode.notaries;
 
 import static org.witness.proofmode.ProofMode.OPENTIMESTAMPS_FILE_TAG;
 
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.preference.PreferenceManager;
 import android.util.Base64;
 
 import com.eternitywall.ots.DetachedTimestampFile;
@@ -25,8 +28,31 @@ public class OpenTimestampsNotarizationProvider implements NotarizationProvider 
 
     private final static String ALGO = "SHA256";
 
+    private final Context mContext;
+
+    public OpenTimestampsNotarizationProvider() {
+        this(null);
+    }
+
+    public OpenTimestampsNotarizationProvider(Context context) {
+        this.mContext = context != null ? context.getApplicationContext() : null;
+    }
+
+    /** Whether the user has the OpenTimestamps notarization provider enabled. */
+    private boolean isEnabled() {
+        if (mContext == null) return true;
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mContext);
+        return prefs.getBoolean(
+                ProofMode.PREF_OPTION_NOTARY_OTS,
+                ProofMode.PREF_OPTION_NOTARY_OTS_DEFAULT);
+    }
+
     @Override
     public void notarize(String mediaHash, String mimeType, InputStream is, NotarizationListener listener) {
+
+        if (!isEnabled()) {
+            return;
+        }
 
         try {
             Hash hash = new Hash(Utils.hexToBytes(mediaHash), ALGO);

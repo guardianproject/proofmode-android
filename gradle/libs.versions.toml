@@ -84,6 +84,7 @@ zxing = "3.5.4"
 bitcoinj = "0.14.7"
 c2pa = "0.0.9-beta.7"
 play-integrity = "1.6.0"
+nostr-sdk = "0.44.2"
 
 # Testing
 junit = "4.13.2"
@@ -189,6 +190,7 @@ tedimagepicker = { module = "io.github.parksanggwon:tedimagepicker", version.ref
 listenablefuture = { module = "com.google.guava:listenablefuture", version.ref = "listenablefuture" }
 zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
 bitcoinj-core = { module = "org.bitcoinj:bitcoinj-core", version.ref = "bitcoinj" }
+nostr-sdk = { module = "org.rust-nostr:nostr-sdk", version.ref = "nostr-sdk" }
 #c2pa = { module = "org.contentauth:c2pa", version.ref = "c2pa" }
 c2pa = { module = "com.github.redaranj:c2pa-android", version.ref = "c2pa" }
 play-integrity = { module = "com.google.android.play:integrity", version.ref = "play-integrity" }

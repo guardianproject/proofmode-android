@@ -93,6 +93,12 @@
             android:name=".SigningSettingsActivity"
             android:label="@string/settings_signing_title"/>
         <activity
+            android:name=".NotarySettingsActivity"
+            android:label="@string/notary_settings_title" />
+        <activity
+            android:name=".NostrIdentityActivity"
+            android:label="@string/nostr_identity_title" />
+        <activity
             android:name=".org.witness.proofmode.ui.DataLegendActivity"
             android:label="@string/activity_datalegend_title" />
         <activity

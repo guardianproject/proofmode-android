@@ -32,7 +32,6 @@ import org.witness.proofmode.c2pa.proofsign.CaptureAuthority
 import org.witness.proofmode.crypto.HashUtils
 import org.witness.proofmode.crypto.pgp.PassphraseKeystore
 import org.witness.proofmode.crypto.pgp.PgpUtils
-import org.witness.proofmode.library.BuildConfig
 import org.witness.proofmode.notarization.NotarizationListener
 import org.witness.proofmode.notarization.NotarizationProvider
 import org.witness.proofmode.storage.CompositeStorageProvider
@@ -222,9 +221,13 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
     fun ingestMedia (uriMediaSource: Uri, autogen: Boolean, createdAt: Date?, mimeType: String?, inputHash: String?, captureNonce: ByteArray? = null)  {
         val intent = Intent()
 
-        val EXPECTED_PACKAGE_NAME = "org.witness.proofmode"
-        val expectedPackageName =
-            if (BuildConfig.DEBUG) "${EXPECTED_PACKAGE_NAME}.debug" else EXPECTED_PACKAGE_NAME
+        // Target our own app package so these broadcasts reach our unexported
+        // ProofEventReceiver (and MainActivity's NOT_EXPORTED receivers). Use the runtime
+        // package name, which already carries any build-type applicationId suffix (e.g.
+        // ".debug"). Deriving it from the library module's BuildConfig.DEBUG is unreliable
+        // (it can be false in a debug app build, sending to the unsuffixed package so the
+        // broadcast is never delivered) and hardcoding ".debug" breaks if the suffix changes.
+        val expectedPackageName = mContext!!.packageName
         intent.setPackage(expectedPackageName)
         var actualUriMedia = uriMediaSource
 
@@ -342,7 +345,7 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
                                 fileMediaOut,
                                 doEmbed,
                                 createdInProofmode,
-                                mediaHash,
+                                mediaHash!!,
                                 captureNonce,
                                 fileDigestBytes,
                             );
@@ -350,6 +353,21 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
                             Timber.w(e, "C2PA signing refused by capture-authority gate for ${fileMedia.name}")
                         } catch (e: org.witness.proofmode.c2pa.proofsign.CompromisedEnvironmentException) {
                             Timber.w(e, "C2PA signing refused: runtime environment is compromised (${fileMedia.name})")
+                        }
+
+                        // Embedding a C2PA manifest rewrites the media file in place, which
+                        // changes its SHA-256. The proof sidecar is keyed by file hash, and
+                        // later lookups (SingleAssetView, share/verify) re-hash the on-disk
+                        // file — so recompute the hash here, after signing, to key the proof
+                        // to the final artifact. Without this the proof is stored under the
+                        // pre-embed hash and the asset view shows no metadata until the proof
+                        // is manually regenerated.
+                        try {
+                            mediaHash = HashUtils.getSHA256FromFileContent(
+                                mContext!!.contentResolver.openInputStream(actualUriMedia)
+                            )
+                        } catch (e: Exception) {
+                            Timber.w(e, "Could not recompute post-embed media hash; keeping pre-embed hash")
                         }
                     }
 

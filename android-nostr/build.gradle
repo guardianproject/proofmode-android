@@ -1,0 +1,91 @@
+
+plugins {
+    id 'maven-publish'
+    alias(libs.plugins.android.library)
+}
+
+
+android {
+    compileSdk 36
+    namespace = "org.witness.proofmode.nostr"
+
+
+    defaultConfig {
+        minSdkVersion 28
+        targetSdk 36
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        multiDexEnabled = true
+
+        ndk {
+            abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    lint {
+        abortOnError = false
+    }
+
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+        }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+    }
+}
+
+dependencies {
+
+    implementation libs.androidx.localbroadcastmanager
+
+    implementation libs.timber
+    implementation libs.androidx.multidex
+    implementation libs.androidx.core.ktx
+
+    // Nostr SDK (rust-nostr) for key generation, event signing and relay publishing.
+    // It transitively pulls the JNA *aar*, which now matches the JNA aar forced by
+    // android-libproofmode (for c2pa), so the two dedupe to a single variant on the classpath.
+    implementation libs.nostr.sdk
+
+    // runBlocking for the synchronous NotarizationProvider.notarize() contract
+    implementation libs.kotlinx.coroutines.android
+
+    implementation project(path: ':android-libproofmode')
+
+    // Required -- JUnit 4 framework
+    androidTestImplementation libs.junit
+
+    // Testing-only dependencies
+    androidTestImplementation libs.androidx.test.core
+    androidTestImplementation libs.androidx.test.ext.junit
+    androidTestImplementation libs.androidx.test.runner
+
+
+}
+
+project.afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                groupId = 'org.proofmode'
+                artifactId = 'android-nostr'
+                version = '1.0.0'
+                from components.release
+            }
+        }
+    }
+}

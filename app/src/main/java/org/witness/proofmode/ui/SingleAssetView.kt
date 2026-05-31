@@ -82,10 +82,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.contentauth.c2pa.C2PA
+import org.json.JSONObject
+import org.witness.proofmode.ProofMode
 import org.witness.proofmode.R
 import org.witness.proofmode.c2pa.C2PAManager
 import org.witness.proofmode.c2pa.PreferencesManager
 import org.witness.proofmode.c2pa.ValidationState
+import org.witness.proofmode.notaries.NostrNotarizationVerifier
 import org.witness.proofmode.service.ProofModeV1Constants
 import org.witness.proofmode.storage.DefaultStorageProvider
 import org.witness.proofmode.util.ProofModeUtil
@@ -96,6 +99,7 @@ import java.lang.Float.max
 import java.lang.Float.min
 import java.text.DateFormat
 import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 
 
@@ -361,6 +365,24 @@ fun updateMetadata (itemUri : Uri, context : Context) {
 
         }
 
+        // Nostr notarization verification, shown just below the C2PA / Content Credentials check.
+        val nostrIdentifier = hash + ProofMode.NOSTR_FILE_TAG
+        if (storageProvider.proofIdentifierExists(hash, nostrIdentifier)) {
+            val nostrJson = try {
+                storageProvider.getInputStream(hash, nostrIdentifier)
+                    ?.bufferedReader()?.use { it.readText() }
+            } catch (e: Exception) {
+                Timber.e(e, "Error reading .nostr notarization file")
+                null
+            }
+            if (!nostrJson.isNullOrEmpty()) {
+                NostrVerificationRow(
+                    label = context.getString(R.string.nostr_notarization),
+                    nostrJson = nostrJson
+                )
+            }
+        }
+
         if (hmap?.contains(ProofModeV1Constants.PROOF_GENERATED) == true)
             addRow(
                 ProofModeV1Constants.PROOF_GENERATED,
@@ -486,6 +508,165 @@ fun C2PAManifestRow(label: String, validationState: ValidationState, filePath: S
         Text(modifier = Modifier.padding(2.dp, 2.dp), text = "")
     }
 }
+
+@Composable
+fun NostrVerificationRow(label: String, nostrJson: String) {
+    var expanded by remember { mutableStateOf(false) }
+    var loading by remember { mutableStateOf(false) }
+    var result by remember { mutableStateOf<NostrNotarizationVerifier.Result?>(null) }
+    var onRelays by remember { mutableStateOf<Boolean?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
+    // Parse header info (event id / note / published flag / relays) without any crypto, for the
+    // always-visible summary line. The heavy work (signature + relay checks) runs on tap.
+    val header = remember(nostrJson) {
+        try {
+            val root = JSONObject(nostrJson)
+            val eventObj = if (root.has("event")) root.getJSONObject("event") else root
+            val eventId = root.optString("eventId").ifEmpty { eventObj.optString("id") }
+            val note = root.optString("note")
+            val published = if (root.has("published")) root.optBoolean("published") else null
+            val relays = root.optJSONArray("relays")?.let { arr ->
+                (0 until arr.length()).mapNotNull { arr.optString(it).ifEmpty { null } }
+            } ?: DEFAULT_VERIFY_RELAYS
+            NostrHeader(eventId, note, published, relays)
+        } catch (e: Exception) {
+            NostrHeader("", "", null, DEFAULT_VERIFY_RELAYS)
+        }
+    }
+
+    val onTap: () -> Unit = {
+        if (!expanded && result == null && !loading) {
+            loading = true
+            coroutineScope.launch {
+                val verifyResult = withContext(Dispatchers.IO) {
+                    NostrNotarizationVerifier.verify(nostrJson)
+                }
+                result = verifyResult
+                val exists = withContext(Dispatchers.IO) {
+                    try {
+                        NostrNotarizationVerifier.existsOnRelays(nostrJson, header.relays, 15000L)
+                    } catch (e: Exception) {
+                        Timber.e(e, "Error checking Nostr relays")
+                        false
+                    }
+                }
+                onRelays = exists
+                loading = false
+                expanded = true
+            }
+        } else {
+            expanded = !expanded
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onTap)
+    ) {
+        Row {
+            Text(
+                modifier = Modifier.padding(3.dp, 3.dp),
+                text = label,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        Row {
+            val idShort = when {
+                header.note.isNotEmpty() -> header.note.take(20) + "…"
+                header.eventId.isNotEmpty() -> header.eventId.take(16) + "…"
+                else -> ""
+            }
+            Text(
+                modifier = Modifier.padding(3.dp, 3.dp),
+                text = if (idShort.isNotEmpty()) "$idShort — Tap to verify" else "Tap to verify",
+                color = Color.Gray
+            )
+        }
+        header.published?.let { pub ->
+            Row {
+                Text(
+                    modifier = Modifier.padding(3.dp, 3.dp),
+                    text = if (pub) "Published to Nostr relays" else "Signed but not yet published",
+                    color = if (pub) Color(0xFF2E7D32) else Color(0xFFEF6C00)
+                )
+            }
+        }
+    }
+
+    if (loading) {
+        Row {
+            Text(
+                modifier = Modifier.padding(3.dp, 3.dp),
+                text = "Verifying signature and checking relays…",
+                color = Color.Gray
+            )
+        }
+    }
+
+    if (expanded && result != null) {
+        val r = result!!
+        Row {
+            Text(
+                modifier = Modifier.padding(3.dp, 3.dp),
+                text = if (r.valid) "Signature: Valid"
+                else "Signature: Invalid" + (r.error?.let { " ($it)" } ?: ""),
+                color = if (r.valid) Color(0xFF2E7D32) else Color(0xFFC62828)
+            )
+        }
+        onRelays?.let { exists ->
+            Row {
+                Text(
+                    modifier = Modifier.padding(3.dp, 3.dp),
+                    text = if (exists) "Relays: Found on Nostr network"
+                    else "Relays: Not found / unreachable",
+                    color = if (exists) Color(0xFF2E7D32) else Color.Gray
+                )
+            }
+        }
+        Row {
+            SelectionContainer {
+                Text(
+                    modifier = Modifier
+                        .padding(3.dp, 3.dp)
+                        .fillMaxWidth()
+                        .background(Color(0xFFF5F5F5))
+                        .padding(8.dp),
+                    text = buildString {
+                        r.eventId?.let { append("Event ID: ").append(it).append("\n") }
+                        if (header.note.isNotEmpty()) append("Note: ").append(header.note).append("\n")
+                        r.npub?.let { append("Author (npub): ").append(it).append("\n") }
+                        r.createdAt?.let {
+                            append("Created: ")
+                                .append(SimpleDateFormat.getDateTimeInstance().format(Date(it * 1000)))
+                                .append("\n")
+                        }
+                        r.mediaHash?.let { append("Media SHA-256: ").append(it) }
+                    },
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+    }
+
+    Row {
+        Text(modifier = Modifier.padding(2.dp, 2.dp), text = "")
+    }
+}
+
+private data class NostrHeader(
+    val eventId: String,
+    val note: String,
+    val published: Boolean?,
+    val relays: List<String>
+)
+
+private val DEFAULT_VERIFY_RELAYS = listOf(
+    "wss://relay.damus.io",
+    "wss://nos.lol",
+    "wss://relay.nostr.band"
+)
 
 @Composable
 fun addRow (key : String,  hmap: HashMap<String,String>?) {

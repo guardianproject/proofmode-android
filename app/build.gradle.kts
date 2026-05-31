@@ -145,6 +145,7 @@ dependencies {
 
     implementation(project(":android-libproofmode"))
     implementation(project(":android-opentimestamps"))
+    implementation(project(":android-nostr"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.preference.ktx)

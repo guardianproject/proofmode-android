@@ -11,6 +11,7 @@
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/android-libproofcam" />
             <option value="$PROJECT_DIR$/android-libproofmode" />
+            <option value="$PROJECT_DIR$/android-nostr" />
             <option value="$PROJECT_DIR$/android-opentimestamps" />
             <option value="$PROJECT_DIR$/app" />
           </set>

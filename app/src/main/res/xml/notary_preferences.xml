@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory app:title="@string/notary_settings_title">
+
+        <SwitchPreferenceCompat
+            app:key="autoNotarize"
+            app:title="@string/notary_enable_title"
+            app:summaryOn="@string/notary_enable_summary_on"
+            app:summaryOff="@string/notary_enable_summary_off"
+            app:defaultValue="true" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/notary_providers_label">
+
+        <SwitchPreferenceCompat
+            app:key="autoNotarizeOts"
+            app:title="@string/notary_ots_title"
+            app:summary="@string/notary_ots_summary"
+            app:dependency="autoNotarize"
+            app:defaultValue="true" />
+
+        <SwitchPreferenceCompat
+            app:key="autoNotarizeNostr"
+            app:title="@string/notary_nostr_title"
+            app:summary="@string/notary_nostr_summary"
+            app:dependency="autoNotarize"
+            app:defaultValue="true" />
+
+        <Preference
+            app:key="nostrIdentity"
+            app:title="@string/nostr_identity_title"
+            app:summary="@string/nostr_identity_summary"
+            app:dependency="autoNotarizeNostr" />
+
+    </PreferenceCategory>
+
+</PreferenceScreen>

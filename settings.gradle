@@ -10,4 +10,4 @@ plugins {
     id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
 }
 
-include ':app', ':android-libproofmode',  ':android-libproofcam', ':android-opentimestamps'
+include ':app', ':android-libproofmode',  ':android-libproofcam', ':android-opentimestamps', ':android-nostr'

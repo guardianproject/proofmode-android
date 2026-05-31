@@ -12,6 +12,42 @@
     <string name="switch_enable_proofmode">Enable ProofMode</string>
     <string name="settings_notary">Notary</string>
     <string name="settings_notary_desc">Registration with a third party that your media exists</string>
+
+    <!-- Notary settings screen -->
+    <string name="notary_settings_title">Notary</string>
+    <string name="notary_enable_title">Enable notarization</string>
+    <string name="notary_enable_summary_on">Media is registered with third parties as proof it existed</string>
+    <string name="notary_enable_summary_off">Notarization is turned off</string>
+    <string name="notary_providers_label">Notary providers</string>
+    <string name="notary_ots_title">OpenTimestamps</string>
+    <string name="notary_ots_summary">Anchor a timestamp of your media hash to the Bitcoin blockchain</string>
+    <string name="notary_nostr_title">Nostr</string>
+    <string name="notary_nostr_summary">Publish a signed notarization of your media hash to the Nostr network</string>
+
+    <!-- Nostr identity screen -->
+    <string name="nostr_identity_title">Nostr Identity</string>
+    <string name="nostr_identity_summary">Manage the signing key used for Nostr notarizations</string>
+    <string name="nostr_identity_current_label">Current identity</string>
+    <string name="nostr_identity_npub_title">Public key (npub)</string>
+    <string name="nostr_identity_none">No identity yet — generate or import one</string>
+    <string name="nostr_identity_copied">Copied to clipboard</string>
+    <string name="nostr_identity_manage_label">Manage key</string>
+    <string name="nostr_identity_import_title">Import private key</string>
+    <string name="nostr_identity_import_summary">Paste an existing nsec to use as your notary identity</string>
+    <string name="nostr_identity_import_dialog">Paste your nsec (or hex) private key. It is stored only on this device.</string>
+    <string name="nostr_identity_import_ok">Identity imported</string>
+    <string name="nostr_identity_import_bad">Not a valid Nostr private key</string>
+    <string name="nostr_identity_generate_title">Generate new identity</string>
+    <string name="nostr_identity_generate_summary">Create a fresh local signing key</string>
+    <string name="nostr_identity_generate_confirm">This replaces your current Nostr identity. Past notarizations stay valid, but new ones will be signed by the new key. Continue?</string>
+    <string name="nostr_identity_generate_ok">New identity generated</string>
+    <string name="nostr_identity_backup_title">Back up recovery key (nsec)</string>
+    <string name="nostr_identity_backup_summary">Copy your private key so you can restore this identity</string>
+    <string name="nostr_identity_backup_warning">Your nsec is your private key. Anyone who has it controls this identity. Store it somewhere safe and never share it.</string>
+    <string name="nostr_identity_backup_copy">Copy nsec</string>
+    <string name="nostr_identity_remote_label">Remote signer</string>
+    <string name="nostr_identity_amber_title">Log in with Amber</string>
+    <string name="nostr_identity_amber_summary">Sign with the Amber remote signer app (coming soon)</string>
     <string name="settings_location">Location</string>
     <string name="settings_location_desc">GPS coordinates when media is taken</string>
     <string name="settings_location_desc_approx">GPS coordinates APPROX ONLY</string>
@@ -224,6 +260,7 @@
     <string name="next">Next</string>
     <string name="previous">Previous</string>
     <string name="content_credentials">Content Credentials (C2PA)</string>
+    <string name="nostr_notarization">Nostr Notarization</string>
     <string name="share_content_credentials_info">Shares image or video directly with proof metadata directly embedded in the file itself, verified and signed by Proofmode.org</string>
     <string name="optional_filename">Optional Filename</string>
     <string name="set_a_custom_name_for_the_proof_zip">Set a custom name for the proof zip</string>

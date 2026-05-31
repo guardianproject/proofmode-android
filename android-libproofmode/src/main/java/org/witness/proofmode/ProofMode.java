@@ -48,6 +48,8 @@ import timber.log.Timber;
 public class ProofMode {
 
     public final static String PREF_OPTION_NOTARY = "autoNotarize";
+    public final static String PREF_OPTION_NOTARY_OTS = "autoNotarizeOts";
+    public final static String PREF_OPTION_NOTARY_NOSTR = "autoNotarizeNostr";
     public final static String PREF_OPTION_LOCATION = "trackLocation";
     public final static String PREF_OPTION_PHONE = "trackDeviceId";
     public final static String PREF_OPTION_NETWORK = "trackMobileNetwork";
@@ -66,6 +68,8 @@ public class ProofMode {
     public final static String PREF_OPTION_TSA_SERVER = "tsaServerUrl";
 
     public final static boolean PREF_OPTION_NOTARY_DEFAULT = true;
+    public final static boolean PREF_OPTION_NOTARY_OTS_DEFAULT = true;
+    public final static boolean PREF_OPTION_NOTARY_NOSTR_DEFAULT = true;
     public final static boolean PREF_OPTION_LOCATION_DEFAULT = false;
     public final static boolean PREF_OPTION_PHONE_DEFAULT = false;
     public final static boolean PREF_OPTION_NETWORK_DEFAULT = false;
@@ -79,6 +83,7 @@ public class ProofMode {
     public final static String OPENPGP_FILE_TAG = ".asc";
     public final static String OPENTIMESTAMPS_FILE_TAG = ".ots";
     public final static String GOOGLE_SAFETYNET_FILE_TAG = ".gst";
+    public final static String NOSTR_FILE_TAG = ".nostr";
 
     public final static String PROVIDER_TAG = ".provider";
 

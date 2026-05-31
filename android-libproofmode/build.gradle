@@ -105,7 +105,15 @@ dependencies {
     // DataStore for preferences
     implementation libs.androidx.datastore.preferences
 
-    api libs.c2pa
+    // c2pa-android pulls JNA as the plain *jar*, whose Android libjnidispatch.so is only a
+    // classpath resource that fails to load at runtime (UnsatisfiedLinkError). Force the JNA
+    // *aar* instead, which packages libjnidispatch.so as a real jniLib under lib/<abi>/. This
+    // is also the variant rust-nostr (android-nostr) needs, so a single aar serves both and
+    // avoids duplicate com.sun.jna classes.
+    api(libs.c2pa) {
+        exclude group: 'net.java.dev.jna', module: 'jna'
+    }
+    api 'net.java.dev.jna:jna:5.17.0@aar'
 
     //replace safetynet
     implementation libs.play.integrity
