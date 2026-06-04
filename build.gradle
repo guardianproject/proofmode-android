@@ -14,15 +14,6 @@ allprojects {
         mavenCentral()
         google()
 
-        maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/contentauth/c2pa-android")
-            credentials {
-                username = System.getenv("gpr.user") ?: project.findProperty("gpr.user")
-                password = System.getenv("gpr.key") ?: project.findProperty("gpr.key")
-            }
-        }
-
         mavenLocal()
 
         maven { url "https://jitpack.io" }
