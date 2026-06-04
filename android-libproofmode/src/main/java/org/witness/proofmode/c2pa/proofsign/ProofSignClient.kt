@@ -35,7 +35,6 @@ import com.google.android.play.core.integrity.StandardIntegrityManager.PrepareIn
 import com.google.android.play.core.integrity.StandardIntegrityManager.StandardIntegrityToken
 import com.google.android.play.core.integrity.StandardIntegrityManager.StandardIntegrityTokenProvider
 import com.google.android.play.core.integrity.StandardIntegrityManager.StandardIntegrityTokenRequest
-import info.guardianproject.durindoor.Native
 import java.io.IOException
 import java.security.KeyPairGenerator
 import java.security.KeyStore
@@ -101,6 +100,20 @@ class ProofSignClient(
         private const val KEYSTORE_ALIAS = "proofsign_device_key"
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
         private const val PLAY_STORE_PACKAGE = "com.android.vending"
+
+        // durindoor (info.guardianproject.durindoor.Native) is a releaseImplementation-only
+        // dependency, absent from debug-build classpaths, so its @JvmStatic native methods are
+        // reached via reflection. See DeviceIntegritySupport for the same pattern.
+        private val durindoorNativeClass: Class<*>? =
+            runCatching { Class.forName("info.guardianproject.durindoor.Native") }.getOrNull()
+
+        private fun nativePing(): String? = runCatching {
+            durindoorNativeClass?.getMethod("nativePing")?.invoke(null) as? String
+        }.getOrNull()
+
+        private fun nativeToken(arg: String): String? = runCatching {
+            durindoorNativeClass?.getMethod("nativeToken", String::class.java)?.invoke(null, arg) as? String
+        }.getOrNull()
 
         /**
          * Whether this device can use Play Integrity (Play Store present).
@@ -395,9 +408,9 @@ class ProofSignClient(
                 //First check if this is a friend of the Elves and Dwarves
                 var apiToken = ""
 
-                if (Native.nativePing() != null)
+                if (nativePing() != null)
                 {
-                    apiToken = Native.nativeToken("mellon");
+                    apiToken = nativeToken("mellon") ?: "";
 
                     if (!BuildConfig.DEBUG) {
                         if (apiToken.isEmpty()) {

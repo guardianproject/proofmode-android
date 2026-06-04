@@ -5,7 +5,6 @@ import android.content.Context
 import android.util.Base64
 import android.util.Log
 import android.widget.Toast
-import info.guardianproject.durindoor.Native
 import kotlinx.serialization.Serializable
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient

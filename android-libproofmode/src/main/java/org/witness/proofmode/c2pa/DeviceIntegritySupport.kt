@@ -7,7 +7,6 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.BatteryManager
 import android.provider.Settings
-import info.guardianproject.durindoor.Native
 import java.io.File
 import java.net.Socket
 
@@ -18,8 +17,7 @@ class DeviceIntegritySupport {
     }
 
     fun isEnvironmentCompromised (): Boolean {
-        return nativeAvailable &&
-            runCatching { Native.nativeIsEnvironmentCompromised() }.getOrDefault(false)
+        return nativeAvailable && nativeIsEnvironmentCompromised()
     }
 
 
@@ -63,7 +61,7 @@ class DeviceIntegritySupport {
         // /proc/self/maps via fopen, /proc/net/tcp[6] port scan, and a
         // /proc/self/task comm-name scan for injected helper threads. These now
         // live in the closed-source durindoor library (info.guardianproject:durindoor).
-        if (nativeAvailable && runCatching { Native.nativeIsEnvironmentCompromised() }.getOrDefault(false)) {
+        if (nativeAvailable && nativeIsEnvironmentCompromised()) {
             return true
         }
 
@@ -82,10 +80,26 @@ class DeviceIntegritySupport {
     }
 
     companion object {
+        // durindoor (info.guardianproject.durindoor.Native) is a releaseImplementation-only
+        // dependency, so it is absent from the classpath in debug builds and is reached via
+        // reflection. It is a Kotlin `object`: INSTANCE holds the singleton, getLoaded() is the
+        // `loaded` accessor, and the native methods are @JvmStatic.
+        private val nativeClass: Class<*>? =
+            runCatching { Class.forName("info.guardianproject.durindoor.Native") }.getOrNull()
+
+        private val nativeInstance: Any? =
+            nativeClass?.let { runCatching { it.getField("INSTANCE").get(null) }.getOrNull() }
+
         // Touching durindoor's Native triggers its System.loadLibrary("durindoor"),
         // which runs the load-time integrity tripwire. Native.loaded is false if
         // the .so is absent (e.g. an unshipped ABI) or refused to load.
-        private val nativeAvailable: Boolean = runCatching { Native.loaded }.getOrDefault(false)
+        private val nativeAvailable: Boolean = runCatching {
+            nativeClass?.getMethod("getLoaded")?.invoke(nativeInstance) as Boolean
+        }.getOrDefault(false)
+
+        private fun nativeIsEnvironmentCompromised(): Boolean = runCatching {
+            nativeClass?.getMethod("nativeIsEnvironmentCompromised")?.invoke(null) as Boolean
+        }.getOrDefault(false)
 
         /**
          * Forces libdurindoor to load now — which runs its .init_array /

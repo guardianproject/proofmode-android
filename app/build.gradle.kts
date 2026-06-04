@@ -206,8 +206,8 @@ dependencies {
     // freeRASP SDK
     implementation(libs.talsecsecurity.community)
 
-    // durindoor for PLAY ONLY
-    implementation(libs.durindoor)
+    // durindoor for PLAY RELEASE ONLY
+    releaseImplementation(libs.durindoor)
 
 
 }

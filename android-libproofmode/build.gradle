@@ -128,8 +128,8 @@ dependencies {
     //RASP
     implementation(libs.talsecsecurity.community)
 
-    // durindoor for PLAY ONLY
-    implementation(libs.durindoor)
+    // durindoor for PLAY RELEASE ONLY (accessed via reflection in DeviceIntegritySupport)
+    releaseImplementation(libs.durindoor)
 
 }
 

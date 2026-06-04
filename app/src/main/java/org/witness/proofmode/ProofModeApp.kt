@@ -3,6 +3,7 @@ package org.witness.proofmode
 import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.preference.PreferenceManager
@@ -14,7 +15,6 @@ import com.aheaditec.talsec_security.security.api.Talsec
 import com.aheaditec.talsec_security.security.api.TalsecConfig
 import com.aheaditec.talsec_security.security.api.TalsecMode
 import com.aheaditec.talsec_security.security.api.ThreatListener
-import info.guardianproject.durindoor.Native
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -239,10 +239,21 @@ class ProofModeApp : Application(), Configuration.Provider {
 
         StorageProviderManager.getInstance().initializeStorageProviders(this)
 
-        var isNative = when {
-            !Native.loaded -> "DD library refused to load."
-            else -> runCatching { Native.nativePing() }
-                .getOrElse { "DD native methods unregistered" }
+        if (!BuildConfig.DEBUG) {
+            // durindoor (info.guardianproject.durindoor.Native) is a releaseImplementation
+            // dependency only, so it is not on the classpath for debug builds. Access it via
+            // reflection so this file still compiles without the library present.
+            val isNative = runCatching {
+                val nativeClass = Class.forName("info.guardianproject.durindoor.Native")
+                val instance = nativeClass.getField("INSTANCE").get(null)
+                val loaded = nativeClass.getMethod("getLoaded").invoke(instance) as Boolean
+                if (!loaded) {
+                    "DD library refused to load."
+                } else {
+                    runCatching { nativeClass.getMethod("nativePing").invoke(null) as String }
+                        .getOrElse { "DD native methods unregistered" }
+                }
+            }.getOrElse { "DD library not available." }
         }
 
     }
