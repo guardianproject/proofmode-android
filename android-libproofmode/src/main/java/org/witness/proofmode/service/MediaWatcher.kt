@@ -335,8 +335,10 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
                     // callbacks. signMediaFile throws UnauthorizedCaptureException
                     // synchronously if anything is wrong.
                     if (captureNonce != null && vState != ValidationState.INVALID) {
-                        val fileDigestBytes = MessageDigest.getInstance("SHA-256")
-                            .digest(fileMedia.readBytes())
+                        // mediaHash is the SHA-256 of this same file content (computed above by
+                        // streaming, or supplied by the caller), so reuse it rather than reading
+                        // the whole file into a ByteArray to re-digest — a large video OOMs that way.
+                        val fileDigestBytes = hexToBytes(mediaHash!!)
                         try {
                             mC2paManager?.signMediaFile(
                                 signingMode,
@@ -1279,6 +1281,19 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
                 )
             }
             return stringBuffer.toString()
+        }
+
+        // Inverse of asHex: parse a hex string (e.g. a SHA-256 digest) back into its raw bytes.
+        private fun hexToBytes(hex: String): ByteArray {
+            val len = hex.length
+            val out = ByteArray(len / 2)
+            var i = 0
+            while (i < len) {
+                out[i / 2] = ((Character.digit(hex[i], 16) shl 4)
+                        + Character.digit(hex[i + 1], 16)).toByte()
+                i += 2
+            }
+            return out
         }
 
         @JvmStatic
