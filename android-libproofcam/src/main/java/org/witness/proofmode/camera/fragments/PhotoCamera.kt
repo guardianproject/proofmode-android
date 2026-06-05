@@ -15,12 +15,14 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -66,6 +68,7 @@ import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.geometry.takeOrElse
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalContext
@@ -142,6 +145,17 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
     val flashMode by cameraViewModel.flashMode.collectAsStateWithLifecycle()
     var showFlashModes by remember { mutableStateOf(false) }
     val ultraHdrOn by cameraViewModel.ultraHdr.collectAsStateWithLifecycle()
+    // Still-capture framing & compression presets, surfaced in the settings sheet below.
+    val photoAspectRatio by cameraViewModel.photoAspectRatio.collectAsStateWithLifecycle()
+    val photoQuality by cameraViewModel.photoQuality.collectAsStateWithLifecycle()
+    // Portrait display aspect (width / height, ≤ 1) for the chosen ratio: the sensor
+    // rational is landscape, so invert it for the locked-portrait viewfinder window.
+    // 4:3 → 3:4 (0.75), 16:9 → 9:16 (0.5625), 1:1 → 1.0.
+    val previewAspect = remember(photoAspectRatio) {
+        val n = photoAspectRatio.rational.numerator.toFloat()
+        val d = photoAspectRatio.rational.denominator.toFloat()
+        minOf(n, d) / maxOf(n, d)
+    }
     var autofocusRequest by remember {
         mutableStateOf(UUID.randomUUID() to Offset.Unspecified)
     }
@@ -188,27 +202,26 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                     .background(Color.Black)) {
                     val (viewFinder, topScrim, topBAr, cancelButton, countDownStateView, bottomBg, captureButton, cameraSwitcher, galleryPreview, cameraText,
                         flashModeRow, logo, crLogo) = createRefs()
-                    // Define guidelines for the grid (1/3 and 2/3 positions)
-                    val vertical1 = createGuidelineFromStart(0.33f)
-                    val vertical2 = createGuidelineFromStart(0.66f)
-                    val horizontal1 = createGuidelineFromTop(0.33f)
-                    val horizontal2 = createGuidelineFromTop(0.66f)
-
-                    // Common modifier for grid lines
-                    val lineModifier = Modifier
-                        .alpha(if (showGridLines) 1f else 0f)
-                        .background(Color.White.copy(alpha = 0.5f))
-
-                    CameraXViewfinder(surfaceRequest = newRequest, modifier = Modifier
+                    // The viewfinder sits in a full-screen box and is itself sized to the
+                    // selected portrait aspect (3:4 / 9:16 / 1:1), so switching ratios visibly
+                    // resizes the preview window. ContentScale.Crop then fills that box with
+                    // the same center-crop the shared ViewPort writes to the JPEG (WYSIWYG).
+                    Box(modifier = Modifier
                         .padding(paddingValues)
-                        .fillMaxSize()
                         .constrainAs(viewFinder) {
                             top.linkTo(parent.top)
                             start.linkTo(parent.start)
                             end.linkTo(parent.end)
                             bottom.linkTo(parent.bottom)
                         }
-                        .fillMaxSize()
+                        .fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                    CameraXViewfinder(surfaceRequest = newRequest,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(previewAspect)
                         .pointerInput(cameraViewModel, coordinateTransformer) {
                             awaitEachGesture {
                                 val firstDown = awaitFirstDown(requireUnconsumed = false)
@@ -274,6 +287,27 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                         }
                         .alpha(previewAlpha)
                     )
+
+                    // Rule-of-thirds overlay, drawn over the same aspect-ratio region as
+                    // the preview (a sibling in the centered box, not the full screen) so
+                    // the lines land inside the framed image rather than the letterbox
+                    // margins on 1:1 / 16:9.
+                    if (showGridLines) {
+                        Canvas(modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(previewAspect)
+                        ) {
+                            val gridColor = Color.White.copy(alpha = 0.5f)
+                            val stroke = 1.dp.toPx()
+                            for (i in 1..2) {
+                                val x = size.width * i / 3f
+                                drawLine(gridColor, Offset(x, 0f), Offset(x, size.height), stroke)
+                                val y = size.height * i / 3f
+                                drawLine(gridColor, Offset(0f, y), Offset(size.width, y), stroke)
+                            }
+                        }
+                    }
+                    } // end viewfinder aspect-ratio box
 
                     if (shutterAlpha.value > 0f) {
                         Box(
@@ -560,45 +594,6 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                         )
                     }
 
-                    // 1/3 vertical grid line
-                    Box(
-                        modifier = lineModifier
-                            .fillMaxHeight()
-                            .width(1.dp)
-                            .constrainAs(createRef()) {
-                                start.linkTo(vertical1)
-                            }
-                    )
-                    // 2/3 vertical grid line
-                    Box(
-                        modifier = lineModifier
-                            .fillMaxHeight()
-                            .width(1.dp)
-                            .constrainAs(createRef()) {
-                                start.linkTo(vertical2)
-                            }
-                    )
-
-                    // Horizontal grid lines
-                    // 1/3 horizontal grid line
-                    Box(
-                        modifier = lineModifier
-                            .fillMaxWidth()
-                            .height(1.dp)
-                            .constrainAs(createRef()) {
-                                top.linkTo(horizontal1)
-                            }
-                    )
-                    // 2/3 horizontal grid line
-                    Box(
-                        modifier = lineModifier
-                            .fillMaxWidth()
-                            .height(1.dp)
-                            .constrainAs(createRef()) {
-                                top.linkTo(horizontal2)
-                            }
-                    )
-
                     CountDownTimerUI(
                         modifier = Modifier.constrainAs(countDownStateView){
                             top.linkTo(parent.top)
@@ -663,6 +658,80 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
 
 
                     }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    // Aspect-ratio selector. changeAspectRatio() rebinds the preview +
+                    // ImageCapture under one shared ViewPort, so what you frame is what
+                    // gets written (1:1 is a genuine square crop, not a letterbox).
+                    Row(modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("Aspect ratio", style = MaterialTheme.typography.bodyLarge)
+                            Text(photoAspectRatio.label, style = MaterialTheme.typography.bodySmall)
+                        }
+                        Spacer(Modifier.weight(1f))
+                        PhotoAspectRatio.entries.forEach { ratioOption ->
+                            val isSelectedRatio = photoAspectRatio == ratioOption
+                            Box(modifier = Modifier
+                                .padding(start = 6.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (isSelectedRatio) AccentGreen else Color.White.copy(alpha = 0.1f))
+                                .clickable {
+                                    // changeAspectRatio is suspend (it dims the preview
+                                    // across the rebind), so it has to run in the scope.
+                                    scope.launch {
+                                        cameraViewModel.changeAspectRatio(ratioOption, lifecycleOwner)
+                                    }
+                                }
+                                .padding(horizontal = 14.dp, vertical = 8.dp)
+                            ) {
+                                Text(
+                                    ratioOption.label,
+                                    color = if (isSelectedRatio) CameraBlack else Color.White,
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    // Resolution / quality picker. These are JPEG compression presets
+                    // (High = 100, Standard = 85) — they trade file size, not pixel
+                    // dimensions. changePhotoQuality() rebinds so the new jpegQuality
+                    // takes effect on the next capture.
+                    Row(modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("Resolution", style = MaterialTheme.typography.bodyLarge)
+                            Text(photoQuality.label, style = MaterialTheme.typography.bodySmall)
+                        }
+                        Spacer(Modifier.weight(1f))
+                        PhotoQuality.entries.forEach { qualityOption ->
+                            val isSelectedQuality = photoQuality == qualityOption
+                            Box(modifier = Modifier
+                                .padding(start = 6.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (isSelectedQuality) AccentGreen else Color.White.copy(alpha = 0.1f))
+                                .clickable {
+                                    cameraViewModel.changePhotoQuality(qualityOption, lifecycleOwner)
+                                }
+                                .padding(horizontal = 14.dp, vertical = 8.dp)
+                            ) {
+                                Text(
+                                    qualityOption.label,
+                                    color = if (isSelectedQuality) CameraBlack else Color.White,
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                            }
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(10.dp))
                     Row (modifier = Modifier
                         .fillMaxWidth()

@@ -9,6 +9,8 @@ class SharedPrefsManager private constructor(private val context: Context) {
         private const val PREFERENCES = "sPrefs"
         const val KEY_CAMERA_MODE = "camera_mode"
         const val KEY_LENS_FACING = "lens_facing"
+        const val KEY_PHOTO_ASPECT_RATIO = "photo_aspect_ratio"
+        const val KEY_PHOTO_QUALITY = "photo_quality"
 
         @Synchronized
         fun newInstance(context: Context) = SharedPrefsManager(context)

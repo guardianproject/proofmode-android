@@ -818,7 +818,11 @@ fun SingleItemView(itemWidth: Dp, allAssets: List<ProofableItem>, index: Int, se
                 ProofableItemView(
                         item = item,
                         modifier = Modifier.fillMaxSize(),
-                        contain = !LocalSelectionHandler.current.anySelected(),
+                        // Always contain (Fit) in the full-screen viewer so the asset is
+                        // shown at its true aspect ratio. The selection-driven crop only
+                        // makes sense for the square grid thumbnails — here it would
+                        // center-crop a 1:1 / 16:9 capture whenever the item was selected.
+                        contain = true,
                         corners = RectF(0f, 0f, 0f, 0f),
                         showSelectionBorder = false
                 )

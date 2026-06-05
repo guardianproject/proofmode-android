@@ -15,6 +15,9 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
 import android.util.Range
+import android.util.Rational
+import android.view.Surface
+import androidx.camera.core.AspectRatio
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraControl
 import androidx.camera.core.CameraSelector
@@ -29,7 +32,11 @@ import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.core.SurfaceOrientedMeteringPointFactory
 import androidx.camera.core.SurfaceRequest
+import androidx.camera.core.UseCaseGroup
+import androidx.camera.core.ViewPort
 import androidx.camera.core.ZoomState
+import androidx.camera.core.resolutionselector.AspectRatioStrategy
+import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.lifecycle.awaitInstance
 import androidx.camera.video.FallbackStrategy
@@ -254,6 +261,42 @@ class CameraViewModel(private val activity: CameraActivity, private val app: App
     var zoomState: LiveData<ZoomState?> = MutableLiveData(null)
         private set
 
+    // Reactive zoom values for the Compose zoom control. zoomState (LiveData) is
+    // reassigned on every (re)bind, which makes it awkward to observe; these flows
+    // are refreshed after each bind and on every zoom change so the preset bubbles
+    // and slider always reflect the live ratio.
+    private val _zoomRatio = MutableStateFlow(1f)
+    val zoomRatio: StateFlow<Float> = _zoomRatio
+    private val _minZoomRatio = MutableStateFlow(1f)
+    val minZoomRatio: StateFlow<Float> = _minZoomRatio
+    private val _maxZoomRatio = MutableStateFlow(1f)
+    val maxZoomRatio: StateFlow<Float> = _maxZoomRatio
+
+    // Still-capture framing & quality. Seeded from prefs so the user's last choice
+    // survives app restarts; persisted again in changeAspectRatio / changePhotoQuality.
+    // The enum is stored by name(), with a fallback in case a stored value is ever
+    // renamed or removed.
+    private val _photoAspectRatio = MutableStateFlow(
+        runCatching {
+            PhotoAspectRatio.valueOf(
+                sharedPrefsManager.getString(
+                    SharedPrefsManager.KEY_PHOTO_ASPECT_RATIO, PhotoAspectRatio.RATIO_4_3.name
+                )
+            )
+        }.getOrDefault(PhotoAspectRatio.RATIO_4_3)
+    )
+    val photoAspectRatio: StateFlow<PhotoAspectRatio> = _photoAspectRatio
+    private val _photoQuality = MutableStateFlow(
+        runCatching {
+            PhotoQuality.valueOf(
+                sharedPrefsManager.getString(
+                    SharedPrefsManager.KEY_PHOTO_QUALITY, PhotoQuality.HIGH.name
+                )
+            )
+        }.getOrDefault(PhotoQuality.HIGH)
+    )
+    val photoQuality: StateFlow<PhotoQuality> = _photoQuality
+
     // Selected quality
     private val _selectedQuality = MutableStateFlow<Quality?>(null) // Default to FHD (1080p)
     val selectedQuality: StateFlow<Quality?> get() = _selectedQuality
@@ -274,17 +317,98 @@ class CameraViewModel(private val activity: CameraActivity, private val app: App
 
     fun toggleFlashMode( @FlashMode newMode: Int, lifecycleOwner: LifecycleOwner) {
         _flashMode.value = newMode
-        cameraProvider?.unbind(imageCapture)
-        imageCapture = null
         imageCaptureBuilder.setFlashMode(flashMode.value)
-        imageCapture = imageCaptureBuilder.build()
-        camera = cameraProvider!!.bindToLifecycle(lifecycleOwner,CameraSelector.Builder().requireLensFacing(lensFacing.value?:CameraSelector.LENS_FACING_BACK).build(),
-            previewUseCase,imageCapture).apply {
-                cameraInfo.exposureState.exposureCompensationRange
-        }
-        zoomState = camera!!.cameraInfo.zoomState
-        cameraControl = camera?.cameraControl
+        bindImageUseCases(lifecycleOwner)
+    }
 
+    /**
+     * Builds an [ImageCapture] reflecting the current aspect ratio, JPEG quality
+     * and Ultra HDR selection. The shared [imageCaptureBuilder] retains the flash
+     * mode set elsewhere.
+     */
+    private fun buildImageCapture(): ImageCapture {
+        val aspect = _photoAspectRatio.value
+        val resolutionSelector = ResolutionSelector.Builder()
+            .setAspectRatioStrategy(
+                if (aspect.baseAspectRatio == AspectRatio.RATIO_16_9)
+                    AspectRatioStrategy.RATIO_16_9_FALLBACK_AUTO_STRATEGY
+                else
+                    AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY
+            )
+            .build()
+        return imageCaptureBuilder
+            .setResolutionSelector(resolutionSelector)
+            .setJpegQuality(_photoQuality.value.jpegQuality)
+            .apply {
+                setOutputFormat(
+                    if (ultraHdr.value == UltraHDRAvailabilityState.ON)
+                        ImageCapture.OUTPUT_FORMAT_JPEG_ULTRA_HDR
+                    else
+                        ImageCapture.OUTPUT_FORMAT_JPEG
+                )
+            }
+            .build()
+    }
+
+    /**
+     * (Re)binds the preview + image-capture use cases as a [UseCaseGroup] sharing a
+     * [ViewPort] of the selected aspect ratio, so the preview and the saved file are
+     * framed identically (WYSIWYG). The viewport's crop rect is what yields a true
+     * square output for 1:1 — CameraX has no native 1:1 aspect-ratio strategy.
+     */
+    private fun bindImageUseCases(lifecycleOwner: LifecycleOwner) {
+        val provider = cameraProvider ?: return
+        val cameraSelector = CameraSelector.Builder()
+            .requireLensFacing(lensFacing.value ?: CameraSelector.LENS_FACING_BACK)
+            .build()
+        provider.unbind(imageCapture)
+        imageCapture = buildImageCapture()
+        // A ViewPort's aspect ratio is expressed in the *output* (rotated) orientation,
+        // so the rational must follow how the device is held: portrait inverts the
+        // landscape sensor rational (16:9 -> 9:16) for a tall crop, landscape keeps it
+        // as-is. Without this the saved crop comes out wide even in portrait.
+        val rotation = activity.getScreenOrientation()
+        val baseRational = _photoAspectRatio.value.rational
+        val isPortrait = rotation == Surface.ROTATION_0 || rotation == Surface.ROTATION_180
+        val orientedRational = if (isPortrait)
+            Rational(baseRational.denominator, baseRational.numerator)
+        else
+            baseRational
+        val viewPort = ViewPort.Builder(orientedRational, rotation).build()
+        val useCaseGroup = UseCaseGroup.Builder()
+            .addUseCase(previewUseCase)
+            .addUseCase(imageCapture!!)
+            .setViewPort(viewPort)
+            .build()
+        try {
+            camera = provider.bindToLifecycle(lifecycleOwner, cameraSelector, useCaseGroup).apply {
+                _exposureState.value = cameraInfo.exposureState
+            }
+            zoomState = camera!!.cameraInfo.zoomState
+            cameraControl = camera?.cameraControl
+            refreshZoomState()
+        } catch (ex: Exception) {
+            Timber.e(ex, "Failed to bind image use cases")
+        }
+    }
+
+    /** Switch the still-capture framing (4:3 / 16:9 / 1:1) and rebind. */
+    suspend fun changeAspectRatio(aspect: PhotoAspectRatio, lifecycleOwner: LifecycleOwner) {
+        if (_photoAspectRatio.value == aspect) return
+        _photoAspectRatio.update { aspect }
+        sharedPrefsManager.putString(SharedPrefsManager.KEY_PHOTO_ASPECT_RATIO, aspect.name)
+        _previewAlpha.update { 0.5f }
+        bindImageUseCases(lifecycleOwner)
+        delay(250)
+        _previewAlpha.update { 1f }
+    }
+
+    /** Switch JPEG quality (High / Standard) and rebind. */
+    fun changePhotoQuality(quality: PhotoQuality, lifecycleOwner: LifecycleOwner) {
+        if (_photoQuality.value == quality) return
+        _photoQuality.update { quality }
+        sharedPrefsManager.putString(SharedPrefsManager.KEY_PHOTO_QUALITY, quality.name)
+        bindImageUseCases(lifecycleOwner)
     }
 
 
@@ -293,15 +417,30 @@ class CameraViewModel(private val activity: CameraActivity, private val app: App
     fun pinchZoom(zoom: Float) {
         val zoomState = camera?.cameraInfo?.zoomState?.value
         if (zoomState != null) {
-            val maxZoomRatio = zoomState.maxZoomRatio ?: 1f
-
-            val minZoomRatio = zoomState.minZoomRatio ?: 1f
-            val currentZoomRatio = zoomState.zoomRatio ?: 1f
+            val maxZoomRatio = zoomState.maxZoomRatio
+            val minZoomRatio = zoomState.minZoomRatio
+            val currentZoomRatio = zoomState.zoomRatio
             val newZoomRatio = (currentZoomRatio * zoom).coerceIn(minZoomRatio, maxZoomRatio)
             cameraControl?.setZoomRatio(newZoomRatio)
+            _zoomRatio.value = newZoomRatio
         }
+    }
 
+    /** Jump to (or smoothly drive, from the slider) an absolute zoom ratio. */
+    fun setZoomRatio(target: Float) {
+        val zoomState = camera?.cameraInfo?.zoomState?.value ?: return
+        val clamped = target.coerceIn(zoomState.minZoomRatio, zoomState.maxZoomRatio)
+        cameraControl?.setZoomRatio(clamped)
+        _zoomRatio.value = clamped
+    }
 
+    /** Pull the live min/current/max zoom out of the camera after a (re)bind. */
+    private fun refreshZoomState() {
+        camera?.cameraInfo?.zoomState?.value?.let { zs ->
+            _minZoomRatio.value = zs.minZoomRatio
+            _maxZoomRatio.value = zs.maxZoomRatio
+            _zoomRatio.value = zs.zoomRatio
+        }
     }
 
     suspend fun changeQuality(quality:Quality,lifecycleOwner: LifecycleOwner) {
@@ -370,23 +509,10 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
         cameraProvider = cameraProvider?: ProcessCameraProvider.awaitInstance(app.applicationContext)
         val cameraSelector = CameraSelector.Builder()
             .requireLensFacing(lensFacing.value?:CameraSelector.LENS_FACING_BACK).build()
-        val isUltraHdrSupported = isUltraHdrSupported(cameraSelector,cameraProvider!!)
-        if (isUltraHdrSupported){
-            if (ultraHdr.value == UltraHDRAvailabilityState.ON) {
-                imageCaptureBuilder.setOutputFormat(ImageCapture.OUTPUT_FORMAT_JPEG_ULTRA_HDR)
-            }
-        } else {
+        if (!isUltraHdrSupported(cameraSelector, cameraProvider!!)) {
             _ultraHdr.update { UltraHDRAvailabilityState.NOT_SUPPORTED }
         }
-
-        imageCapture = imageCaptureBuilder
-            .build()
-        camera = cameraProvider!!.bindToLifecycle(lifecycleOwner = lifecycleOwner,cameraSelector,
-            previewUseCase,imageCapture).apply {
-                _exposureState.value = cameraInfo.exposureState
-        }
-        zoomState = camera!!.cameraInfo.zoomState
-        cameraControl = camera?.cameraControl
+        bindImageUseCases(lifecycleOwner)
     }
 
     suspend fun toggleUltraHdr(lifecycleOwner: LifecycleOwner) {
@@ -396,8 +522,7 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
         if (!isUltraHdrSupported) {
             _ultraHdr.update { UltraHDRAvailabilityState.NOT_SUPPORTED }
         } else {
-            val currentUltraHdrState = ultraHdr.value
-            if (currentUltraHdrState == UltraHDRAvailabilityState.ON) {
+            if (ultraHdr.value == UltraHDRAvailabilityState.ON) {
                 _ultraHdr.update { UltraHDRAvailabilityState.OFF }
             } else {
                 _ultraHdr.update { UltraHDRAvailabilityState.ON }
@@ -405,22 +530,7 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
             _previewAlpha.update { 0.5f }
             delay(800)
             _previewAlpha.update { 1f }
-            cameraProvider?.unbind(imageCapture)
-            imageCapture = null
-            imageCapture = imageCaptureBuilder
-                .apply {
-                    if (ultraHdr.value == UltraHDRAvailabilityState.ON) {
-                        setOutputFormat(ImageCapture.OUTPUT_FORMAT_JPEG_ULTRA_HDR)
-                    }
-                }
-                .build()
-            camera = cameraProvider!!.bindToLifecycle(lifecycleOwner = lifecycleOwner,cameraSelector,
-                previewUseCase,imageCapture)
-                .apply {
-                    _exposureState.value = cameraInfo.exposureState
-                }
-            zoomState = camera!!.cameraInfo.zoomState
-            cameraControl = camera?.cameraControl
+            bindImageUseCases(lifecycleOwner)
         }
 
     }
@@ -779,6 +889,23 @@ enum class UltraHDRAvailabilityState(val description: String) {
     ON("On"),
     OFF("Off"),
     NOT_SUPPORTED("Not supported")
+}
+
+/**
+ * Still-capture framing. [rational] drives the shared [ViewPort] crop (so 1:1 yields
+ * a real square output), while [baseAspectRatio] picks the sensor output strategy —
+ * 1:1 is captured from the full 4:3 sensor area and cropped square by the viewport.
+ */
+enum class PhotoAspectRatio(val label: String, val rational: Rational, val baseAspectRatio: Int) {
+    RATIO_4_3("4:3", Rational(4, 3), AspectRatio.RATIO_4_3),
+    RATIO_16_9("16:9", Rational(16, 9), AspectRatio.RATIO_16_9),
+    RATIO_1_1("1:1", Rational(1, 1), AspectRatio.RATIO_4_3)
+}
+
+/** JPEG quality presets for stills. */
+enum class PhotoQuality(val label: String, val jpegQuality: Int) {
+    HIGH("High", 100),
+    STANDARD("Standard", 85)
 }
 
 
