@@ -46,6 +46,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -89,6 +90,7 @@ import org.witness.proofmode.c2pa.C2PAManager
 import org.witness.proofmode.c2pa.PreferencesManager
 import org.witness.proofmode.c2pa.ValidationState
 import org.witness.proofmode.notaries.NostrNotarizationVerifier
+import org.witness.proofmode.service.MediaWatcher
 import org.witness.proofmode.service.ProofModeV1Constants
 import org.witness.proofmode.storage.DefaultStorageProvider
 import org.witness.proofmode.util.ProofModeUtil
@@ -360,6 +362,7 @@ fun updateMetadata (itemUri : Uri, context : Context) {
                 label = context.getString(R.string.content_credentials),
                 validationState = validationState,
                 filePath = c2paFile.canonicalPath,
+                mediaHash = hash,
                 context = context
             )
 
@@ -424,7 +427,7 @@ fun updateMetadata (itemUri : Uri, context : Context) {
     }
 }
 @Composable
-fun C2PAManifestRow(label: String, validationState: ValidationState, filePath: String, context: Context) {
+fun C2PAManifestRow(label: String, validationState: ValidationState, filePath: String, mediaHash: String, context: Context) {
     var expanded by remember { mutableStateOf(false) }
     var manifestText by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(false) }
@@ -478,6 +481,53 @@ fun C2PAManifestRow(label: String, validationState: ValidationState, filePath: S
                     ValidationState.INVALID -> Color(0xFFC62828)
                 }
             )
+        }
+    }
+
+    // An invalid manifest can be re-signed: if local ProofMode data already exists for
+    // this file's hash, run it back through MediaWatcher (as a notarization import),
+    // producing a freshly C2PA-signed asset and a new item in the Activities feed.
+    if (validationState == ValidationState.INVALID) {
+        var resigning by remember { mutableStateOf(false) }
+        var resignStatus by remember { mutableStateOf<String?>(null) }
+        Row {
+            Button(
+                modifier = Modifier.padding(3.dp, 3.dp),
+                enabled = !resigning,
+                onClick = {
+                    resigning = true
+                    resignStatus = context.getString(R.string.resign_in_progress)
+                    coroutineScope.launch {
+                        val started = withContext(Dispatchers.IO) {
+                            runCatching {
+                                val mw = MediaWatcher.getInstance(context)
+                                if (mw != null && mw.proofExists(mediaHash)) {
+                                    mw.resignMedia(
+                                        Uri.fromFile(File(filePath)),
+                                        mimeTypeForPath(filePath)
+                                    )
+                                    true
+                                } else false
+                            }.getOrDefault(false)
+                        }
+                        resignStatus = context.getString(
+                            if (started) R.string.resign_started else R.string.resign_no_proof
+                        )
+                        resigning = false
+                    }
+                }
+            ) {
+                Text(text = stringResource(R.string.resign_action))
+            }
+        }
+        resignStatus?.let { status ->
+            Row {
+                Text(
+                    modifier = Modifier.padding(3.dp, 3.dp),
+                    text = status,
+                    color = Color.Gray
+                )
+            }
         }
     }
     if (loading) {
@@ -653,6 +703,11 @@ fun NostrVerificationRow(label: String, nostrJson: String) {
     Row {
         Text(modifier = Modifier.padding(2.dp, 2.dp), text = "")
     }
+}
+
+private fun mimeTypeForPath(path: String): String {
+    val ext = path.substringAfterLast('.', "").lowercase(Locale.US)
+    return android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext) ?: "image/jpeg"
 }
 
 private data class NostrHeader(

@@ -146,7 +146,73 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                 "capture nonce invalid, expired, or does not match file digest"
             )
         }
-        try {
+        signInternal(signingMode, inFile, contentType, outFile, doEmbed, wasCreated, hash, captureFileDigest)
+    }
+
+    /**
+     * Sign an existing asset with a C2PA *notarization* claim (created = false): a
+     * parentOf ingredient + edit intent plus the ProofMode assertion, rather than a
+     * camera-capture "c2pa.created" action. This is a weaker statement about the source
+     * of an image, so — unlike [signMediaFile] — it is NOT gated by a capture
+     * authorization nonce.
+     *
+     * It signs with whichever [signingMode] the user has chosen (local OR remote). To
+     * keep the remote ProofSign device-auth signer working, we still open a signing
+     * scope bound to the file's own digest (the inner signers only require that a scope
+     * is active; the nonce binding is a separate, capture-only gate). The trade-off is
+     * deliberate: a notarization can reach the remote signer without a nonce because the
+     * resulting manifest claims an edit/notarization, not a camera creation.
+     */
+    suspend fun notarizeMediaFile(
+        signingMode: SigningMode,
+        inFile: File,
+        contentType: String,
+        outFile: File,
+        doEmbed: Boolean = true,
+        hash: String,
+    ): Result<Stream> = withContext(Dispatchers.IO) {
+        if (DeviceIntegritySupport().isEnvironmentCompromised()) {
+            throw CompromisedEnvironmentException(
+                "notarizeMediaFile refused: runtime environment is compromised"
+            )
+        }
+        signInternal(
+            signingMode, inFile, contentType, outFile, doEmbed,
+            wasCreated = false, hash, captureFileDigest = sha256Bytes(inFile)
+        )
+    }
+
+    /** Raw SHA-256 of a file's contents, streamed to avoid loading large media into memory. */
+    private fun sha256Bytes(file: File): ByteArray {
+        val md = java.security.MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input ->
+            val buffer = ByteArray(64 * 1024)
+            var n = input.read(buffer)
+            while (n != -1) {
+                if (n > 0) md.update(buffer, 0, n)
+                n = input.read(buffer)
+            }
+        }
+        return md.digest()
+    }
+
+    /**
+     * Shared signing core. When [captureFileDigest] is non-null the inner signing runs
+     * inside an authorized [CaptureAuthority.enterSigningScope] (required by the remote
+     * ProofSign signers); when null it signs directly, which only the local keystore /
+     * hardware signers permit.
+     */
+    private suspend fun signInternal(
+        signingMode: SigningMode,
+        inFile: File,
+        contentType: String,
+        outFile: File,
+        doEmbed: Boolean,
+        wasCreated: Boolean,
+        hash: String,
+        captureFileDigest: ByteArray?,
+    ): Result<Stream> {
+        return try {
 
 
             Timber.d( "Original file size: ${inFile.length()} bytes")
@@ -236,17 +302,20 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                 val fileStream = FileStream(inFile)
                 val outStream = FileStream(outFile)
 
-                CaptureAuthority.enterSigningScope(captureFileDigest) {
+                if (captureFileDigest != null) {
+                    // Camera capture: sign inside the authorized scope the remote
+                    // ProofSign signers require.
+                    CaptureAuthority.enterSigningScope(captureFileDigest) {
+                        signStream(
+                            inFile.name, fileStream, contentType, outStream,
+                            manifestJSON, it, doEmbed, wasCreated, hash
+                        )
+                    }
+                } else {
+                    // Notarization (created = false): no capture scope; local signer only.
                     signStream(
-                        inFile.name,
-                        fileStream,
-                        contentType,
-                        outStream,
-                        manifestJSON,
-                        it,
-                        doEmbed,
-                        wasCreated,
-                        hash
+                        inFile.name, fileStream, contentType, outStream,
+                        manifestJSON, it, doEmbed, wasCreated, hash
                     )
                 }
                 Timber.d("Signed file size: ${outFile.length()} bytes")

@@ -932,6 +932,108 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
         else return false
     }
 
+    /**
+     * Re-sign an already-proofed local media file with a fresh C2PA *notarization*
+     * (created = false) claim, then regenerate ProofMode proof for the result.
+     *
+     * C2PA embedding rewrites the file and changes its SHA-256, so we sign a copy and
+     * run it through the import path as a brand-new asset. The result is a new item in
+     * the Activities feed keyed to the new hash; the original proof/item is left intact.
+     *
+     * No capture nonce is involved: a notarization is a weaker provenance statement than
+     * a camera capture, so it skips the capture lock — but it still honors the user's
+     * chosen signing mode (remote ProofSign or local self-signed). This is intended for
+     * the SingleAssetView "re-sign" action on an invalid C2PA manifest; callers should
+     * confirm [proofExists] for the current hash before invoking it.
+     */
+    fun resignMedia(uriMediaSource: Uri, mimeType: String?) {
+        CoroutineScope(Dispatchers.IO).launch {
+            val context = mContext ?: return@launch
+            val expectedPackageName = context.packageName
+            val srcFile = File(uriMediaSource.path ?: return@launch)
+            if (!srcFile.exists()) {
+                Timber.w("resignMedia: source file does not exist: ${uriMediaSource.path}")
+                return@launch
+            }
+            val actualMimeType = mimeType
+                ?: context.contentResolver.getType(uriMediaSource)
+                ?: "image/jpeg"
+
+            // Work on a copy so the original asset (keyed by its current hash) is untouched.
+            val workFile = File(outputDirectory, "${Date().time}-${srcFile.name}")
+            try {
+                srcFile.inputStream().use { input ->
+                    FileOutputStream(workFile).use { input.copyTo(it) }
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "resignMedia: failed to copy source file")
+                return@launch
+            }
+            val workUri = Uri.fromFile(workFile)
+
+            // Let the Activities feed show a "generating" state for the new asset.
+            Intent(ProofMode.EVENT_PROOF_START).apply {
+                setPackage(expectedPackageName)
+                putExtra(ProofMode.EVENT_PROOF_EXTRA_URI, workUri.toString())
+            }.also { context.sendBroadcast(it) }
+
+            // Pre-embed hash, used for the manifest's ProofMode assertion.
+            val preHash = HashUtils.getSHA256FromFileContent(
+                context.contentResolver.openInputStream(workUri)
+            )
+
+            // 1) C2PA notarization sign (created = false), no capture nonce, using the
+            //    signing mode the user has chosen (remote ProofSign or local self-signed).
+            if (preHash != null) {
+                val useRemote = mPrefs?.getBoolean(
+                    ProofMode.PREF_OPTION_REMOTE_SIGNING,
+                    ProofMode.PREF_OPTION_REMOTE_SIGNING_DEFAULT
+                ) ?: true
+                val signingMode = if (useRemote) SigningMode.REMOTE else localSigningMode(context)
+                try {
+                    mC2paManager?.notarizeMediaFile(
+                        signingMode,
+                        workFile,
+                        actualMimeType,
+                        workFile,
+                        true,
+                        preHash,
+                    )
+                } catch (e: Exception) {
+                    // Even if C2PA signing fails we still (re)generate a proof for the copy.
+                    Timber.e(e, "resignMedia: C2PA notarization failed")
+                }
+            }
+
+            // 2) Embedding changed the file → recompute the post-embed hash proof is keyed to.
+            val newHash = try {
+                HashUtils.getSHA256FromFileContent(context.contentResolver.openInputStream(workUri))
+            } catch (e: Exception) {
+                Timber.w(e, "resignMedia: could not recompute post-embed hash; keeping pre-embed hash")
+                preHash
+            }
+
+            if (newHash != null) {
+                // 3) Announce as an import so the Activities feed adds a new item.
+                Intent().apply {
+                    action = ProofMode.EVENT_PROOF_GENERATED_IMPORT
+                    setPackage(expectedPackageName)
+                    putExtra(ProofMode.EVENT_PROOF_EXTRA_URI, workUri.toString())
+                    putExtra(ProofMode.EVENT_PROOF_EXTRA_HASH, newHash)
+                }.also { context.sendBroadcast(it) }
+
+                // 4) Generate the ProofMode proof sidecar for the new asset/hash.
+                processUri(context, workUri, newHash, false, null)
+            }
+        }
+    }
+
+    private fun localSigningMode(context: Context): SigningMode {
+        val hasStrongBox =
+            context.packageManager.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)
+        return if (hasStrongBox) SigningMode.HARDWARE else SigningMode.KEYSTORE
+    }
+
     fun isOnline(context: Context): Boolean {
         val cm =
             context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
