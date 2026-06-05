@@ -132,32 +132,19 @@ class SettingsActivity : AppCompatActivity() {
             startActivity(Intent(this, NotarySettingsActivity::class.java))
         }
 
-        if (Build.SUPPORTED_64_BIT_ABIS.isNotEmpty()) {
-            switchCredentials.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
-                mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_CREDENTIALS, isChecked)
-                    .commit()
-
-                switchAI.isEnabled = isChecked
-
-                if (isChecked) {
-                    showIdentityChooser()
-                    startActivity(Intent(this, SigningSettingsActivity::class.java))
-                }
-
-                updateUI()
-            }
-
-            switchAI.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
-                mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_BLOCK_AI, isChecked)
-                    .commit()
-                updateUI()
-            }
+        // The Credentials cell is not a toggle: tapping it always opens the signing
+        // settings, where the user picks Remote / Local / Disabled. The checkbox is a
+        // read-only indicator of that mode (off only when signing is Disabled).
+        binding.contentSettings.cellCredentials.setOnClickListener {
+            startActivity(Intent(this, SigningSettingsActivity::class.java))
         }
-        else
-        {
-            switchCredentials.isEnabled = false
-            switchAI.isEnabled = false
+
+        switchAI.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
+            mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_BLOCK_AI, isChecked)
+                .commit()
+            updateUI()
         }
+
 
         // Setup Filebase settings button
         switchAutoSync.setOnCheckedChangeListener {_: CompoundButton?, isChecked: Boolean ->
@@ -221,12 +208,14 @@ class SettingsActivity : AppCompatActivity() {
         switchNotarize.isChecked =
             mPrefs.getBoolean(ProofMode.PREF_OPTION_NOTARY, ProofMode.PREF_OPTION_NOTARY_DEFAULT)
 
-        switchCredentials.isChecked =
+        val credentialsEnabled =
             mPrefs.getBoolean(ProofMode.PREF_OPTION_CREDENTIALS, ProofMode.PREF_OPTION_CREDENTIALS_DEFAULT)
-
+        switchCredentials.isChecked = credentialsEnabled
 
         switchAI.isChecked =
             mPrefs.getBoolean(ProofMode.PREF_OPTION_BLOCK_AI, ProofMode.PREF_OPTION_AI_DEFAULT)
+
+        switchAI.isEnabled = credentialsEnabled
 
         switchAutoSync.isChecked =
             mPrefs.getBoolean(FilebaseConfig.PREF_FILEBASE_ENABLED, false)
@@ -267,14 +256,19 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun updateCredentialsDesc() {
         val textCRDesc = binding.contentSettings.textCRDesc
+        val credentialsEnabled = mPrefs.getBoolean(
+            ProofMode.PREF_OPTION_CREDENTIALS,
+            ProofMode.PREF_OPTION_CREDENTIALS_DEFAULT
+        )
         val isRemote = mPrefs.getBoolean(
             ProofMode.PREF_OPTION_REMOTE_SIGNING,
             ProofMode.PREF_OPTION_REMOTE_SIGNING_DEFAULT
         )
-        textCRDesc.text = if (isRemote)
-            getString(R.string.settings_credentials_remote)
-        else
-            getString(R.string.settings_credentials_local)
+        textCRDesc.text = when {
+            !credentialsEnabled -> getString(R.string.settings_credentials_disabled)
+            isRemote -> getString(R.string.settings_credentials_remote)
+            else -> getString(R.string.settings_credentials_local)
+        }
     }
 
     override fun onResume() {

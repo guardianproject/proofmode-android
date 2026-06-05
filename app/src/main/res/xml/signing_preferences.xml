@@ -3,12 +3,13 @@
 
     <PreferenceCategory app:title="@string/settings_signing_mode_label">
 
-        <SwitchPreferenceCompat
-            app:key="useRemoteSigning"
-            app:title="@string/settings_signing_remote"
-            app:summaryOn="@string/settings_credentials_remote"
-            app:summaryOff="@string/settings_credentials_local"
-            app:defaultValue="true" />
+        <ListPreference
+            app:key="signingMode"
+            app:title="@string/settings_signing_mode_label"
+            app:entries="@array/signing_mode_entries"
+            app:entryValues="@array/signing_mode_values"
+            app:useSimpleSummaryProvider="true"
+            app:defaultValue="remote" />
 
     </PreferenceCategory>
 
