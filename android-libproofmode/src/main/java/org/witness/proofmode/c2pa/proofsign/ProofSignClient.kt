@@ -433,10 +433,9 @@ class ProofSignClient(
                 val signingInput =
                     ClaimBinding.deviceRequestSigningInput(deviceId, timestamp, claimBinding)
                 val deviceSignature = signWithDeviceKey(signingInput.toByteArray())
-                val requestHash = claimBinding
 
                 val integrityToken = try {
-                    requestIntegrityToken(requestHash)
+                    requestIntegrityToken(claimBinding)
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to get integrity token", e)
                     dispatch(callback, Result.Failure("Failed to get integrity token: ${e.message}", e))
@@ -444,9 +443,7 @@ class ProofSignClient(
                 }
 
                 val json = JSONObject().apply {
-                    if (!apiToken.isEmpty())
-                        put ("api_token", apiToken)
-
+                    put ("api_token", apiToken)
                     put("claim", claim)
                     put("platform", "android")
                     put("device_id", deviceId)
