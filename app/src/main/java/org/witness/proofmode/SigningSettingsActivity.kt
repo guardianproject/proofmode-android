@@ -6,10 +6,12 @@ import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.EditTextPreference
 import androidx.preference.ListPreference
+import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceManager
 import org.witness.proofmode.databinding.ActivitySettingsBinding
 import org.witness.proofmode.databinding.ActivitySigningSettingsBinding
+import org.witness.proofmode.library.BuildConfig
 import org.witness.proofmode.service.MediaWatcher
 
 class SigningSettingsActivity : AppCompatActivity() {
@@ -63,7 +65,34 @@ class SigningSettingsActivity : AppCompatActivity() {
                     true
                 }
             }
+
+            // For the remote signing servers, show the user's configured value when set, and
+            // otherwise fall back to the env-secret default the signer actually uses (see
+            // ProofModeApp/C2PAManager). These mirror BuildConfig.SIGNING_SERVER/TSA_SERVER.
+            configureServerDefault(ProofMode.PREF_OPTION_PROOFSIGN_SERVER, BuildConfig.SIGNING_SERVER)
+            configureServerDefault(ProofMode.PREF_OPTION_TSA_SERVER, BuildConfig.TSA_SERVER)
+
             applyModeState()
+        }
+
+        /**
+         * Wire an EditTextPreference so its summary shows the configured value or, when blank,
+         * [default]; and so opening its dialog pre-fills [default] instead of an empty field.
+         * We never persist [default] ourselves — the signer already falls back to it when the
+         * stored value is empty, so seeding only happens if the user explicitly saves.
+         */
+        private fun configureServerDefault(key: String, default: String) {
+            findPreference<EditTextPreference>(key)?.apply {
+                summaryProvider = Preference.SummaryProvider<EditTextPreference> { pref ->
+                    pref.text?.takeIf { it.isNotBlank() } ?: default
+                }
+                setOnBindEditTextListener { editText ->
+                    if (editText.text.isNullOrBlank()) {
+                        editText.setText(default)
+                        editText.setSelection(editText.text.length)
+                    }
+                }
+            }
         }
 
         override fun onResume() {

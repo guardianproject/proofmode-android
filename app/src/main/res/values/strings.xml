@@ -307,5 +307,6 @@
     <string name="no_proof_yet">No proof (yet)</string>
     <string name="take_pictures_and_videos_and_they_will_show_up_here">Take pictures and videos and they will show up here</string>
     <string name="security_warning_usb">For security reasons, Proofmode cannot be run while Developer mode is enabled</string>
+    <string name="coming_soon">Coming soon...</string>
 
 </resources>

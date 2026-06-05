@@ -18,13 +18,11 @@
         <EditTextPreference
             app:key="proofSignServerUrl"
             app:title="@string/settings_signing_proofsign_server"
-            app:useSimpleSummaryProvider="true"
             app:dialogTitle="@string/settings_signing_proofsign_server" />
 
         <EditTextPreference
             app:key="tsaServerUrl"
             app:title="@string/settings_signing_tsa"
-            app:useSimpleSummaryProvider="true"
             app:dialogTitle="@string/settings_signing_tsa" />
 
     </PreferenceCategory>

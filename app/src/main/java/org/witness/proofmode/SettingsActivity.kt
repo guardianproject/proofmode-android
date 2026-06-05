@@ -12,6 +12,7 @@ import android.provider.Settings
 import android.view.MenuItem
 import android.widget.CheckBox
 import android.widget.CompoundButton
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
@@ -164,12 +165,16 @@ class SettingsActivity : AppCompatActivity() {
 
         switchAutoImport.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
 
+            /**
             mPrefs.edit().putBoolean(ProofMode.PREFS_DOPROOF, isChecked).commit()
 
             if (isChecked)
                 (application as ProofModeApp).init(this)
             else
                 (application as ProofModeApp).cancel(this)
+            **/
+            //Toast.makeText(this, getString(R.string.coming_soon),Toast.LENGTH_LONG).show()
+
 
         }
 
