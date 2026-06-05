@@ -116,8 +116,8 @@ class ProofModeApp : Application(), Configuration.Provider {
                 println("onUntrustedInstallationSourceDetected")
 
                 if (!BuildConfig.DEBUG) {
-                    showWarning("Untrusted installation source detected");
-                    exitProcess(0)
+                  //  showWarning("Untrusted installation source detected");
+                //    exitProcess(0)
                 }
             }
 
@@ -153,8 +153,8 @@ class ProofModeApp : Application(), Configuration.Provider {
                 println("onMultiInstanceDetected")
 
                 if (!BuildConfig.DEBUG) {
-                    showWarning("Multiple instances detected");
-                    exitProcess(0)
+                   // showWarning("Multiple instances detected");
+                    //exitProcess(0)
                 }
             }
 
@@ -174,7 +174,7 @@ class ProofModeApp : Application(), Configuration.Provider {
                 println("onLocationSpoofingDetected")
                 if (!BuildConfig.DEBUG) {
                     showWarning("Location spoofing detected");
-                    exitProcess(0)
+                //    exitProcess(0)
                 }
             }
 
