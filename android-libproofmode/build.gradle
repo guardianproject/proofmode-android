@@ -129,7 +129,7 @@ dependencies {
     implementation(libs.talsecsecurity.community)
 
     // durindoor for PLAY RELEASE ONLY (accessed via reflection in DeviceIntegritySupport)
-    releaseImplementation(libs.durindoor)
+    implementation(libs.durindoor)
 
 }
 

@@ -207,7 +207,7 @@ dependencies {
     implementation(libs.talsecsecurity.community)
 
     // durindoor for PLAY RELEASE ONLY
-    releaseImplementation(libs.durindoor)
+    implementation(libs.durindoor)
 
 
 }

@@ -43,7 +43,7 @@ import timber.log.Timber
 import java.io.IOException
 import java.util.concurrent.Executors
 import kotlin.system.exitProcess
-
+import info.guardianproject.durindoor.Native
 
 private var mPgpUtils: PgpUtils? = null
 private lateinit var mPrefs: SharedPreferences
@@ -239,22 +239,22 @@ class ProofModeApp : Application(), Configuration.Provider {
 
         StorageProviderManager.getInstance().initializeStorageProviders(this)
 
-        if (!BuildConfig.DEBUG) {
-            // durindoor (info.guardianproject.durindoor.Native) is a releaseImplementation
-            // dependency only, so it is not on the classpath for debug builds. Access it via
-            // reflection so this file still compiles without the library present.
-            val isNative = runCatching {
-                val nativeClass = Class.forName("info.guardianproject.durindoor.Native")
-                val instance = nativeClass.getField("INSTANCE").get(null)
-                val loaded = nativeClass.getMethod("getLoaded").invoke(instance) as Boolean
-                if (!loaded) {
-                    "DD library refused to load."
-                } else {
-                    runCatching { nativeClass.getMethod("nativePing").invoke(null) as String }
-                        .getOrElse { "DD native methods unregistered" }
-                }
-            }.getOrElse { "DD library not available." }
-        }
+        val isNative = runCatching {
+
+            val nativeClass = Class.forName("info.guardianproject.durindoor.Native")
+            val instance = nativeClass.getField("INSTANCE").get(null)
+            val loaded = nativeClass.getMethod("getLoaded").invoke(instance) as Boolean
+            if (!loaded) {
+                "DD library refused to load."
+            } else {
+                runCatching { nativeClass.getMethod("nativePing").invoke(null) as String }
+                    .getOrElse { "DD native methods unregistered" }
+            }
+
+        }.getOrElse { "DD library not available." }
+
+        Timber.d("DD=$isNative")
+
 
     }
 
@@ -599,7 +599,9 @@ class ProofModeApp : Application(), Configuration.Provider {
 
     private companion object {
         init {
-            DeviceIntegritySupport.ensureNativeLoaded()
+            System.loadLibrary("durindoor")
+
+         //   DeviceIntegritySupport.ensureNativeLoaded()
         }
 
         public const val EXPECTED_PACKAGE_NAME = "org.witness.proofmode" // Don't use Context.getPackageName!
