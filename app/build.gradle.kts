@@ -47,10 +47,6 @@ android {
 
     signingConfigs {
         getByName("debug") {
-            storeFile = file("/home/n8fr8/dev/creds/creds.orig/android-signing/certificate.jks")
-            storePassword = "mt@d)C6!t&2EvfsFLytW9(Tt$-iVNGLb"
-            keyAlias = "1"
-            keyPassword = "mt@d)C6!t&2EvfsFLytW9(Tt$-iVNGLb"
         }
         create("release") {
             val keystorePropertiesFile = rootProject.file("keystore.properties")
