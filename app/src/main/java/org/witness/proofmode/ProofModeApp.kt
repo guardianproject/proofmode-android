@@ -60,6 +60,9 @@ class ProofModeApp : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
 
+        System.loadLibrary("durindoor")
+        DeviceIntegritySupport.ensureNativeLoaded()
+
         val expectedPackageName =
             if (BuildConfig.DEBUG) "$EXPECTED_PACKAGE_NAME.debug" else EXPECTED_PACKAGE_NAME
         val isProd = IS_PROD && !BuildConfig.DEBUG
@@ -598,11 +601,6 @@ class ProofModeApp : Application(), Configuration.Provider {
 
 
     private companion object {
-        init {
-            System.loadLibrary("durindoor")
-
-         //   DeviceIntegritySupport.ensureNativeLoaded()
-        }
 
         public const val EXPECTED_PACKAGE_NAME = "org.witness.proofmode" // Don't use Context.getPackageName!
         private val EXPECTED_SIGNING_CERTIFICATE_HASH_BASE64 = arrayOf(
