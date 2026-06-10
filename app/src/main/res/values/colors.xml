@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Previously inherited from the (removed) tedimagepicker library's resources. -->
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+
     <color name="colorPrimary">#79E176</color>
     <color name="colorPrimaryDark">#3CB371</color>
     <color name="colorAccent">#79E176</color>

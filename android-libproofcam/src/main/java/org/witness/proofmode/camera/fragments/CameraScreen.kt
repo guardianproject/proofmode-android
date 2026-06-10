@@ -30,18 +30,16 @@ import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import org.witness.proofmode.camera.CameraActivity
 import org.witness.proofmode.camera.R
 
+// CAMERA is all the capture flow needs on API 29+: media is saved through
+// MediaStore and the app can read back the rows it owns without any storage
+// permission. API 28 still writes straight to the public DCIM folder with the
+// File API, which requires the legacy storage permissions.
 private val permissions = mutableListOf(
     Manifest.permission.CAMERA,
-    Manifest.permission.READ_EXTERNAL_STORAGE,
 ).apply {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-        add(Manifest.permission.ACCESS_MEDIA_LOCATION)
-    }
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        remove(Manifest.permission.READ_EXTERNAL_STORAGE)
-        add(Manifest.permission.READ_MEDIA_IMAGES)
-        add(Manifest.permission.READ_MEDIA_VIDEO)
-
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+        add(Manifest.permission.READ_EXTERNAL_STORAGE)
+        add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
     }
 }
 

@@ -44,9 +44,19 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-
     signingConfigs {
         getByName("debug") {
+            val keystorePropertiesFile = rootProject.file("keystore.properties")
+            val keystoreProperties = Properties()
+            if (keystorePropertiesFile.canRead()) {
+                keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+            }
+            if (!keystoreProperties.stringPropertyNames().isEmpty()) {
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+            }
         }
         create("release") {
             val keystorePropertiesFile = rootProject.file("keystore.properties")
@@ -185,8 +195,6 @@ dependencies {
     implementation(libs.timber)
 
     implementation(libs.androidsvg)
-
-    implementation(libs.tedimagepicker)
 
     // implementation("com.google.android.gms:play-services-safetynet:18.0.1")
     implementation(libs.listenablefuture)

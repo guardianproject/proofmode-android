@@ -25,8 +25,9 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.preference.PreferenceManager
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import com.google.android.material.floatingactionbutton.FloatingActionButton
-import gun0912.tedimagepicker.builder.TedImagePicker
 import org.witness.proofmode.ProofMode.EVENT_PROOF_GENERATED
 import org.witness.proofmode.ProofMode.PREF_OPTION_AI_DEFAULT
 import org.witness.proofmode.ProofMode.PREF_OPTION_BLOCK_AI
@@ -71,9 +72,6 @@ class MainActivity : AppCompatActivity(),
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requiredPermissions = arrayOf(
-                Manifest.permission.ACCESS_MEDIA_LOCATION,
-                Manifest.permission.READ_MEDIA_IMAGES,
-                Manifest.permission.READ_MEDIA_VIDEO,
                 Manifest.permission.CAMERA
             )
         }
@@ -229,15 +227,21 @@ class MainActivity : AppCompatActivity(),
 
     private val eventReceiver = EventReceiver(this)
 
-    private fun showMediaPicker() {
-        TedImagePicker.with(this).imageAndVideo().showVideoDuration(true).dropDownAlbum()
-            .startMultiImage {
-                showShareProof(
-                    it
-                )
-            //    addProofActivity(it)
-            }
+    // System photo picker: grants per-URI read access to whatever the user
+    // selects, so the app needs no READ_MEDIA_* / storage permissions to
+    // import existing media for proofing.
+    private val pickMediaLauncher = registerForActivityResult(
+        ActivityResultContracts.PickMultipleVisualMedia()
+    ) { uris ->
+        if (uris.isNotEmpty()) {
+            showShareProof(uris)
+        }
+    }
 
+    private fun showMediaPicker() {
+        pickMediaLauncher.launch(
+            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
+        )
     }
 
 
@@ -572,8 +576,15 @@ class MainActivity : AppCompatActivity(),
          * The permissions needed for "base" ProofMode to work, without extra options.
          */
         private var requiredPermissions = arrayOf(
-            Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.ACCESS_FINE_LOCATION
+            Manifest.permission.CAMERA
         )
+        //
+        /**
+         * Manifest.permission.ACCESS_FINE_LOCATION
+         * Manifest.permission.ACCESS_MEDIA_LOCATION,
+         *                 Manifest.permission.READ_MEDIA_IMAGES,
+         *                 Manifest.permission.READ_MEDIA_VIDEO,
+         */
         private val optionalPermissions = arrayOf(
             Manifest.permission.ACCESS_NETWORK_STATE,
         )

@@ -313,4 +313,32 @@
     <string name="security_warning_usb">For security reasons, Proofmode cannot be run while Developer mode is enabled</string>
     <string name="coming_soon">Coming soon...</string>
 
+
+    <string name="message_no_permissions">ProofMode requires the camera permission to capture photos and videos.</string>
+    <string name="label_ok">OK</string>
+    <string name="toggle_location_description">Toggle location tracking</string>
+    <string name="video_fragment">video_fragment</string>
+    <string name="camera_fragment">camera_fragment</string>
+    <string name="change_exposure_compensation">Change exposure compensation</string>
+    <string name="change_flash_mode_content_description">Change flash mode</string>
+    <string name="grid_lines_hide_description">Hide grid lines</string>
+    <string name="show_grid_lines_description">Show grid lines</string>
+    <string name="turn_off_flash_description">Turn off flash</string>
+    <string name="turn_flash_on_auto_description">Turn flash on auto</string>
+    <string name="turn_flash_on_description">Turn flash on</string>
+    <string name="capture_image_description">Capture image</string>
+    <string name="ultra_hdr">Ultra HDR</string>
+    <string name="ultra_hdr_description">Shows more vibrant colors: %1$s</string>
+    <string name="delete">Delete</string>
+    <string name="delete_media_confirmation">Are you sure you want to delete this media?</string>
+    <string name="grant_permissions">Grant permissions</string>
+    <string name="permissions_rationale">Grant permissions in order to be able to fully use ProofMode.</string>
+    <string name="turn_flash_off">Turn flash off</string>
+    <string name="turn_flash_on">Turn flash on</string>
+    <string name="record_video">Record video</string>
+    <string name="stop_recording">Stop recording</string>
+    <string name="video_settings">Video Settings</string>
+    <string name="resolution">Resolution</string>
+    <string name="timer">Timer</string>
+
 </resources>

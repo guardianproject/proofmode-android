@@ -5,31 +5,34 @@
     <uses-feature
         android:name="android.hardware.camera.any"
         android:required="true" />
-    <!--
- Required only if your app needs to access images or photos
-     that other apps created.
-    -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <!--
- Required only if your app needs to access videos
-         that other apps created.
-    -->
-    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
-    <!--
- Required only if your app needs to access audio files
-         that other apps created.
-    -->
-    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
-    <!--
- If your app doesn't need to access media files that other apps created,
-         set the "maxSdkVersion" attribute to "28" instead.
-    -->
+    <!-- ProofMode only reads and writes media it captures itself. On API 29+ the
+         app owns the MediaStore rows it inserts, so no media-read permission is
+         needed; imports go through the system photo picker, which grants per-URI
+         access. The tools:node="remove" entries strip the broad media permissions
+         that library manifests would otherwise merge into the final APK, per
+         Google Play's Photo and Video Permissions policy. -->
+    <uses-permission
+        android:name="android.permission.READ_MEDIA_IMAGES"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.READ_MEDIA_VIDEO"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.READ_MEDIA_AUDIO"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED"
+        tools:node="remove" />
+
+    <!-- Legacy storage for API 28 only, where captures and proof zips are written
+         with the File API instead of MediaStore. -->
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32" />
+        android:maxSdkVersion="28" />
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        tools:remove="android:maxSdkVersion" />
+        android:maxSdkVersion="28" />
+
     <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" /> <!-- SDK 33 and up -->
 
     <uses-permission
