@@ -16,6 +16,12 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         multiDexEnabled = true
 
+        // Exported into the consuming app's R8 run. JNA resolves classes,
+        // fields (e.g. Pointer.peer) and Library methods by name from native
+        // code, so the app must not rename them; buildTypes.proguardFiles
+        // would only apply if this library itself were minified.
+        consumerProguardFiles 'proguard-rules.pro'
+
         ndk {
             abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64'
         }
@@ -28,7 +34,6 @@ android {
     buildTypes {
         release {
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
     lint {

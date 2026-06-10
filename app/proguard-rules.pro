@@ -80,6 +80,8 @@
 -keep class org.spongycastle.** { *; }
 # org.bouncycastle.** and org.contentauth.c2pa.** are kept by the
 # c2pa-android library's consumer-rules.pro; do not duplicate here.
+# com.sun.jna.** and rust.nostr.** are kept by the android-nostr module's
+# consumer rules (android-nostr/proguard-rules.pro); do not duplicate here.
 
 # ProofMode subpackages that are referenced reflectively, declared in the
 # manifest, exposed as a library API, or otherwise need stable names.
