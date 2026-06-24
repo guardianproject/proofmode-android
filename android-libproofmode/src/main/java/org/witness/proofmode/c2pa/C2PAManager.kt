@@ -834,10 +834,14 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                 cawgKeyAndCerts.get(0),
                 SigningAlgorithm.ES256)
 
+            val listRoles = ArrayList<String>()
+            listRoles.add("cawg.creator")
+
             val combined = Signer.withCawgIdentity(
                 c2pa = signer,
                 identity = identitySigner,
                 referencedAssertions = listOf("c2pa.actions","cawg.training-mining","cawg.metadata"),
+                roles = listRoles
             )
 
             currentSigner = combined
