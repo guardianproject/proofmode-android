@@ -67,6 +67,11 @@ public class ProofMode {
 
     public final static String PREF_OPTION_TSA_SERVER = "tsaServerUrl";
 
+    public final static String PREF_OPTION_CAWG_SIGNING = "useCawgSigning";
+    public final static boolean PREF_OPTION_CAWG_SIGNING_DEFAULT = false;
+    public final static String PREF_CAWG_CREATOR = "cawgCreator";
+    public final static String PREF_CAWG_RIGHTS = "cawgRights";
+
     public final static boolean PREF_OPTION_NOTARY_DEFAULT = true;
     public final static boolean PREF_OPTION_NOTARY_OTS_DEFAULT = true;
     public final static boolean PREF_OPTION_NOTARY_NOSTR_DEFAULT = true;

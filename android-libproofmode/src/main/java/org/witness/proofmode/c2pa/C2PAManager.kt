@@ -246,18 +246,21 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                 listAssertions.add(createC2PAMetadataAssertion(context, location, inFile, contentType))
                 listAssertions.add(createCAWGTrainingMiningAssertion(context, blockAI == true))
 
-                val creatorName = ""//""Joe Smith"
-                val creatorCopyright = ""//""Copyright (C) 2022 Example Photo Agency. All Rights Reserved."
+                val cawgCreator = pPrefs.getString(ProofMode.PREF_CAWG_CREATOR, "") ?: ""
+                val cawgRights = pPrefs.getString(ProofMode.PREF_CAWG_RIGHTS, "") ?: ""
 
                 val cawgContext = HashMap<String, String>()
                 cawgContext.put("dc", "http://purl.org/dc/elements/1.1/")
+                cawgContext.put("exif","http://ns.adobe.com/exif/1.0/")
                 val cawgInfo = HashMap<String, String>()
-                if (creatorName.isNotEmpty()) {
-                    cawgInfo.put("dc:creator", "[$creatorName]")
+                if (cawgCreator.isNotEmpty()) {
+                    cawgInfo.put("dc:creator", "[$cawgCreator]")
+                    cawgInfo.put("Exif.Image.Artist",cawgCreator)
                 }
 
-                if (creatorCopyright.isNotEmpty()) {
-                    cawgInfo.put("dc:rights", creatorCopyright);
+                if (cawgRights.isNotEmpty()) {
+                    cawgInfo.put("dc:rights", cawgRights);
+                    cawgInfo.put("Exif.Image.Copyright",cawgRights)
                 }
 
                 listAssertions.add(createCAWGMetadataAssertion(context, cawgContext, cawgInfo))
@@ -798,7 +801,8 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
         var currentSigner = signer;
 
-        val doCawgIdentity = true; //not ready yet!
+        val doCawgSigning = PreferenceManager.getDefaultSharedPreferences(context)
+            .getBoolean(ProofMode.PREF_OPTION_CAWG_SIGNING, ProofMode.PREF_OPTION_CAWG_SIGNING_DEFAULT)
 
         val settingsJson = buildJsonObject {
             put("version", 1)
@@ -822,7 +826,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         val settingsJsonString = settingsJson.toString()
         Timber.d("Settings JSON:  $settingsJsonString")
 
-        if (doCawgIdentity) {
+        if (doCawgSigning) {
             val cawgKeyAndCerts = createCawgIdentity ()
 
             val identitySigner = Signer.fromKeys(
