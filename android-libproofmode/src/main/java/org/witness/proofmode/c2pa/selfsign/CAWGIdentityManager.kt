@@ -33,7 +33,6 @@ import java.security.cert.Certificate
 import java.security.spec.ECGenParameterSpec
 import java.util.Date
 import javax.security.auth.x500.X500Principal
-import kotlin.io.encoding.Base64
 
 class CAWGIdentityManager (private val context: Context) {
 
@@ -92,11 +91,13 @@ class CAWGIdentityManager (private val context: Context) {
             val signer = JcaContentSignerBuilder("SHA256withECDSA").build(keyPair.private)
             val cert = JcaX509CertificateConverter().getCertificate(certBuilder.build(signer))
 
-            // Write private key PEM
-            val privateKeyPem =
-                "-----BEGIN PRIVATE KEY-----\n" +
-                Base64.encode(keyPair.private.encoded) +
-                "\n-----END PRIVATE KEY-----\n"
+            // Write private key PEM. Use PemWriter so the base64 is wrapped at 64
+            // chars per RFC 7468; the c2pa-rs pem-rfc7468 decoder rejects single
+            // unbroken base64 lines ("PEM Base64 error: invalid Base64 encoding").
+            val privateKeyPem = StringWriter().use { sw ->
+                PemWriter(sw).use { it.writeObject(PemObject("PRIVATE KEY", keyPair.private.encoded)) }
+                sw.toString()
+            }
 
             var fileKey = File(context.filesDir,"$keyAlias.key")
             fileKey.writeText(privateKeyPem)

@@ -354,7 +354,10 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
         val result = ArrayList<String>()
         var fileKey = File(context.filesDir,"$keyAlias.key")
+        val fileCert = File(context.filesDir, "$keyAlias.cert")
+
         fileKey.delete()
+        fileCert.delete()
 
         // Create or get the keystore key
         if (!fileKey.exists()) {
@@ -776,7 +779,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
         var currentSigner = signer;
 
-        val doCawgIdentity = false; //not ready yet!
+        val doCawgIdentity = true; //not ready yet!
 
         val settingsJson = buildJsonObject {
             put("version", 1)
@@ -795,30 +798,27 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                 put ("trust_config", trustConfig)
             })
 
-            if (doCawgIdentity)
-            {
-                val cawgKeyAndCerts = createCawgIdentity ()
-
-                put ("cawg_x509_signer", buildJsonObject {
-
-                    put ("local", buildJsonObject {
-                        put ("alg","es256")
-                        put ("sign_cert",cawgKeyAndCerts.get(1))
-                        put ("private_key",cawgKeyAndCerts.get(0))
-                        put ("tsa_url",TSA_DEFAULT)
-                        put("referenced_assertions", buildJsonArray {
-                            add("cawg.training-mining")
-                        })
-                    })
-                })
-            }
         }
 
         val settingsJsonString = settingsJson.toString()
         Timber.d("Settings JSON:  $settingsJsonString")
 
-        if (doCawgIdentity)
-            currentSigner = Signer.fromSettingsJson(settingsJsonString)
+        if (doCawgIdentity) {
+            val cawgKeyAndCerts = createCawgIdentity ()
+
+            val identitySigner = Signer.fromKeys(
+                cawgKeyAndCerts.get(1),
+                cawgKeyAndCerts.get(0),
+                SigningAlgorithm.ES256)
+
+            val combined = Signer.withCawgIdentity(
+                c2pa = signer,
+                identity = identitySigner,
+                referencedAssertions = listOf("c2pa.actions","cawg.training-mining"),
+            )
+
+            currentSigner = combined
+        }
 
         val settings = C2PASettings.create().apply {
             updateFromString(settingsJson.toString(), "json")
