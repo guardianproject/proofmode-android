@@ -263,6 +263,16 @@
     <string name="settings_signing_signing_servers">Signing Servers</string>
     <string name="settings_signing_proofsign_server">ProofSign Server</string>
     <string name="settings_signing_tsa">Time Stamp Authority (TSA)</string>
+    <string name="settings_signing_identity">Identity Signing</string>
+    <string name="settings_signing_cawg">Creators Assertion (CAWG) BETA</string>
+    <string name="settings_signing_cawg_on">CAWG Signing Enabled</string>
+    <string name="settings_signing_cawg_off">CAWG Signing Disabled</string>
+    <string name="settings_signing_cawg_creator">Creator Name</string>
+    <string name="settings_signing_cawg_rights">Copyright or License</string>
+    <string name="settings_signing_cawg_import">Import CAWG Credentials</string>
+    <string name="settings_signing_cawg_import_summary">Select Private Key and Certificate</string>
+    <string name="settings_signing_cawg_generate">Generate CAWG Credential</string>
+    <string name="settings_signing_cawg_generate_summary">Generate New Key and Cert Request</string>
     <string name="settings_ai">Block AI</string>
     <string name="settings_ai_desc">Flag to not be used for machine learning training</string>
 

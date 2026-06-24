@@ -27,38 +27,35 @@
 
     </PreferenceCategory>
 
-    <PreferenceCategory app:title="Identity Signing">
+    <PreferenceCategory app:title="@string/settings_signing_identity">
 
         <SwitchPreferenceCompat
             app:key="useCawgSigning"
-            app:title="Creators Assertion (CAWG)"
-            app:summaryOn="CAWG Signing Enabled"
-            app:summaryOff="CAWG Signing Disabled"
+            app:title="@string/settings_signing_cawg"
+            app:summaryOn="@string/settings_signing_cawg_on"
+            app:summaryOff="@string/settings_signing_cawg_off"
             app:defaultValue="false" />
 
         <EditTextPreference
             app:key="cawgCreator"
-            app:title="Creator Name"
-            app:dialogTitle="Creator Name" />
+            app:title="@string/settings_signing_cawg_creator"
+            app:dialogTitle="@string/settings_signing_cawg_creator" />
 
         <EditTextPreference
             app:key="cawgRights"
-            app:title="Copyright or License"
-            app:dialogTitle="Copyright or License" />
+            app:title="@string/settings_signing_cawg_rights"
+            app:dialogTitle="@string/settings_signing_cawg_rights" />
 
         <Preference
             app:key="importCawg"
-            app:title="Import CAWG Credentials"
-            app:summary="Select Private Key and Certificate"
-            app:enabled="false"
-
+            app:title="@string/settings_signing_cawg_import"
+            app:summary="@string/settings_signing_cawg_import_summary"
             />
 
         <Preference
             app:key="generateCawg"
-            app:title="Generate CAWG Credential"
-            app:summary="Generate New Key and Cert Request"
-            app:enabled="false"
+            app:title="@string/settings_signing_cawg_generate"
+            app:summary="@string/settings_signing_cawg_generate_summary"
             />
     </PreferenceCategory>
 

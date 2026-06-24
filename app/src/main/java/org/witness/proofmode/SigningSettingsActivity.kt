@@ -1,14 +1,25 @@
 package org.witness.proofmode
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.view.MenuItem
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.preference.EditTextPreference
 import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.witness.proofmode.c2pa.C2PAManager
+import org.witness.proofmode.c2pa.PreferencesManager
 import org.witness.proofmode.databinding.ActivitySettingsBinding
 import org.witness.proofmode.databinding.ActivitySigningSettingsBinding
 import org.witness.proofmode.library.BuildConfig
@@ -72,7 +83,52 @@ class SigningSettingsActivity : AppCompatActivity() {
             configureServerDefault(ProofMode.PREF_OPTION_PROOFSIGN_SERVER, BuildConfig.SIGNING_SERVER)
             configureServerDefault(ProofMode.PREF_OPTION_TSA_SERVER, BuildConfig.TSA_SERVER)
 
+            findPreference<Preference>(KEY_GENERATE_CAWG)?.setOnPreferenceClickListener {
+                generateCawgIdentity()
+                true
+            }
+
             applyModeState()
+        }
+
+        /**
+         * (Re)generate the CAWG identity key using the configured creator name, then show
+         * the resulting certificate signing request (CSR) so the user can submit it to an
+         * official CA to obtain a properly signed certificate.
+         */
+        private fun generateCawgIdentity() {
+            val prefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
+            val creatorName = prefs.getString(ProofMode.PREF_CAWG_CREATOR, null)
+                ?.takeIf { it.isNotBlank() } ?: getString(R.string.app_name)
+            val appContext = requireContext().applicationContext
+
+            lifecycleScope.launch {
+                val csr = withContext(Dispatchers.IO) {
+                    val c2paManager = C2PAManager(appContext, PreferencesManager(appContext))
+                    c2paManager.createCawgIdentity(creatorName, true)
+                    c2paManager.getCawgCSR()
+                }
+                showCawgCsrDialog(csr)
+            }
+        }
+
+        private fun showCawgCsrDialog(csr: String?) {
+            val context = context ?: return
+            val builder = AlertDialog.Builder(context)
+                .setTitle("CAWG Certificate Request")
+                .setMessage(csr ?: "Unable to generate certificate request.")
+                .setPositiveButton(android.R.string.ok, null)
+
+            if (csr != null) {
+                builder.setNeutralButton(android.R.string.copy) { _, _ ->
+                    val clipboard =
+                        context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    clipboard.setPrimaryClip(ClipData.newPlainText("CAWG CSR", csr))
+                    Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            builder.show()
         }
 
         /**
@@ -155,6 +211,7 @@ class SigningSettingsActivity : AppCompatActivity() {
 
         companion object {
             private const val KEY_SIGNING_MODE = "signingMode"
+            private const val KEY_GENERATE_CAWG = "generateCawg"
             private const val MODE_REMOTE = "remote"
             private const val MODE_LOCAL = "local"
             private const val MODE_DISABLED = "disabled"

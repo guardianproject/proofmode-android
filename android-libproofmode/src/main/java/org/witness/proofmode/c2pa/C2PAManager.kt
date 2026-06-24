@@ -368,7 +368,17 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
     val CAWG_KEY_ALIAS = "CAWG_SECURE_1"
 
-    private suspend fun createCawgIdentity() : List<String> {
+    /**
+     * Returns the persisted PKCS#10 certificate signing request (CSR) for the CAWG
+     * identity key, or null if no key has been generated yet. The user can submit this
+     * CSR to an official CA to obtain a properly signed certificate.
+     */
+    fun getCawgCSR(): String? {
+        val fileCsr = File(context.filesDir, "$CAWG_KEY_ALIAS.csr")
+        return if (fileCsr.exists()) fileCsr.readText() else null
+    }
+
+    suspend fun createCawgIdentity(creatorName: String, regenerateIdentity: Boolean) : List<String> {
         val keyAlias = CAWG_KEY_ALIAS
 
         var certChain = ""
@@ -378,13 +388,19 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         var fileKey = File(context.filesDir,"$keyAlias.key")
         val fileCert = File(context.filesDir, "$keyAlias.cert")
 
-        fileKey.delete()
-        fileCert.delete()
+        if (regenerateIdentity) {
+            if (fileKey.exists())
+                fileKey.delete()
+
+            if (fileCert.exists())
+                fileCert.delete()
+        }
 
         // Create or get the keystore key
         if (!fileKey.exists()) {
             Timber.d( "Creating new keystore key")
-            CAWGIdentityManager(context).createCawgKey(keyAlias, false)
+            val country = Locale.getDefault().country
+            CAWGIdentityManager(context).createCawgKey(keyAlias, false, creatorName, country)
         }
 
         // Get certificate chain from local files
@@ -827,7 +843,9 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         Timber.d("Settings JSON:  $settingsJsonString")
 
         if (doCawgSigning) {
-            val cawgKeyAndCerts = createCawgIdentity ()
+            val pPrefs = PreferenceManager.getDefaultSharedPreferences(context)
+            val cawgCreator = pPrefs.getString(ProofMode.PREF_CAWG_CREATOR, "Proofmode Android User") ?: ""
+            val cawgKeyAndCerts = createCawgIdentity (cawgCreator, false)
 
             val identitySigner = Signer.fromKeys(
                 cawgKeyAndCerts.get(1),

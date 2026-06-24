@@ -41,9 +41,10 @@ class CAWGIdentityManager (private val context: Context) {
 
     }
 
-    public suspend fun createCawgKey(keyAlias: String, useHardware: Boolean) : String {
+    public suspend fun createCawgKey(keyAlias: String, useHardware: Boolean, creatorName: String, country: String) : String {
 
-        val subject = X500Principal("CN=C2PA Android User, O=C2PA Example, C=US")
+        val subjectInfo = "CN=$creatorName, O=$creatorName, C=$country"
+        val subject = X500Principal(subjectInfo)
         val notBefore = Date()
         val notAfter = Date(System.currentTimeMillis() + 365L * 24 * 60 * 60 * 1000)
         val serial = BigInteger.valueOf(System.currentTimeMillis())
@@ -84,7 +85,7 @@ class CAWGIdentityManager (private val context: Context) {
             val keyPair = keyPairGenerator.generateKeyPair()
 
             // Build self-signed certificate using Bouncy Castle
-            val issuer = X500Name("CN=C2PA Android User, O=C2PA Example, C=US")
+            val issuer = X500Name(subjectInfo)
             val certBuilder = JcaX509v3CertificateBuilder(
                             issuer, serial, notBefore, notAfter, issuer, keyPair.public
                         )
@@ -102,7 +103,12 @@ class CAWGIdentityManager (private val context: Context) {
             var fileKey = File(context.filesDir,"$keyAlias.key")
             fileKey.writeText(privateKeyPem)
 
-            var certChain = getSelfSignedCertChain(keyPair)
+            // Generate a PKCS#10 CSR for this key and persist it, so the user can
+            // submit it to an official CA to obtain a properly signed certificate.
+            val csrPem = generateCSR(keyPair, creatorName, country)
+            File(context.filesDir, "$keyAlias.csr").writeText(csrPem)
+
+            var certChain = getSelfSignedCertChain(csrPem)
             var fileCert = File(context.filesDir,"$keyAlias.cert")
             fileCert.writeText(certChain)
 
@@ -110,10 +116,7 @@ class CAWGIdentityManager (private val context: Context) {
         }
     }
 
-    private suspend fun getSelfSignedCertChain(keyPair: KeyPair): String {
-
-        // Generate CSR
-        val csr = generateCSR(keyPair)
+    private suspend fun getSelfSignedCertChain(csr: String): String {
 
         // Submit CSR to signing server
         val csrResp = CertificateSigningService().signCSR(csr)
@@ -125,17 +128,15 @@ class CAWGIdentityManager (private val context: Context) {
         return certChain
     }
 
-    private fun generateCSR(keyPair: KeyPair): String {
+    private fun generateCSR(keyPair: KeyPair, creatorName: String, country: String): String {
         try {
             // Use the library's CertificateManager to generate a proper CSR
             val config =
                 CertificateManager.CertificateConfig(
-                    commonName = "Proofmode C2PA Hardware Key",
-                    organization = "Proofmode App Self-Signed",
+                    commonName = creatorName,
+                    organization = creatorName,
                     organizationalUnit = "Mobile",
-                    country = "US",
-                    state = "New York",
-                    locality = "New York",
+                    country = country,
                 )
 
             // Build X500 subject
