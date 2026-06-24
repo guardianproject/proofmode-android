@@ -16,6 +16,7 @@ import com.android.keyattestation.verifier.KeyDescription
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -73,6 +74,7 @@ import java.text.SimpleDateFormat
 import java.time.Instant
 import java.util.Date
 import java.util.Locale
+import java.util.StringTokenizer
 import java.util.TimeZone
 import javax.crypto.Cipher
 import javax.security.auth.x500.X500Principal
@@ -242,7 +244,24 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             if (wasCreated) {
                 //only add these for items we create
                 listAssertions.add(createC2PAMetadataAssertion(context, location, inFile, contentType))
-                listAssertions.add(createCAWGAssertion(context, blockAI == true, email))
+                listAssertions.add(createCAWGTrainingMiningAssertion(context, blockAI == true))
+
+                val creatorName = ""//""Joe Smith"
+                val creatorCopyright = ""//""Copyright (C) 2022 Example Photo Agency. All Rights Reserved."
+
+                val cawgContext = HashMap<String, String>()
+                cawgContext.put("dc", "http://purl.org/dc/elements/1.1/")
+                val cawgInfo = HashMap<String, String>()
+                if (creatorName.isNotEmpty()) {
+                    cawgInfo.put("dc:creator", "[$creatorName]")
+                }
+
+                if (creatorCopyright.isNotEmpty()) {
+                    cawgInfo.put("dc:rights", creatorCopyright);
+                }
+
+                listAssertions.add(createCAWGMetadataAssertion(context, cawgContext, cawgInfo))
+
             }
             else
             {
@@ -814,7 +833,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             val combined = Signer.withCawgIdentity(
                 c2pa = signer,
                 identity = identitySigner,
-                referencedAssertions = listOf("c2pa.actions","cawg.training-mining"),
+                referencedAssertions = listOf("c2pa.actions","cawg.training-mining","cawg.metadata"),
             )
 
             currentSigner = combined
@@ -1101,7 +1120,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         return result
     }
 
-    private fun createCAWGAssertion (context: Context, blockAI: Boolean, creatorEmail: String?): AssertionDefinition {
+    private fun createCAWGTrainingMiningAssertion (context: Context, blockAI: Boolean): AssertionDefinition {
 
         /**
          *  CawgTrainingMiningEntry(
@@ -1135,6 +1154,73 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                     }
 
                 )
+
+            }
+        )
+
+        return result
+    }
+
+    /**
+     * val cawgContext = HashMap<String,String>()
+     * cawgContext.put("dc", "http://purl.org/dc/elements/1.1/")
+     * val cawgInfo = HashMap<String,String>()
+     * cawgInfo.put ("dc:creator","[ \"Julie Smith\" ]")
+     * cawgInfo.put ("dc:rights","Copyright (C) 2022 Example Photo Agency. All Rights Reserved.");s
+     * createCAWGMetadataAssertion(this, cawgContext, cawgInfo)
+     */
+
+    private fun createCAWGMetadataAssertion (context: Context, cawgContext: HashMap<String,String>, cawgInfo: HashMap<String,String>): AssertionDefinition {
+
+        /**
+         *  {
+         * 	"@context" : {
+         * 		"exif": "http://ns.adobe.com/exif/1.0/",
+         * 		"exifEX": "http://cipa.jp/exif/2.32/",
+         * 		"tiff": "http://ns.adobe.com/tiff/1.0/",
+         * 		"Iptc4xmpCore": "http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/",
+         * 		"Iptc4xmpExt": "http://iptc.org/std/Iptc4xmpExt/2008-02-29/",
+         * 		"dc" : "http://purl.org/dc/elements/1.1/",
+         * 		"photoshop" : "http://ns.adobe.com/photoshop/1.0/",
+         * 	},
+         * 	"photoshop:DateCreated": "Aug 31, 2022",
+         * 	"Iptc4xmpExt:DigitalSourceType": "https://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture",
+         * 	"Iptc4xmpExt:LocationCreated": {
+         * 	  "Iptc4xmpExt:City": "San Francisco"
+         * 	},
+         * 	"Iptc4xmpExt:PersonInImage": [
+         * 	  "Erika Fictional"
+         * 	],
+         * 	"Iptc4xmpCore:AltTextAccessibility": "Photo of Erika Fictional standing in front of the Golden Gate Bridge at sunset.",
+         */
+
+        var result = AssertionDefinition.custom(
+            label = "cawg.metadata",
+            data = buildJsonObject {
+
+                put ("@context",
+                    buildJsonObject {
+                        for (cawgContextItem in cawgContext) {
+
+                            if (cawgContextItem.value.startsWith("["))
+                            {
+                                val itemList = cawgContextItem.value.substring(1,cawgContextItem.value.length-2)
+                                val itemListTokens = StringTokenizer(itemList,",")
+                                buildJsonArray() {
+                                    while (itemListTokens.hasMoreTokens())
+                                       add(itemListTokens.nextToken())
+                                }
+                            }
+                            else
+                                put (cawgContextItem.key,cawgContextItem.value)
+                        }
+                    }
+
+                )
+
+                for (cawgInfoItem in cawgInfo) {
+                    put (cawgInfoItem.key,cawgInfoItem.value)
+                }
 
             }
         )
