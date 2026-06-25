@@ -264,12 +264,12 @@
     <string name="settings_signing_proofsign_server">ProofSign Server</string>
     <string name="settings_signing_tsa">Time Stamp Authority (TSA)</string>
     <string name="settings_signing_identity">Identity Signing</string>
-    <string name="settings_signing_cawg">Creators Assertion (CAWG) BETA</string>
+    <string name="settings_signing_cawg">Creators Assertion - BETA</string>
     <string name="settings_signing_cawg_on">CAWG Signing Enabled</string>
     <string name="settings_signing_cawg_off">CAWG Signing Disabled</string>
     <string name="settings_signing_cawg_creator">Creator Name</string>
     <string name="settings_signing_cawg_rights">Copyright or License</string>
-    <string name="settings_signing_cawg_edit">Edit CAWG Credentials</string>
+    <string name="settings_signing_cawg_edit">Edit Credentials</string>
     <string name="settings_signing_cawg_edit_summary">Paste or edit the private key and certificate</string>
     <string name="settings_signing_cawg_edit_key_label">Private Key (PEM)</string>
     <string name="settings_signing_cawg_edit_cert_label">Certificate (PEM)</string>
@@ -281,7 +281,7 @@
     <string name="settings_signing_cawg_edit_confirm_message">This replaces your stored CAWG private key and certificate. Existing credentials cannot be recovered unless you have backed them up.</string>
     <string name="settings_signing_cawg_edit_ok">CAWG credentials saved</string>
     <string name="action_save">Save</string>
-    <string name="settings_signing_cawg_generate">Generate CAWG Credential</string>
+    <string name="settings_signing_cawg_generate">Regenerate Credential</string>
     <string name="settings_signing_cawg_generate_summary">Generate New Key and Cert Request</string>
     <string name="settings_signing_cawg_generate_confirm_title">Generate new CAWG credential?</string>
     <string name="settings_signing_cawg_generate_confirm_message">This replaces your current CAWG private key and certificate with a freshly generated key and certificate request. Existing credentials cannot be recovered unless you have backed them up.</string>
