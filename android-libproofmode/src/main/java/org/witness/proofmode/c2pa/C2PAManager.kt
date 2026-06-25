@@ -378,6 +378,32 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         return if (fileCsr.exists()) fileCsr.readText() else null
     }
 
+    /**
+     * Replace the locally stored CAWG identity with an externally supplied private key and
+     * certificate chain, both in the same PEM formats produced by [createCawgIdentity]
+     * (a PKCS#8 "PRIVATE KEY" and one or more "CERTIFICATE" blocks). They overwrite any
+     * previously generated identity at the same paths; the stale CSR — which belonged to
+     * the old key — is removed so [getCawgCSR] no longer returns a request for a key the
+     * user no longer holds.
+     */
+    fun importCawgIdentity(privateKeyPem: String, certChainPem: String) {
+        File(context.filesDir, "$CAWG_KEY_ALIAS.key").writeText(privateKeyPem)
+        File(context.filesDir, "$CAWG_KEY_ALIAS.cert").writeText(certChainPem)
+        File(context.filesDir, "$CAWG_KEY_ALIAS.csr").delete()
+    }
+
+    /** The stored CAWG private key PEM, or null if no identity has been created/imported yet. */
+    fun getCawgPrivateKey(): String? {
+        val fileKey = File(context.filesDir, "$CAWG_KEY_ALIAS.key")
+        return if (fileKey.exists()) fileKey.readText() else null
+    }
+
+    /** The stored CAWG certificate chain PEM, or null if no identity has been created/imported yet. */
+    fun getCawgCertChain(): String? {
+        val fileCert = File(context.filesDir, "$CAWG_KEY_ALIAS.cert")
+        return if (fileCert.exists()) fileCert.readText() else null
+    }
+
     suspend fun createCawgIdentity(creatorName: String, regenerateIdentity: Boolean) : List<String> {
         val keyAlias = CAWG_KEY_ALIAS
 

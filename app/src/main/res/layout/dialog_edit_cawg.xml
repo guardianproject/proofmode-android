@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="8dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/settings_signing_cawg_edit_key_label"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/editCawgPrivateKey"
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:layout_weight="1"
+            android:minLines="6"
+            android:gravity="top|start"
+            android:inputType="textMultiLine|textNoSuggestions"
+            android:fontFamily="monospace"
+            android:textSize="12sp"
+            android:hint="@string/settings_signing_cawg_edit_key_hint"
+            android:importantForAutofill="no" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/settings_signing_cawg_edit_cert_label"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/editCawgCertChain"
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:layout_weight="1"
+            android:minLines="6"
+            android:gravity="top|start"
+            android:inputType="textMultiLine|textNoSuggestions"
+            android:fontFamily="monospace"
+            android:textSize="12sp"
+            android:hint="@string/settings_signing_cawg_edit_cert_hint"
+            android:importantForAutofill="no" />
+
+    </LinearLayout>
+
+</ScrollView>

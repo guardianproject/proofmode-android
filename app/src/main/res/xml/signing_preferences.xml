@@ -47,9 +47,9 @@
             app:dialogTitle="@string/settings_signing_cawg_rights" />
 
         <Preference
-            app:key="importCawg"
-            app:title="@string/settings_signing_cawg_import"
-            app:summary="@string/settings_signing_cawg_import_summary"
+            app:key="editCawg"
+            app:title="@string/settings_signing_cawg_edit"
+            app:summary="@string/settings_signing_cawg_edit_summary"
             />
 
         <Preference

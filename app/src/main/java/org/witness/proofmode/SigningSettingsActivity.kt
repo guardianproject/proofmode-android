@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.view.MenuItem
+import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -84,11 +85,97 @@ class SigningSettingsActivity : AppCompatActivity() {
             configureServerDefault(ProofMode.PREF_OPTION_TSA_SERVER, BuildConfig.TSA_SERVER)
 
             findPreference<Preference>(KEY_GENERATE_CAWG)?.setOnPreferenceClickListener {
-                generateCawgIdentity()
+                confirmGenerateCawgIdentity()
+                true
+            }
+
+            findPreference<Preference>(KEY_EDIT_CAWG)?.setOnPreferenceClickListener {
+                showEditCawgDialog()
                 true
             }
 
             applyModeState()
+        }
+
+        /**
+         * Show a dialog with two editable boxes pre-filled with the stored CAWG private key
+         * and certificate PEMs. SAVE validates the PEMs, asks for confirmation, and then
+         * overwrites the stored identity; CANCEL discards the edits.
+         */
+        private fun showEditCawgDialog() {
+            val context = context ?: return
+            val appContext = context.applicationContext
+            val c2paManager = C2PAManager(appContext, PreferencesManager(appContext))
+
+            val view = layoutInflater.inflate(R.layout.dialog_edit_cawg, null)
+            val keyEdit = view.findViewById<EditText>(R.id.editCawgPrivateKey)
+            val certEdit = view.findViewById<EditText>(R.id.editCawgCertChain)
+            keyEdit.setText(c2paManager.getCawgPrivateKey().orEmpty())
+            certEdit.setText(c2paManager.getCawgCertChain().orEmpty())
+
+            val dialog = AlertDialog.Builder(context)
+                .setTitle(R.string.settings_signing_cawg_edit)
+                .setView(view)
+                .setPositiveButton(R.string.action_save, null)
+                .setNegativeButton(android.R.string.cancel, null)
+                .create()
+
+            // Override the positive button click so a failed validation keeps the dialog
+            // open instead of dismissing it (the default behaviour).
+            dialog.setOnShowListener {
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                    val keyPem = keyEdit.text.toString().trim()
+                    val certPem = certEdit.text.toString().trim()
+                    if (!keyPem.contains("PRIVATE KEY")) {
+                        toast(getString(R.string.settings_signing_cawg_edit_key_invalid))
+                        return@setOnClickListener
+                    }
+                    if (!certPem.contains("CERTIFICATE")) {
+                        toast(getString(R.string.settings_signing_cawg_edit_cert_invalid))
+                        return@setOnClickListener
+                    }
+                    confirmSaveCawg(c2paManager, keyPem, certPem) { dialog.dismiss() }
+                }
+            }
+            dialog.show()
+        }
+
+        /** Second-stage confirm before overwriting the stored CAWG identity. */
+        private fun confirmSaveCawg(
+            c2paManager: C2PAManager,
+            keyPem: String,
+            certPem: String,
+            onSaved: () -> Unit
+        ) {
+            val context = context ?: return
+            AlertDialog.Builder(context)
+                .setTitle(R.string.settings_signing_cawg_edit_confirm_title)
+                .setMessage(R.string.settings_signing_cawg_edit_confirm_message)
+                .setPositiveButton(R.string.action_save) { _, _ ->
+                    c2paManager.importCawgIdentity(keyPem, certPem)
+                    MediaWatcher.getInstance(activity)?.resetC2PA()
+                    toast(getString(R.string.settings_signing_cawg_edit_ok))
+                    onSaved()
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+        }
+
+        private fun toast(message: String) {
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        }
+
+        /** Confirm before generating, since it wipes out the current CAWG key and certificate. */
+        private fun confirmGenerateCawgIdentity() {
+            val context = context ?: return
+            AlertDialog.Builder(context)
+                .setTitle(R.string.settings_signing_cawg_generate_confirm_title)
+                .setMessage(R.string.settings_signing_cawg_generate_confirm_message)
+                .setPositiveButton(R.string.action_generate_short) { _, _ ->
+                    generateCawgIdentity()
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
         }
 
         /**
@@ -212,6 +299,7 @@ class SigningSettingsActivity : AppCompatActivity() {
         companion object {
             private const val KEY_SIGNING_MODE = "signingMode"
             private const val KEY_GENERATE_CAWG = "generateCawg"
+            private const val KEY_EDIT_CAWG = "editCawg"
             private const val MODE_REMOTE = "remote"
             private const val MODE_LOCAL = "local"
             private const val MODE_DISABLED = "disabled"
