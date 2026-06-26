@@ -100,7 +100,6 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
     }
 
-    private var defaultSigner: Signer? = null
     private var trustAnchors: String? = null
     private var allowedList: String? = null
     private var trustConfig: String? = null
@@ -285,36 +284,35 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
             Timber.d("Media manifest file:\n\n$manifestJSON")
 
-            // Create appropriate signer based on mode
-            if (defaultSigner == null)
-            {
-                val tsaUrl = resolveTsaUrl(signingMode)
-                if (signingMode == SigningMode.REMOTE) {
-                    if (!ProofSignClient.isPlayIntegrityAvailable(context)) {
-                        // Remote signing requires Play Integrity. No-Play devices
-                        // never contact the server — sign locally instead.
-                        Timber.i("C2PA: Play Integrity unavailable; using local keystore signer (no remote signing)")
-                        defaultSigner = createSigner(SigningMode.KEYSTORE, tsaUrl)
-                    }
-                    //we only allow C2PA on devices that have been patched within 90 days
-                    else if (checkOSSecurityPatchDate(90, certChain)) {
-                        defaultSigner = createSigner(signingMode, tsaUrl)
-                    }
-                    else
-                    {
-                        Timber.i("C2PA Disabled: OS Security Patches not updated within 90 days")
-                        //fall back to using a local keystore signer as fallback
-                        defaultSigner = createSigner(SigningMode.KEYSTORE, tsaUrl)
-
-                    }
+            // Create a fresh signer for each sign operation. The signer must NOT
+            // be cached/reused: the CAWG path (Signer.withCawgIdentity) *consumes*
+            // the base signer, zeroing its native pointer. A reused signer would
+            // therefore throw "c2pa signer is already closed" on the second sign.
+            val tsaUrl = resolveTsaUrl(signingMode)
+            val signer = if (signingMode == SigningMode.REMOTE) {
+                if (!ProofSignClient.isPlayIntegrityAvailable(context)) {
+                    // Remote signing requires Play Integrity. No-Play devices
+                    // never contact the server — sign locally instead.
+                    Timber.i("C2PA: Play Integrity unavailable; using local keystore signer (no remote signing)")
+                    createSigner(SigningMode.KEYSTORE, tsaUrl)
                 }
-                else //local signing
+                //we only allow C2PA on devices that have been patched within 90 days
+                else if (checkOSSecurityPatchDate(90, certChain)) {
+                    createSigner(signingMode, tsaUrl)
+                }
+                else
                 {
-                    defaultSigner = createSigner(signingMode, tsaUrl)
+                    Timber.i("C2PA Disabled: OS Security Patches not updated within 90 days")
+                    //fall back to using a local keystore signer as fallback
+                    createSigner(SigningMode.KEYSTORE, tsaUrl)
                 }
             }
+            else //local signing
+            {
+                createSigner(signingMode, tsaUrl)
+            }
 
-            defaultSigner?.let {
+            signer?.let {
                 // Sign the image using C2PA library. We open a thread-local
                 // signing scope bound to the file digest so the inner signing
                 // callbacks (ProofSignC2PASigner.signData,
@@ -960,6 +958,14 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             Timber.d( "Closing streams")
             sourceStream.close()
             destStream.close()
+
+            // Release native signer handles. Each sign call owns a fresh signer
+            // (see signInternal), so close them here to avoid leaking native
+            // memory. close() is a guarded no-op when the pointer was already
+            // consumed/zeroed (e.g. the base signer after withCawgIdentity).
+            try { currentSigner.close() } catch (e: Exception) { Timber.w(e, "Error closing signer") }
+            if (currentSigner !== signer)
+                try { signer.close() } catch (e: Exception) { Timber.w(e, "Error closing base signer") }
         }
     }
 
