@@ -227,7 +227,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
             val showLocation = pPrefs?.getBoolean(
                 PREF_OPTION_LOCATION,
-                true
+                ProofMode.PREF_OPTION_LOCATION_DEFAULT
             )
 
             var location : Location? = null;

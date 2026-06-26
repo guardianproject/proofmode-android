@@ -544,6 +544,17 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
             isReversedHorizontal = false //do not mirror
             // Mirror image when using the front camera
             //    lensFacing.value == CameraSelector.LENS_FACING_FRONT
+
+            // Embed GPS into the JPEG EXIF at capture time when location is enabled.
+            // CameraX writes these tags into the file before it is C2PA-signed downstream.
+            // Read the "trackLocation" pref directly (rather than the cached _locationEnabled
+            // StateFlow) so this stays in sync with SettingsActivity and matches the same
+            // decision C2PAManager/MediaWatcher make at sign time.
+            val trackLocation = PreferenceManager.getDefaultSharedPreferences(app.applicationContext)
+                .getBoolean(ProofMode.PREF_OPTION_LOCATION, ProofMode.PREF_OPTION_LOCATION_DEFAULT)
+            if (trackLocation && hasLocationPermission()) {
+                location = ProofMode.getLatestLocation(app.applicationContext)
+            }
         }
 
         MediaStore.Images.Media.EXTERNAL_CONTENT_URI
