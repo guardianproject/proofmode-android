@@ -713,7 +713,11 @@ fun ActivitiesView(onAnyItemSelected: ((Boolean) -> Unit)? = null) {
                     ) {
 
 
-                        Activities.activities.asReversed().forEach { activity ->
+                        // distinctBy id: the in-memory list can briefly hold two
+                        // entries with the same id (e.g. a load() reload racing an
+                        // addActivity() broadcast), and LazyColumn throws
+                        // IllegalArgumentException on duplicate item keys.
+                        Activities.activities.asReversed().distinctBy { it.id }.forEach { activity ->
                             stickyHeader(key = "header_${activity.id}") {
                                 ActivityDateView(
                                     date = activity.startTime,

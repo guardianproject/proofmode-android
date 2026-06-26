@@ -272,7 +272,11 @@ object Activities: ViewModel()
                 if (db.activitiesDao().activityFromProofableItemId(activity.id) == null)
                     db.activitiesDao().update(lastActivity)
             } else {
-                activities.add(activity)
+                // Guard against a duplicate in-memory id (matches the Room
+                // @PrimaryKey constraint). Two entries with the same id would
+                // crash the Activities LazyColumn, which keys items by id.
+                if (activities.none { it.id == activity.id })
+                    activities.add(activity)
                 if (db.activitiesDao().activityFromProofableItemId(activity.id) == null)
                     db.activitiesDao().insert(activity)
             }
