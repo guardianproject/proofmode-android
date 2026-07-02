@@ -288,6 +288,35 @@
         </TableRow>
     </TableLayout>
 
+    <TextView
+        android:id="@+id/text_version"
+        style="@style/SettingsOptionDescStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="@string/settings_version_placeholder" />
+
+    <TextView
+        android:id="@+id/text_developer_preview"
+        style="@style/SettingsOptionStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:text="@string/developer_preview_title" />
+
+    <TextView
+        android:id="@+id/text_wallet_settings"
+        style="@style/SettingsOptionStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:text="@string/wallet_settings_title"
+        android:visibility="gone" />
+
 
 </LinearLayout>
 </ScrollView>

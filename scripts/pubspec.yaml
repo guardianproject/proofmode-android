@@ -1,0 +1,9 @@
+name: proofmode_scripts
+description: One-off operational scripts for proofmode-android (EAS schema registration, etc.)
+publish_to: none
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  location_protocol: ^0.1.0

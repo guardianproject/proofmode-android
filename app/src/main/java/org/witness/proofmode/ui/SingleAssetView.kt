@@ -1,6 +1,7 @@
 package org.witness.proofmode.org.witness.proofmode.ui
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.RectF
 import android.location.Location
 import android.net.Uri
@@ -53,6 +54,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -90,9 +92,12 @@ import org.witness.proofmode.c2pa.C2PAManager
 import org.witness.proofmode.c2pa.PreferencesManager
 import org.witness.proofmode.c2pa.ValidationState
 import org.witness.proofmode.notaries.NostrNotarizationVerifier
+import org.witness.proofmode.plugins.ipfscid.IpfsCidSidecar
+import org.witness.proofmode.plugins.lp.attestation.LocationProtocolArtifactStore
 import org.witness.proofmode.service.MediaWatcher
 import org.witness.proofmode.service.ProofModeV1Constants
 import org.witness.proofmode.storage.DefaultStorageProvider
+import org.witness.proofmode.ui.ProofOverviewArtifactSummaries
 import org.witness.proofmode.util.ProofModeUtil
 import timber.log.Timber
 import java.io.File
@@ -384,6 +389,42 @@ fun updateMetadata (itemUri : Uri, context : Context) {
                     nostrJson = nostrJson
                 )
             }
+        }
+
+        val tapToView = context.getString(R.string.artifact_tap_to_view)
+        val tapManifest = context.getString(R.string.artifact_tap_to_view_manifest)
+
+        val cidIdentifier = IpfsCidSidecar.sidecarBasename(hash)
+        if (storageProvider.proofIdentifierExists(hash, cidIdentifier)) {
+            CidManifestRow(
+                label = context.getString(R.string.cid_manifest),
+                tapHint = tapManifest,
+                mediaHash = hash,
+                identifier = cidIdentifier,
+                storageProvider = storageProvider,
+            )
+        }
+
+        val offchainId = hash + LocationProtocolArtifactStore.OFFCHAIN_SUFFIX
+        if (storageProvider.proofIdentifierExists(hash, offchainId)) {
+            OffchainLpAttestationRow(
+                label = context.getString(R.string.offchain_location_attestation),
+                tapHint = tapToView,
+                mediaHash = hash,
+                identifier = offchainId,
+                storageProvider = storageProvider,
+            )
+        }
+
+        val onchainId = hash + LocationProtocolArtifactStore.ONCHAIN_SUFFIX
+        if (storageProvider.proofIdentifierExists(hash, onchainId)) {
+            OnchainLpAttestationRow(
+                label = context.getString(R.string.onchain_location_attestation),
+                tapHint = tapToView,
+                mediaHash = hash,
+                identifier = onchainId,
+                storageProvider = storageProvider,
+            )
         }
 
         if (hmap?.contains(ProofModeV1Constants.PROOF_GENERATED) == true)
@@ -702,6 +743,168 @@ fun NostrVerificationRow(label: String, nostrJson: String) {
 
     Row {
         Text(modifier = Modifier.padding(2.dp, 2.dp), text = "")
+    }
+}
+
+@Composable
+fun CidManifestRow(
+    label: String,
+    tapHint: String,
+    mediaHash: String,
+    identifier: String,
+    storageProvider: DefaultStorageProvider,
+) {
+    ExpandableArtifactJsonRow(
+        label = label,
+        collapsedHint = tapHint,
+        mediaHash = mediaHash,
+        identifier = identifier,
+        storageProvider = storageProvider,
+        collapsedSummary = { json -> ProofOverviewArtifactSummaries.cidCollapsedSummary(json) },
+    )
+}
+
+@Composable
+fun OffchainLpAttestationRow(
+    label: String,
+    tapHint: String,
+    mediaHash: String,
+    identifier: String,
+    storageProvider: DefaultStorageProvider,
+) {
+    ExpandableArtifactJsonRow(
+        label = label,
+        collapsedHint = tapHint,
+        mediaHash = mediaHash,
+        identifier = identifier,
+        storageProvider = storageProvider,
+        collapsedSummary = { json ->
+            val s = ProofOverviewArtifactSummaries.offchainCollapsedSummary(json)
+            listOfNotNull(s.uidShort, s.chainDisplayName, s.attesterShort).joinToString(" — ")
+                .takeIf { it.isNotBlank() }
+        },
+    )
+}
+
+@Composable
+fun OnchainLpAttestationRow(
+    label: String,
+    tapHint: String,
+    mediaHash: String,
+    identifier: String,
+    storageProvider: DefaultStorageProvider,
+) {
+    val context = LocalContext.current
+    ExpandableArtifactJsonRow(
+        label = label,
+        collapsedHint = tapHint,
+        mediaHash = mediaHash,
+        identifier = identifier,
+        storageProvider = storageProvider,
+        collapsedSummary = { json ->
+            val s = ProofOverviewArtifactSummaries.onchainCollapsedSummary(json)
+            listOfNotNull(s.uidShort, s.chainDisplayName).joinToString(" — ")
+                .takeIf { it.isNotBlank() }
+        },
+        expandedFooter = { rawJson ->
+            ProofOverviewArtifactSummaries.easScanUrlForArtifact(rawJson)?.let { url ->
+                TextButton(
+                    onClick = {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)))
+                    }
+                ) {
+                    Text(text = stringResource(R.string.view_on_eas_scan))
+                }
+            }
+        },
+    )
+}
+
+@Composable
+private fun ExpandableArtifactJsonRow(
+    label: String,
+    collapsedHint: String,
+    mediaHash: String,
+    identifier: String,
+    storageProvider: DefaultStorageProvider,
+    collapsedSummary: (String) -> String?,
+    expandedFooter: @Composable ((String) -> Unit)? = null,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    var rawJson by remember { mutableStateOf<String?>(null) }
+    var loading by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+
+    val onTap: () -> Unit = {
+        if (!expanded && rawJson == null && !loading) {
+            loading = true
+            coroutineScope.launch {
+                rawJson = withContext(Dispatchers.IO) {
+                    try {
+                        storageProvider.getInputStream(mediaHash, identifier)
+                            ?.bufferedReader()?.use { it.readText() }
+                    } catch (e: Exception) {
+                        Timber.e(e, "Error reading artifact $identifier")
+                        null
+                    }
+                }
+                loading = false
+                expanded = true
+            }
+        } else {
+            expanded = !expanded
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onTap)
+    ) {
+        Row {
+            Text(
+                modifier = Modifier.padding(3.dp, 3.dp),
+                text = label,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        Row {
+            val summary = rawJson?.let(collapsedSummary)
+            Text(
+                modifier = Modifier.padding(3.dp, 3.dp),
+                text = when {
+                    summary != null -> "$summary — $collapsedHint"
+                    else -> collapsedHint
+                },
+                color = Color.Gray,
+            )
+        }
+        if (loading) {
+            Row {
+                Text(
+                    modifier = Modifier.padding(3.dp, 3.dp),
+                    text = stringResource(R.string.artifact_loading),
+                    color = Color.Gray,
+                )
+            }
+        }
+        if (expanded && rawJson != null) {
+            expandedFooter?.invoke(rawJson!!)
+            Row {
+                SelectionContainer {
+                    Text(
+                        modifier = Modifier
+                            .padding(3.dp, 3.dp)
+                            .fillMaxWidth()
+                            .background(Color(0xFFF5F5F5))
+                            .padding(8.dp),
+                        text = ProofOverviewArtifactSummaries.formatArtifactJson(rawJson!!),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+        }
+        Row { Text(modifier = Modifier.padding(2.dp, 2.dp), text = "") }
     }
 }
 

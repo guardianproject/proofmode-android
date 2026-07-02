@@ -15,8 +15,10 @@ import com.aheaditec.talsec_security.security.api.Talsec
 import com.aheaditec.talsec_security.security.api.TalsecConfig
 import com.aheaditec.talsec_security.security.api.TalsecMode
 import com.aheaditec.talsec_security.security.api.ThreatListener
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import org.acra.config.dialog
 import org.acra.config.mailSender
@@ -37,8 +39,15 @@ import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.library.BuildConfig
 import org.witness.proofmode.notaries.NostrNotarizationProvider
 import org.witness.proofmode.notaries.OpenTimestampsNotarizationProvider
+import androidx.lifecycle.ProcessLifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import org.witness.proofmode.notarization.NotarizationProvider
+import org.witness.proofmode.lp.AutoCaptureLocationAttestationOrchestrator
+import org.witness.proofmode.lp.AutoCaptureSkipReason
+import org.witness.proofmode.plugins.ipfscid.IpfsCidPlugin
+import org.witness.proofmode.plugins.lp.LocationProtocolPlugin
 import org.witness.proofmode.storage.StorageProviderManager
+import org.witness.proofmode.util.ForegroundWalletActivityBinder
 import timber.log.Timber
 import java.io.IOException
 import java.util.concurrent.Executors
@@ -48,10 +57,21 @@ import info.guardianproject.durindoor.Native
 private var mPgpUtils: PgpUtils? = null
 private lateinit var mPrefs: SharedPreferences
 
+internal fun registerExperimentalPluginsIfEnabled(
+    lpEnabled: Boolean,
+    registerLocationProtocol: () -> Unit,
+) {
+    if (lpEnabled) {
+        registerLocationProtocol()
+    }
+}
+
 /**
  * Created by n8fr8 on 10/10/16.
  */
 class ProofModeApp : Application(), Configuration.Provider {
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
             .setMinimumLoggingLevel(android.util.Log.INFO)
@@ -228,10 +248,15 @@ class ProofModeApp : Application(), Configuration.Provider {
         // a PBE test-decrypt, and (on migration) an in-memory keyring rewrite.
         provisionPassphrase()
 
+        FeatureFlags.init(this)
+
         init(this)
 
         //add google safetynet and opentimestamps
         addDefaultNotarizationProviders()
+
+        // proof pipeline plugins (CID, LP, experimental bootstrap)
+        registerPlugins()
 
         GlobalScope.launch(Dispatchers.IO) {
             // Slow path (4096-bit RSA × 2 on a fresh install) goes on IO.
@@ -486,7 +511,7 @@ class ProofModeApp : Application(), Configuration.Provider {
         }
     }
 
-    private fun showToastMessage(message: String) {
+    internal fun showToastMessage(message: String) {
         val handler = Handler(Looper.getMainLooper())
         handler.post {
             //UI Thread work here
@@ -576,6 +601,22 @@ class ProofModeApp : Application(), Configuration.Provider {
         ProofMode.stopBackgroundService(this)
     }
 
+    private fun registerPlugins() {
+        val lpEnabled = FeatureFlags.lpEnabled
+        Timber.i("IpfsCidPlugin.register() called")
+        IpfsCidPlugin.register(this)
+        Timber.i("Registering experimental plugins: Location Protocol enabled=%s", lpEnabled)
+        LocationProtocolPlugin.registerApplicationScope(applicationScope)
+        registerExperimentalPluginsIfEnabled(
+            lpEnabled = lpEnabled,
+            registerLocationProtocol = {
+                Timber.i("LocationProtocolPlugin.register() called")
+                LocationProtocolPlugin.register(this)
+            },
+        )
+        ExperimentalFeatureActivator.bootstrapAtColdStart(this)
+    }
+
     private fun addDefaultNotarizationProviders() {
 
         try {
@@ -592,10 +633,11 @@ class ProofModeApp : Application(), Configuration.Provider {
             Class.forName("rust.nostr.sdk.Keys")
             val nProvider: NotarizationProvider = NostrNotarizationProvider(this)
             ProofMode.addNotarizationProvider(this, nProvider)
+            Timber.d("OpenTimestamps notarization provider registered")
         } catch (e: ClassNotFoundException) {
             //class not available
+            Timber.d("OpenTimestamps not available")
         }
-
 
     }
 

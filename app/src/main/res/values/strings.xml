@@ -302,6 +302,13 @@
     <string name="resign_started">Re-signing started — a new item will appear in Activities.</string>
     <string name="resign_no_proof">Can\'t re-sign: no local ProofMode data found for this file.</string>
     <string name="nostr_notarization">Nostr Notarization</string>
+    <string name="cid_manifest">CID Manifest</string>
+    <string name="offchain_location_attestation">Off-chain Location Attestation</string>
+    <string name="onchain_location_attestation">On-chain Location Attestation</string>
+    <string name="artifact_tap_to_view">Tap to view</string>
+    <string name="artifact_tap_to_view_manifest">Tap to view full manifest</string>
+    <string name="view_on_eas_scan">View on EAS Scan</string>
+    <string name="artifact_loading">Loading…</string>
     <string name="share_content_credentials_info">Shares image or video directly with proof metadata directly embedded in the file itself, verified and signed by Proofmode.org</string>
     <string name="optional_filename">Optional Filename</string>
     <string name="set_a_custom_name_for_the_proof_zip">Set a custom name for the proof zip</string>
@@ -325,6 +332,8 @@
     <string name="social">social</string>
     <string name="share_social">Shares just the media file with C2PA and a verify link for social networks</string>
     <string name="share_media">Share on Social</string>
+    <string name="lp_action_location_attestation">Location Attestation</string>
+    <string name="lp_onchain_attest">Notarize On-Chain</string>
     <string name="share_using">Share using</string>
     <string name="verify_this_media_at">"Verify this media at: "</string>
     <string name="open">Open</string>
@@ -335,6 +344,26 @@
     <string name="take_pictures_and_videos_and_they_will_show_up_here">Take pictures and videos and they will show up here</string>
     <string name="security_warning_usb">For security reasons, Proofmode cannot be run while Developer mode is enabled</string>
     <string name="coming_soon">Coming soon...</string>
+    <string name="developer_preview_title">Developer Preview</string>
+    <string name="wallet_settings_title">Wallet Settings</string>
+    <string name="developer_preview_experimental_features">Experimental Features</string>
+    <string name="developer_preview_lp_title">Location Protocol Attestation</string>
+    <string name="developer_preview_lp_summary">Enable experimental LP share-flow attestation. Takes effect immediately; disabling may require app restart.</string>
+    <string name="developer_preview_lp_auto_capture_title">Auto-attest on capture</string>
+    <string name="developer_preview_lp_auto_capture_summary">Automatically run location attestation after in-app capture.</string>
+    <string name="developer_preview_lp_auto_capture_summary_location_required">Enable Track location in Settings to use Location Protocol features.</string>
+    <string name="developer_preview_lp_auto_capture_summary_wallet_required">Connect your wallet in Wallet Settings to choose an auto-attest mode.</string>
+    <string name="developer_preview_local_ipfs_cid_title">Local IPFS CID</string>
+    <string name="developer_preview_local_ipfs_cid_summary">Compute and persist IPFS CIDs for proof sets (experimental; takes effect immediately)</string>
+    <string name="lp_auto_capture_mode_off">Off</string>
+    <string name="lp_auto_capture_mode_offchain">Off-chain only</string>
+    <string name="lp_auto_capture_mode_onchain">On-chain only</string>
+    <string name="lp_auto_capture_mode_both">Both (off-chain then on-chain)</string>
+    <string name="lp_auto_capture_skip_location_unavailable">Auto location attestation skipped: location data unavailable for this capture.</string>
+    <string name="lp_auto_capture_skip_no_activity">Auto on-chain attestation skipped: open the app to submit on-chain.</string>
+    <string name="lp_auto_capture_skip_wallet_unavailable">Auto location attestation skipped: wallet not connected.</string>
+    <string name="settings_version_placeholder">Version</string>
+    <string name="settings_version_format">Version %1$s</string>
 
 
     <string name="message_no_permissions">ProofMode requires the camera permission to capture photos and videos.</string>

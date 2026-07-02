@@ -10,9 +10,10 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.MenuItem
+import android.view.View
 import android.widget.CheckBox
 import android.widget.CompoundButton
-import android.widget.Toast
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
@@ -21,6 +22,7 @@ import org.witness.proofmode.PermissionActivity.Companion.hasPermissions
 import org.witness.proofmode.ProofMode.PREF_CREDENTIALS_PRIMARY
 import org.witness.proofmode.databinding.ActivitySettingsBinding
 import org.witness.proofmode.org.witness.proofmode.share.FilebaseSettingsActivity
+import org.witness.proofmode.plugins.lp.wallet.WalletSettingsActivity
 import org.witness.proofmode.storage.FilebaseConfig
 import org.witness.proofmode.util.GPSTracker
 
@@ -35,6 +37,9 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var switchAI: CheckBox
     private lateinit var switchAutoImport: CheckBox
     private lateinit var switchAutoSync: CheckBox
+    private lateinit var versionText: TextView
+    private lateinit var developerPreviewEntry: TextView
+    private lateinit var walletSettingsEntry: TextView
 
     private lateinit var binding:ActivitySettingsBinding
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -61,9 +66,23 @@ class SettingsActivity : AppCompatActivity() {
         switchAI = binding.contentSettings.switchAI
         switchAutoImport = binding.contentSettings.switchAutoImport
         switchAutoSync = binding.contentSettings.switchAutoSync
+        versionText = binding.contentSettings.textVersion
+        developerPreviewEntry = binding.contentSettings.textDeveloperPreview
+        walletSettingsEntry = binding.contentSettings.textWalletSettings
+
+        versionText.text = getString(R.string.settings_version_format, BuildConfig.VERSION_NAME)
+
+        developerPreviewEntry.setOnClickListener {
+            startActivity(Intent(this, DeveloperPreviewActivity::class.java))
+        }
+
+        walletSettingsEntry.setOnClickListener {
+            startActivity(Intent(this, WalletSettingsActivity::class.java))
+        }
 
 
         updateUI()
+        updateDeveloperPreviewVisibility()
         switchLocation.setOnLongClickListener { _ ->
             val intent: Intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
             val uri = Uri.fromParts("package", packageName, null)
@@ -279,6 +298,13 @@ class SettingsActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         updateUI()
+        updateDeveloperPreviewVisibility()
+    }
+
+    private fun updateDeveloperPreviewVisibility() {
+        developerPreviewEntry.visibility = View.VISIBLE
+        walletSettingsEntry.visibility =
+            if (FeatureFlags.lpEnabled) View.VISIBLE else View.GONE
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

@@ -38,6 +38,8 @@ import org.witness.proofmode.storage.CompositeStorageProvider
 import org.witness.proofmode.storage.DefaultStorageProvider
 import org.witness.proofmode.storage.FilebaseConfig
 import org.witness.proofmode.storage.FilebaseStorageProvider
+import org.witness.proofmode.plugin.ProofWriteEvent
+import org.witness.proofmode.plugin.ProofWriteHookRegistry
 import org.witness.proofmode.storage.StorageListener
 import org.witness.proofmode.storage.StorageProvider
 import org.witness.proofmode.util.DeviceInfo
@@ -1125,6 +1127,16 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
             mediaHash + ProofMode.OPENPGP_FILE_TAG,
             osMediaSig.toByteArray(),
             null
+        )
+
+        ProofWriteHookRegistry.notify(
+            ProofWriteEvent(
+                context = context,
+                mediaHash = mediaHash!!,
+                mediaUri = uriMedia,
+                storageProvider = storageProvider!!,
+                executor = mExec,
+            ),
         )
 
         Timber.d("Proof written/updated for uri %s and hash %s", uriMedia, mediaHash)

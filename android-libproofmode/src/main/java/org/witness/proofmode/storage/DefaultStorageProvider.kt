@@ -3,6 +3,7 @@ package org.witness.proofmode.storage
 import android.content.Context
 import android.net.Uri
 import org.witness.proofmode.ProofMode
+import org.witness.proofmode.plugin.ProofArtifactSavedHookRegistry
 import timber.log.Timber
 import java.io.File
 import java.io.FileInputStream
@@ -33,9 +34,10 @@ public class DefaultStorageProvider (context : Context) : StorageProvider {
         if (stream != null) {
             copyStreamToFile(stream, file)
 
-            if (file.exists())
+            if (file.exists()) {
+                notifyArtifactSavedIfSuccessful(hash, identifier, file)
                 listener?.saveSuccessful(hash, file.path)
-            else
+            } else
                 listener?.saveFailed(FileNotFoundException())
         }
     }
@@ -104,9 +106,10 @@ public class DefaultStorageProvider (context : Context) : StorageProvider {
                     file, data
                 )
 
-                if (file.exists())
+                if (file.exists()) {
+                    notifyArtifactSavedIfSuccessful(hash, identifier, file)
                     listener?.saveSuccessful(hash, file.path)
-                else
+                } else
                     listener?.saveFailed(FileNotFoundException())
             }
         }
@@ -237,5 +240,11 @@ public class DefaultStorageProvider (context : Context) : StorageProvider {
         inStream.copyTo(outStream, DEFAULT_BUFFER_SIZE)
         inStream.close()
         outStream.close()
+    }
+
+    private fun notifyArtifactSavedIfSuccessful(hash: String?, identifier: String?, file: File) {
+        if (hash != null && identifier != null && file.exists()) {
+            ProofArtifactSavedHookRegistry.notify(hash, identifier)
+        }
     }
 }

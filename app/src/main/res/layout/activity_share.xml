@@ -221,6 +221,35 @@
             android:onClick="clickShareSocial"
             />
 
+        <LinearLayout
+            android:id="@+id/ll_lp_attest_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="20dp"
+            android:visibility="gone">
+
+            <Button
+                android:id="@+id/btn_lp_onchain_attest"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="@string/lp_onchain_attest"
+                android:onClick="clickOnchainLocationAttestation"
+                />
+
+            <Button
+                android:id="@+id/btn_lp_offchain_attest"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="Off-chain Attestation"
+                android:onClick="clickOffchainLocationAttestation"
+                />
+        </LinearLayout>
+
 
     </LinearLayout>
 

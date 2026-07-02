@@ -16,6 +16,16 @@ allprojects {
 
         mavenLocal()
 
+        // Flutter artifacts (group: io.flutter) are published in this repo;
+        // keep it scoped to io.flutter to avoid unnecessary lookups/conflicts.
+        maven {
+            name = "FlutterStorage"
+            url = uri("https://storage.googleapis.com/download.flutter.io")
+            content {
+                includeGroup "io.flutter"
+            }
+        }
+
         maven { url "https://jitpack.io" }
 
         maven { url "https://raw.githubusercontent.com/guardianproject/gpmaven/master" }
