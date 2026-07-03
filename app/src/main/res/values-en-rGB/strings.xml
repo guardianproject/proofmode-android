@@ -38,11 +38,18 @@
     <string name="share_sign_robust">Sign</string>
     <string name="re_share">Re-share</string>
     <string name="cd_take_picture">Take picture</string>
-    <string name="camera">Camera</string>
+    <string name="camera">Photo</string>
     <string name="video">Video</string>
     <string name="previous">Previous</string>
     <string name="filebase_test_connection">Test Connection</string>
     <string name="filebase_save_settings">Save Settings</string>
     <string name="open">Open</string>
     <string name="close">Close</string>
+    <string name="nostr_identity_copied">Copied to clipboard</string>
+    <string name="action_save">Save</string>
+    <string name="label_ok">OK</string>
+    <string name="delete">Delete</string>
+    <string name="stop_recording">Stop recording</string>
+    <string name="video_settings">Video Settings</string>
+    <string name="resolution">Resolution</string>
 </resources>
