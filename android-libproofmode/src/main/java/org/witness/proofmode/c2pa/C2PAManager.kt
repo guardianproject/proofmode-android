@@ -78,6 +78,8 @@ import java.util.StringTokenizer
 import java.util.TimeZone
 import javax.crypto.Cipher
 import javax.security.auth.x500.X500Principal
+import kotlin.math.abs
+import kotlin.math.floor
 
 enum class ValidationState {
     TRUSTED,
@@ -98,6 +100,26 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
         private const val TSA_DEFAULT = BuildConfig.TSA_SERVER
 
+        /**
+         * Formats a signed decimal-degrees coordinate as an XMP GPSCoordinate string
+         * ("D,M.mmmmmmH"), which is what the exif:GPSLatitude / exif:GPSLongitude
+         * fields expect in a C2PA/XMP metadata assertion. Unlike the binary EXIF IFD
+         * (which pairs a rational value with a separate GPSLatitudeRef/GPSLongitudeRef
+         * tag), XMP has no ref tag: the hemisphere has to be folded into the string
+         * itself, and the numeric part must be unsigned. Writing the raw signed
+         * double here (e.g. "-6.1483...") drops that hemisphere letter entirely, so
+         * readers fall back to a default ref and can flip western longitudes/southern
+         * latitudes to the wrong hemisphere (github issue #122).
+         */
+        internal fun toXmpGpsCoordinate(decimalDegrees: Double, positiveRef: String, negativeRef: String): String {
+            val ref = if (decimalDegrees < 0) negativeRef else positiveRef
+            val absDegrees = abs(decimalDegrees)
+            val degrees = floor(absDegrees).toInt()
+            val minutes = (absDegrees - degrees) * 60.0
+            // Locale.US keeps the decimal point a "." regardless of device locale -
+            // a comma here would collide with the "D,M" separator and corrupt the field.
+            return "$degrees,${String.format(Locale.US, "%.6f", minutes)}$ref"
+        }
     }
 
     private var trustAnchors: String? = null
@@ -1086,8 +1108,8 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
                     location?.let {
                         put ("exif:GPSVersionID", "2.2.0.0")
-                        put("exif:GPSLatitude", it.latitude.toString())
-                        put("exif:GPSLongitude", it.longitude.toString())
+                        put("exif:GPSLatitude", toXmpGpsCoordinate(it.latitude, "N", "S"))
+                        put("exif:GPSLongitude", toXmpGpsCoordinate(it.longitude, "E", "W"))
                         put("exif:GPSAltitude", it.altitude.toString())
                         put ("exif:GPSHPositioningError", it.accuracy.toString())
                         put ("exif:GPSSpeed", it.speed.toString())
