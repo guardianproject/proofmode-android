@@ -38,7 +38,7 @@ import org.witness.proofmode.library.BuildConfig
 import org.witness.proofmode.notaries.NostrNotarizationProvider
 import org.witness.proofmode.notaries.OpenTimestampsNotarizationProvider
 import org.witness.proofmode.notarization.NotarizationProvider
-import org.witness.proofmode.storage.StorageProviderManager
+import org.witness.proofmode.storage.filebase.FilebaseConfig
 import timber.log.Timber
 import java.io.IOException
 import java.util.concurrent.Executors
@@ -218,6 +218,10 @@ class ProofModeApp : Application(), Configuration.Provider {
 
         mPrefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
 
+        // Spec F7 dual choke: normalize legacy filebase prefs before MediaWatcher /
+        // storage init. Schema behavior covered by FilebaseConfigTest; call order by review.
+        FilebaseConfig.ensurePrefsSchema(mPrefs)
+
         // Reconcile the keystore-wrapped passphrase with the on-disk keyring
         // *before* anything else can touch PassphraseKeystore. If init(this)
         // runs first it ends up calling MediaWatcher.getInstance() (when
@@ -239,8 +243,6 @@ class ProofModeApp : Application(), Configuration.Provider {
             // whatever passphrase the keyring will need.
             initPgpKey()
         }
-
-        StorageProviderManager.getInstance().initializeStorageProviders(this)
 
         val isNative = runCatching {
 

@@ -1,4 +1,4 @@
-package org.witness.proofmode.org.witness.proofmode.ui
+package org.witness.proofmode.ui
 
 import android.content.Context
 import android.net.Uri

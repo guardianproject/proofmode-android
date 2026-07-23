@@ -1,9 +1,9 @@
-package org.witness.proofmode.org.witness.proofmode.util
+package org.witness.proofmode.util
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import org.witness.proofmode.org.witness.proofmode.ui.Activities
+import org.witness.proofmode.ui.Activities
 import org.witness.proofmode.ProofMode
 import timber.log.Timber
 
