@@ -1,10 +1,8 @@
 package org.witness.proofmode.storage;
 
 import android.net.Uri;
-import android.renderscript.ScriptGroup;
 
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 
 public interface StorageProvider {
@@ -13,7 +11,16 @@ public interface StorageProvider {
 
     public void saveBytes(String hash, String identifier, byte[] data, StorageListener listener);
 
+    /**
+     * Appends [data] as a new line for [identifier] under [hash] (historical CSV-friendly behavior).
+     */
     public void saveText(String hash, String identifier, String data, StorageListener listener);
+
+    /**
+     * Writes [data] as the full contents of [identifier] under [hash], creating or replacing the file.
+     * Use for single-value tip files (Filebase/Share URI sidecars, Composite {@code *.uri}).
+     */
+    public void replaceText(String hash, String identifier, String data, StorageListener listener);
 
     public InputStream getInputStream (String hash, String identifier);
 

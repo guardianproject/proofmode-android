@@ -102,17 +102,17 @@
             android:name=".NostrIdentityActivity"
             android:label="@string/nostr_identity_title" />
         <activity
-            android:name=".org.witness.proofmode.ui.DataLegendActivity"
+            android:name=".ui.DataLegendActivity"
             android:label="@string/activity_datalegend_title" />
         <activity
-            android:name=".org.witness.proofmode.ui.DigitalSignaturesActivity"
+            android:name=".ui.DigitalSignaturesActivity"
             android:label="@string/menu_digital_signatures" />
         <activity
-            android:name=".org.witness.proofmode.share.FilebaseSettingsActivity"
+            android:name=".share.FilebaseSettingsActivity"
             android:label="@string/auto_sync_title" />
 
         <receiver
-            android:name=".org.witness.proofmode.util.OnBootReceiver"
+            android:name=".util.OnBootReceiver"
             android:enabled="true"
             android:exported="true">
             <intent-filter>
@@ -131,7 +131,7 @@
         -->
 
 <activity
-            android:name=".org.witness.proofmode.share.ShareProofActivity"
+            android:name=".share.ShareProofActivity"
             android:exported="true"
             android:label="@string/share_proof_action"
             android:launchMode="singleTop">
@@ -246,7 +246,7 @@
             anchors in the user's own history view.
         -->
         <receiver
-            android:name=".org.witness.proofmode.util.ProofEventReceiver"
+            android:name=".util.ProofEventReceiver"
             android:enabled="true"
             android:exported="false">
             <intent-filter android:priority="10000">

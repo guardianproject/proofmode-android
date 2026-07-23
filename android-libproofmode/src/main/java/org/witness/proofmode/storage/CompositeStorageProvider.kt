@@ -1,40 +1,81 @@
 package org.witness.proofmode.storage
 
+import android.content.Context
 import android.net.Uri
 import android.util.Log
 import java.io.InputStream
-import java.io.OutputStream
 import java.util.ArrayList
+import java.util.concurrent.ConcurrentHashMap
+import org.witness.proofmode.storage.filebase.FilebaseConfig
+import org.witness.proofmode.storage.filebase.FilebaseStorageProvider
+import org.witness.proofmode.storage.proofset.MediaInclusion
+import org.witness.proofmode.storage.proofset.ProofSetMembershipPolicy
+import org.witness.proofmode.storage.proofset.ProofSetUploader
 
+/**
+ * Primary + optional secondary storage. When [deferProofSetUpload] is true (Filebase auto-upload),
+ * proof sidecars are written to primary only and a proof-set upload is flushed
+ * via [ProofSetUploader] once first-pass membership is complete.
+ *
+ * The media leaf (`{hash}.jpg` / etc.) is **not** saved through [saveBytes]/[saveText] — it is
+ * injected at upload time from a content [Uri]. Callers (MediaWatcher) must tip Composite off
+ * with [bindMedia] so [tryFlush] can read those bytes (INCLUDE_MEDIA) and choose the leaf basename/MIME.
+ */
 class CompositeStorageProvider(
     private val primaryProvider: StorageProvider,
-    private val secondaryProvider: StorageProvider? = null
+    private val secondaryProvider: StorageProvider? = null,
+    private val appContext: Context? = null,
+    private val deferProofSetUpload: Boolean = false,
+    private val filebaseConfig: FilebaseConfig? = null,
 ) : StorageProvider {
 
     companion object {
         private const val TAG = "CompositeStorageProvider"
     }
 
+    /** hash → (media content Uri, mime) for deferred proof-set leaf injection. */
+    private val mediaByHash = ConcurrentHashMap<String, Pair<Uri, String?>>()
+
+    /**
+     * Stash the source media [Uri] + MIME for a proof-set [hash] before/while proof sidecars
+     * are saved.
+     *
+     * **Why this exists (Composite-only):** deferred proof-set upload needs an injected
+     * media leaf that never goes through [saveBytes]/[saveStream]/[saveText]. Without this
+     * tip-off, [tryFlush] has no way to open media bytes or name `{hash}.<ext>`, so auto-upload
+     * would never start. Safe to call when [deferProofSetUpload] is false (stash is unused;
+     * flush is a no-op). Always stash regardless of [MediaInclusion] — [tryFlush] gates reads.
+     *
+     * Prefer calling from MediaWatcher.writeProof (all processUri/Bytes/FileDescriptor paths
+     * funnel there) **before** the first proof sidecar save when possible.
+     */
+    fun bindMedia(hash: String, mediaUri: Uri, mimeType: String) {
+        mediaByHash[hash] = mediaUri to mimeType
+        if (deferProofSetUpload) tryFlush(hash)
+    }
+
     override fun saveStream(hash: String, identifier: String, stream: InputStream, listener: StorageListener?) {
-        // Save to primary provider first
         primaryProvider.saveStream(hash, identifier, stream, listener)
-        
-        // Save to secondary provider if available (non-blocking)
+
+        if (deferProofSetUpload) {
+            tryFlush(hash)
+            return
+        }
+
         secondaryProvider?.let { secondary ->
             try {
-                // Reset stream if possible, otherwise secondary will get empty stream
                 if (stream.markSupported()) {
                     stream.reset()
                 } else {
                     Log.w(TAG, "Stream doesn't support reset, secondary provider may get empty stream")
                 }
-                
+
                 secondary.saveStream(hash, identifier, stream, object : StorageListener {
                     override fun saveSuccessful(hash: String?, uri: String?) {
                         Log.d(TAG, "Successfully saved $identifier to secondary storage at: $uri")
-                        primaryProvider.saveText(hash, "$identifier.uri", uri, null)
+                        primaryProvider.replaceText(hash, "$identifier.uri", uri, null)
                     }
-                    
+
                     override fun saveFailed(exception: Exception?) {
                         Log.w(TAG, "Failed to save $identifier to secondary storage: ${exception?.message}")
                     }
@@ -46,16 +87,19 @@ class CompositeStorageProvider(
     }
 
     override fun saveBytes(hash: String, identifier: String, data: ByteArray, listener: StorageListener?) {
-        // Save to primary provider first
         primaryProvider.saveBytes(hash, identifier, data, listener)
-        
-        // Save to secondary provider if available (non-blocking)
+
+        if (deferProofSetUpload) {
+            tryFlush(hash)
+            return
+        }
+
         secondaryProvider?.saveBytes(hash, identifier, data, object : StorageListener {
             override fun saveSuccessful(hash: String?, uri: String?) {
                 Log.d(TAG, "Successfully saved $identifier to secondary storage at: $uri")
-                primaryProvider.saveText(hash, "$identifier.uri", uri, null)
+                primaryProvider.replaceText(hash, "$identifier.uri", uri, null)
             }
-            
+
             override fun saveFailed(exception: Exception?) {
                 Log.w(TAG, "Failed to save $identifier to secondary storage: ${exception?.message}")
             }
@@ -63,20 +107,116 @@ class CompositeStorageProvider(
     }
 
     override fun saveText(hash: String, identifier: String, data: String, listener: StorageListener?) {
-        // Save to primary provider first
         primaryProvider.saveText(hash, identifier, data, listener)
-        
-        // Save to secondary provider if available (non-blocking)
+
+        if (deferProofSetUpload) {
+            tryFlush(hash)
+            return
+        }
+
         secondaryProvider?.saveText(hash, identifier, data, object : StorageListener {
             override fun saveSuccessful(hash: String?, uri: String?) {
                 Log.d(TAG, "Successfully saved text $identifier to secondary storage at: $uri")
-                primaryProvider.saveText(hash, "$identifier.uri", uri, null)
+                primaryProvider.replaceText(hash, "$identifier.uri", uri, null)
             }
-            
+
             override fun saveFailed(exception: Exception?) {
                 Log.w(TAG, "Failed to save text $identifier to secondary storage: ${exception?.message}")
             }
         })
+    }
+
+    /**
+     * Tip / single-value overwrite on primary only.
+     *
+     * Unlike [saveText], this must not fan out to secondary or record a nested
+     * `"$identifier.uri"` tip — callers use [replaceText] *to write* those tips
+     * (and other local-only values). Mirroring would upload tip contents to S3 and
+     * create `*.uri.uri` files.
+     */
+    override fun replaceText(hash: String, identifier: String, data: String, listener: StorageListener?) {
+        primaryProvider.replaceText(hash, identifier, data, listener)
+    }
+
+    /**
+     * Attempt upload of proof-set artifacts. The upload is delayed until all defined [ArtifactRule.RequiredCore], set
+     * in [ProofSetMembershipPolicy.RULES] are present in the primary storage space. Once the condition is met, the
+     * upload will be initiated. Any proof set artifacts defined in [ArtifactRule.PrefGated], can be triggered for later 
+     * uploads once the files are present.
+     *
+     * This method supports the different upload modes defined in [FilebaseConfig.UploadMode].
+     *  - IPFS upload strategy: This strategy will group all proof set artifacts into a single directory and upload it to IPFS.
+     *  - S3 upload strategy: This strategy will upload each proof set artifact individually to S3.
+     * 
+     * Requires a prior [bindMedia] entry for [hash]; otherwise returns immediately.
+     * Gates media stream opens by [MediaInclusion] from [filebaseConfig].
+     */
+    private fun tryFlush(hash: String) {
+        if (!deferProofSetUpload) return
+        val config = filebaseConfig ?: return
+        val ctx = appContext ?: return
+        val secondary = secondaryProvider as? FilebaseStorageProvider ?: return
+
+        val (mediaUri, mime) = mediaByHash[hash] ?: return
+
+        val mode = config.resolveUploadMode()
+        if (mode != FilebaseConfig.UploadMode.IPFS_DIRECTORY &&
+            mode != FilebaseConfig.UploadMode.S3_MEMBERS
+        ) {
+            return
+        }
+        val inclusion = config.resolveMediaInclusionForAuto()
+
+        val mediaBytes: ByteArray? = when (inclusion) {
+            MediaInclusion.INCLUDE_MEDIA -> {
+                val bytes = try {
+                    ctx.contentResolver.openInputStream(mediaUri)?.use { it.readBytes() }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to read media bytes for deferred upload", e)
+                    null
+                }
+                if (bytes == null || bytes.isEmpty()) return
+                bytes
+            }
+            MediaInclusion.SIDECARS_ONLY -> null
+        }
+
+        val onDisk = primaryProvider.getProofSet(hash)
+            .mapNotNull { ProofSetMembershipPolicy.fromProofSetUri(it) }
+        val memberBasenames = onDisk
+            .filter { ProofSetMembershipPolicy.isManifestMember(ctx, hash, it) }
+            .toSet()
+        val candidate = ProofSetUploader.buildMembershipStamp(
+            hash, mode, inclusion, memberBasenames, mime,
+        )
+        if (candidate == ProofSetUploader.lastUploadedMembership(hash)) return
+
+        ProofSetUploader.enqueueProofSetUpload(
+            ctx,
+            hash,
+            primaryProvider,
+            secondary,
+            mediaBytes,
+            mime,
+            mode,
+            inclusion,
+            object : StorageListener {
+                override fun saveSuccessful(resultHash: String?, uri: String?) {
+                    Log.d(TAG, "Deferred proof-set upload succeeded for $hash at: $uri")
+                    tryFlush(hash)
+                }
+
+                override fun saveFailed(exception: Exception?) {
+                    Log.w(TAG, "Deferred proof-set upload failed: ${exception?.message}")
+                }
+            },
+            mediaUriProvider = when (inclusion) {
+                MediaInclusion.SIDECARS_ONLY -> null
+                MediaInclusion.INCLUDE_MEDIA -> {
+                    { mediaByHash[hash] }
+                }
+            },
+        )
     }
 
     // All read operations delegate to primary provider only

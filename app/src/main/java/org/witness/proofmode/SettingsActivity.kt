@@ -20,8 +20,9 @@ import androidx.preference.PreferenceManager
 import org.witness.proofmode.PermissionActivity.Companion.hasPermissions
 import org.witness.proofmode.ProofMode.PREF_CREDENTIALS_PRIMARY
 import org.witness.proofmode.databinding.ActivitySettingsBinding
-import org.witness.proofmode.org.witness.proofmode.share.FilebaseSettingsActivity
-import org.witness.proofmode.storage.FilebaseConfig
+import org.witness.proofmode.service.MediaWatcher
+import org.witness.proofmode.share.FilebaseSettingsActivity
+import org.witness.proofmode.storage.filebase.FilebaseConfig
 import org.witness.proofmode.util.GPSTracker
 
 
@@ -147,20 +148,20 @@ class SettingsActivity : AppCompatActivity() {
         }
 
 
-        // Setup Filebase settings button
-        switchAutoSync.setOnCheckedChangeListener {_: CompoundButton?, isChecked: Boolean ->
+        // Auto Sync cell opens Filebase settings on tap; long-press toggles auto-upload
+        // when configured. The checkbox is a read-only indicator.
+        binding.contentSettings.cellAutoSync.setOnClickListener {
+            startActivity(Intent(this, FilebaseSettingsActivity::class.java))
+        }
 
-            mPrefs.edit().putBoolean(FilebaseConfig.PREF_FILEBASE_ENABLED, isChecked).commit()
-
-            if (isChecked) {
-                val intent = Intent(this, FilebaseSettingsActivity::class.java)
-                startActivity(intent)
+        binding.contentSettings.cellAutoSync.setOnLongClickListener {
+            if (FilebaseConfig.toggleAutoUploadIfConfigured(mPrefs)) {
+                updateUI()
+                MediaWatcher.getInstance(this)?.refreshStorageProvider(null)
+            } else {
+                startActivity(Intent(this, FilebaseSettingsActivity::class.java))
             }
-            else {
-
-            }
-
-
+            true
         }
 
         switchAutoImport.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
@@ -222,8 +223,8 @@ class SettingsActivity : AppCompatActivity() {
 
         switchAI.isEnabled = credentialsEnabled
 
-        switchAutoSync.isChecked =
-            mPrefs.getBoolean(FilebaseConfig.PREF_FILEBASE_ENABLED, false)
+        val filebaseCfg = FilebaseConfig.fromPrefs(mPrefs)
+        switchAutoSync.isChecked = FilebaseConfig.autoSyncIndicatorChecked(filebaseCfg)
 
         switchAutoImport.isChecked =
             mPrefs.getBoolean(ProofMode.PREFS_DOPROOF, false)

@@ -46,21 +46,30 @@ public class DefaultStorageProvider (context : Context) : StorageProvider {
         data: String?,
         listener: StorageListener?
     ) {
-
-        val file = File(
-            getHashStorageDir(
-                hash!!
-            ), identifier!!
-        )
+        val file = File(getHashStorageDir(hash!!), identifier!!)
         if (data != null) {
-            writeTextToFile(file, data)
-
+            appendTextToFile(file, data)
             if (file.exists())
                 listener?.saveSuccessful(hash, file.path)
             else
                 listener?.saveFailed(FileNotFoundException())
         }
+    }
 
+    override fun replaceText(
+        hash: String?,
+        identifier: String?,
+        data: String?,
+        listener: StorageListener?
+    ) {
+        val file = File(getHashStorageDir(hash!!), identifier!!)
+        if (data != null) {
+            replaceTextInFile(file, data)
+            if (file.exists())
+                listener?.saveSuccessful(hash, file.path)
+            else
+                listener?.saveFailed(FileNotFoundException())
+        }
     }
 
     override fun getInputStream(hash: String?, identifier: String?): InputStream? {
@@ -89,31 +98,30 @@ public class DefaultStorageProvider (context : Context) : StorageProvider {
         hash: String?,
         identifier: String?,
         data: ByteArray?,
-        listener: StorageListener?
+        listener: StorageListener?,
     ) {
-
         identifier?.let {
-            var file = File(
-                getHashStorageDir(
-                                        hash!!
-                ), it
-            )
+            var file =
+                File(
+                    getHashStorageDir(
+                        hash!!,
+                    ),
+                    it,
+                )
 
             if (data != null) {
                 writeBytesToFile(
-                    file, data
+                    file,
+                    data,
                 )
 
-                if (file.exists())
+                if (file.exists()) {
                     listener?.saveSuccessful(hash, file.path)
-                else
+                } else {
                     listener?.saveFailed(FileNotFoundException())
+                }
             }
         }
-
-
-
-
     }
 
     override fun proofExists(hash: String?) : Boolean {
@@ -164,12 +172,29 @@ public class DefaultStorageProvider (context : Context) : StorageProvider {
             null
     }
 
-    private fun writeTextToFile(fileOut: File, text: String) {
+    /**
+     * Appends [text] as a new line (historical [saveText] behavior for CSV proof history).
+     */
+    private fun appendTextToFile(fileOut: File, text: String) {
         try {
-            val ps = PrintStream(FileOutputStream(fileOut, true))
+            val ps = PrintStream(FileOutputStream(fileOut, /* append = */ true))
             ps.println(text)
             ps.flush()
             ps.close()
+        } catch (ioe: IOException) {
+            ioe.printStackTrace()
+        }
+    }
+
+    /**
+     * Overwrites [fileOut] with [text] (UTF-8). Used by [replaceText] for single line
+     * files (URI sidecars); append would leave stale lines that break later CID/URI reads.
+     */
+    private fun replaceTextInFile(fileOut: File, text: String) {
+        try {
+            FileOutputStream(fileOut, /* append = */ false).use { fos ->
+                fos.write(text.toByteArray(Charsets.UTF_8))
+            }
         } catch (ioe: IOException) {
             ioe.printStackTrace()
         }
