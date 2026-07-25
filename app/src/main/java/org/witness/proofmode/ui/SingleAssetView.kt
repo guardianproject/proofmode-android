@@ -1,5 +1,7 @@
-package org.witness.proofmode.org.witness.proofmode.ui
+package org.witness.proofmode.ui
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.RectF
@@ -7,6 +9,7 @@ import android.location.Location
 import android.net.Uri
 import android.preference.PreferenceManager
 import android.widget.MediaController
+import android.widget.Toast
 import android.widget.VideoView
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
@@ -96,8 +99,10 @@ import org.witness.proofmode.plugins.ipfscid.IpfsCidSidecar
 import org.witness.proofmode.plugins.lp.attestation.LocationProtocolArtifactStore
 import org.witness.proofmode.service.MediaWatcher
 import org.witness.proofmode.service.ProofModeV1Constants
+import org.witness.proofmode.share.FilebaseSocialShareHelper
 import org.witness.proofmode.storage.DefaultStorageProvider
 import org.witness.proofmode.ui.ProofOverviewArtifactSummaries
+import org.witness.proofmode.storage.filebase.FilebaseSidecarContract
 import org.witness.proofmode.util.ProofModeUtil
 import timber.log.Timber
 import java.io.File
@@ -427,6 +432,21 @@ fun updateMetadata (itemUri : Uri, context : Context) {
             )
         }
 
+        val proofsetId = hash + FilebaseSidecarContract.FILEBASE_IPFS_URI_SUFFIX
+        val imageId = hash + FilebaseSidecarContract.FILEBASE_IMAGE_URI_SUFFIX
+        val proofsetUrl = if (storageProvider.proofIdentifierExists(hash, proofsetId)) {
+            storageProvider.getInputStream(hash, proofsetId)?.bufferedReader()?.use { it.readText() }
+        } else null
+        val rawImageUrl = if (storageProvider.proofIdentifierExists(hash, imageId)) {
+            storageProvider.getInputStream(hash, imageId)?.bufferedReader()?.use { it.readText() }
+        } else null
+        val imageUrl = FilebaseSocialShareHelper.overviewFilebaseImageUrl(proofsetUrl, rawImageUrl)
+
+        FilebaseUploadsGroup(
+            proofsetUrl = proofsetUrl?.takeIf { it.isNotBlank() },
+            imageUrl = imageUrl?.takeIf { it.isNotBlank() },
+        )
+
         if (hmap?.contains(ProofModeV1Constants.PROOF_GENERATED) == true)
             addRow(
                 ProofModeV1Constants.PROOF_GENERATED,
@@ -467,6 +487,69 @@ fun updateMetadata (itemUri : Uri, context : Context) {
 
     }
 }
+@Composable
+fun FilebaseUploadsGroup(proofsetUrl: String?, imageUrl: String?) {
+    if (proofsetUrl.isNullOrBlank() && imageUrl.isNullOrBlank()) return
+
+    Row {
+        Text(
+            modifier = Modifier.padding(3.dp, 3.dp),
+            text = stringResource(R.string.filebase_uploads_group),
+            fontWeight = FontWeight.Bold,
+        )
+    }
+    proofsetUrl?.takeIf { it.isNotBlank() }?.let { url ->
+        FilebaseUploadLink(
+            label = stringResource(R.string.filebase_view_proofset),
+            url = url,
+        )
+    }
+    imageUrl?.takeIf { it.isNotBlank() }?.let { url ->
+        FilebaseUploadLink(
+            label = stringResource(R.string.filebase_view_uploaded_media),
+            url = url,
+        )
+    }
+    // Match Nostr / addRow section spacing before the next metadata group.
+    Row {
+        Text(modifier = Modifier.padding(2.dp, 2.dp), text = "")
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun FilebaseUploadLink(label: String, url: String) {
+    val context = LocalContext.current
+    Row {
+        Text(
+            modifier = Modifier
+                .fillMaxWidth()
+                .combinedClickable(
+                    onClick = {
+                        try {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                        } catch (e: Exception) {
+                            Timber.e(e, "Unable to open Filebase URL")
+                        }
+                    },
+                    onLongClick = {
+                        val clipboard =
+                            context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        clipboard.setPrimaryClip(ClipData.newPlainText(label, url))
+                        Toast.makeText(
+                            context,
+                            R.string.nostr_identity_copied,
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    },
+                )
+                .padding(3.dp, 3.dp),
+            text = label,
+            color = Color(0xFF2E7D32),
+        )
+    }
+}
+
 @Composable
 fun C2PAManifestRow(label: String, validationState: ValidationState, filePath: String, mediaHash: String, context: Context) {
     var expanded by remember { mutableStateOf(false) }

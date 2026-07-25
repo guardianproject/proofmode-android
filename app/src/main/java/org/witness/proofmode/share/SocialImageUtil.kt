@@ -1,4 +1,4 @@
-package org.witness.proofmode.org.witness.proofmode.share
+package org.witness.proofmode.share
 
 import android.content.Context
 import android.graphics.Bitmap

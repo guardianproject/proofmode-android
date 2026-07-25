@@ -261,9 +261,12 @@
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/cellAutoSync"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="0.5"
+                android:clickable="true"
+                android:focusable="true"
                 android:gravity="center_horizontal"
                 android:orientation="vertical">
 
@@ -271,7 +274,9 @@
                     android:id="@+id/switchAutoSync"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
-                    android:button="@drawable/option_network_selector" />
+                    android:button="@drawable/option_network_selector"
+                    android:clickable="false"
+                    android:focusable="false" />
 
                 <TextView
                     style="@style/SettingsOptionStyle"

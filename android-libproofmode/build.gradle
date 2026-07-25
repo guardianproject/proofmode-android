@@ -44,6 +44,12 @@ android {
         abortOnError = false
     }
 
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+        }
+    }
+
     publishing {
         singleVariant("release") {
             withSourcesJar()
@@ -94,13 +100,16 @@ dependencies {
     implementation libs.okio
     implementation libs.okhttp
 
+    // Coroutine coordinator for ProofSetUploader (Mutex + Dispatchers.IO)
+    implementation libs.kotlinx.coroutines.android
+
     // Required -- JUnit 4 framework
     androidTestImplementation libs.junit
 
     // JVM unit tests (e.g. cross-language claim-binding conformance)
     testImplementation libs.junit
-    testImplementation("org.robolectric:robolectric:4.13")
     testImplementation libs.androidx.test.core
+    testImplementation 'org.robolectric:robolectric:4.13'
 
     implementation libs.bouncycastle.bcpkix
 

@@ -111,50 +111,16 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
 
     private fun createCompositeStorageProvider(context: Context): StorageProvider {
         val primaryProvider = DefaultStorageProvider(context)
-
-        // Check if Filebase is configured and enabled
-        val config = this.filebaseConfig
-        if (config.enabled && config.isValid()) {
-            try {
-                val filebaseProvider = FilebaseStorageProvider(
-                    config.accessKey,
-                    config.secretKey,
-                    config.bucketName,
-                    config.endpoint,
-                    config.region
-                )
-                return CompositeStorageProvider(primaryProvider, filebaseProvider)
-            } catch (e: Exception) {
-                Log.e("MediaWatcher", "Failed to initialize Filebase provider", e)
-            }
+        return try {
+            buildFilebaseAutoComposite(context, primaryProvider, filebaseConfig) ?: primaryProvider
+        } catch (e: Exception) {
+            Log.e("MediaWatcher", "Failed to initialize Filebase provider", e)
+            primaryProvider
         }
-
-        return primaryProvider
     }
 
     private val filebaseConfig: FilebaseConfig
-        get() {
-            val enabled =
-                mPrefs!!.getBoolean(FilebaseConfig.PREF_FILEBASE_ENABLED, false)
-            val accessKey: String =
-                mPrefs!!.getString(FilebaseConfig.PREF_FILEBASE_ACCESS_KEY, "")!!
-            val secretKey: String =
-                mPrefs!!.getString(FilebaseConfig.PREF_FILEBASE_SECRET_KEY, "")!!
-            val bucketName: String =
-                mPrefs!!.getString(FilebaseConfig.PREF_FILEBASE_BUCKET_NAME, "")!!
-            val endpoint: String =
-                mPrefs!!.getString(
-                    FilebaseConfig.PREF_FILEBASE_ENDPOINT,
-                    "https://s3.filebase.com"
-                )!!
-            val region: String =
-                mPrefs!!.getString(
-                    FilebaseConfig.PREF_FILEBASE_REGION,
-                    "us-west-1"
-                )!!
-
-            return FilebaseConfig(accessKey, secretKey, bucketName, endpoint, region,enabled)
-        }
+        get() = FilebaseConfig.fromPrefs(mPrefs!!)
 
     /*
    // TODO Involes writing
@@ -1057,6 +1023,15 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
     ) {
         val usePgpArmor = true
 
+        if (mediaHash != null) {
+            val mimeType = context.contentResolver.getType(uriMedia)
+                ?: "application/octet-stream"
+            // Composite-only tip-off: media leaf is not written via save*; deferred IPFS flush
+            // needs URI+MIME to inject `{hash}.<ext>` when proof sidecars become complete.
+            // No-op when storageProvider is DefaultStorageProvider or non-deferring Composite.
+            (storageProvider as? CompositeStorageProvider)?.bindMedia(mediaHash, uriMedia, mimeType)
+        }
+
         //        File fileMediaProof = new File(fileFolder, mediaHash + PROOF_FILE_TAG);
         val proofExists = storageProvider!!.proofExists(mediaHash)
 
@@ -1481,5 +1456,32 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
 
             return mediaPath
         }
+    }
+}
+
+/**
+ * When Filebase auto-upload is on, wrap [primary] in a deferring [CompositeStorageProvider]
+ * for both IPFS directory and S3 members modes. Returns null when auto-upload is off or
+ * Filebase is not configured; returns [primary] when configured but [FilebaseConfig.UploadMode.NONE].
+ */
+internal fun buildFilebaseAutoComposite(
+    context: Context,
+    primary: StorageProvider,
+    config: FilebaseConfig,
+): StorageProvider? {
+    if (!config.isConfigured() || !config.autoUpload) return null
+    return when (config.resolveUploadMode()) {
+        FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+        FilebaseConfig.UploadMode.S3_MEMBERS -> {
+            val filebaseProvider = FilebaseStorageProvider.from(config)
+            CompositeStorageProvider(
+                primary,
+                filebaseProvider,
+                appContext = context,
+                deferProofSetUpload = true,
+                filebaseConfig = config,
+            )
+        }
+        FilebaseConfig.UploadMode.NONE -> primary
     }
 }

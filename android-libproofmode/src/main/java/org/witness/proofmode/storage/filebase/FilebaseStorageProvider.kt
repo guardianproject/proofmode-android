@@ -1,0 +1,616 @@
+package org.witness.proofmode.storage.filebase
+
+import android.net.Uri
+import android.util.Log
+import java.io.*
+import java.net.URLEncoder
+import java.nio.file.CopyOption
+import java.nio.file.Files
+import java.nio.file.Paths
+import java.security.MessageDigest
+import java.text.SimpleDateFormat
+import java.util.*
+import java.util.concurrent.TimeUnit
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
+import kotlin.collections.ArrayList
+import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
+import org.witness.proofmode.storage.StorageListener
+import org.witness.proofmode.storage.StorageProvider
+import org.witness.proofmode.storage.proofset.DeferredArtifact
+import org.witness.proofmode.storage.proofset.ProofSetContentTypes
+
+interface TestConnectionCallback {
+    fun onTestSuccess()
+    fun onTestFailure(error: String)
+}
+
+open class FilebaseStorageProvider(
+    private val accessKey: String,
+    private val secretKey: String,
+    private val bucketName: String,
+    private val endpoint: String = "https://s3.filebase.com",
+    private val region: String = "us-east-1",
+    private val ipfsBearerToken: String = "",
+) : StorageProvider {
+
+    companion object {
+        private const val TAG = "FilebaseStorageProvider"
+    //    private const val REGION = "us-east-1"
+        private const val SERVICE = "s3"
+        private const val ALGORITHM = "AWS4-HMAC-SHA256"
+        private const val DATE_FORMAT = "yyyyMMdd'T'HHmmss'Z'"
+        private const val DATE_STAMP_FORMAT = "yyyyMMdd"
+        private const val IPFS_RPC_BASE_URL = "https://rpc.filebase.io"
+        /** Directory `/api/v0/add` query — Filebase-supported params only. */
+        private const val IPFS_ADD_PARAM = "wrap-with-directory=true&cid-version=1"
+
+        /**
+         * Parse a CID from IPFS RPC NDJSON.
+         *
+         * - [name] `null`: first non-blank `Hash` (standalone file add)
+         * - [name] `""`: wrap-with-directory wrapper (`Name` exactly empty)
+         * - otherwise: first line whose `Name` equals [name] (e.g. media basename)
+         */
+        @JvmStatic
+        fun parseCid(responseBody: String?, name: String? = null): String? {
+            if (responseBody.isNullOrBlank()) {
+                return null
+            }
+            // Reject whitespace-only names; empty string "" is the directory wrapper sentinel.
+            if (name != null && name.isNotEmpty() && name.isBlank()) {
+                return null
+            }
+
+            try {
+                for (line in responseBody.trim().lineSequence()) {
+                    if (line.isBlank()) continue
+                    val json = JSONObject(line)
+                    if (!json.has("Hash")) continue
+                    val hash = json.getString("Hash")
+                    if (hash.isBlank()) continue
+
+                    when (name) {
+                        null -> return hash
+                        else -> {
+                            if (!json.has("Name")) continue
+                            if (json.getString("Name") == name) return hash
+                        }
+                    }
+                }
+                return null
+            } catch (e: Exception) {
+                Log.e(TAG, "Error parsing IPFS RPC CID (name=$name)", e)
+                return null
+            }
+        }
+
+        @JvmStatic
+        fun buildUnpinUrl(cid: String): String {
+            val encodedCid = URLEncoder.encode(cid, "UTF-8")
+            return "$IPFS_RPC_BASE_URL/api/v0/pin/rm?arg=$encodedCid"
+        }
+
+        fun from(config: FilebaseConfig): FilebaseStorageProvider = FilebaseStorageProvider(
+            accessKey = config.accessKey,
+            secretKey = config.secretKey,
+            bucketName = config.bucketName,
+            endpoint = config.endpoint,
+            region = config.region,
+            ipfsBearerToken = config.ipfsBearerToken,
+        )
+    }
+
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(120, TimeUnit.SECONDS)
+        .readTimeout(120, TimeUnit.SECONDS)
+        .writeTimeout(120, TimeUnit.SECONDS)
+        .build()
+
+    override fun saveStream(hash: String, identifier: String, stream: InputStream, listener: StorageListener?) {
+        try {
+            val tempFile = File.createTempFile("filebase_upload", ".tmp")
+
+            stream.use { input ->
+                tempFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+
+            uploadFile(hash, identifier, tempFile, listener)
+            tempFile.delete()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving stream to Filebase", e)
+            listener?.saveFailed(e)
+        }
+    }
+
+    open override fun saveBytes(hash: String, identifier: String, data: ByteArray, listener: StorageListener?) {
+        try {
+            val tempFile = File.createTempFile("filebase_upload", ".tmp")
+            tempFile.writeBytes(data)
+
+            uploadFile(hash, identifier, tempFile, listener)
+            tempFile.delete()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving bytes to Filebase", e)
+            listener?.saveFailed(e)
+        }
+    }
+
+    override fun saveText(hash: String, identifier: String, data: String, listener: StorageListener?) {
+        uploadTextObject(hash, identifier, data, listener)
+    }
+
+    /** S3 object PUT replaces the key; same path as [saveText]. */
+    override fun replaceText(hash: String, identifier: String, data: String, listener: StorageListener?) {
+        uploadTextObject(hash, identifier, data, listener)
+    }
+
+    private fun uploadTextObject(
+        hash: String,
+        identifier: String,
+        data: String,
+        listener: StorageListener?,
+    ) {
+        try {
+            val tempFile = File.createTempFile("filebase_upload", ".tmp")
+            tempFile.writeText(data)
+            uploadFile(hash, identifier, tempFile, listener)
+            tempFile.delete()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving text to Filebase", e)
+            listener?.saveFailed(e)
+        }
+    }
+
+    /**
+     * Upload a flat proof-set directory via Filebase IPFS RPC (`wrap-with-directory`).
+     * Multipart filenames are [DeferredArtifact.identifier] basenames only (no `hash/` prefix).
+     *
+     * Returns [FilebaseUploadResult] on success (directory gateway URI + optional media-leaf CID
+     * for [mediaBasename]), or `null` on failure. [listener] is forward-only UX; persist
+     * decisions must use the return value, not the listener.
+     */
+    open fun uploadDirectory(
+        hash: String,
+        artifacts: List<DeferredArtifact>,
+        mediaBasename: String?,
+        listener: StorageListener?,
+    ): FilebaseUploadResult? {
+        if (ipfsBearerToken.isBlank()) {
+            val error = IllegalStateException(
+                "IPFS Bearer Token not configured. Please set it in Filebase settings.",
+            )
+            Log.e(TAG, "IPFS upload failed: missing bearer token")
+            listener?.saveFailed(error)
+            return null
+        }
+
+        return try {
+            Log.d(TAG, "Uploading directory for hash: $hash with ${artifacts.size} files")
+
+            val multipartBody = buildIpfsMultipart(
+                artifacts.map { Triple(it.identifier, it.data, it.contentType) },
+            )
+            val url = "$IPFS_RPC_BASE_URL/api/v0/add?$IPFS_ADD_PARAM"
+            val (code, body) = postIpfsAdd(url, multipartBody)
+
+            if (!isIpfsAddSuccess(code) || body.isNullOrBlank()) {
+                val error = IOException("IPFS RPC upload failed: $code")
+                Log.e(TAG, "Directory upload failed", error)
+                listener?.saveFailed(error)
+                return null
+            }
+
+            val directoryCid = parseCid(body, name = "")
+            if (directoryCid == null) {
+                val error = IOException("Failed to parse directory CID from response")
+                Log.e(TAG, "CID parsing failed", error)
+                listener?.saveFailed(error)
+                return null
+            }
+
+            val mediaLeafCid = if (!mediaBasename.isNullOrBlank()) {
+                parseCid(body, name = mediaBasename)
+            } else {
+                null
+            }
+
+            val ipfsUrl = "https://ipfs.filebase.io/ipfs/$directoryCid"
+            Log.d(TAG, "Successfully uploaded directory: $ipfsUrl")
+            listener?.saveSuccessful(hash, ipfsUrl)
+            FilebaseUploadResult(ipfsUrl, mediaLeafCid)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error uploading directory to Filebase IPFS RPC", e)
+            listener?.saveFailed(e)
+            null
+        }
+    }
+
+    /**
+     * Build a flat multipart form for IPFS `/add`.
+     * Each triple is (basename, bytes, contentType?).
+     */
+    private fun buildIpfsMultipart(
+        parts: List<Triple<String, ByteArray, String?>>,
+    ): MultipartBody {
+        val multipartBuilder = MultipartBody.Builder().setType(MultipartBody.FORM)
+        for ((basename, data, contentType) in parts) {
+            val mediaType = if (contentType.isNullOrBlank()) {
+                "application/octet-stream"
+            } else {
+                contentType
+            }
+            multipartBuilder.addFormDataPart(
+                "file",
+                basename,
+                data.toRequestBody(mediaType.toMediaType()),
+            )
+        }
+        return multipartBuilder.build()
+    }
+
+    protected open fun postIpfsAdd(url: String, body: RequestBody): Pair<Int, String?> {
+        val request = Request.Builder()
+            .url(url)
+            .post(body)
+            .addHeader("Authorization", "Bearer $ipfsBearerToken")
+            .build()
+        Log.d(TAG, "Sending IPFS RPC request to: $url")
+        client.newCall(request).execute().use { response ->
+            val responseBody = response.body?.string()
+            Log.d(TAG, "IPFS RPC response code: ${response.code}")
+            return response.code to responseBody
+        }
+    }
+
+    private fun isIpfsAddSuccess(code: Int): Boolean = code in 200..299
+
+    /**
+     * Best-effort unpin. Returns true if RPC reports success; false on blank token,
+     * blank cid, network/HTTP failure. Never throws to callers.
+     */
+    open fun unpinIpfsCid(cid: String): Boolean {
+        if (ipfsBearerToken.isBlank() || cid.isBlank()) {
+            return false
+        }
+
+        return try {
+            val url = buildUnpinUrl(cid)
+            val request = Request.Builder()
+                .url(url)
+                .post(ByteArray(0).toRequestBody(null))
+                .addHeader("Authorization", "Bearer $ipfsBearerToken")
+                .build()
+            Log.d(TAG, "Sending IPFS unpin request to: $url")
+            client.newCall(request).execute().use { response ->
+                Log.d(TAG, "IPFS unpin response code: ${response.code}")
+                response.isSuccessful
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error unpinning IPFS CID", e)
+            false
+        }
+    }
+
+    /**
+     * Standalone IPFS file add (no wrap-with-directory) for social.
+     * On success returns gateway leaf URI; on failure null.
+     */
+    fun uploadFileIpfs(basename: String, bytes: ByteArray, contentType: String?): String? {
+        if (ipfsBearerToken.isBlank() || basename.isBlank()) {
+            return null
+        }
+
+        return try {
+            val multipartBody = buildIpfsMultipart(
+                listOf(Triple(basename, bytes, contentType)),
+            )
+            val url = "$IPFS_RPC_BASE_URL/api/v0/add?cid-version=1"
+            val (code, body) = postIpfsAdd(url, multipartBody)
+            if (!isIpfsAddSuccess(code) || body.isNullOrBlank()) {
+                Log.e(TAG, "IPFS file add failed: HTTP $code")
+                return null
+            }
+
+            val leafCid = parseCid(body)
+            if (leafCid == null) {
+                Log.e(TAG, "Failed to parse file CID from IPFS RPC response")
+                return null
+            }
+
+            FilebaseGatewayUris.buildLeafImageUri(leafCid)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error uploading IPFS file", e)
+            null
+        }
+    }
+
+    private fun uploadFile(hash: String, identifier: String, file: File, listener: StorageListener?) {
+        try {
+            val objectKey = "$hash/$identifier"
+            val contentType = ProofSetContentTypes.contentTypeFor(identifier)
+            
+            val requestBody = file.asRequestBody(contentType.toMediaType())
+            val timestamp = getTimestamp()
+            val dateStamp = getDateStamp()
+
+            // Create canonical request
+            val canonicalHeaders = "host:${endpoint.removePrefix("https://")}\n" +
+                    "x-amz-content-sha256:${getPayloadHash(file)}\n" +
+                    "x-amz-date:$timestamp\n"
+
+            val signedHeaders = "host;x-amz-content-sha256;x-amz-date"
+            val canonicalRequest = "PUT\n" +
+                    "/$bucketName/$objectKey\n" +
+                    "\n" +
+                    canonicalHeaders +
+                    "\n" +
+                    signedHeaders +
+                    "\n" +
+                    getPayloadHash(file)
+
+            // Create string to sign
+            val credentialScope = "$dateStamp/$region/$SERVICE/aws4_request"
+            val stringToSign = "$ALGORITHM\n" +
+                    timestamp + "\n" +
+                    credentialScope + "\n" +
+                    sha256(canonicalRequest)
+
+            // Calculate signature
+            val signature = calculateSignature(secretKey, dateStamp, region, SERVICE, stringToSign)
+
+            // Create authorization header
+            val authorization = "$ALGORITHM Credential=$accessKey/$credentialScope, " +
+                    "SignedHeaders=$signedHeaders, Signature=$signature"
+
+            val request = Request.Builder()
+                .url("$endpoint/$bucketName/$objectKey")
+                .put(requestBody)
+                .addHeader("Host", endpoint.removePrefix("https://"))
+                .addHeader("x-amz-content-sha256", getPayloadHash(file))
+                .addHeader("x-amz-date", timestamp)
+                .addHeader("Authorization", authorization)
+                .addHeader("Content-Type", contentType)
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    Log.d(TAG, "Successfully uploaded $identifier to Filebase")
+                    // Extract IPFS CID from response headers if available
+                    val ipfsCid = response.header("x-amz-meta-cid")
+                    Log.d(TAG, "IPFS CID: $ipfsCid")
+                    listener?.saveSuccessful(hash, "https://ipfs.filebase.io/ipfs/$ipfsCid")
+                } else {
+                    val error = IOException("Upload failed: ${response.code} ${response.message}")
+                    Log.e(TAG, "Upload failed", error)
+                    listener?.saveFailed(error)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error uploading file to Filebase", e)
+            listener?.saveFailed(e)
+        }
+    }
+
+    private fun getTimestamp(): String {
+        val sdf = SimpleDateFormat(DATE_FORMAT, Locale.US)
+        sdf.timeZone = TimeZone.getTimeZone("UTC")
+        return sdf.format(Date())
+    }
+
+    private fun getDateStamp(): String {
+        val sdf = SimpleDateFormat(DATE_STAMP_FORMAT, Locale.US)
+        sdf.timeZone = TimeZone.getTimeZone("UTC")
+        return sdf.format(Date())
+    }
+
+    private fun getPayloadHash(file: File): String {
+        return sha256(file.readBytes())
+    }
+
+    private fun sha256(data: String): String {
+        return sha256(data.toByteArray())
+    }
+
+    private fun sha256(data: ByteArray): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        return digest.digest(data).joinToString("") { "%02x".format(it) }
+    }
+
+    private fun calculateSignature(key: String, dateStamp: String, regionName: String, serviceName: String, stringToSign: String): String {
+        val kDate = hmacSha256(("AWS4" + key).toByteArray(), dateStamp)
+        val kRegion = hmacSha256(kDate, regionName)
+        val kService = hmacSha256(kRegion, serviceName)
+        val kSigning = hmacSha256(kService, "aws4_request")
+        val signature = hmacSha256(kSigning, stringToSign)
+        return signature.joinToString("") { "%02x".format(it) }
+    }
+
+    private fun hmacSha256(key: ByteArray, data: String): ByteArray {
+        val algorithm = "HmacSHA256"
+        val mac = Mac.getInstance(algorithm)
+        mac.init(SecretKeySpec(key, algorithm))
+        return mac.doFinal(data.toByteArray())
+    }
+
+    // The following methods are not implemented for remote storage
+    // They would require downloading files from Filebase
+    override fun getInputStream(hash: String, identifier: String): InputStream? {
+
+        return null
+    }
+
+    override fun proofExists(hash: String): Boolean {
+        Log.w(TAG, "proofExists not implemented for FilebaseStorageProvider")
+        return false
+    }
+
+    override fun proofIdentifierExists(hash: String, identifier: String): Boolean {
+        Log.w(TAG, "proofIdentifierExists not implemented for FilebaseStorageProvider")
+        return false
+    }
+
+    override fun getProofSet(hash: String): ArrayList<Uri> {
+        Log.w(TAG, "getProofSet not implemented for FilebaseStorageProvider")
+        return ArrayList()
+    }
+
+    override fun getProofItem(uri: Uri): InputStream? {
+        Log.w(TAG, "getProofItem not implemented for FilebaseStorageProvider")
+        return null
+    }
+
+    fun testConnection(callback: TestConnectionCallback) {
+        Thread {
+                    try {
+                        val timestamp = getTimestamp()
+                        val dateStamp = getDateStamp()
+
+                        // Create canonical request for a simple HEAD request to the bucket
+                        val canonicalHeaders =
+                                "host:${endpoint.removePrefix("https://")}\n" +
+                                        "x-amz-date:$timestamp\n"
+
+                        val signedHeaders = "host;x-amz-date"
+                        val canonicalRequest =
+                                "HEAD\n" +
+                                        "/$bucketName/\n" +
+                                        "\n" +
+                                        canonicalHeaders +
+                                        "\n" +
+                                        signedHeaders +
+                                        "\n" +
+                                        "UNSIGNED-PAYLOAD"
+
+                        // Create string to sign
+                        val credentialScope = "$dateStamp/$region/$SERVICE/aws4_request"
+                        val stringToSign =
+                                "$ALGORITHM\n" +
+                                        timestamp +
+                                        "\n" +
+                                        credentialScope +
+                                        "\n" +
+                                        sha256(canonicalRequest)
+
+                        // Calculate signature
+                        val signature =
+                                calculateSignature(
+                                        secretKey,
+                                        dateStamp,
+                                        region,
+                                        SERVICE,
+                                        stringToSign
+                                )
+
+                        // Create authorization header
+                        val authorization =
+                                "$ALGORITHM Credential=$accessKey/$credentialScope, " +
+                                        "SignedHeaders=$signedHeaders, Signature=$signature"
+
+                        val request =
+                                Request.Builder()
+                                        .url("$endpoint/$bucketName/")
+                                        .head()
+                                        .addHeader("Host", endpoint.removePrefix("https://"))
+                                        .addHeader("x-amz-date", timestamp)
+                                        .addHeader("Authorization", authorization)
+                                        .build()
+
+                        client.newCall(request).execute().use { response ->
+                            if (response.isSuccessful) {
+                                Log.d(TAG, "Successfully connected to Filebase")
+                                callback.onTestSuccess()
+                            } else if (response.code == 403) {
+                                val errorMsg =
+                                        "Connection failed (${response.code} ${response.message}): Check your credentials"
+                                Log.e(TAG, errorMsg)
+                                callback.onTestFailure(errorMsg)
+                            } else if (response.code == 404) {
+                                val errorMsg =
+                                        "Connection failed (${response.code} ${response.message}): Bucket not found"
+                                Log.e(TAG, errorMsg)
+                                callback.onTestFailure(errorMsg)
+                            } else {
+                                val errorMsg =
+                                        "Connection failed: ${response.code} ${response.message}"
+                                Log.e(TAG, errorMsg)
+                                callback.onTestFailure(errorMsg)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        val errorMsg = "Error connecting to Filebase: ${e.message}"
+                        Log.e(TAG, errorMsg, e)
+                        callback.onTestFailure(errorMsg)
+                    }
+                }
+                .start()
+    }
+
+    /**
+     * Test IPFS RPC connectivity with the configured bearer token (`POST /api/v0/version`).
+     *
+     * Filebase documents `/version` as the auth check for RPC tokens. Bucket MFS probes
+     * like `/files/stat` return 400 for valid tokens on this gateway, so they are not used.
+     */
+    fun testIpfsConnection(callback: TestConnectionCallback) {
+        Thread {
+            try {
+                if (ipfsBearerToken.isBlank()) {
+                    callback.onTestFailure("IPFS Bearer Token not configured")
+                    return@Thread
+                }
+
+                val request = Request.Builder()
+                    .url("$IPFS_RPC_BASE_URL/api/v0/version")
+                    .post(ByteArray(0).toRequestBody(null))
+                    .addHeader("Authorization", "Bearer $ipfsBearerToken")
+                    .build()
+
+                Log.d(TAG, "Testing IPFS RPC connection...")
+
+                client.newCall(request).execute().use { response ->
+                    val responseBody = response.body?.string().orEmpty()
+                    if (response.isSuccessful) {
+                        // Require a real version payload — reject empty/error JSON that some
+                        // gateways still return as HTTP 200 for bad credentials.
+                        val version =
+                            try {
+                                JSONObject(responseBody).optString("Version").trim()
+                            } catch (_: Exception) {
+                                ""
+                            }
+                        if (version.isEmpty()) {
+                            val errorMsg =
+                                "IPFS connection failed: Invalid bearer token or unexpected response"
+                            Log.e(TAG, "$errorMsg body=$responseBody")
+                            callback.onTestFailure(errorMsg)
+                        } else {
+                            Log.d(TAG, "Successfully connected to Filebase IPFS RPC: $responseBody")
+                            callback.onTestSuccess()
+                        }
+                    } else if (response.code == 401 || response.code == 403) {
+                        val errorMsg =
+                            "IPFS connection failed (${response.code}): Invalid bearer token"
+                        Log.e(TAG, errorMsg)
+                        callback.onTestFailure(errorMsg)
+                    } else {
+                        val errorMsg =
+                            "IPFS connection failed: ${response.code} ${response.message}"
+                        Log.e(TAG, errorMsg)
+                        callback.onTestFailure(errorMsg)
+                    }
+                }
+            } catch (e: Exception) {
+                val errorMsg = "Error testing IPFS connection: ${e.message}"
+                Log.e(TAG, errorMsg, e)
+                callback.onTestFailure(errorMsg)
+            }
+        }.start()
+    }
+}
