@@ -122,7 +122,6 @@ public class DefaultStorageProvider (context : Context) : StorageProvider {
                     listener?.saveSuccessful(hash, file.path)
                 } else
                     listener?.saveFailed(FileNotFoundException())
-                }
             }
         }
     }

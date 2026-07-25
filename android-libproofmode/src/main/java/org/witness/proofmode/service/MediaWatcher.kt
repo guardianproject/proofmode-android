@@ -36,8 +36,8 @@ import org.witness.proofmode.notarization.NotarizationListener
 import org.witness.proofmode.notarization.NotarizationProvider
 import org.witness.proofmode.storage.CompositeStorageProvider
 import org.witness.proofmode.storage.DefaultStorageProvider
-import org.witness.proofmode.storage.FilebaseConfig
-import org.witness.proofmode.storage.FilebaseStorageProvider
+import org.witness.proofmode.storage.filebase.FilebaseConfig
+import org.witness.proofmode.storage.filebase.FilebaseStorageProvider
 import org.witness.proofmode.plugin.ProofWriteEvent
 import org.witness.proofmode.plugin.ProofWriteHookRegistry
 import org.witness.proofmode.storage.StorageListener
