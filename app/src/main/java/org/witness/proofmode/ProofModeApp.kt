@@ -46,7 +46,7 @@ import org.witness.proofmode.lp.AutoCaptureLocationAttestationOrchestrator
 import org.witness.proofmode.lp.AutoCaptureSkipReason
 import org.witness.proofmode.plugins.ipfscid.IpfsCidPlugin
 import org.witness.proofmode.plugins.lp.LocationProtocolPlugin
-import org.witness.proofmode.storage.StorageProviderManager
+import org.witness.proofmode.storage.filebase.FilebaseConfig
 import org.witness.proofmode.util.ForegroundWalletActivityBinder
 import timber.log.Timber
 import java.io.IOException

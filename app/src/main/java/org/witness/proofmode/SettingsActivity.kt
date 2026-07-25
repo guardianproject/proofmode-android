@@ -21,9 +21,7 @@ import androidx.preference.PreferenceManager
 import org.witness.proofmode.PermissionActivity.Companion.hasPermissions
 import org.witness.proofmode.ProofMode.PREF_CREDENTIALS_PRIMARY
 import org.witness.proofmode.databinding.ActivitySettingsBinding
-import org.witness.proofmode.org.witness.proofmode.share.FilebaseSettingsActivity
 import org.witness.proofmode.plugins.lp.wallet.WalletSettingsActivity
-import org.witness.proofmode.storage.FilebaseConfig
 import org.witness.proofmode.service.MediaWatcher
 import org.witness.proofmode.share.FilebaseSettingsActivity
 import org.witness.proofmode.storage.filebase.FilebaseConfig
