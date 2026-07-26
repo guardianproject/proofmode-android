@@ -192,74 +192,100 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
             Box(modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black)){
-                CameraXViewfinder(surfaceRequest = newRequest, modifier = Modifier
-                    .padding(paddingValues)
-                    .fillMaxSize()
-                    .pointerInput(cameraViewModel, coordinateTransformer) {
-                        awaitEachGesture {
-                            val firstDown = awaitFirstDown(requireUnconsumed = false)
+                // Keep preview, tap targets, and the AF ring in one padded box so
+                // tap Offset is in the same coordinate space as the ring overlay.
+                Box(
+                    modifier = Modifier
+                        .padding(paddingValues)
+                        .fillMaxSize()
+                ) {
+                    CameraXViewfinder(
+                        surfaceRequest = newRequest,
+                        coordinateTransformer = coordinateTransformer,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .pointerInput(cameraViewModel, coordinateTransformer) {
+                                awaitEachGesture {
+                                    val firstDown = awaitFirstDown(requireUnconsumed = false)
 
-                            var drag = Offset.Zero
-                            var pastTouchSlop = false
-                            val touchSlop = viewConfiguration.touchSlop
-                            var previousPinchDistance = 0f
-                            var isZooming = false
+                                    var drag = Offset.Zero
+                                    var pastTouchSlop = false
+                                    val touchSlop = viewConfiguration.touchSlop
+                                    var previousPinchDistance = 0f
+                                    var isZooming = false
 
-                            do {
-                                val event = awaitPointerEvent()
-                                val pressed = event.changes.filter { it.pressed }
+                                    do {
+                                        val event = awaitPointerEvent()
+                                        val pressed = event.changes.filter { it.pressed }
 
-                                if (pressed.size >= 2) {
-                                    val currentDistance =
-                                        (pressed[0].position - pressed[1].position).getDistance()
+                                        if (pressed.size >= 2) {
+                                            val currentDistance =
+                                                (pressed[0].position - pressed[1].position).getDistance()
+
+                                            if (!isZooming) {
+                                                isZooming = true
+                                                previousPinchDistance = currentDistance
+                                                drag = Offset.Zero
+                                                pastTouchSlop = false
+                                            } else if (previousPinchDistance > 0f && currentDistance > 0f) {
+                                                val zoomDelta = currentDistance / previousPinchDistance
+                                                cameraViewModel.pinchZoom(zoomDelta)
+                                                previousPinchDistance = currentDistance
+                                            }
+                                            pressed.forEach { it.consume() }
+                                        } else if (pressed.size == 1 && !isZooming) {
+                                            val pointer = pressed[0]
+                                            if (pointer.id == firstDown.id) {
+                                                drag += pointer.positionChange()
+                                                if (!pastTouchSlop && abs(drag.x) > touchSlop) {
+                                                    pastTouchSlop = true
+                                                }
+                                                if (pastTouchSlop) {
+                                                    pointer.consume()
+                                                }
+                                            }
+                                        }
+                                    } while (event.changes.any { it.pressed })
 
                                     if (!isZooming) {
-                                        isZooming = true
-                                        previousPinchDistance = currentDistance
-                                        drag = Offset.Zero
-                                        pastTouchSlop = false
-                                    } else if (previousPinchDistance > 0f && currentDistance > 0f) {
-                                        val zoomDelta = currentDistance / previousPinchDistance
-                                        cameraViewModel.pinchZoom(zoomDelta)
-                                        previousPinchDistance = currentDistance
-                                    }
-                                    pressed.forEach { it.consume() }
-                                } else if (pressed.size == 1 && !isZooming) {
-                                    val pointer = pressed[0]
-                                    if (pointer.id == firstDown.id) {
-                                        drag += pointer.positionChange()
-                                        if (!pastTouchSlop && abs(drag.x) > touchSlop) {
-                                            pastTouchSlop = true
-                                        }
-                                        if (pastTouchSlop) {
-                                            pointer.consume()
+                                        if (pastTouchSlop && abs(drag.x) > abs(drag.y)) {
+                                            if (drag.x > 0) {
+                                                if (recordingState == RecordingState.Recording) {
+                                                    cameraViewModel.stopRecording()
+                                                    onNavigateToPhotoCamera()
+                                                } else {
+                                                    onNavigateToPhotoCamera()
+                                                }
+                                            }
+                                        } else if (!pastTouchSlop && drag.getDistance() < touchSlop) {
+                                            val tapCoordinates = firstDown.position
+                                            with(coordinateTransformer) {
+                                                cameraViewModel.tapToFocus(tapCoordinates.transform())
+                                            }
+                                            autofocusRequest = UUID.randomUUID() to tapCoordinates
                                         }
                                     }
-                                }
-                            } while (event.changes.any { it.pressed })
-
-                            if (!isZooming) {
-                                if (pastTouchSlop && abs(drag.x) > abs(drag.y)) {
-                                    if (drag.x > 0) {
-                                        if (recordingState == RecordingState.Recording) {
-                                            cameraViewModel.stopRecording()
-                                            onNavigateToPhotoCamera()
-                                        } else {
-                                            onNavigateToPhotoCamera()
-                                        }
-                                    }
-                                } else if (!pastTouchSlop && drag.getDistance() < touchSlop) {
-                                    val tapCoordinates = firstDown.position
-                                    with(coordinateTransformer) {
-                                        cameraViewModel.tapToFocus(tapCoordinates.transform())
-                                    }
-                                    autofocusRequest = UUID.randomUUID() to tapCoordinates
                                 }
                             }
-                        }
+                            .alpha(previewAlpha)
+                    )
+
+                    AnimatedVisibility(
+                        visible = showAutoFocusIndicator,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                        modifier = Modifier
+                            .offset { autofocusCoordinates.takeOrElse { Offset.Zero }.round() }
+                            .offset((-24).dp, (-24).dp)
+                    ) {
+                        Spacer(
+                            modifier = Modifier
+                                .border(1.5.dp, AccentGreen, CircleShape)
+                                .size(48.dp)
+                                .shadow(elevation = 8.dp)
+                        )
                     }
-                    .alpha(previewAlpha)
-                )
+                }
                 // Meant for responsive design but activity has been restricted to portrait,
 
                 BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -529,19 +555,6 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                         }
 
                 }
-            }
-
-            AnimatedVisibility(visible = showAutoFocusIndicator,
-                enter = fadeIn(),
-                exit = fadeOut(),
-                modifier = Modifier
-                    .offset { autofocusCoordinates.takeOrElse { Offset.Zero }.round() }
-                    .offset((-24).dp, (-24).dp)
-            ) {
-                Spacer(modifier = Modifier
-                    .border(1.5.dp, AccentGreen, CircleShape)
-                    .size(48.dp)
-                    .shadow(elevation = 8.dp))
             }
 
             if (showBSettingsBottomSheet){
