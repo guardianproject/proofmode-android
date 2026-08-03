@@ -4,17 +4,33 @@
   <component name="GradleSettings">
     <option name="linkedExternalProjectsSettings">
       <GradleProjectSettings>
+        <compositeConfiguration>
+          <compositeBuild compositeDefinitionSource="SCRIPT">
+            <builds>
+              <build path="$USER_HOME$/snap/flutter/common/flutter/packages/flutter_tools/gradle" name="gradle">
+                <projects>
+                  <project path="$USER_HOME$/snap/flutter/common/flutter/packages/flutter_tools/gradle" />
+                </projects>
+              </build>
+            </builds>
+          </compositeBuild>
+        </compositeConfiguration>
         <option name="testRunner" value="CHOOSE_PER_TEST" />
         <option name="externalProjectPath" value="$PROJECT_DIR$" />
-        <option name="gradleJvm" value="jbr-21" />
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
+            <option value="$PROJECT_DIR$/android-cid-lib" />
             <option value="$PROJECT_DIR$/android-libproofcam" />
             <option value="$PROJECT_DIR$/android-libproofmode" />
             <option value="$PROJECT_DIR$/android-nostr" />
             <option value="$PROJECT_DIR$/android-opentimestamps" />
             <option value="$PROJECT_DIR$/app" />
+            <option value="$PROJECT_DIR$/flutter-location-protocol/.android/Flutter" />
+            <option value="$PROJECT_DIR$/plugin-ipfs-cid" />
+            <option value="$PROJECT_DIR$/plugin-location-protocol" />
+            <option value="$PROJECT_DIR$/plugin-wallet-infra" />
+            <option value="$USER_HOME$/snap/flutter/common/flutter/packages/flutter_tools/gradle" />
           </set>
         </option>
       </GradleProjectSettings>
