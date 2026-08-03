@@ -218,6 +218,12 @@ public class ProofMode {
     }
 
 
+    /**
+     * @deprecated Latent multi-writer for {@link #PREF_OPTION_LOCATION}. Production
+     * settings must use Settings/Location + LocationSharingPermissionSync (app module).
+     * Prefer writing SharedPreferences keys explicitly in tests.
+     */
+    @Deprecated
     public static void setProofPoints(Context context, boolean deviceIds, boolean location, boolean networks, boolean notarization) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 

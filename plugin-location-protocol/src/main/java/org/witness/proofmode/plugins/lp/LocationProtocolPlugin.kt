@@ -2,6 +2,8 @@ package org.witness.proofmode.plugins.lp
 
 import android.app.Activity
 import android.content.Context
+import android.os.Looper
+import androidx.annotation.VisibleForTesting
 import android.net.Uri
 import org.witness.proofmode.plugins.lp.attestation.EASAttestationManager
 import org.witness.proofmode.plugins.lp.attestation.LocationProtocolAttestationCoordinator
@@ -21,6 +23,7 @@ import org.witness.proofmode.plugins.wallet.infra.zerodev.ZeroDevSmartAccountCon
 import org.witness.proofmode.plugins.lp.wallet.WalletDiagnostics
 import org.witness.proofmode.plugins.lp.wallet.WalletSigningPlugin
 import timber.log.Timber
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Entry-point for the Location Protocol plugin module.
@@ -44,12 +47,58 @@ object LocationProtocolPlugin : ProofmodePlugin {
             "LocationProtocolPlugin.registerApplicationScope() must be called from Application.onCreate"
         }
 
-    override fun register(context: Context) {
+    private val registerWalletStackInvocationCountForTests = AtomicInteger(0)
+
+    @Volatile
+    private var registerWalletStackOnMainThreadForTests: Boolean? = null
+
+    @VisibleForTesting
+    fun getRegisterWalletStackInvocationCountForTests(): Int =
+        registerWalletStackInvocationCountForTests.get()
+
+    @VisibleForTesting
+    fun wasRegisterWalletStackInvokedOnMainThreadForTests(): Boolean? =
+        registerWalletStackOnMainThreadForTests
+
+    @VisibleForTesting
+    fun resetRegisterWalletStackInvocationCountForTests() {
+        registerWalletStackInvocationCountForTests.set(0)
+        registerWalletStackOnMainThreadForTests = null
+    }
+
+    /** IO-safe: Keystore / EncryptedSharedPreferences / connectors. Do not call from callers that import wallet-infra. */
+    fun registerWalletStack(context: Context) {
+        registerWalletStackInvocationCountForTests.incrementAndGet()
+        registerWalletStackOnMainThreadForTests = Looper.getMainLooper().isCurrentThread
         val config = WalletSdkConfig.fromBuildConfig()
         WalletSigningPlugin.configure(config)
-        WalletSigningPlugin.register(context)
+        WalletSigningPlugin.register(context.applicationContext)
+    }
+
+    /**
+     * Main-only: FlutterEngineGroup + ProcessLifecycleOwner observer.
+     * Must NOT swallow failures the way monolithic register() historically did for activator paths.
+     */
+    fun initFlutterEngine(context: Context) {
+        FlutterEngineProvider.init(context.applicationContext)
+    }
+
+    @Volatile
+    private var flutterEngineReadyOverrideForTests: Boolean? = null
+
+    fun isFlutterEngineReady(): Boolean =
+        flutterEngineReadyOverrideForTests ?: FlutterEngineProvider.isReady()
+
+    /** Test-only override for [isFlutterEngineReady]; null restores real probe. */
+    fun setFlutterEngineReadyForTests(ready: Boolean?) {
+        flutterEngineReadyOverrideForTests = ready
+    }
+
+    override fun register(context: Context) {
+        // Cold-start / ProofModeApp path (NF1): still a single Main-thread entry.
+        registerWalletStack(context)
         try {
-            FlutterEngineProvider.init(context.applicationContext)
+            initFlutterEngine(context)
         } catch (e: Throwable) {
             Timber.w(e, "LocationProtocolPlugin: Flutter engine init failed (non-fatal)")
         }

@@ -2,6 +2,7 @@ package org.witness.proofmode.util
 
 import android.content.Context
 import android.content.Intent
+import androidx.preference.PreferenceManager
 import androidx.test.core.app.ApplicationProvider
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -15,6 +16,7 @@ import org.witness.proofmode.TestProofModeApplication
 import org.witness.proofmode.ProofMode
 import org.witness.proofmode.lp.AutoCaptureLocationAttestationOrchestrator
 import org.witness.proofmode.plugins.lp.autocapture.AutoCaptureLpMode
+import org.witness.proofmode.util.ProofEventReceiver
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28], application = TestProofModeApplication::class)
@@ -28,6 +30,7 @@ class ProofEventReceiverAutoCaptureTest {
         context = ApplicationProvider.getApplicationContext()
         context.getSharedPreferences(FeatureFlags.PREFS_NAME, Context.MODE_PRIVATE)
             .edit().clear().commit()
+        PreferenceManager.getDefaultSharedPreferences(context).edit().clear().commit()
         FeatureFlags.resetForTests(context)
         enqueueCount = 0
         AutoCaptureLocationAttestationOrchestrator.setEnqueueInterceptorForTests { _, _, _ ->
@@ -41,7 +44,8 @@ class ProofEventReceiverAutoCaptureTest {
     }
 
     @Test
-    fun proofGenerated_enqueuesWhenLpEnabledAndModeActive() {
+    fun proofGenerated_enqueuesWhenLpActiveAndModeActive() {
+        primeLocationMasterOn()
         FeatureFlags.lpEnabled = true
         FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFFCHAIN
 
@@ -52,6 +56,7 @@ class ProofEventReceiverAutoCaptureTest {
 
     @Test
     fun proofGeneratedImport_doesNotEnqueue() {
+        primeLocationMasterOn()
         FeatureFlags.lpEnabled = true
         FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFFCHAIN
 
@@ -62,12 +67,34 @@ class ProofEventReceiverAutoCaptureTest {
 
     @Test
     fun proofGenerated_skipsWhenLpDisabled() {
+        primeLocationMasterOn()
         FeatureFlags.lpEnabled = false
         FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFFCHAIN
 
         deliverProofEvent(ProofMode.EVENT_PROOF_GENERATED)
 
         assertEquals(0, enqueueCount)
+    }
+
+    @Test
+    fun proofGenerated_skipsWhenLocationMasterOffEvenIfLpEnabled() {
+        primeLocationMasterOff()
+        FeatureFlags.lpEnabled = true
+        FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFFCHAIN
+
+        deliverProofEvent(ProofMode.EVENT_PROOF_GENERATED)
+
+        assertEquals(0, enqueueCount)
+    }
+
+    private fun primeLocationMasterOn() {
+        PreferenceManager.getDefaultSharedPreferences(context)
+            .edit().putBoolean(ProofMode.PREF_OPTION_LOCATION, true).commit()
+    }
+
+    private fun primeLocationMasterOff() {
+        PreferenceManager.getDefaultSharedPreferences(context)
+            .edit().putBoolean(ProofMode.PREF_OPTION_LOCATION, false).commit()
     }
 
     private fun deliverProofEvent(action: String) {

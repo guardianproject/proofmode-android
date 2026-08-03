@@ -31,6 +31,9 @@ object FlutterEngineProvider {
         }
     }
 
+    /** True after a successful [init] left [engineGroup] non-null. Does not fork an isolate. */
+    fun isReady(): Boolean = synchronized(lock) { engineGroup != null }
+
     fun init(context: Context) {
         val applicationContext = context.applicationContext
         synchronized(lock) {

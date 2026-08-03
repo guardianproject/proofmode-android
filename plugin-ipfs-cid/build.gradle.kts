@@ -38,8 +38,10 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.preference.ktx)
     implementation(libs.timber)
+    implementation(libs.kotlinx.coroutines.android)
 
     testImplementation(libs.junit)
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:${libs.versions.coroutines.get()}")
     testImplementation(libs.androidx.test.core)
     testImplementation("org.robolectric:robolectric:4.13")
 

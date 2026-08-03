@@ -6,8 +6,10 @@ import static org.witness.proofmode.ProofMode.OPENPGP_FILE_TAG;
 import static org.witness.proofmode.ProofMode.PROOF_FILE_TAG;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.res.AssetManager;
 import android.net.Uri;
+import android.preference.PreferenceManager;
 
 import androidx.test.platform.app.InstrumentationRegistry;
 
@@ -50,7 +52,13 @@ public class ProofmodeGenerationTests {
         boolean useLocation = true;
         boolean useNetworks = true;
         boolean useNotarization = true;
-        ProofMode.setProofPoints(context, useDeviceIds, useLocation, useNetworks, useNotarization);
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        prefs.edit()
+                .putBoolean(ProofMode.PREF_OPTION_PHONE, useDeviceIds)
+                .putBoolean(ProofMode.PREF_OPTION_LOCATION, useLocation)
+                .putBoolean(ProofMode.PREF_OPTION_NOTARY, useNotarization)
+                .putBoolean(ProofMode.PREF_OPTION_NETWORK, useNetworks)
+                .apply();
 
         final ByteArrayOutputStream result = new ByteArrayOutputStream();
         final AssetManager assets = context.getAssets();

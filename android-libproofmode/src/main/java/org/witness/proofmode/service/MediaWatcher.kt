@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 import org.bouncycastle.openpgp.PGPException
 import org.contentauth.c2pa.C2PA
 import org.json.JSONObject
+import org.witness.proofmode.LocationCapturePolicy
 import org.witness.proofmode.ProofMode
 import org.witness.proofmode.ProofModeConstants
 import org.witness.proofmode.c2pa.C2PAManager
@@ -417,17 +418,14 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
 
         val showDeviceIds =
             mPrefs!!.getBoolean(ProofMode.PREF_OPTION_PHONE, ProofMode.PREF_OPTION_PHONE_DEFAULT)
-        val showLocation = mPrefs!!.getBoolean(
-            ProofMode.PREF_OPTION_LOCATION,
-            ProofMode.PREF_OPTION_LOCATION_DEFAULT
-        ) && checkPermissionForLocation(false)
+        val showLocation = LocationCapturePolicy.shouldEmbedLocation(context)
 
         val autoNotarize =
             mPrefs!!.getBoolean(ProofMode.PREF_OPTION_NOTARY, ProofMode.PREF_OPTION_NOTARY_DEFAULT)
         val showMobileNetwork = mPrefs!!.getBoolean(
             ProofMode.PREF_OPTION_NETWORK,
             ProofMode.PREF_OPTION_NETWORK_DEFAULT
-        ) && checkPermissionForLocation(true)
+        ) && LocationCapturePolicy.hasFineLocationPermission(context)
 
         if (mediaHash != null) {
             try {
@@ -591,16 +589,13 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
 
         val showDeviceIds =
             mPrefs!!.getBoolean(ProofMode.PREF_OPTION_PHONE, ProofMode.PREF_OPTION_PHONE_DEFAULT)
-        val showLocation = mPrefs!!.getBoolean(
-            ProofMode.PREF_OPTION_LOCATION,
-            ProofMode.PREF_OPTION_LOCATION_DEFAULT
-        ) && checkPermissionForLocation(false)
+        val showLocation = LocationCapturePolicy.shouldEmbedLocation(context)
         val autoNotarize =
             mPrefs!!.getBoolean(ProofMode.PREF_OPTION_NOTARY, ProofMode.PREF_OPTION_NOTARY_DEFAULT)
         val showMobileNetwork = mPrefs!!.getBoolean(
             ProofMode.PREF_OPTION_NETWORK,
             ProofMode.PREF_OPTION_NETWORK_DEFAULT
-        )&& checkPermissionForLocation(true)
+        ) && LocationCapturePolicy.hasFineLocationPermission(context)
 
         val mediaHash = HashUtils.getSHA256FromBytes(mediaBytes)
 
@@ -742,10 +737,7 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
 
         val showDeviceIds =
             mPrefs!!.getBoolean(ProofMode.PREF_OPTION_PHONE, ProofMode.PREF_OPTION_PHONE_DEFAULT)
-        val showLocation = mPrefs!!.getBoolean(
-            ProofMode.PREF_OPTION_LOCATION,
-            ProofMode.PREF_OPTION_LOCATION_DEFAULT
-        ) && checkPermissionForLocation(false)
+        val showLocation = LocationCapturePolicy.shouldEmbedLocation(context)
         val autoNotarize =
             mPrefs!!.getBoolean(ProofMode.PREF_OPTION_NOTARY, ProofMode.PREF_OPTION_NOTARY_DEFAULT)
 
@@ -753,7 +745,7 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
         val showMobileNetwork = mPrefs!!.getBoolean(
             ProofMode.PREF_OPTION_NETWORK,
             ProofMode.PREF_OPTION_NETWORK_DEFAULT
-        )&& checkPermissionForLocation(true)
+        ) && LocationCapturePolicy.hasFineLocationPermission(context)
 
         var isMedia: InputStream = FileInputStream(fdMedia)
         val mediaHash = HashUtils.getSHA256FromFileContent(isMedia)
@@ -1279,24 +1271,6 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
             return result == PackageManager.PERMISSION_GRANTED
         }
         return false
-    }
-
-    fun checkPermissionForLocation(fineOnly: Boolean): Boolean {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-
-            if (fineOnly) {
-                return mContext!!.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
-            } else {
-                val resultFine =
-                    mContext!!.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-                val resultCoarse =
-                    mContext!!.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
-
-                return (resultFine == PackageManager.PERMISSION_GRANTED
-                        || resultCoarse == PackageManager.PERMISSION_GRANTED)
-            }
-        }
-        return true
     }
 
     fun stop() {

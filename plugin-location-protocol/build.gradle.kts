@@ -50,6 +50,7 @@ kotlin {
 
 dependencies {
     implementation(project(":android-libproofmode"))
+    implementation(project(":plugin-ipfs-cid"))
     implementation(project(":flutter"))
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)

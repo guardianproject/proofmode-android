@@ -19,6 +19,7 @@ import org.witness.proofmode.plugins.lp.autocapture.AutoCaptureLpMode
 import org.witness.proofmode.plugins.lp.autocapture.AutoCaptureLpStateRegistry
 import org.witness.proofmode.plugins.lp.attestation.LocationProtocolArtifactStore
 import org.witness.proofmode.plugins.lp.attestation.LocationProtocolAttestationCoordinator
+import org.witness.proofmode.plugins.lp.attestation.LocationProtocolCoordinateValidator
 import org.witness.proofmode.plugins.lp.LocationProtocolPlugin
 import org.witness.proofmode.plugins.lp.autocapture.LpBadgePhase
 import org.witness.proofmode.plugins.lp.autocapture.LpRunState
@@ -62,7 +63,7 @@ object AutoCaptureLocationAttestationOrchestrator {
     fun enqueue(context: Context, mediaUri: Uri, mediaHash: String) {
         enqueueInterceptor?.invoke(context, mediaUri, mediaHash)
             ?: run {
-                if (!FeatureFlags.lpEnabled || !FeatureFlags.autoCaptureLpMode.isActive) {
+                if (!FeatureFlags.lpActive || !FeatureFlags.autoCaptureLpMode.isActive) {
                     return
                 }
                 ensureDefaultEngine(context.applicationContext).offer(context, mediaUri, mediaHash)
@@ -72,7 +73,7 @@ object AutoCaptureLocationAttestationOrchestrator {
     fun enqueueManual(context: Context, mediaUri: Uri, mediaHash: String, leg: LpManualLeg) {
         enqueueInterceptor?.invoke(context, mediaUri, mediaHash)
             ?: run {
-                if (!FeatureFlags.lpEnabled) {
+                if (!FeatureFlags.lpActive) {
                     return
                 }
                 ensureDefaultEngine(context.applicationContext)
@@ -163,6 +164,14 @@ object AutoCaptureLocationAttestationOrchestrator {
             engine.offerManual(mediaUri = mediaUri, mediaHash = mediaHash, leg = leg)
         }
 
+        fun offerForTests(
+            context: Context,
+            mediaHash: String,
+            mediaUri: Uri = Uri.parse("content://test/$mediaHash"),
+        ) {
+            engine.offer(context, mediaUri, mediaHash)
+        }
+
         fun pendingCountForTests(): Int = engine.pendingCount()
 
         fun startProcessorForTests() {
@@ -211,7 +220,7 @@ internal class OrchestratorEngine(
     }
 
     fun offer(context: Context, mediaUri: Uri, mediaHash: String) {
-        if (!FeatureFlags.lpEnabled || !FeatureFlags.autoCaptureLpMode.isActive) {
+        if (!FeatureFlags.lpActive || !FeatureFlags.autoCaptureLpMode.isActive) {
             return
         }
         offerDirect(mediaUri, mediaHash)
@@ -239,7 +248,7 @@ internal class OrchestratorEngine(
     }
 
     private suspend fun processJob(appContext: Context, job: AutoCaptureJob) {
-        if (!FeatureFlags.lpEnabled) {
+        if (!FeatureFlags.lpActive) {
             return
         }
 
@@ -470,9 +479,9 @@ internal class OrchestratorEngine(
 
     private fun isLocationAvailable(storage: StorageProvider, mediaHash: String): Boolean {
         val map = ProofModeUtil.getProofHashMap(storage, mediaHash)
-        val lat = map[ProofModeV1Constants.LOCATION_LATITUDE]?.toDoubleOrNull()
-        val lng = map[ProofModeV1Constants.LOCATION_LONGITUDE]?.toDoubleOrNull()
-        return lat != null && lng != null && lat != 0.0 && lng != 0.0
+        val lat = map[ProofModeV1Constants.LOCATION_LATITUDE]?.trim()?.toDoubleOrNull()
+        val lng = map[ProofModeV1Constants.LOCATION_LONGITUDE]?.trim()?.toDoubleOrNull()
+        return LocationProtocolCoordinateValidator.isValid(lat, lng)
     }
 
     private fun markBothLegsSkipped(mediaHash: String, mode: AutoCaptureLpMode) {

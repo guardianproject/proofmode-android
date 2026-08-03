@@ -17,9 +17,9 @@ data class LocationProtocolPayload(
     val locationType: String,           // string  — type of location format (e.g. "geojson")
     val location: String,               // string  — location data (GeoJSON string)
     val recipeType: Array<String>,      // string[] — array of recipe types
-    val recipePayload: Array<String>,   // bytes[]  — array of recipe payloads (as strings)
-    val mediaType: Array<String>,       // string[] — array of media MIME types
-    val mediaData: Array<String>,       // string[] — array of media data (hashes or URIs)
+    val recipePayload: Array<String>,   // bytes[] — "" baseline, or proof-set rootCid when enriched
+    val mediaType: Array<String>,       // string[] — file extension (e.g. "jpg"), not MIME
+    val mediaData: Array<String>,       // string[] — SHA-256 baseline, or media leaf CID when enriched
     val memo: String                    // string  — notes / memo
 ) {
     companion object {

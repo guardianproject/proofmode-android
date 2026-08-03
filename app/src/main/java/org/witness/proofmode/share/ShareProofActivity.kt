@@ -122,16 +122,12 @@ class ShareProofActivity : AppCompatActivity() {
 
         mStorageProvider = DefaultStorageProvider(applicationContext)
 
-        // --- Location Protocol feature gate ---
-        val lpEnabled = FeatureFlags.lpEnabled
-        Timber.d("ShareProofActivity: Location Protocol feature flag=%s", lpEnabled)
-        if (lpEnabled) {
-            binding.llLpAttestContainer.visibility = View.VISIBLE
-            Timber.d("Location Attestation buttons visibility set to VISIBLE")
-        } else {
-            Timber.d("Location Attestation button visibility set to GONE (feature disabled)")
-            binding.llLpAttestContainer.visibility = View.GONE
-        }
+        refreshLpAttestContainerVisibility()
+    }
+
+    private fun refreshLpAttestContainerVisibility() {
+        val visible = FeatureFlags.lpActive
+        binding.llLpAttestContainer.visibility = if (visible) View.VISIBLE else View.GONE
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -152,6 +148,7 @@ class ShareProofActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        refreshLpAttestContainerVisibility()
 
         val tvInfoBasic = binding.tvInfoBasic
         tvInfoBasic.setOnClickListener { showInfoBasic() }

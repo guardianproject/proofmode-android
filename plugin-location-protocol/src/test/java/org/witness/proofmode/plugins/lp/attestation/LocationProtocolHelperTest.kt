@@ -3,6 +3,7 @@ package org.witness.proofmode.plugins.lp.attestation
 import android.content.ContentResolver
 import android.net.Uri
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -137,13 +138,13 @@ class LocationProtocolHelperTest {
         assertEquals("""{"type":"Point","coordinates":[-122.4194,37.7749]}""", payload.location)
         assertEquals("ProofMode", payload.recipeType[0])
         assertEquals("", payload.recipePayload[0])
-        assertEquals("image/jpeg", payload.mediaType[0])
+        assertEquals("jpg", payload.mediaType[0])
         assertEquals(hash, payload.mediaData[0])
         assertEquals("test memo", payload.memo)
     }
 
     @Test
-    fun `buildPayload with empty GPS proof fields falls back to zero coordinates`() {
+    fun `buildPayload returns null with empty GPS proof fields`() {
         val hash = "zero-gps"
         storageProvider.markProofExists(hash)
         val proofData = hashMapOf(
@@ -163,8 +164,149 @@ class LocationProtocolHelperTest {
             storageProvider = storageProvider
         )
 
+        assertNull(result)
+    }
+
+    @Test
+    fun `buildPayload accepts a valid single zero coordinate axis`() {
+        val hash = "zero-axis-gps"
+        storageProvider.markProofExists(hash)
+        whenever(proofModeUtilCompanionMock.getProofHashMap(storageProvider, hash)).thenReturn(
+            hashMapOf(
+                ProofModeV1Constants.FILE_HASH_SHA_256 to hash,
+                ProofModeV1Constants.LOCATION_LATITUDE to "0.0",
+                ProofModeV1Constants.LOCATION_LONGITUDE to "30.0",
+            ),
+        )
+
+        val result = LocationProtocolHelper.buildPayload(hash, mediaUri, contentResolver, storageProvider)
+
         assertNotNull(result)
-        assertEquals("""{"type":"Point","coordinates":[0.0,0.0]}""", result!!.location)
+        assertEquals("""{"type":"Point","coordinates":[30.0,0.0]}""", result!!.location)
+    }
+
+    @Test
+    fun `buildPayload returns null for ambiguous zero coordinates`() {
+        val hash = "ambiguous-zero-gps"
+        storageProvider.markProofExists(hash)
+        whenever(proofModeUtilCompanionMock.getProofHashMap(storageProvider, hash)).thenReturn(
+            hashMapOf(
+                ProofModeV1Constants.LOCATION_LATITUDE to "0.0",
+                ProofModeV1Constants.LOCATION_LONGITUDE to "0.0",
+            ),
+        )
+
+        val result = LocationProtocolHelper.buildPayload(hash, mediaUri, contentResolver, storageProvider)
+
+        assertNull(result)
+    }
+
+    @Test
+    fun `coordinate validator rejects missing nonfinite and out of range values`() {
+        assertFalse(LocationProtocolCoordinateValidator.isValid(null, 2.0))
+        assertFalse(LocationProtocolCoordinateValidator.isValid(Double.NaN, 2.0))
+        assertFalse(LocationProtocolCoordinateValidator.isValid(91.0, 2.0))
+        assertFalse(LocationProtocolCoordinateValidator.isValid(45.0, 181.0))
+    }
+
+    @Test
+    fun `buildPayload mediaType is jpg for image jpeg getType`() {
+        // covered by updated GPS test; keep focused mapping tests:
+        val hash = "mime-jpg"
+        storageProvider.markProofExists(hash)
+        whenever(proofModeUtilCompanionMock.getProofHashMap(storageProvider, hash)).thenReturn(
+            hashMapOf(
+                ProofModeV1Constants.FILE_HASH_SHA_256 to hash,
+                ProofModeV1Constants.LOCATION_LATITUDE to "1",
+                ProofModeV1Constants.LOCATION_LONGITUDE to "2",
+                ProofModeV1Constants.PROOF_GENERATED to "2024-01-15T10:30:00.000Z",
+                ProofModeV1Constants.FILE_PATH to "/sdcard/test.jpg",
+                ProofModeV1Constants.NOTES to "",
+            ),
+        )
+        whenever(contentResolver.getType(mediaUri)).thenReturn("image/jpeg")
+        val result = LocationProtocolHelper.buildPayload(hash, mediaUri, contentResolver, storageProvider)
+        assertEquals("jpg", result!!.mediaType[0])
+    }
+
+    @Test
+    fun `buildPayload mediaType is bin when getType null — no path fallback`() {
+        val hash = "mime-null"
+        storageProvider.markProofExists(hash)
+        whenever(proofModeUtilCompanionMock.getProofHashMap(storageProvider, hash)).thenReturn(
+            hashMapOf(
+                ProofModeV1Constants.FILE_HASH_SHA_256 to hash,
+                ProofModeV1Constants.LOCATION_LATITUDE to "1",
+                ProofModeV1Constants.LOCATION_LONGITUDE to "2",
+                ProofModeV1Constants.PROOF_GENERATED to "2024-01-15T10:30:00.000Z",
+                ProofModeV1Constants.FILE_PATH to "/sdcard/photo.jpg", // would have been jpeg via old path fallback
+                ProofModeV1Constants.NOTES to "",
+            ),
+        )
+        whenever(contentResolver.getType(mediaUri)).thenReturn(null)
+        val result = LocationProtocolHelper.buildPayload(hash, mediaUri, contentResolver, storageProvider)
+        assertEquals("bin", result!!.mediaType[0])
+    }
+
+    @Test
+    fun `buildPayload mediaType is bin when getType throws`() {
+        val hash = "mime-throw"
+        storageProvider.markProofExists(hash)
+        whenever(proofModeUtilCompanionMock.getProofHashMap(storageProvider, hash)).thenReturn(
+            hashMapOf(
+                ProofModeV1Constants.FILE_HASH_SHA_256 to hash,
+                ProofModeV1Constants.LOCATION_LATITUDE to "1",
+                ProofModeV1Constants.LOCATION_LONGITUDE to "2",
+                ProofModeV1Constants.PROOF_GENERATED to "2024-01-15T10:30:00.000Z",
+                ProofModeV1Constants.FILE_PATH to "/sdcard/photo.jpg",
+                ProofModeV1Constants.NOTES to "",
+            ),
+        )
+        whenever(contentResolver.getType(mediaUri)).thenThrow(RuntimeException("resolver boom"))
+        val built = LocationProtocolHelper.buildPayloadResult(hash, mediaUri, contentResolver, storageProvider)!!
+        assertEquals(null, built.captureMimeType)
+        assertEquals("bin", built.payload.mediaType[0])
+    }
+
+    @Test
+    fun `buildPayload mediaType is bin for unrecognized mime`() {
+        val hash = "mime-unk"
+        storageProvider.markProofExists(hash)
+        whenever(proofModeUtilCompanionMock.getProofHashMap(storageProvider, hash)).thenReturn(
+            hashMapOf(
+                ProofModeV1Constants.FILE_HASH_SHA_256 to hash,
+                ProofModeV1Constants.LOCATION_LATITUDE to "1",
+                ProofModeV1Constants.LOCATION_LONGITUDE to "2",
+                ProofModeV1Constants.PROOF_GENERATED to "2024-01-15T10:30:00.000Z",
+                ProofModeV1Constants.FILE_PATH to "/sdcard/x.mov",
+                ProofModeV1Constants.NOTES to "",
+            ),
+        )
+        whenever(contentResolver.getType(mediaUri)).thenReturn("video/quicktime")
+        val result = LocationProtocolHelper.buildPayload(hash, mediaUri, contentResolver, storageProvider)
+        assertEquals("bin", result!!.mediaType[0]) // MediaLinkNaming table has no mov
+    }
+
+    @Test
+    fun `buildPayloadResult exposes raw captureMimeType for awaitReady pass-through`() {
+        val hash = "mime-pass"
+        storageProvider.markProofExists(hash)
+        whenever(proofModeUtilCompanionMock.getProofHashMap(storageProvider, hash)).thenReturn(
+            hashMapOf(
+                ProofModeV1Constants.FILE_HASH_SHA_256 to hash,
+                ProofModeV1Constants.LOCATION_LATITUDE to "1",
+                ProofModeV1Constants.LOCATION_LONGITUDE to "2",
+                ProofModeV1Constants.PROOF_GENERATED to "2024-01-15T10:30:00.000Z",
+                ProofModeV1Constants.FILE_PATH to "/sdcard/test.png",
+                ProofModeV1Constants.NOTES to "",
+            ),
+        )
+        whenever(contentResolver.getType(mediaUri)).thenReturn("image/png")
+        val built = LocationProtocolHelper.buildPayloadResult(hash, mediaUri, contentResolver, storageProvider)!!
+        assertEquals("image/png", built.captureMimeType)
+        assertEquals("png", built.payload.mediaType[0])
+        assertEquals(hash, built.payload.mediaData[0]) // baseline SHA still
+        assertEquals("", built.payload.recipePayload[0])
     }
 
     private class FakeStorageProvider : StorageProvider {
