@@ -135,6 +135,7 @@ class ProofSetCidSidecarWriterArtifactHookTest {
         }
         override fun saveStream(hash: String, identifier: String, stream: InputStream, listener: StorageListener?) {}
         override fun saveText(hash: String, identifier: String, data: String, listener: StorageListener?) {}
+        override fun replaceText(hash: String, identifier: String, data: String, listener: StorageListener?) {}
         override fun getInputStream(hash: String, identifier: String): InputStream? = null
         override fun proofExists(hash: String) = false
         override fun proofIdentifierExists(hash: String, identifier: String) = false

@@ -68,6 +68,7 @@ class ProofSetCidSidecarWriterNoSidecarRetryTest {
 
             override fun saveStream(hash: String, identifier: String, stream: InputStream, listener: StorageListener?) {}
             override fun saveText(hash: String, identifier: String, data: String, listener: StorageListener?) {}
+            override fun replaceText(hash: String, identifier: String, data: String, listener: StorageListener?) {}
             override fun getInputStream(h: String, identifier: String): InputStream? = when {
                 identifier == IpfsCidSidecar.sidecarBasename(h) && sidecarAvailable.get() ->
                     ByteArrayInputStream(sidecarBytes)

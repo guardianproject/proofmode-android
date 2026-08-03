@@ -100,6 +100,7 @@ class IpfsCidPluginRegisterTest {
 
             override fun saveStream(hash: String, identifier: String, stream: java.io.InputStream, listener: org.witness.proofmode.storage.StorageListener?) {}
             override fun saveText(hash: String, identifier: String, data: String, listener: org.witness.proofmode.storage.StorageListener?) {}
+            override fun replaceText(hash: String, identifier: String, data: String, listener: org.witness.proofmode.storage.StorageListener?) {}
             override fun getInputStream(h: String, identifier: String): java.io.InputStream? = when (identifier) {
                 IpfsCidSidecar.sidecarBasename(h) -> java.io.ByteArrayInputStream(sidecar)
                 "$h.ots" -> java.io.ByteArrayInputStream(byteArrayOf(1, 2))
