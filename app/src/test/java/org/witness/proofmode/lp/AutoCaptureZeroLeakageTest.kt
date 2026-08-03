@@ -12,7 +12,7 @@ import org.robolectric.annotation.Config
 import org.witness.proofmode.TestProofModeApplication
 import org.witness.proofmode.FeatureFlags
 import org.witness.proofmode.ProofMode
-import org.witness.proofmode.org.witness.proofmode.util.ProofEventReceiver
+import org.witness.proofmode.util.ProofEventReceiver
 import org.witness.proofmode.plugins.lp.autocapture.AutoCaptureLpMode
 
 @RunWith(RobolectricTestRunner::class)

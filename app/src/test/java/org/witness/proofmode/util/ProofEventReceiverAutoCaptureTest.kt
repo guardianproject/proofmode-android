@@ -1,4 +1,4 @@
-package org.witness.proofmode.org.witness.proofmode.util
+package org.witness.proofmode.util
 
 import android.content.Context
 import android.content.Intent

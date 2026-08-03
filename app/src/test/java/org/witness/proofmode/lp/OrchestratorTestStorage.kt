@@ -81,6 +81,16 @@ class OrchestratorTestStorage : StorageProvider {
         listener.saveSuccessful(hash, identifier)
     }
 
+    override fun replaceText(
+        hash: String,
+        identifier: String,
+        data: String,
+        listener: StorageListener,
+    ) {
+        store["$hash/$identifier"] = data.toByteArray(Charsets.UTF_8)
+        listener.saveSuccessful(hash, identifier)
+    }
+
     override fun getInputStream(hash: String, identifier: String): InputStream? {
         val bytes = store["$hash/$identifier"] ?: return null
         return bytes.inputStream()
