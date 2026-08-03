@@ -1,6 +1,7 @@
 package org.witness.proofmode.camera.fragments
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.background
@@ -15,6 +16,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -43,11 +45,16 @@ private val permissions = mutableListOf(
     }
 }
 
+// CameraViewModel takes the CameraActivity itself, so it deliberately must NOT outlive the
+// activity — viewModel()/ViewModelProvider would retain it across configuration changes and
+// leak the destroyed activity. remember{} keeps the existing lifetime while avoiding a fresh
+// view model on every recomposition.
+@SuppressLint("ViewModelConstructorInComposable")
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun CameraScreen(activity: CameraActivity, modifier: Modifier = Modifier, onClose: () -> Unit) {
     val lifecycleOwner = LocalLifecycleOwner.current
-    val viewModel: CameraViewModel = CameraViewModel(activity, activity.application)
+    val viewModel: CameraViewModel = remember(activity) { CameraViewModel(activity, activity.application) }
     val navController = rememberNavController()
     val permissionsState = rememberMultiplePermissionsState(permissions)
     CameraTheme {
