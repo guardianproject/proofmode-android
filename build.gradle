@@ -14,6 +14,8 @@ allprojects {
         mavenCentral()
         google()
 
+        maven { url "https://jitpack.io" }
+
         mavenLocal()
 
         // Flutter artifacts (group: io.flutter) are published in this repo;
@@ -26,18 +28,22 @@ allprojects {
             }
         }
 
-        maven { url "https://jitpack.io" }
 
         maven { url "https://raw.githubusercontent.com/guardianproject/gpmaven/master" }
 
         // Talsec freeRASP (TalsecSecurity-Community) is only published here
         maven { url "https://europe-west3-maven.pkg.dev/talsec-artifact-repository/freerasp" }
 
-	maven {
+	// Only org.contentauth is published here. Keep it scoped: this repo answers 401 (not 404)
+        // for anything it doesn't serve, which aborts resolution of unrelated modules outright.
+        maven {
         url = uri("https://maven.pkg.github.com/contentauth/c2pa-android")
         credentials {
             username = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
             password = project.findProperty("gpr.key") ?: System.getenv("TOKEN")
+        }
+        content {
+            includeGroup "org.contentauth"
         }
    }
 
