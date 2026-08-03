@@ -2,7 +2,9 @@
 # Kotlin & KSP
 
 durindoor = "0.1.1"
-keyattestation = "main-SNAPSHOT"
+# JitPack's build of "-47f970d044-1" failed (no JDK 21 toolchain on the builder), so it
+# publishes only a build.log — no pom/jar. This is the newest commit JitPack actually built.
+keyattestation = "8ebb29078d27007ddfa65999717ddea555295483"
 kotlin = "2.3.21"
 kotlin-serialization = "2.3.21"
 ksp = "2.3.7"
