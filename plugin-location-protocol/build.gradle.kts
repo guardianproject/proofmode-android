@@ -80,6 +80,15 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
 }
 
+// unitTests.isIncludeAndroidResources merges the :flutter module's assets, which
+// :flutter:copyFlutterAssets<Variant> writes into flutter-location-protocol/.android. Gradle
+// can't infer that producer/consumer edge across the add-to-app build, so declare it.
+listOf("Debug", "Release").forEach { variant ->
+    tasks.matching { it.name == "merge${variant}UnitTestAssets" }.configureEach {
+        dependsOn(":flutter:copyFlutterAssets$variant")
+    }
+}
+
 val coverageClassDirectories = fileTree(layout.buildDirectory.dir("tmp/kotlin-classes/debug")) {
     exclude(
         "**/R.class",

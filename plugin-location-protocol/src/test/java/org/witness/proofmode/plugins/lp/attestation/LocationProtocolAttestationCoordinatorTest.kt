@@ -124,6 +124,11 @@ class LocationProtocolAttestationCoordinatorTest {
             listener.saveSuccessful(hash, identifier)
         }
 
+        override fun replaceText(hash: String, identifier: String, data: String, listener: StorageListener) {
+            store["$hash/$identifier"] = data.toByteArray(Charsets.UTF_8)
+            listener.saveSuccessful(hash, identifier)
+        }
+
         override fun saveStream(hash: String, identifier: String, stream: InputStream, listener: StorageListener) {
             listener.saveSuccessful(hash, identifier)
         }

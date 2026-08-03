@@ -187,6 +187,10 @@ class LocationProtocolHelperTest {
             listener.saveSuccessful(hash, identifier)
         }
 
+        override fun replaceText(hash: String, identifier: String, data: String, listener: StorageListener) {
+            listener.saveSuccessful(hash, identifier)
+        }
+
         override fun getInputStream(hash: String, identifier: String): InputStream? = null
 
         override fun proofExists(hash: String): Boolean = proofHashes.contains(hash)
