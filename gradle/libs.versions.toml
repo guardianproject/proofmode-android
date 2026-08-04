@@ -2,7 +2,9 @@
 # Kotlin & KSP
 
 durindoor = "0.1.1"
-keyattestation = "main-SNAPSHOT"
+# JitPack's build of "-47f970d044-1" failed (no JDK 21 toolchain on the builder), so it
+# publishes only a build.log — no pom/jar. This is the newest commit JitPack actually built.
+keyattestation = "8ebb29078d27007ddfa65999717ddea555295483"
 kotlin = "2.3.21"
 kotlin-serialization = "2.3.21"
 ksp = "2.3.7"
@@ -15,6 +17,7 @@ talsecsecurityCommunity = "18.0.2"
 targetSdk = "36"
 
 # AndroidX Core
+appcompat = "1.7.0"
 core-ktx = "1.17.0"
 multidex = "2.0.1"
 preference-ktx = "1.2.1"
@@ -81,10 +84,13 @@ appintro = "6.3.1"
 androidsvg = "1.4"
 listenablefuture = "9999.0-empty-to-avoid-conflict-with-guava"
 zxing = "3.5.4"
+zerodev = "0.0.1-alpha.6"
 bitcoinj = "0.14.7"
 c2pa = "0.0.10"
 play-integrity = "1.6.0"
 nostr-sdk = "0.44.2"
+privy = "0.12.0"
+androidx-security-crypto = "1.1.0"
 
 # Testing
 junit = "4.13.2"
@@ -98,6 +104,7 @@ secrets-gradle-plugin = "2.0.1"
 
 [libraries]
 # AndroidX Core
+androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "core-ktx" }
 androidx-multidex = { module = "androidx.multidex:multidex", version.ref = "multidex" }
 androidx-preference-ktx = { module = "androidx.preference:preference-ktx", version.ref = "preference-ktx" }
@@ -124,6 +131,7 @@ androidx-compose-foundation = { module = "androidx.compose.foundation:foundation
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity-compose" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
 androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycle" }
+androidx-lifecycle-process = { module = "androidx.lifecycle:lifecycle-process", version.ref = "lifecycle" }
 
 # Navigation
 androidx-navigation-fragment-ktx = { module = "androidx.navigation:navigation-fragment-ktx", version.ref = "navigation" }
@@ -188,12 +196,15 @@ appintro = { module = "com.github.AppIntro:AppIntro", version.ref = "appintro" }
 androidsvg = { module = "com.caverock:androidsvg-aar", version.ref = "androidsvg" }
 listenablefuture = { module = "com.google.guava:listenablefuture", version.ref = "listenablefuture" }
 zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
+zerodev-aa = { group = "app.zerodev", name = "zerodev-aa", version.ref = "zerodev" }
 bitcoinj-core = { module = "org.bitcoinj:bitcoinj-core", version.ref = "bitcoinj" }
 nostr-sdk = { module = "org.rust-nostr:nostr-sdk", version.ref = "nostr-sdk" }
 c2pa = { module = "org.contentauth:c2pa", version.ref = "c2pa" }
 #c2pa = { module = "com.github.contentauth:c2pa-android", version.ref = "c2pa" }
 play-integrity = { module = "com.google.android.play:integrity", version.ref = "play-integrity" }
 kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
+privy-android = { group = "io.privy", name = "privy-core", version.ref = "privy" }
+androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "androidx-security-crypto" }
 
 # Testing
 junit = { module = "junit:junit", version.ref = "junit" }

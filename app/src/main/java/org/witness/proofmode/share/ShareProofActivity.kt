@@ -54,8 +54,14 @@ import org.witness.proofmode.c2pa.SigningMode
 import org.witness.proofmode.crypto.HashUtils
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.databinding.ActivityShareBinding
+import org.witness.proofmode.FeatureFlags
+import org.witness.proofmode.lp.LpManualLeg
+import org.witness.proofmode.lp.canonicalMediaUriKey
+import org.witness.proofmode.lp.collectShareProofMediaUris
+import org.witness.proofmode.lp.enqueueManualAttestForShareProof
 import org.witness.proofmode.getFileNameFromUri
 import org.witness.proofmode.getRealUri
+import org.witness.proofmode.plugins.lp.LocationProtocolPlugin
 import org.witness.proofmode.ui.ActivityConstants.EXTRA_FILE_NAME
 import org.witness.proofmode.ui.ActivityConstants.EXTRA_SHARE_TEXT
 import org.witness.proofmode.ui.ActivityConstants.INTENT_ACTIVITY_ITEMS_SHARED
@@ -84,6 +90,7 @@ import kotlin.math.sign
 class ShareProofActivity : AppCompatActivity() {
     private lateinit var binding: ActivityShareBinding
     private var sendMedia = true
+    private var lastProcessedIntentKey: String? = null
 
     private val hashCache = HashMap<String, String?>()
 
@@ -114,6 +121,13 @@ class ShareProofActivity : AppCompatActivity() {
         }
 
         mStorageProvider = DefaultStorageProvider(applicationContext)
+
+        refreshLpAttestContainerVisibility()
+    }
+
+    private fun refreshLpAttestContainerVisibility() {
+        val visible = FeatureFlags.lpActive
+        binding.llLpAttestContainer.visibility = if (visible) View.VISIBLE else View.GONE
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -129,10 +143,12 @@ class ShareProofActivity : AppCompatActivity() {
         hashCache.clear()
         proofZipName = ""
         baseDocumentTreeUri = null
+        lastProcessedIntentKey = null
     }
 
     override fun onResume() {
         super.onResume()
+        refreshLpAttestContainerVisibility()
 
         val tvInfoBasic = binding.tvInfoBasic
         tvInfoBasic.setOnClickListener { showInfoBasic() }
@@ -141,6 +157,14 @@ class ShareProofActivity : AppCompatActivity() {
         // Get intent, action and MIME type
         val intent = intent
         val action = intent.action
+
+        val currentIntentKey = buildIntentKey(intent)
+        if (currentIntentKey != null && currentIntentKey == lastProcessedIntentKey) {
+            Timber.d("ShareProofActivity: skipping duplicate onResume processing for key=%s", currentIntentKey)
+            return
+        }
+        lastProcessedIntentKey = currentIntentKey
+
         if (Intent.ACTION_SEND_MULTIPLE == action) {
             val mediaUris = intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM) ?: emptyList()
 
@@ -159,6 +183,17 @@ class ShareProofActivity : AppCompatActivity() {
                 checkProof(mediaUri)
             }
         } else finish()
+    }
+
+    private fun buildIntentKey(intent: Intent): String? {
+        val action = intent.action ?: return null
+        return if (Intent.ACTION_SEND_MULTIPLE == action) {
+            val mediaUris = intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM) ?: emptyList()
+            "$action:${mediaUris.joinToString(separator = "|") { it.toString() }}"
+        } else {
+            val mediaUri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM) ?: intent.data
+            "$action:${mediaUri?.toString().orEmpty()}"
+        }
     }
 
     private fun cleanUri(mediaUri: Uri): Uri {
@@ -302,6 +337,66 @@ class ShareProofActivity : AppCompatActivity() {
 
     fun clickNotarize(button: View?) {
         shareProofWithProgress("", false, false)
+    }
+
+    fun clickOffchainLocationAttestation(button: View?) {
+        Timber.i("Off-chain Location Attestation button clicked")
+        startAttestation(button, onChain = false)
+    }
+
+    fun clickOnchainLocationAttestation(button: View?) {
+        Timber.i("On-chain Location Attestation button clicked")
+        logOnchainAttestationWalletState()
+        startAttestation(button, onChain = true)
+    }
+
+    private fun logOnchainAttestationWalletState() {
+        val diag = LocationProtocolPlugin.walletDiagnostics()
+        Timber.d(
+            "LocationAttestation: wallet state — chainId=%s address=%s connector=%s sponsorshipActive=%s connected=%s",
+            diag.chainId ?: "n/a",
+            diag.abbreviatedAddress() ?: "n/a",
+            diag.connectorName,
+            diag.sponsorshipActive,
+            diag.connected,
+        )
+    }
+
+    private fun startAttestation(button: View?, onChain: Boolean) {
+        val leg = if (onChain) LpManualLeg.ONCHAIN else LpManualLeg.OFFCHAIN
+        val uris = collectShareProofMediaUris(intent, ::cleanUri)
+        if (uris.isEmpty()) {
+            Timber.w("LocationAttestation: no media URIs for action=%s", intent.action)
+            return
+        }
+
+        val storage = mStorageProvider ?: run {
+            Timber.e("LocationAttestation: storage provider not initialized")
+            return
+        }
+
+        LocationProtocolPlugin.requireApplicationScope().launch {
+            val result = enqueueManualAttestForShareProof(
+                appContext = applicationContext,
+                uris = uris,
+                leg = leg,
+                hashCache = hashCache,
+                storage = storage,
+            )
+            if (result.enqueuedCount == 0 && result.hashMissCount > 0) {
+                runOnUiThread {
+                    if (isFinishing || isDestroyed) {
+                        Timber.w("LocationAttestation: hash-miss snackbar skipped — Activity finishing")
+                        return@runOnUiThread
+                    }
+                    com.google.android.material.snackbar.Snackbar.make(
+                        binding.root,
+                        "Location attestation: proof not ready yet",
+                        com.google.android.material.snackbar.Snackbar.LENGTH_LONG,
+                    ).show()
+                }
+            }
+        }
     }
 
     fun clickAll(button: View?) {
@@ -940,7 +1035,7 @@ class ShareProofActivity : AppCompatActivity() {
             contentResolver.openInputStream(mediaUri)
         )
         if (hash != null) {
-            hashCache[sMediaUri] = hash
+            hashCache[canonicalMediaUriKey(mediaUri)] = hash
             Timber.d("Proof check if exists for URI %s and hash %s", mediaUri, hash)
             if (mStorageProvider?.proofExists(hash) == true)
             {
@@ -980,7 +1075,7 @@ class ShareProofActivity : AppCompatActivity() {
                         proofHash = HashUtils.getSHA256FromFileContent(
                             contentResolver.openInputStream(mediaUri)
                         )
-                        hashCache[mediaUri.toString()] = proofHash
+                        hashCache[canonicalMediaUriKey(mediaUri)] = proofHash
 
                         var mimeType = contentResolver.getType(mediaUri)
 
@@ -1176,6 +1271,7 @@ class ShareProofActivity : AppCompatActivity() {
         )
         if (hash != null && mStorageProvider?.proofExists(hash) == true) {
 
+            // LP attestation (.lp.json) artifacts are included automatically — see LocationProtocolArtifactStore Phase 4 notes
             mStorageProvider?.getProofSet(hash)?.let { shareUris.addAll(it) }
 
             val sdf = SimpleDateFormat.getDateTimeInstance()

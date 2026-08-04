@@ -98,6 +98,7 @@
 -keep class org.witness.proofmode.service.** { *; }
 -keep class org.witness.proofmode.share.** { *; }
 -keep class org.witness.proofmode.storage.** { *; }
+-keep class org.witness.proofmode.cid.** { *; }
 -keep class org.witness.proofmode.ui.** { *; }
 -keep class org.witness.proofmode.util.** { *; }
 

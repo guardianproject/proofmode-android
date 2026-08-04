@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory app:title="@string/location_settings_title">
+        <SwitchPreferenceCompat
+            app:key="locationSharingMaster"
+            app:persistent="false"
+            app:title="@string/location_sharing_enable_title"
+            app:summaryOn="@string/location_sharing_summary_on"
+            app:summaryOff="@string/location_sharing_summary_off" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/location_protocol_category_title">
+        <SwitchPreferenceCompat
+            app:key="pref_experimental_lp_enabled"
+            app:title="@string/location_protocol_enable_title"
+            app:summaryOn="@string/location_protocol_enable_summary_on"
+            app:summaryOff="@string/location_protocol_enable_summary_off"
+            app:defaultValue="false" />
+        <ListPreference
+            app:key="pref_lp_auto_capture_mode"
+            app:title="@string/location_protocol_auto_capture_title"
+            app:summary="@string/location_protocol_auto_capture_summary"
+            app:entries="@array/lp_auto_capture_mode_entries"
+            app:entryValues="@array/lp_auto_capture_mode_values"
+            app:defaultValue="off" />
+        <SwitchPreferenceCompat
+            app:key="pref_experimental_local_ipfs_cid_enabled"
+            app:title="@string/compute_cids_enable_title"
+            app:summaryOn="@string/compute_cids_enable_summary_on"
+            app:summaryOff="@string/compute_cids_enable_summary_off"
+            app:defaultValue="false" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/wallet_settings_title">
+        <Preference
+            app:key="walletSettings"
+            app:persistent="false"
+            app:title="@string/wallet_settings_title"
+            app:summary="@string/location_wallet_row_summary" />
+    </PreferenceCategory>
+
+</PreferenceScreen>

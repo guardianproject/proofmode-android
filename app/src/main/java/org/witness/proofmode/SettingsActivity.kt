@@ -5,14 +5,14 @@ import android.accounts.AccountManager
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
 import android.view.MenuItem
+import android.view.View
 import android.widget.CheckBox
 import android.widget.CompoundButton
-import android.widget.Toast
+import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
@@ -23,7 +23,6 @@ import org.witness.proofmode.databinding.ActivitySettingsBinding
 import org.witness.proofmode.service.MediaWatcher
 import org.witness.proofmode.share.FilebaseSettingsActivity
 import org.witness.proofmode.storage.filebase.FilebaseConfig
-import org.witness.proofmode.util.GPSTracker
 
 
 class SettingsActivity : AppCompatActivity() {
@@ -36,12 +35,30 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var switchAI: CheckBox
     private lateinit var switchAutoImport: CheckBox
     private lateinit var switchAutoSync: CheckBox
+    private lateinit var versionText: TextView
+    private lateinit var developerPreviewEntry: TextView
+
+    private var pendingEnableLocation = false
+    private var requestAttemptedThisCycle = false
+
+    private val locationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { grantMap ->
+        handleLocationPermissionResult(grantMap)
+    }
 
     private lateinit var binding:ActivitySettingsBinding
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivitySettingsBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        if (savedInstanceState != null) {
+            pendingEnableLocation =
+                savedInstanceState.getBoolean(KEY_PENDING_ENABLE_LOCATION, false)
+            requestAttemptedThisCycle =
+                savedInstanceState.getBoolean(KEY_REQUEST_ATTEMPTED, false)
+        }
 
         // Setup toolbar
         setSupportActionBar(binding.toolbar)
@@ -62,40 +79,44 @@ class SettingsActivity : AppCompatActivity() {
         switchAI = binding.contentSettings.switchAI
         switchAutoImport = binding.contentSettings.switchAutoImport
         switchAutoSync = binding.contentSettings.switchAutoSync
+        versionText = binding.contentSettings.textVersion
+        developerPreviewEntry = binding.contentSettings.textDeveloperPreview
 
+        versionText.text = getString(R.string.settings_version_format, BuildConfig.VERSION_NAME)
+
+        developerPreviewEntry.setOnClickListener {
+            startActivity(Intent(this, DeveloperPreviewActivity::class.java))
+        }
 
         updateUI()
-        switchLocation.setOnLongClickListener { _ ->
-            val intent: Intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-            val uri = Uri.fromParts("package", packageName, null)
-            intent.data = uri
-            startActivity(intent)
+        updateDeveloperPreviewVisibility()
+
+        // Location cell opens dedicated Location settings; checkbox is read-only indicator.
+        binding.contentSettings.cellLocation.setOnClickListener {
+            startActivity(Intent(this, LocationSettingsActivity::class.java))
+        }
+        binding.contentSettings.cellLocation.setOnLongClickListener {
+            val currentlyOn = mPrefs.getBoolean(
+                ProofMode.PREF_OPTION_LOCATION,
+                ProofMode.PREF_OPTION_LOCATION_DEFAULT,
+            )
+            if (currentlyOn) {
+                val snap = LocationSharingPermissionSync.beginDisable(this)
+                pendingEnableLocation = snap.pendingEnable
+                updateUI()
+            } else {
+                val plan = LocationSharingPermissionSync.beginEnable(this)
+                if (plan.needsPermissionRequest) {
+                    pendingEnableLocation = true
+                    requestAttemptedThisCycle = true
+                    locationPermissionLauncher.launch(
+                        LocationSharingPermissionSync.LOCATION_PERMISSIONS,
+                    )
+                }
+                updateUI()
+            }
             true
         }
-        switchLocation.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
-            if (isChecked) {
-                if (hasPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))||
-                    hasPermissions(this, arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION))
-                )
-                {
-                    mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_LOCATION, true).commit()
-                    refreshLocation()
-                }
-                else if (!askForPermission(
-                        Manifest.permission.ACCESS_FINE_LOCATION,
-                        REQUEST_CODE_LOCATION,
-                        R.layout.permission_location
-                    )
-                ) {
-                    mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_LOCATION, true).commit()
-                    refreshLocation()
-                }
-            } else {
-                mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_LOCATION, false).commit()
-            }
-            updateUI()
-        }
-
 
         switchNetwork.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
             if (isChecked) {
@@ -277,23 +298,50 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean(KEY_PENDING_ENABLE_LOCATION, pendingEnableLocation)
+        outState.putBoolean(KEY_REQUEST_ATTEMPTED, requestAttemptedThisCycle)
+    }
+
     override fun onResume() {
         super.onResume()
+        val snap = LocationSharingPermissionSync.reconcileOnResume(this, pendingEnableLocation)
+        pendingEnableLocation = snap.pendingEnable
         updateUI()
+        updateDeveloperPreviewVisibility()
+    }
+
+    private fun handleLocationPermissionResult(grantMap: Map<String, Boolean>) {
+        val result = LocationSharingPermissionSync.onPermissionLauncherResult(
+            activity = this,
+            context = this,
+            pendingEnable = pendingEnableLocation,
+            requestAttempted = requestAttemptedThisCycle,
+            grantMap = grantMap,
+        )
+        pendingEnableLocation = result.pendingEnable
+        requestAttemptedThisCycle = false
+        if (result.openAppInfo) {
+            startActivity(LocationSharingPermissionSync.applicationDetailsIntent(packageName))
+        }
+        updateUI()
+    }
+
+    /** Package-visible for Robolectric T6 long-press permission coverage. */
+    internal fun handleLocationPermissionResultForTests(grantMap: Map<String, Boolean>) {
+        handleLocationPermissionResult(grantMap)
+    }
+
+    internal fun pendingEnableLocationForTests(): Boolean = pendingEnableLocation
+
+    private fun updateDeveloperPreviewVisibility() {
+        developerPreviewEntry.visibility = View.GONE
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         when (requestCode) {
-            REQUEST_CODE_LOCATION -> {
-                if (hasPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))||
-                    hasPermissions(this, arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION))
-                    ) {
-                    mPrefs.edit(commit = true) { putBoolean(ProofMode.PREF_OPTION_LOCATION, true) }
-                    refreshLocation()
-                }
-                updateUI()
-            }
             REQUEST_CODE_NETWORK_STATE -> {
                 if (hasPermissions(this, arrayOf(Manifest.permission.ACCESS_NETWORK_STATE))) {
                     mPrefs.edit(commit = true) { putBoolean(ProofMode.PREF_OPTION_NETWORK, true) }
@@ -350,17 +398,11 @@ class SettingsActivity : AppCompatActivity() {
         return false
     }
 
-    private fun refreshLocation() {
-        val gpsTracker = GPSTracker(this)
-        if (gpsTracker.canGetLocation()) {
-            gpsTracker.location
-        }
-    }
-
     companion object {
-        private const val REQUEST_CODE_LOCATION = 1
         private const val REQUEST_CODE_NETWORK_STATE = 2
         private const val REQUEST_CODE_READ_PHONE_STATE = 3
        // private const val REQUEST_CODE_LOCATION_BACKGROUND = 4
+        internal const val KEY_PENDING_ENABLE_LOCATION = "pendingEnableLocation"
+        internal const val KEY_REQUEST_ATTEMPTED = "requestAttemptedThisCycle"
     }
 }

@@ -102,6 +102,14 @@
             android:name=".NostrIdentityActivity"
             android:label="@string/nostr_identity_title" />
         <activity
+            android:name=".DeveloperPreviewActivity"
+            android:exported="false"
+            android:label="@string/developer_preview_title" />
+        <activity
+            android:name=".LocationSettingsActivity"
+            android:exported="false"
+            android:label="@string/location_settings_title" />
+        <activity
             android:name=".ui.DataLegendActivity"
             android:label="@string/activity_datalegend_title" />
         <activity

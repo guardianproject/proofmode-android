@@ -2,12 +2,10 @@
 
 package org.witness.proofmode.camera.fragments
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.ContentValues
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -64,6 +62,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.witness.proofmode.LocationCapturePolicy
 import org.witness.proofmode.ProofMode
 import org.witness.proofmode.camera.CameraActivity
 import org.witness.proofmode.camera.adapter.Media
@@ -179,30 +178,18 @@ class CameraViewModel(private val activity: CameraActivity, private val app: App
     val shutterFlashTrigger: StateFlow<Int> = _shutterFlashTrigger
 
     private val _locationEnabled = MutableStateFlow(
-        PreferenceManager.getDefaultSharedPreferences(app.applicationContext)
-            .getBoolean(ProofMode.PREF_OPTION_LOCATION, ProofMode.PREF_OPTION_LOCATION_DEFAULT)
-                && hasLocationPermission()
+        LocationCapturePolicy.shouldEmbedLocation(app.applicationContext)
     )
     val locationEnabled: StateFlow<Boolean> = _locationEnabled
 
     private val _requestLocationPermission = MutableStateFlow(0)
     val requestLocationPermission: StateFlow<Int> = _requestLocationPermission
 
-    fun hasLocationPermission(): Boolean {
-        val ctx = app.applicationContext
-        return ContextCompat.checkSelfPermission(
-            ctx, Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED ||
-                ContextCompat.checkSelfPermission(
-                    ctx, Manifest.permission.ACCESS_COARSE_LOCATION
-                ) == PackageManager.PERMISSION_GRANTED
-    }
-
     fun toggleLocationEnabled() {
         if (_locationEnabled.value) {
             setLocationEnabled(false)
         } else {
-            if (hasLocationPermission()) {
+            if (LocationCapturePolicy.hasOsLocationPermission(app.applicationContext)) {
                 setLocationEnabled(true)
             } else {
                 _requestLocationPermission.update { it + 1 }
@@ -219,9 +206,8 @@ class CameraViewModel(private val activity: CameraActivity, private val app: App
     }
 
     fun refreshLocationPermissionState() {
-        val pref = PreferenceManager.getDefaultSharedPreferences(app.applicationContext)
-            .getBoolean(ProofMode.PREF_OPTION_LOCATION, ProofMode.PREF_OPTION_LOCATION_DEFAULT)
-        _locationEnabled.value = pref && hasLocationPermission()
+        _locationEnabled.value =
+            LocationCapturePolicy.shouldEmbedLocation(app.applicationContext)
     }
 
 
@@ -547,12 +533,8 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
 
             // Embed GPS into the JPEG EXIF at capture time when location is enabled.
             // CameraX writes these tags into the file before it is C2PA-signed downstream.
-            // Read the "trackLocation" pref directly (rather than the cached _locationEnabled
-            // StateFlow) so this stays in sync with SettingsActivity and matches the same
-            // decision C2PAManager/MediaWatcher make at sign time.
-            val trackLocation = PreferenceManager.getDefaultSharedPreferences(app.applicationContext)
-                .getBoolean(ProofMode.PREF_OPTION_LOCATION, ProofMode.PREF_OPTION_LOCATION_DEFAULT)
-            if (trackLocation && hasLocationPermission()) {
+            // Same Ideal recipe as C2PAManager / MediaWatcher (LocationCapturePolicy.shouldEmbedLocation).
+            if (LocationCapturePolicy.shouldEmbedLocation(app.applicationContext)) {
                 location = ProofMode.getLatestLocation(app.applicationContext)
             }
         }

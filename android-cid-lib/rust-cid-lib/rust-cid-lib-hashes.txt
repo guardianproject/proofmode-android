@@ -1,0 +1,4 @@
+f9416645e1afbb958bada74bec093553fd4149599a857f6f49d6422d2f9bb5c8  android-cid-lib/src/main/jniLibs/arm64-v8a/librust_cid_lib.so
+7641eaa3fd07088c6a71a78c8e0fccb3806e8ba8f6a11d3093b5966c8988aa5e  android-cid-lib/src/main/jniLibs/armeabi-v7a/librust_cid_lib.so
+158135685553a445b589ed6249dfdb279fe54ff1ab97415600f7667f4bef2e89  android-cid-lib/src/main/jniLibs/x86/librust_cid_lib.so
+6498dfd4ae548237d3d7e9a4ba81c03062349ad6d3ee842e6eb44ef5e845250f  android-cid-lib/src/main/jniLibs/x86_64/librust_cid_lib.so

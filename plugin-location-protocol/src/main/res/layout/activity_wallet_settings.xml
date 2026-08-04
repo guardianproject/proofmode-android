@@ -1,0 +1,382 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:fitsSystemWindows="false">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fitsSystemWindows="true"
+        android:background="@android:color/white"
+        app:elevation="0dp">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@android:color/white"
+            android:titleTextColor="@android:color/black"
+            app:navigationIconTint="@android:color/black" />
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Page Title with Info Icon -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:fontFamily="@font/inter"
+                    android:text="@string/wallet_settings_title"
+                    android:textColor="@color/onboarding_gray"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
+
+                <ImageButton
+                    android:id="@+id/btn_info_web3_wallet"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="@drawable/info_icon_background"
+                    android:contentDescription="@string/info_web3_wallet_title"
+                    android:padding="10dp"
+                    android:src="@android:drawable/ic_dialog_info"
+                    app:tint="@color/colorPrimary" />
+            </LinearLayout>
+
+            <!-- Wallet Status Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_wallet_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp"
+                app:strokeColor="#E0E0E0"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <!-- Address Display with Copy -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/tv_wallet_address"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:fontFamily="@font/inter"
+                            android:text="@string/wallet_not_connected"
+                            android:textColor="@color/onboarding_gray"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <ImageButton
+                            android:id="@+id/btn_copy_address"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:contentDescription="@string/wallet_copy_address"
+                            android:src="@drawable/ic_content_copy"
+                            android:visibility="gone"
+                            app:tint="@color/colorPrimaryDark" />
+                    </LinearLayout>
+
+                    <!-- Connect / Disconnect Buttons -->
+                    <Button
+                        android:id="@+id/btn_connect_wallet"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:background="@drawable/rounded_button_dark_background"
+                        android:fontFamily="@font/inter"
+                        android:text="@string/wallet_connect"
+                        android:textAllCaps="false"
+                        android:textColor="@android:color/white"
+                        android:textSize="15sp" />
+
+                    <Button
+                        android:id="@+id/btn_disconnect_wallet"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:background="@drawable/rounded_button_background"
+                        android:fontFamily="@font/inter"
+                        android:text="@string/wallet_disconnect"
+                        android:textAllCaps="false"
+                        android:textColor="@color/onboarding_gray"
+                        android:textSize="15sp"
+                        android:visibility="gone" />
+
+                    <Button
+                        android:id="@+id/btn_show_onboarding_guide"
+                        style="@style/Widget.MaterialComponents.Button.TextButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:fontFamily="@font/inter"
+                        android:text="@string/wallet_show_onboarding_guide"
+                        android:textAllCaps="false"
+                        android:textColor="@color/colorPrimary" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Chain Selector Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_chain_selector"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp"
+                app:strokeColor="#E0E0E0"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:fontFamily="@font/inter"
+                            android:text="@string/wallet_network_label"
+                            android:textColor="@color/onboarding_gray"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <ImageButton
+                            android:id="@+id/btn_info_eas"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:background="@drawable/info_icon_background"
+                            android:contentDescription="@string/info_eas_title"
+                            android:padding="10dp"
+                            android:src="@android:drawable/ic_dialog_info"
+                            app:tint="@color/colorPrimary" />
+                    </LinearLayout>
+
+                    <Spinner
+                        android:id="@+id/spinner_chain"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Gas Sponsorship Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_sponsorship"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp"
+                app:strokeColor="#E0E0E0"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:fontFamily="@font/inter"
+                            android:text="@string/wallet_sponsorship_section_title"
+                            android:textColor="@color/onboarding_gray"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <ImageButton
+                            android:id="@+id/btn_info_sponsorship"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:background="@drawable/info_icon_background"
+                            android:contentDescription="@string/info_sponsorship_title"
+                            android:padding="10dp"
+                            android:src="@android:drawable/ic_dialog_info"
+                            app:tint="@color/colorPrimary" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:fontFamily="@font/inter"
+                            android:text="@string/wallet_sponsor_transactions_label"
+                            android:textColor="@color/onboarding_gray"
+                            android:textSize="14sp" />
+
+                        <com.google.android.material.switchmaterial.SwitchMaterial
+                            android:id="@+id/switch_sponsor_transactions"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tv_sponsor_transactions_summary"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:textColor="#999999"
+                        android:textSize="12sp" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/til_zerodev_project_id"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:hint="@string/wallet_zerodev_project_id_label">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_zerodev_project_id"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:imeOptions="actionDone"
+                            android:inputType="textNoSuggestions"
+                            android:maxLines="1" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <TextView
+                        android:id="@+id/tv_zerodev_project_id_helper"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:textColor="#999999"
+                        android:textSize="12sp" />
+
+                    <Button
+                        android:id="@+id/btn_save_zerodev_project_id"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/wallet_sponsorship_save"
+                        android:textAllCaps="false" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Explorer Links Card (visible when connected) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_explorer_links"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:visibility="gone"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp"
+                app:strokeColor="#E0E0E0"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <Button
+                        android:id="@+id/btn_view_transactions"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/rounded_button_background"
+                        android:fontFamily="@font/inter"
+                        android:text="@string/wallet_view_transactions"
+                        android:textAllCaps="false"
+                        android:textColor="@color/onboarding_gray"
+                        android:textSize="14sp" />
+
+                    <Button
+                        android:id="@+id/btn_view_attestations"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/rounded_button_background"
+                        android:fontFamily="@font/inter"
+                        android:text="@string/wallet_view_attestations"
+                        android:textAllCaps="false"
+                        android:textColor="@color/onboarding_gray"
+                        android:textSize="14sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Privy Info Card -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/powered_by_privy"
+                    android:textColor="#999999"
+                    android:textSize="12sp" />
+
+                <ImageButton
+                    android:id="@+id/btn_info_privy"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_marginStart="4dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/info_privy_title"
+                    android:padding="12dp"
+                    android:src="@android:drawable/ic_dialog_info"
+                    app:tint="#999999" />
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>
