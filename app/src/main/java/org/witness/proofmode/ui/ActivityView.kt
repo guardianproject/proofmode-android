@@ -39,6 +39,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.derivedStateOf
@@ -65,18 +66,29 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toFile
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage
 import coil.decode.VideoFrameDecoder
 import coil.request.ImageRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.witness.proofmode.FeatureFlags
 import org.witness.proofmode.MediaType
 import org.witness.proofmode.R
 import org.witness.proofmode.c2pa.C2PAManager
 import org.witness.proofmode.c2pa.PreferencesManager
 import org.witness.proofmode.c2pa.ValidationState
 import org.witness.proofmode.getMediaTypeFromFileUri
+import org.witness.proofmode.lp.AutoCaptureLpMarkerResolver
+import org.witness.proofmode.lp.LpBadgeUiState
+import org.witness.proofmode.lp.LpOffchainBadge
+import org.witness.proofmode.lp.LpOnchainBadge
+import org.witness.proofmode.plugins.lp.autocapture.AutoCaptureLpStateRegistry
+import org.witness.proofmode.plugins.lp.attestation.LocationProtocolArtifactStore
 import org.witness.proofmode.service.MediaWatcher
+import org.witness.proofmode.storage.DefaultStorageProvider
 import org.witness.proofmode.service.MediaWatcher.Companion.getImagePath
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -118,6 +130,9 @@ sealed class CapturedAssetRow {
     class FourItems(val items: List<ProofableItem>) : CapturedAssetRow()
 }
 
+internal fun lpBadgeAllowed(lpActive: Boolean, proofStatus: ProofStatus): Boolean =
+    lpActive && proofStatus == ProofStatus.GENERATED
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ProofableItemView(
@@ -131,6 +146,17 @@ fun ProofableItemView(
 ) {
     val selectionHandler = LocalSelectionHandler.current
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var lpActive by remember { mutableStateOf(FeatureFlags.lpActive) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                lpActive = FeatureFlags.lpActive
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     // Verify if Uri MIME type is image or video and if it is a video,get the thumbnail
     val isVideo = remember(item) {
         val uri = item.uri
@@ -184,6 +210,31 @@ fun ProofableItemView(
             }
         }
 
+    }
+
+    var lpBadgeState by remember(item.id) { mutableStateOf(LpBadgeUiState()) }
+
+    LaunchedEffect(item.id, item.proofStatus, lpActive) {
+        if (!lpBadgeAllowed(lpActive, item.proofStatus)) {
+            lpBadgeState = LpBadgeUiState()
+            return@LaunchedEffect
+        }
+        val storage = DefaultStorageProvider(context)
+        val artifactStore = LocationProtocolArtifactStore(storage)
+        suspend fun refresh() {
+            lpBadgeState = withContext(Dispatchers.IO) {
+                AutoCaptureLpMarkerResolver.resolve(
+                    mediaHash = item.id,
+                    registryState = AutoCaptureLpStateRegistry.getState(item.id),
+                    artifactStore = artifactStore,
+                    storageProvider = storage,
+                )
+            }
+        }
+        refresh()
+        AutoCaptureLpStateRegistry.updates.collect { hash ->
+            if (hash == item.id) refresh()
+        }
     }
 
 
@@ -302,10 +353,69 @@ fun ProofableItemView(
                 // No pending badge; the CR badge above appears once verified.
             }
         }
+
+        if (lpBadgeAllowed(lpActive, item.proofStatus)) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(2.dp)
+                    .background(
+                        color = Color.Black.copy(alpha = 0.6f),
+                        shape = RoundedCornerShape(2.dp),
+                    )
+                    .padding(1.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                when (lpBadgeState.offchain) {
+                    LpOffchainBadge.SPINNER -> {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                    LpOffchainBadge.FINAL -> {
+                        Image(
+                            painter = painterResource(R.drawable.ic_lp_offchain_badge),
+                            contentDescription = "LP off-chain attestation",
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
+                    LpOffchainBadge.NONE -> Unit
+                }
+                if (lpBadgeState.offchain != LpOffchainBadge.NONE &&
+                    lpBadgeState.onchain != LpOnchainBadge.NONE
+                ) {
+                    Spacer(modifier = Modifier.width(2.dp))
+                }
+                when (lpBadgeState.onchain) {
+                    LpOnchainBadge.SPINNER -> {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                    LpOnchainBadge.PENDING -> {
+                        Image(
+                            painter = painterResource(R.drawable.ic_lp_onchain_pending_badge),
+                            contentDescription = "LP on-chain pending",
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
+                    LpOnchainBadge.CONFIRMED -> {
+                        Image(
+                            painter = painterResource(R.drawable.ic_lp_onchain_confirmed_badge),
+                            contentDescription = "LP on-chain confirmed",
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
+                    LpOnchainBadge.NONE -> Unit
+                }
+            }
+        }
     }
-
-
-
 }
 
 // Custom extension

@@ -78,9 +78,12 @@
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/cellLocation"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="0.5"
+                android:clickable="true"
+                android:focusable="true"
                 android:gravity="center_horizontal"
                 android:orientation="vertical">
 
@@ -88,7 +91,9 @@
                     android:id="@+id/switchLocation"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
-                    android:button="@drawable/option_location_selector" />
+                    android:button="@drawable/option_location_selector"
+                    android:clickable="false"
+                    android:focusable="false" />
 
                 <TextView
                     style="@style/SettingsOptionStyle"
@@ -292,6 +297,24 @@
             </LinearLayout>
         </TableRow>
     </TableLayout>
+
+    <TextView
+        android:id="@+id/text_version"
+        style="@style/SettingsOptionDescStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="@string/settings_version_placeholder" />
+
+    <TextView
+        android:id="@+id/text_developer_preview"
+        style="@style/SettingsOptionStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:text="@string/developer_preview_title" />
 
 
 </LinearLayout>

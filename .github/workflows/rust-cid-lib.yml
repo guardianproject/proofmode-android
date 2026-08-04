@@ -1,0 +1,85 @@
+name: rust-cid-lib
+
+on:
+  pull_request:
+    paths: &rust-cid-lib-paths
+      - 'android-cid-lib/rust-cid-lib/**'
+      - 'android-cid-lib/rust-cid-lib/rust-cid-lib-hashes.txt'
+      - 'android-cid-lib/rust-cid-lib/rust-cid-lib-uniffi-hashes.txt'
+      - 'android-cid-lib/scripts/build-rust-cid-lib.sh'
+      - 'android-cid-lib/src/main/jniLibs/**'
+      - 'android-cid-lib/src/main/java/org/witness/proofmode/cid/uniffi/**'
+      - 'android-cid-lib/build.gradle.kts'
+      - '.github/workflows/rust-cid-lib.yml'
+  push:
+    branches: [main]
+    paths: *rust-cid-lib-paths
+
+jobs:
+  verify-native-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: >-
+            aarch64-linux-android,
+            armv7-linux-androideabi,
+            i686-linux-android,
+            x86_64-linux-android
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: cargo-rust-cid-lib-${{ hashFiles('android-cid-lib/rust-cid-lib/Cargo.lock') }}
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --locked
+
+      - name: Setup Android NDK
+        uses: ntsknightly/action-android-ndk@v1
+        with:
+          ndk-version: r26d
+
+      - name: Build rust-cid-lib
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
+        run: android-cid-lib/scripts/build-rust-cid-lib.sh
+
+      - name: Verify SHA-256 hashes match committed manifest
+        run: |
+          find android-cid-lib/src/main/jniLibs -name 'librust_cid_lib.so' -exec sha256sum {} \; \
+            | awk '{print $1 "  android-cid-lib/" substr($2, index($2,"src/"))}' | sort -k2 > /tmp/built-hashes.txt
+          diff -u android-cid-lib/rust-cid-lib/rust-cid-lib-hashes.txt /tmp/built-hashes.txt
+
+      - name: Verify UniFFI Kotlin glue hash manifest
+        run: |
+          find android-cid-lib/src/main/java/org/witness/proofmode/cid/uniffi -name '*.kt' -exec sha256sum {} \; \
+            | awk '{print $1 "  android-cid-lib/" substr($2, index($2,"src/"))}' | sort -k2 > /tmp/built-uniffi-hashes.txt
+          diff -u android-cid-lib/rust-cid-lib/rust-cid-lib-uniffi-hashes.txt /tmp/built-uniffi-hashes.txt
+
+      - name: Verify no uncommitted UniFFI glue after rebuild
+        run: |
+          git diff --exit-code -- android-cid-lib/src/main/java/org/witness/proofmode/cid/uniffi/
+
+      - name: Gradle verifyRustCidLib
+        run: ./gradlew :android-cid-lib:verifyRustCidLib
+
+      - name: Gradle verifyUniffiBindings
+        run: ./gradlew :android-cid-lib:verifyUniffiBindings
+
+      - name: Rust unit tests
+        run: cd android-cid-lib/rust-cid-lib && cargo test

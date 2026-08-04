@@ -19,6 +19,7 @@
 bin/
 gen/
 out/
+.cxx/
 
 # Gradle files
 .gradle/
@@ -46,6 +47,7 @@ captures/
 
 # Keystore files
 *.jks
+keystore.properties
 
 /app/src/main/res/values/googleapis.actual.xml
 
@@ -53,3 +55,4 @@ captures/
 secrets.properties
 
 gradle-daemon-jvm.properties
+.worktrees/

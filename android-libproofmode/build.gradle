@@ -65,7 +65,13 @@ android {
 
         test {
             resources {
-                srcDirs 'src/test/assets'
+                srcDirs 'src/test/assets', 'src/test/resources'
+            }
+        }
+
+        androidTest {
+            resources {
+                srcDirs 'src/test/resources'
             }
         }
     }
@@ -80,7 +86,6 @@ kotlin {
 
 dependencies {
 
- //   implementation 'androidx.appcompat:appcompat:1.7.1'
     implementation libs.androidx.localbroadcastmanager
 
     implementation libs.timber

@@ -3,6 +3,8 @@ package org.witness.proofmode.util
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import org.witness.proofmode.FeatureFlags
+import org.witness.proofmode.lp.AutoCaptureLocationAttestationOrchestrator
 import org.witness.proofmode.ui.Activities
 import org.witness.proofmode.ProofMode
 import timber.log.Timber
@@ -31,6 +33,13 @@ class ProofEventReceiver : BroadcastReceiver() {
                 if (proofHash != null) {
                     val imported = intent.action == ProofMode.EVENT_PROOF_GENERATED_IMPORT
                     Activities.markProofGenerated(uriMedia, proofHash, imported, context)
+                    if (intent.action == ProofMode.EVENT_PROOF_GENERATED && !imported && FeatureFlags.lpActive) {
+                        AutoCaptureLocationAttestationOrchestrator.enqueue(
+                            context = context.applicationContext,
+                            mediaUri = android.net.Uri.parse(uriMedia),
+                            mediaHash = proofHash,
+                        )
+                    }
                 }
             }
         }

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="OtpDigitStyle">
+        <item name="android:background">@drawable/otp_digit_background</item>
+        <item name="android:textColor">@color/onboarding_gray</item>
+        <item name="android:cursorVisible">true</item>
+        <item name="android:importantForAutofill">no</item>
+    </style>
+
+    <style name="Theme.Proofmode.WalletDeepLinkRouter" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+    </style>
+</resources>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="lp_auto_capture_mode_entries">
+        <item>@string/lp_auto_capture_mode_off</item>
+        <item>@string/lp_auto_capture_mode_offchain</item>
+        <item>@string/lp_auto_capture_mode_onchain</item>
+        <item>@string/lp_auto_capture_mode_both</item>
+    </string-array>
+    <string-array name="lp_auto_capture_mode_values">
+        <item>off</item>
+        <item>offchain</item>
+        <item>onchain</item>
+        <item>both</item>
+    </string-array>
+</resources>

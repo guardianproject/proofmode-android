@@ -10,4 +10,9 @@ plugins {
     id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
 }
 
-include ':app', ':android-libproofmode',  ':android-libproofcam', ':android-opentimestamps', ':android-nostr'
+include ':app', ':android-libproofmode',  ':android-libproofcam', ':android-opentimestamps', ':android-nostr',
+        ':android-cid-lib',
+        ':plugin-location-protocol', ':plugin-wallet-infra', ':plugin-ipfs-cid'
+
+setBinding(new Binding([gradle: this]))
+evaluate(new File(settingsDir, 'flutter-location-protocol/.android/include_flutter.groovy'))
