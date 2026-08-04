@@ -9,11 +9,35 @@ import timber.log.Timber
 import java.text.SimpleDateFormat
 import java.util.*
 
+data class BuildPayloadResult(
+    val payload: LocationProtocolPayload,
+    val captureMimeType: String?,
+)
+
+/** Validates coordinates before they are included in a Location Protocol payload. */
+object LocationProtocolCoordinateValidator {
+
+    /**
+     * Returns true for finite, in-range coordinates except the ambiguous `(0, 0)` pair.
+     * A single zero axis is valid for locations on the equator or prime meridian.
+     */
+    fun isValid(latitude: Double?, longitude: Double?): Boolean {
+        if (latitude == null || longitude == null ||
+            !latitude.isFinite() || !longitude.isFinite()
+        ) {
+            return false
+        }
+        if (latitude !in -90.0..90.0 || longitude !in -180.0..180.0) {
+            return false
+        }
+        return latitude != 0.0 || longitude != 0.0
+    }
+}
+
 /**
  * Extracts Location Protocol payloads from ProofMode proof metadata stored by
- * [StorageProvider]. Uses the non-compliant / fallback strategy: if GPS coordinates
- * are absent or 0.0, the payload is still produced with zeroed coordinates rather
- * than returning null — preserving safety boundaries for downstream pipeline steps.
+ * [StorageProvider]. Payload creation requires trustworthy GPS coordinates; missing,
+ * malformed, or ambiguous coordinates cause this helper to return null.
  *
  * Decision note (Phase 2): proof-derived extraction is intentionally kept over
  * direct EXIF extraction for consistency with the existing proof pipeline.
@@ -24,9 +48,8 @@ object LocationProtocolHelper {
     /**
      * Builds a [LocationProtocolPayload] from ProofMode proof data for the given [mediaHash].
      *
-     * If proof data is not found or GPS fields are absent/zero the payload is still returned
-     * with zeroed coordinates (non-compliant / safe-fallback variant). Returns null only when
-     * [storageProvider] cannot supply any proof data at all for the given hash.
+        * Returns null when proof data cannot be supplied or when its GPS coordinates are missing,
+    * malformed, out of range, non-finite, or the ambiguous `(0, 0)` pair.
      *
      * @param mediaHash  SHA-256 hash of the source media file
      * @param mediaUri   Original media URI (used to derive MIME type)
@@ -39,8 +62,22 @@ object LocationProtocolHelper {
         mediaUri: Uri,
         contentResolver: ContentResolver,
         storageProvider: StorageProvider,
-        memo: String = ""
-    ): LocationProtocolPayload? {
+        memo: String = "",
+    ): LocationProtocolPayload? = buildPayloadResult(
+        mediaHash = mediaHash,
+        mediaUri = mediaUri,
+        contentResolver = contentResolver,
+        storageProvider = storageProvider,
+        memo = memo,
+    )?.payload
+
+    fun buildPayloadResult(
+        mediaHash: String,
+        mediaUri: Uri,
+        contentResolver: ContentResolver,
+        storageProvider: StorageProvider,
+        memo: String = "",
+    ): BuildPayloadResult? {
         return try {
             if (!storageProvider.proofExists(mediaHash)) {
                 Timber.w("LP helper: no proof found for hash %s", mediaHash)
@@ -49,11 +86,15 @@ object LocationProtocolHelper {
 
             val proofData = ProofModeUtil.getProofHashMap(storageProvider, mediaHash)
 
-            // --- Coordinates (0.0 fallback when absent/invalid) ---
+            // --- Coordinates (required for a trustworthy attestation) ---
             val latStr = proofData[ProofModeV1Constants.LOCATION_LATITUDE]
             val lonStr = proofData[ProofModeV1Constants.LOCATION_LONGITUDE]
-            val latitude = latStr.nullIfEmpty()?.toDoubleOrNull() ?: 0.0
-            val longitude = lonStr.nullIfEmpty()?.toDoubleOrNull() ?: 0.0
+            val latitude = latStr.nullIfBlank()?.toDoubleOrNull()
+            val longitude = lonStr.nullIfBlank()?.toDoubleOrNull()
+            if (!LocationProtocolCoordinateValidator.isValid(latitude, longitude)) {
+                Timber.w("LP helper: invalid GPS coordinates for hash %s", mediaHash)
+                return null
+            }
 
             val geoJsonLocation = """{"type":"Point","coordinates":[$longitude,$latitude]}"""
 
@@ -72,14 +113,15 @@ object LocationProtocolHelper {
                 System.currentTimeMillis()
             }
 
-            // --- Media type ---
-            val filePath = proofData[ProofModeV1Constants.FILE_PATH] ?: ""
-            val mimeType: String = try {
-                contentResolver.getType(mediaUri) ?: extensionMimeType(filePath)
+            // --- Media type (getType-only; no path fallback) ---
+            val captureMimeType: String? = try {
+                contentResolver.getType(mediaUri)
             } catch (e: Exception) {
-                Timber.w(e, "LP helper: error determining media type")
-                "application/octet-stream"
+                Timber.w(e, "LP helper: error determining media type via getType")
+                null
             }
+            val mediaTypeExtension = org.witness.proofmode.plugins.ipfscid.MediaLinkNaming
+                .extensionFromMimeType(captureMimeType)
 
             // --- File hash (media data) ---
             val fileHash = proofData[ProofModeV1Constants.FILE_HASH_SHA_256] ?: ""
@@ -87,17 +129,18 @@ object LocationProtocolHelper {
             // --- Memo ---
             val proofMemo = memo.ifEmpty { proofData[ProofModeV1Constants.NOTES] ?: "" }
 
-            LocationProtocolPayload(
+            val payload = LocationProtocolPayload(
                 eventTimestamp = eventTimestamp,
                 srs = "WGS84",
                 locationType = "geojson",
                 location = geoJsonLocation,
                 recipeType = arrayOf("ProofMode"),
                 recipePayload = arrayOf(""),
-                mediaType = arrayOf(mimeType),
+                mediaType = arrayOf(mediaTypeExtension),
                 mediaData = arrayOf(fileHash),
-                memo = proofMemo
+                memo = proofMemo,
             )
+            BuildPayloadResult(payload = payload, captureMimeType = captureMimeType)
         } catch (e: Exception) {
             Timber.e(e, "LP helper: unexpected error building payload for hash %s", mediaHash)
             null
@@ -108,17 +151,5 @@ object LocationProtocolHelper {
     // Private helpers
     // -------------------------------------------------------------------------
 
-    private fun String?.nullIfEmpty(): String? = if (isNullOrEmpty()) null else this
-
-    private fun extensionMimeType(filePath: String): String {
-        return when (filePath.substringAfterLast(".", "").lowercase()) {
-            "jpg", "jpeg" -> "image/jpeg"
-            "png"         -> "image/png"
-            "mp4"         -> "video/mp4"
-            "mov"         -> "video/quicktime"
-            "mp3"         -> "audio/mpeg"
-            "wav"         -> "audio/wav"
-            else          -> "application/octet-stream"
-        }
-    }
+    private fun String?.nullIfBlank(): String? = if (isNullOrBlank()) null else this
 }

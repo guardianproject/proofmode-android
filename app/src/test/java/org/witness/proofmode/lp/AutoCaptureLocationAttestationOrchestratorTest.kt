@@ -1,6 +1,7 @@
 package org.witness.proofmode.lp
 
 import android.content.Context
+import androidx.preference.PreferenceManager
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -30,6 +31,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.witness.proofmode.TestProofModeApplication
 import org.witness.proofmode.FeatureFlags
+import org.witness.proofmode.ProofMode
 import org.witness.proofmode.plugins.lp.autocapture.AutoCaptureLpMode
 import org.witness.proofmode.plugins.lp.autocapture.AutoCaptureLpStateRegistry
 import org.witness.proofmode.plugins.lp.attestation.LocationProtocolAttestationCoordinator
@@ -53,7 +55,9 @@ class AutoCaptureLocationAttestationOrchestratorTest {
         context = ApplicationProvider.getApplicationContext()
         context.getSharedPreferences(FeatureFlags.PREFS_NAME, Context.MODE_PRIVATE)
             .edit().clear().commit()
-        FeatureFlags.init(context)
+        PreferenceManager.getDefaultSharedPreferences(context).edit().clear().commit()
+        FeatureFlags.resetForTests(context)
+        primeLocationMasterOn()
         applicationScopeJob?.cancel()
         applicationScopeJob = SupervisorJob()
         LocationProtocolPlugin.registerApplicationScope(
@@ -74,6 +78,21 @@ class AutoCaptureLocationAttestationOrchestratorTest {
         applicationScopeJob?.cancel()
         applicationScopeJob = null
         AutoCaptureLpStateRegistry.clearForTests()
+    }
+
+    private fun primeLocationMasterOn() {
+        PreferenceManager.getDefaultSharedPreferences(context)
+            .edit().putBoolean(ProofMode.PREF_OPTION_LOCATION, true).commit()
+    }
+
+    private fun primeLocationMasterOff() {
+        PreferenceManager.getDefaultSharedPreferences(context)
+            .edit().putBoolean(ProofMode.PREF_OPTION_LOCATION, false).commit()
+    }
+
+    private fun primeLpActiveEnabled() {
+        primeLocationMasterOn()
+        FeatureFlags.lpEnabled = true
     }
 
     private fun trackHandle(
@@ -120,6 +139,87 @@ class AutoCaptureLocationAttestationOrchestratorTest {
     }
 
     @Test
+    fun enqueue_whenLocationMasterOff_doesNotQueue() {
+        primeLpActiveEnabled()
+        primeLocationMasterOff()
+        FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFFCHAIN
+
+        AutoCaptureLocationAttestationOrchestrator.setEnqueueInterceptorForTests(null)
+        try {
+            AutoCaptureLocationAttestationOrchestrator.enqueue(
+                context,
+                android.net.Uri.parse("content://test/1"),
+                "hash1",
+            )
+
+            assertEquals(0, AutoCaptureLocationAttestationOrchestrator.pendingCountForTests())
+        } finally {
+            AutoCaptureLocationAttestationOrchestrator.resetForTests()
+            AutoCaptureLocationAttestationOrchestrator.setEnqueueInterceptorForTests(enqueueNoOpForTests)
+        }
+    }
+
+    @Test
+    fun enqueueManual_whenLocationMasterOff_doesNotQueue() {
+        primeLpActiveEnabled()
+        primeLocationMasterOff()
+        FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFF
+
+        AutoCaptureLocationAttestationOrchestrator.setEnqueueInterceptorForTests(null)
+        try {
+            AutoCaptureLocationAttestationOrchestrator.enqueueManual(
+                context,
+                android.net.Uri.parse("content://test/1"),
+                "hash1",
+                LpManualLeg.OFFCHAIN,
+            )
+
+            assertEquals(0, AutoCaptureLocationAttestationOrchestrator.pendingCountForTests())
+        } finally {
+            AutoCaptureLocationAttestationOrchestrator.resetForTests()
+            AutoCaptureLocationAttestationOrchestrator.setEnqueueInterceptorForTests(enqueueNoOpForTests)
+        }
+    }
+
+    @Test
+    fun offer_whenLocationMasterOff_doesNotQueue() = runTest {
+        primeLpActiveEnabled()
+        primeLocationMasterOff()
+        FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFFCHAIN
+
+        val handle = createOrchestratorHandle(
+            coordinatorFactory = { _, _ -> mock() },
+            autoStart = false,
+        )
+        handle.offerForTests(
+            context = context,
+            mediaHash = "hash1",
+        )
+
+        assertEquals(0, handle.pendingCountForTests())
+    }
+
+    @Test
+    fun processJob_whenLocationMasterOff_softSkips() = runTest {
+        primeLpActiveEnabled()
+        primeLocationMasterOff()
+        FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFFCHAIN
+        val coordinator = mock<LocationProtocolAttestationCoordinator>()
+        val storage = OrchestratorTestStorage()
+        storage.seedProof("hash1")
+
+        val handle = createOrchestratorHandle(
+            coordinatorFactory = { _, _ -> coordinator },
+            storageFactory = { storage },
+        )
+        handle.enqueueTestJob("hash1")
+        advanceUntilIdle()
+
+        verify(coordinator, never()).attestOffchain(any(), any(), any(), any())
+        verify(coordinator, never()).attestOnchain(any(), any(), any(), any(), any())
+    }
+
+    @Test
     fun enqueue_whenLpDisabled_doesNotQueue() {
         FeatureFlags.lpEnabled = false
         FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFFCHAIN
@@ -135,7 +235,7 @@ class AutoCaptureLocationAttestationOrchestratorTest {
 
     @Test
     fun enqueue_whenModeOff_doesNotQueue() {
-        FeatureFlags.lpEnabled = true
+        primeLpActiveEnabled()
         FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFF
 
         AutoCaptureLocationAttestationOrchestrator.enqueue(
@@ -149,7 +249,7 @@ class AutoCaptureLocationAttestationOrchestratorTest {
 
     @Test
     fun processor_waitsForProofExistsBeforeCoordinator() = runTest {
-        FeatureFlags.lpEnabled = true
+        primeLpActiveEnabled()
         FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFFCHAIN
         val coordinator = mock<LocationProtocolAttestationCoordinator>()
         val storage = mock<StorageProvider>()
@@ -182,7 +282,7 @@ class AutoCaptureLocationAttestationOrchestratorTest {
 
     @Test
     fun offerManual_whenAutoCaptureModeOff_stillQueuesBeforeProcessorStarts() = runTest {
-        FeatureFlags.lpEnabled = true
+        primeLpActiveEnabled()
         FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFF
 
         val handle = createOrchestratorHandle(
@@ -199,7 +299,7 @@ class AutoCaptureLocationAttestationOrchestratorTest {
 
     @Test
     fun enqueueManual_whenLpEnabled_doesNotCrashWithRegisteredScope() {
-        FeatureFlags.lpEnabled = true
+        primeLpActiveEnabled()
         FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFF
 
         AutoCaptureLocationAttestationOrchestrator.setEnqueueInterceptorForTests(null)
@@ -218,7 +318,7 @@ class AutoCaptureLocationAttestationOrchestratorTest {
 
     @Test
     fun enqueueTestJob_withManualLeg_preservesLegOnQueuedJob() = runTest {
-        FeatureFlags.lpEnabled = true
+        primeLpActiveEnabled()
         FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFF
         val coordinator = mock<LocationProtocolAttestationCoordinator>()
         val storage = OrchestratorTestStorage()
@@ -239,7 +339,7 @@ class AutoCaptureLocationAttestationOrchestratorTest {
 
     @Test
     fun processJob_autoCapturePath_stillSkippedWhenModeOff() = runTest {
-        FeatureFlags.lpEnabled = true
+        primeLpActiveEnabled()
         FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFF
         val coordinator = mock<LocationProtocolAttestationCoordinator>()
         val storage = OrchestratorTestStorage()
@@ -257,7 +357,7 @@ class AutoCaptureLocationAttestationOrchestratorTest {
 
     @Test
     fun manualOffchainJob_walletUnavailable_marksOffchainSkippedOnly() = runTest {
-        FeatureFlags.lpEnabled = true
+        primeLpActiveEnabled()
         FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFF
         val coordinator = mock<LocationProtocolAttestationCoordinator>()
         val storage = OrchestratorTestStorage()
@@ -278,8 +378,54 @@ class AutoCaptureLocationAttestationOrchestratorTest {
     }
 
     @Test
-    fun manualOnchainJob_waitsForWalletActivity_thenAttests() = runTest {
+    fun `autoCaptureJob_invalidLocation_skipsBothLegsWithoutAttesting`() = runTest {
         FeatureFlags.lpEnabled = true
+        FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.BOTH
+        val coordinator = mock<LocationProtocolAttestationCoordinator>()
+        val storage = OrchestratorTestStorage()
+        storage.seedProof("hash1", latitude = 0.0, longitude = 0.0)
+        val skipReasons = mutableListOf<AutoCaptureSkipReason>()
+        AutoCaptureLocationAttestationOrchestrator.installSkipListener { skipReasons.add(it) }
+
+        val handle = createOrchestratorHandle(
+            coordinatorFactory = { _, _ -> coordinator },
+            storageFactory = { storage },
+        )
+        handle.enqueueTestJob("hash1")
+        advanceUntilIdle()
+
+        val state = AutoCaptureLpStateRegistry.getState("hash1")
+        assertEquals(LpRunState.SKIPPED, state.offchain)
+        assertEquals(LpRunState.SKIPPED, state.onchain)
+        verify(coordinator, never()).attestOffchain(any(), any(), any(), any())
+        verify(coordinator, never()).attestOnchain(any(), any(), any(), any(), any())
+        assertEquals(listOf(AutoCaptureSkipReason.LOCATION_UNAVAILABLE), skipReasons)
+    }
+
+    @Test
+    fun `autoCaptureJob_acceptsValidSingleZeroCoordinateAxis`() = runTest {
+        FeatureFlags.lpEnabled = true
+        FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFFCHAIN
+        val coordinator = mock<LocationProtocolAttestationCoordinator>()
+        whenever(coordinator.attestOffchain(any(), any(), any(), any()))
+            .thenReturn(Result.success(mock<LocationProtocolAttestationResult>()))
+        val storage = OrchestratorTestStorage()
+        storage.seedProof("hash1", latitude = 0.0, longitude = 30.0)
+
+        val handle = createOrchestratorHandle(
+            coordinatorFactory = { _, _ -> coordinator },
+            storageFactory = { storage },
+        )
+        handle.enqueueTestJob("hash1")
+        advanceUntilIdle()
+
+        assertEquals(LpRunState.SUCCEEDED, AutoCaptureLpStateRegistry.getState("hash1").offchain)
+        verify(coordinator).attestOffchain(eq("hash1"), any(), any(), any())
+    }
+
+    @Test
+    fun manualOnchainJob_waitsForWalletActivity_thenAttests() = runTest {
+        primeLpActiveEnabled()
         FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFF
         val coordinator = mock<LocationProtocolAttestationCoordinator>()
         val storage = OrchestratorTestStorage()
@@ -312,7 +458,7 @@ class AutoCaptureLocationAttestationOrchestratorTest {
 
     @Test
     fun manualOnchainJob_walletActivityTimeout_marksSkippedAndDoesNotAttest() = runTest {
-        FeatureFlags.lpEnabled = true
+        primeLpActiveEnabled()
         FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFF
         val coordinator = mock<LocationProtocolAttestationCoordinator>()
         val storage = OrchestratorTestStorage()
@@ -337,7 +483,7 @@ class AutoCaptureLocationAttestationOrchestratorTest {
 
     @Test
     fun fifo_processesAutoCaptureThenManualJobsInArrivalOrder() = runTest {
-        FeatureFlags.lpEnabled = true
+        primeLpActiveEnabled()
         FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFFCHAIN
         val callOrder = mutableListOf<String>()
         val coordinator = mock<LocationProtocolAttestationCoordinator>()
@@ -364,7 +510,7 @@ class AutoCaptureLocationAttestationOrchestratorTest {
 
     @Test
     fun fifo_manualOnchainJobs_deferredUntilBindThenAllAttest() = runTest {
-        FeatureFlags.lpEnabled = true
+        primeLpActiveEnabled()
         FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFFCHAIN
         val coordinator = mock<LocationProtocolAttestationCoordinator>()
         whenever(coordinator.attestOffchain(any(), any(), any(), any()))

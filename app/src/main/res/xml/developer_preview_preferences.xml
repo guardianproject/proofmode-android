@@ -4,23 +4,13 @@
     <PreferenceCategory
         app:title="@string/developer_preview_experimental_features">
 
-        <SwitchPreferenceCompat
-            app:key="pref_experimental_lp_enabled"
-            app:summary="@string/developer_preview_lp_summary"
-            app:title="@string/developer_preview_lp_title" />
+        <Preference
+            app:key="developerPreviewEmpty"
+            app:selectable="false"
+            app:persistent="false"
+            app:title="@string/developer_preview_empty_title"
+            app:summary="@string/developer_preview_empty_summary" />
 
-        <ListPreference
-            app:key="pref_lp_auto_capture_mode"
-            app:title="@string/developer_preview_lp_auto_capture_title"
-            app:summary="@string/developer_preview_lp_auto_capture_summary"
-            app:entries="@array/lp_auto_capture_mode_entries"
-            app:entryValues="@array/lp_auto_capture_mode_values"
-            app:defaultValue="off" />
-
-        <SwitchPreferenceCompat
-            app:key="pref_experimental_local_ipfs_cid_enabled"
-            app:summary="@string/developer_preview_local_ipfs_cid_summary"
-            app:title="@string/developer_preview_local_ipfs_cid_title" />
     </PreferenceCategory>
 
 </PreferenceScreen>

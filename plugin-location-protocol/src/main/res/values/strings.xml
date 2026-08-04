@@ -45,7 +45,7 @@
     <string name="info_sponsorship_title">Gas sponsorship</string>
     <string name="info_sponsorship_body">Sponsored transactions let Proofmode pay network gas for your on-chain attestations through ZeroDev when enabled.\n\nWhen sponsorship is off or unavailable, attestations are self-funded: your wallet pays gas in the blockchain\'s native token.\n\nOn-chain actions are public and irreversible. If sponsorship fails, open this screen to check the project ID or disable sponsorship.</string>
     <string name="wallet_sponsorship_save">Save</string>
-    <string name="wallet_deep_link_feature_disabled">Wallet is not available. Enable Location Protocol in Developer Preview settings, then try again.</string>
+    <string name="wallet_deep_link_feature_disabled">Wallet is not available. Turn on Location Protocol in Settings → Location, then try again.</string>
     <string name="wallet_deep_link_applied_summary">Wallet settings updated from event link.</string>
     <string name="wallet_deep_link_no_params">Opened wallet settings — no configuration parameters in link.</string>
     <string name="wallet_deep_link_chain_rejected">Could not apply network from link. Check the QR code and try again.</string>

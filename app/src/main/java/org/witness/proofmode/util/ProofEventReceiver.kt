@@ -33,7 +33,7 @@ class ProofEventReceiver : BroadcastReceiver() {
                 if (proofHash != null) {
                     val imported = intent.action == ProofMode.EVENT_PROOF_GENERATED_IMPORT
                     Activities.markProofGenerated(uriMedia, proofHash, imported, context)
-                    if (intent.action == ProofMode.EVENT_PROOF_GENERATED && !imported && FeatureFlags.lpEnabled) {
+                    if (intent.action == ProofMode.EVENT_PROOF_GENERATED && !imported && FeatureFlags.lpActive) {
                         AutoCaptureLocationAttestationOrchestrator.enqueue(
                             context = context.applicationContext,
                             mediaUri = android.net.Uri.parse(uriMedia),

@@ -35,10 +35,10 @@ object WalletSigningPlugin : ProofmodePlugin {
         )
 
         val store = WalletSessionStore(context.applicationContext)
-        sessionStore = store
         providerSelection = WalletProviderFactory.createDefault(config, store)
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         WalletProviderFactory.wireSponsorshipPrefRefresh(store, providerSelection, scope)
+        sessionStore = store
     }
 
     fun authClient(): WalletAuthClient =

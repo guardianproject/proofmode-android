@@ -39,6 +39,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.derivedStateOf
@@ -65,6 +66,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toFile
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage
 import coil.decode.VideoFrameDecoder
 import coil.request.ImageRequest
@@ -126,6 +130,9 @@ sealed class CapturedAssetRow {
     class FourItems(val items: List<ProofableItem>) : CapturedAssetRow()
 }
 
+internal fun lpBadgeAllowed(lpActive: Boolean, proofStatus: ProofStatus): Boolean =
+    lpActive && proofStatus == ProofStatus.GENERATED
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ProofableItemView(
@@ -139,6 +146,17 @@ fun ProofableItemView(
 ) {
     val selectionHandler = LocalSelectionHandler.current
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var lpActive by remember { mutableStateOf(FeatureFlags.lpActive) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                lpActive = FeatureFlags.lpActive
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     // Verify if Uri MIME type is image or video and if it is a video,get the thumbnail
     val isVideo = remember(item) {
         val uri = item.uri
@@ -196,8 +214,8 @@ fun ProofableItemView(
 
     var lpBadgeState by remember(item.id) { mutableStateOf(LpBadgeUiState()) }
 
-    LaunchedEffect(item.id, item.proofStatus) {
-        if (!FeatureFlags.lpEnabled || item.proofStatus != ProofStatus.GENERATED) {
+    LaunchedEffect(item.id, item.proofStatus, lpActive) {
+        if (!lpBadgeAllowed(lpActive, item.proofStatus)) {
             lpBadgeState = LpBadgeUiState()
             return@LaunchedEffect
         }
@@ -336,7 +354,7 @@ fun ProofableItemView(
             }
         }
 
-        if (FeatureFlags.lpEnabled && item.proofStatus == ProofStatus.GENERATED) {
+        if (lpBadgeAllowed(lpActive, item.proofStatus)) {
             Row(
                 modifier = Modifier
                     .align(Alignment.TopEnd)

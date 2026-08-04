@@ -24,6 +24,36 @@
     <string name="notary_nostr_title">Nostr</string>
     <string name="notary_nostr_summary">Publish a signed notarization of your media hash to the Nostr network</string>
 
+    <!-- Location settings screen -->
+    <string name="location_settings_title">Location</string>
+    <string name="location_sharing_enable_title">Enable location sharing</string>
+    <string name="location_sharing_summary_on">GPS coordinates are saved with your media and can be attested</string>
+    <string name="location_sharing_summary_off">Location sharing is turned off</string>
+    <string name="location_protocol_category_title">Location Protocol</string>
+    <string name="location_protocol_enable_title">Location Protocol attestation</string>
+    <string name="location_protocol_enable_summary_on">Location attestations can be signed and published for your media</string>
+    <string name="location_protocol_enable_summary_off">Location attestation is turned off</string>
+    <string name="location_protocol_enable_summary_location_required">Turn on location sharing above to use Location Protocol</string>
+    <string name="location_protocol_enable_activating">Setting up…</string>
+    <string name="location_protocol_enable_failed">Setup did not complete. Reopen this screen to try again</string>
+    <string name="location_protocol_disable_restart_notice">Location Protocol is off. Some background components stay loaded until the app restarts</string>
+    <string name="location_protocol_auto_capture_title">Auto-attest on capture</string>
+    <string name="location_protocol_auto_capture_summary">Automatically run location attestation after in-app capture</string>
+    <string name="location_protocol_auto_capture_summary_location_required">Turn on location sharing above to choose an auto-attest mode</string>
+    <string name="location_protocol_auto_capture_summary_lp_required">Turn on Location Protocol attestation to choose an auto-attest mode</string>
+    <string name="location_protocol_auto_capture_summary_wallet_required">Connect a wallet in Wallet Settings to choose an auto-attest mode</string>
+    <string name="location_wallet_row_summary">Manage the wallet used to sign location attestations</string>
+    <string name="location_wallet_summary_location_required">Turn on location sharing above to set up a wallet</string>
+    <string name="location_wallet_summary_lp_required">Turn on Location Protocol attestation to set up a wallet</string>
+    <string name="location_wallet_summary_connected">Connected: %1$s</string>
+    <string name="compute_cids_enable_title">Local IPFS CID</string>
+    <string name="compute_cids_enable_summary_on">IPFS content IDs are computed and saved with each proof set</string>
+    <string name="compute_cids_enable_summary_off">Content IDs are not computed</string>
+    <string name="compute_cids_enable_summary_location_required">Turn on location sharing above to compute content IDs</string>
+    <string name="compute_cids_enable_summary_lp_required">Turn on Location Protocol attestation to compute content IDs</string>
+    <string name="developer_preview_empty_title">No experimental features</string>
+    <string name="developer_preview_empty_summary">There is nothing to try out in this build</string>
+
     <!-- Nostr identity screen -->
     <string name="nostr_identity_title">Nostr Identity</string>
     <string name="nostr_identity_summary">Manage the signing key used for Nostr notarizations</string>

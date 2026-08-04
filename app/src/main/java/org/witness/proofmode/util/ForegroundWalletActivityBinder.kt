@@ -2,6 +2,7 @@ package org.witness.proofmode.util
 
 import android.app.Activity
 import android.app.Application
+import androidx.annotation.VisibleForTesting
 import kotlinx.coroutines.delay
 import org.witness.proofmode.plugins.lp.LocationProtocolPlugin
 import java.util.concurrent.atomic.AtomicBoolean
@@ -41,6 +42,9 @@ class ForegroundWalletActivityBinder : Application.ActivityLifecycleCallbacks {
         internal fun resetRegistrationStateForTests() {
             registered.set(false)
         }
+
+        @VisibleForTesting
+        internal fun isRegisteredForTests(): Boolean = registered.get()
 
         /**
          * Suspend until [LocationProtocolPlugin.hasWalletActivityBound] is true or [timeoutMs] elapses.

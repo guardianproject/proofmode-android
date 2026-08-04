@@ -193,8 +193,12 @@ class FakeStorageProvider : StorageProvider {
     }
 
     override fun replaceText(hash: String, identifier: String, data: String, listener: StorageListener) {
+        saveError?.let {
+            listener.saveFailed(it)
+            return
+        }
         store[key(hash, identifier)] = data.toByteArray(Charsets.UTF_8)
-        listener.saveSuccessful(hash, identifier)
+        listener.saveSuccessful(hash, savedPath ?: identifier)
     }
 
     override fun saveStream(hash: String, identifier: String, stream: InputStream, listener: StorageListener) {

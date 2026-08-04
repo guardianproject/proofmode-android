@@ -119,9 +119,12 @@ object ProofSetCidSidecarWriter {
         val sidecarId = IpfsCidSidecar.sidecarBasename(proofSetHash)
         val sidecarBytes = storageProvider.getInputStream(proofSetHash, sidecarId)?.use { it.readBytes() }
         if (sidecarBytes == null) {
-            Timber.w("CID sidecar refresh: no sidecar for %s — deferring follow-up", proofSetHash)
-            scheduler.markPendingRefresh(proofSetHash)
-            scheduleCidSidecarRefresh(proofSetHash, storageProvider, executor, context)
+            // No self-reschedule: markPending + this job's finally would busy-loop.
+            // F12 coalesce already defers refresh until initial write completes.
+            Timber.w(
+                "CID sidecar refresh: no sidecar for %s — skipping until initial write",
+                proofSetHash,
+            )
             return CidSidecarWriteOutcome.Failed("no sidecar yet").also {
                 CidSidecarWriteOutcome.logAtBoundary(proofSetHash, it)
             }

@@ -43,7 +43,7 @@ import org.contentauth.c2pa.manifest.ManifestDefinition
 import org.contentauth.c2pa.manifest.ManifestValidator
 import org.json.JSONObject
 import org.witness.proofmode.ProofMode
-import org.witness.proofmode.ProofMode.PREF_OPTION_LOCATION
+import org.witness.proofmode.LocationCapturePolicy
 import org.witness.proofmode.c2pa.proofsign.CaptureAuthority
 import org.witness.proofmode.c2pa.proofsign.CompromisedEnvironmentException
 import org.witness.proofmode.c2pa.proofsign.ProofSignC2PASigner
@@ -224,15 +224,10 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             val email = pPrefs.getString(ProofMode.PREF_CREDENTIALS_PRIMARY,"info@proofmode.org")
             val blockAI = pPrefs?.getBoolean(ProofMode.PREF_OPTION_BLOCK_AI, ProofMode.PREF_OPTION_AI_DEFAULT)
 
-            val showLocation = pPrefs?.getBoolean(
-                PREF_OPTION_LOCATION,
-                ProofMode.PREF_OPTION_LOCATION_DEFAULT
-            )
-
-            var location : Location? = null;
-
-            if (showLocation == true)
-                location = ProofMode.getLatestLocation(context);
+            var location: Location? = null
+            if (LocationCapturePolicy.shouldEmbedLocation(context)) {
+                location = ProofMode.getLatestLocation(context)
+            }
 
             val certChain = getDeviceAttestationCertChain(hash)
 
