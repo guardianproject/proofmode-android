@@ -310,16 +310,18 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                 if (!ProofSignClient.isPlayIntegrityAvailable(context)) {
                     // Remote signing requires Play Integrity. No-Play devices
                     // never contact the server — sign locally instead.
-                    Timber.i("C2PA: Play Integrity unavailable; using local keystore signer (no remote signing)")
+                    Timber.i("C2PA: Play Integrity unavailable - using local keystore signer")
                     createSigner(SigningMode.KEYSTORE, tsaUrl)
                 }
                 //we only allow C2PA on devices that have been patched within 90 days
                 else if (checkOSSecurityPatchDate(90, certChain)) {
+                    Timber.i("C2PA: Security Patches within 90 days - enabling signer - ${signingMode.name}")
+
                     createSigner(signingMode, tsaUrl)
                 }
                 else
                 {
-                    Timber.i("C2PA Disabled: OS Security Patches not updated within 90 days")
+                    Timber.i("C2PA: OS Security Patches not updated within 90 days - using local keystore signer")
                     //fall back to using a local keystore signer as fallback
                     createSigner(SigningMode.KEYSTORE, tsaUrl)
                 }
