@@ -37,6 +37,7 @@ import androidx.camera.core.resolutionselector.AspectRatioStrategy
 import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.lifecycle.awaitInstance
+import androidx.camera.video.ExperimentalPersistentRecording
 import androidx.camera.video.FallbackStrategy
 import androidx.camera.video.MediaStoreOutputOptions
 import androidx.camera.video.Quality
@@ -297,7 +298,18 @@ class CameraViewModel(private val activity: CameraActivity, private val app: App
     fun toggleTorchForVideo() {
         val previousTorchState = torchOn.value
         _torchOn.value = !previousTorchState
-        cameraControl?.enableTorch(_torchOn.value)
+        applyTorchState()
+    }
+
+    /**
+     * Re-applies the user's torch selection to whatever camera is currently bound.
+     * The desired state is kept in [_torchOn] even when the bound camera has no flash
+     * unit (typically the front lens), so switching back to the rear camera restores it.
+     */
+    private fun applyTorchState() {
+        if (camera?.cameraInfo?.hasFlashUnit() == true) {
+            cameraControl?.enableTorch(_torchOn.value)
+        }
     }
 
 
@@ -453,7 +465,7 @@ class CameraViewModel(private val activity: CameraActivity, private val app: App
             }
             zoomState = camera!!.cameraInfo.zoomState
             cameraControl = camera?.cameraControl
-            cameraControl?.enableTorch(_torchOn.value)
+            applyTorchState()
         } catch (ex: Exception) {
             Timber.e(ex, "Failed to bind video capture with quality $quality")
         }
@@ -484,7 +496,7 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
             previewUseCase,videoCapture)
         zoomState = camera!!.cameraInfo.zoomState
         cameraControl = camera?.cameraControl
-        cameraControl?.enableTorch(_torchOn.value)
+        applyTorchState()
     } catch (ex:Exception){
         Timber.e("Binding failed")
     }
@@ -598,6 +610,7 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
 
 
     @SuppressLint("MissingPermission")
+    @OptIn(ExperimentalPersistentRecording::class)
     fun startRecording() {
         videoCapture?.targetRotation = activity.getScreenOrientation()
 
@@ -614,7 +627,12 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
             MediaStore.Video.Media.EXTERNAL_CONTENT_URI)
             .setContentValues(contentValues)
             .build()
+        // Persistent: the recording ignores the VideoCapture being unbound, which is what
+        // lets switchLensFacing() rebind the same VideoCapture to the other lens mid-take
+        // and keep writing both segments into this one file. Only an explicit stop()/close()
+        // finalizes it, so every path out of recording must call stopRecording().
         recording = recorder?.prepareRecording(app.applicationContext,mediaStoreOutput)
+            ?.asPersistentRecording()
             ?.withAudioEnabled()
             ?.start(ContextCompat.getMainExecutor(app.applicationContext)){ recordEvent->
                 when(recordEvent) {
@@ -774,11 +792,33 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
 
 
     suspend fun switchLensFacing(lifecycleOwner: LifecycleOwner,cameraMode: CameraMode) {
-        val newFacing = if (lensFacing.value == CameraSelector.LENS_FACING_BACK) {
+        val previousFacing = lensFacing.value ?: CameraSelector.LENS_FACING_BACK
+        val newFacing = if (previousFacing == CameraSelector.LENS_FACING_BACK) {
             CameraSelector.LENS_FACING_FRONT
         } else {
             CameraSelector.LENS_FACING_BACK
         }
+
+        // Mid-take switch. The recording is persistent, so rebinding the *same*
+        // VideoCapture/Recorder to the other lens keeps the encoder session alive and both
+        // segments land in the one output file. Rebuilding them (as the idle path below
+        // does) would orphan the in-flight recording, so this path must not touch them.
+        if (cameraMode == CameraMode.VIDEO && isRecordingInProgress()) {
+            if (rebindVideoForLensSwitch(lifecycleOwner, newFacing)) {
+                lensFacing.value = newFacing
+                sharedPrefsManager.putInt(SharedPrefsManager.KEY_LENS_FACING, newFacing)
+            } else {
+                // The other camera can't feed the in-flight encoder (usually an unsupported
+                // resolution or surface combination). Put the original one back so the
+                // recording keeps going rather than being left with no video source.
+                if (!rebindVideoForLensSwitch(lifecycleOwner, previousFacing)) {
+                    Timber.e("Lens switch failed and the original camera could not be restored; stopping recording")
+                    stopRecording()
+                }
+            }
+            return
+        }
+
         lensFacing.value = newFacing
         sharedPrefsManager.putInt(SharedPrefsManager.KEY_LENS_FACING, newFacing)
         cameraProvider?.unbindAll()
@@ -789,6 +829,40 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
         }
 
 
+    }
+
+    private fun isRecordingInProgress(): Boolean =
+        recording != null &&
+                (_recordingState.value == RecordingState.Recording ||
+                        _recordingState.value == RecordingState.Paused)
+
+    /**
+     * Rebinds the existing preview + [videoCapture] to [facing] without recreating either
+     * use case. Returns false if the new camera cannot be bound, leaving nothing bound —
+     * the caller is responsible for recovering.
+     */
+    private fun rebindVideoForLensSwitch(lifecycleOwner: LifecycleOwner, facing: Int): Boolean {
+        val provider = cameraProvider ?: return false
+        val capture = videoCapture ?: return false
+        provider.unbindAll()
+        return try {
+            camera = provider.bindToLifecycle(
+                lifecycleOwner,
+                CameraSelector.Builder().requireLensFacing(facing).build(),
+                previewUseCase,
+                capture
+            )
+            // targetRotation is deliberately left alone: it was locked in at
+            // startRecording() and the in-flight recording keeps that orientation.
+            zoomState = camera!!.cameraInfo.zoomState
+            cameraControl = camera?.cameraControl
+            refreshZoomState()
+            applyTorchState()
+            true
+        } catch (ex: Exception) {
+            Timber.e(ex, "Failed to rebind video capture to lens facing %d while recording", facing)
+            false
+        }
     }
 
     fun updateExposureCompensation(compensationIndex:Int){

@@ -482,23 +482,22 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                                 }
                             }
 
-                            AnimatedVisibility(visible = recordingState != RecordingState.Recording,
-                                enter = fadeIn(),
-                                exit = fadeOut(),
-                                modifier = Modifier.layoutId("cameraSwitcher")
-                            ){
-                                IconButton(onClick = {
-                                    scope.launch {
-                                        cameraViewModel.switchLensFacing(lifecycleOwner,CameraMode.VIDEO)
-                                    }
-
-                                },
-                                    modifier = Modifier.secondaryControl()
-                                ) {
-                                    Icon(imageVector = ImageVector.vectorResource(R.drawable.ic_switch),
-                                        tint = Color.White,
-                                        contentDescription = null)
+                            // Stays available while recording: the take is a persistent
+                            // recording, so switching lenses mid-shot continues into the
+                            // same file rather than ending it.
+                            IconButton(onClick = {
+                                scope.launch {
+                                    cameraViewModel.switchLensFacing(lifecycleOwner,CameraMode.VIDEO)
                                 }
+
+                            },
+                                modifier = Modifier
+                                    .layoutId("cameraSwitcher")
+                                    .secondaryControl()
+                            ) {
+                                Icon(imageVector = ImageVector.vectorResource(R.drawable.ic_switch),
+                                    tint = Color.White,
+                                    contentDescription = stringResource(R.string.cb_switch))
                             }
 
                             AnimatedVisibility(

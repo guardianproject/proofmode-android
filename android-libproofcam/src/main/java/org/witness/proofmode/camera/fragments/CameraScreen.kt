@@ -16,6 +16,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,6 +25,8 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
@@ -57,6 +60,20 @@ fun CameraScreen(activity: CameraActivity, modifier: Modifier = Modifier, onClos
     val viewModel: CameraViewModel = remember(activity) { CameraViewModel(activity, activity.application) }
     val navController = rememberNavController()
     val permissionsState = rememberMultiplePermissionsState(permissions)
+
+    // Video recordings are persistent (see startRecording), so unbinding the camera no
+    // longer finalizes them on its own — without this, backgrounding mid-take would leave
+    // the file open and the mic live. Stop explicitly when the screen stops.
+    DisposableEffect(lifecycleOwner, viewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) {
+                viewModel.stopRecording()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     CameraTheme {
         if (permissionsState.allPermissionsGranted) {
             CameraNavigation(navController = navController, viewModel = viewModel, lifecycleOwner = lifecycleOwner,onClosed = onClose)
