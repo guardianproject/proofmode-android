@@ -397,7 +397,6 @@ class WalletSettingsActivity : AppCompatActivity() {
         val tvSummary = findViewById<TextView>(R.id.tv_sponsor_transactions_summary)
         val tilProjectId = findViewById<TextInputLayout>(R.id.til_zerodev_project_id)
         val etProjectId = findViewById<TextInputEditText>(R.id.et_zerodev_project_id)
-        val tvHelper = findViewById<TextView>(R.id.tv_zerodev_project_id_helper)
         val btnSave = findViewById<Button>(R.id.btn_save_zerodev_project_id)
 
         val hasBuildDefault = buildDefault.isNotBlank()
@@ -407,11 +406,6 @@ class WalletSettingsActivity : AppCompatActivity() {
         fun bindProjectIdUi() {
             val override = sessionStore.loadZeroDevProjectIdOverride()
             etProjectId.setText(presenter.displayProjectId(override, buildDefault))
-            tvHelper.text = when {
-                !hasBuildDefault -> getString(R.string.wallet_zerodev_project_id_helper_no_build_default)
-                override.isNullOrBlank() -> getString(R.string.wallet_zerodev_project_id_helper_default, buildDefault)
-                else -> getString(R.string.wallet_zerodev_project_id_helper_override)
-            }
             tilProjectId.error = null
         }
 

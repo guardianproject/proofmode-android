@@ -36,10 +36,7 @@
     <string name="wallet_sponsor_transactions_label">Sponsor transactions</string>
     <string name="wallet_sponsor_transactions_summary_on">On-chain attestations use sponsored gas when available.</string>
     <string name="wallet_sponsor_transactions_summary_off">Self-funded mode — gas is paid from your wallet balance.</string>
-    <string name="wallet_zerodev_project_id_label">ZeroDev project ID</string>
-    <string name="wallet_zerodev_project_id_helper_default">Build default: %1$s</string>
-    <string name="wallet_zerodev_project_id_helper_override">Override active. Clear field and save to use build default.</string>
-    <string name="wallet_zerodev_project_id_helper_no_build_default">No build default configured</string>
+    <string name="wallet_zerodev_project_id_label">Override ZeroDev Project ID</string>
     <string name="wallet_zerodev_project_id_error_invalid">Enter a valid UUID (e.g. 550e8400-e29b-41d4-a716-446655440000).</string>
     <string name="wallet_zerodev_project_id_saved">Project ID saved</string>
     <string name="info_sponsorship_title">Gas sponsorship</string>

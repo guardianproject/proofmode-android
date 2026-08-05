@@ -54,7 +54,8 @@ object WalletSigningPlugin : ProofmodePlugin {
 
     /**
      * Build-time ZeroDev project ID for the active chain (no runtime override).
-     * Used by Wallet Settings UI for helper text and configureServerDefault-style prefill.
+     * Used by Wallet Settings UI for configureServerDefault-style focus prefill
+     * (value is masked in settings UI).
      */
     fun buildDefaultZeroDevProjectId(): String {
         val config = sdkConfig ?: return ""
