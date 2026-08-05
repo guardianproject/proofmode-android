@@ -13,6 +13,24 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+// Staging directories for the Flutter release (AOT) build. Declared up here
+// because android.sourceSets below has to reference them by path at
+// configuration time; the tasks that populate them are registered further down.
+// Each is a separate directory: overlapping task outputs break Gradle's
+// incremental checks for flavored single-ABI builds (flutter/flutter#186810).
+val flutterAotReleaseDir = layout.buildDirectory.dir("flutter/aot/release").get().asFile
+val flutterReleaseAssetsDir = layout.buildDirectory.dir("flutter/assets/release").get().asFile
+val flutterReleaseJniLibsDir = layout.buildDirectory.dir("flutter/jniLibs/release").get().asFile
+
+// ABI -> Flutter target-platform name. x86 is absent on purpose: Flutter
+// publishes no x86_release engine, which is why flutter-android-build-shim.gradle
+// omits it from releaseImplementation too.
+val flutterReleaseAbis = mapOf(
+    "armeabi-v7a" to "android-arm",
+    "arm64-v8a" to "android-arm64",
+    "x86_64" to "android-x64",
+)
+
 android {
     compileSdk = 36
     namespace = "org.witness.proofmode"
@@ -124,12 +142,23 @@ android {
     }
 
     sourceSets {
-        // Point at the build/ root so the flutter_assets/ subdirectory name is
+        // Debug (JIT): buildFlutterBundleDebug writes flutter_assets/kernel_blob.bin
+        // here. Point at the build/ root so the flutter_assets/ subdirectory name is
         // preserved inside the APK — the Flutter engine resolves its kernel/snapshot
         // files via the "flutter_assets/" prefix and will fail to boot without it.
         // Test artifacts (test_cache, unit_test_assets, etc.) are deleted by the
-        // buildFlutterBundle* tasks' doLast blocks before Gradle walks this directory.
-        getByName("main").assets.directories.add("../flutter-location-protocol/build")
+        // buildFlutterBundleDebug task's doLast block before Gradle walks this directory.
+        //
+        // This is scoped to debug rather than main on purpose: the release engine
+        // cannot execute a JIT kernel, so shipping this directory in the release APK
+        // would only add a few MB of dead weight.
+        getByName("debug").assets.directories.add("../flutter-location-protocol/build")
+
+        // Release (AOT): staged by syncFlutterAssetsRelease / syncFlutterAotJniLibsRelease
+        // from the `flutter assemble` output. libapp.so is the Dart snapshot the
+        // release engine loads — without it FlutterJNI.performNativeAttach segfaults.
+        getByName("release").assets.directories.add(flutterReleaseAssetsDir.path)
+        getByName("release").jniLibs.directories.add(flutterReleaseJniLibsDir.path)
     }
 
     configurations.all {
@@ -187,20 +216,72 @@ val buildFlutterBundleDebug by tasks.registering(Exec::class) {
     }
 }
 
-val buildFlutterBundleRelease by tasks.registering(Exec::class) {
+// `flutter build bundle --release` does NOT produce an AOT snapshot — it only
+// emits flutter_assets (AssetManifest.bin, fonts, shaders) with no kernel_blob.bin
+// and no app.so. The release engine (flutter_embedding_release + *_release .so,
+// see flutter-android-build-shim.gradle) has no JIT and loads all Dart code from
+// libapp.so, so a bundle-only release APK died at startup with:
+//
+//   [dart_vm_data.cc] VM snapshot invalid and could not be inferred from settings.
+//   [dart_vm_lifecycle.cc] Could not create Dart VM instance.
+//   Fatal signal 11 (SIGSEGV) ... io.flutter.embedding.engine.FlutterJNI.performNativeAttach
+//
+// Normally dev.flutter.flutter-gradle-plugin's FlutterTask runs this step, but the
+// shim replaces that plugin (it NPEs under AGP 9), so we invoke `flutter assemble`
+// with the same arguments and rule names the plugin uses. Output layout is
+// <out>/<abi>/app.so plus <out>/flutter_assets/.
+val flutterAssembleReleaseCommand = buildList {
+    add(flutterExecutable)
+    add("assemble")
+    add("--no-version-check")
+    add("--output=${flutterAotReleaseDir.path}")
+    add("--depfile=${File(flutterAotReleaseDir, "flutter_build.d").path}")
+    add("-dTargetFile=lib/main.dart")
+    add("-dTargetPlatform=android")
+    add("-dBuildMode=release")
+    add("-dAndroidArchs=${flutterReleaseAbis.values.joinToString(" ")}")
+    add("-dMinSdkVersion=${android.defaultConfig.minSdk}")
+    add("-dTrackWidgetCreation=false")
+    flutterReleaseAbis.values.forEach { add("android_aot_bundle_release_$it") }
+}
+
+val buildFlutterAotRelease by tasks.registering(Exec::class) {
     group = "flutter"
-    description = "Builds Flutter release bundle assets (AOT snapshot) for headless bridge runtime"
+    description = "Compiles the Flutter module to a release AOT snapshot (app.so) plus flutter_assets"
     workingDir = flutterModuleDir
-    // See --no-pub rationale on buildFlutterBundleDebug above.
-    commandLine(flutterExecutable, "build", "bundle", "--no-pub", "--release", "--target", "lib/main.dart")
-    doLast {
-        val buildDir = File(workingDir, "build")
-        buildDir.resolve("test_cache").deleteRecursively()
-        buildDir.resolve("unit_test_assets").deleteRecursively()
-        buildDir.resolve("native_assets").deleteRecursively()
-        buildDir.walkTopDown()
-            .filter { it.isFile && it.extension == "d" }
-            .forEach { it.delete() }
+    commandLine(flutterAssembleReleaseCommand)
+}
+
+// Stage <out>/<abi>/app.so as <staging>/<abi>/libapp.so, the layout AGP expects
+// from a jniLibs source directory. Mirrors the plugin's CopyFlutterJniLibsTask,
+// including the native_assets passthrough for packages that ship native code.
+val syncFlutterAotJniLibsRelease by tasks.registering(Sync::class) {
+    group = "flutter"
+    description = "Stages the Flutter AOT snapshot as <abi>/libapp.so for the release APK"
+    dependsOn(buildFlutterAotRelease)
+    into(flutterReleaseJniLibsDir)
+    flutterReleaseAbis.keys.forEach { abi ->
+        from(File(flutterAotReleaseDir, abi)) {
+            include("*.so")
+            rename { fileName -> "lib$fileName" }
+            into(abi)
+        }
+        from(File(flutterAotReleaseDir, "native_assets/jniLibs/lib/$abi")) {
+            include("*.so")
+            into(abi)
+        }
+    }
+}
+
+// flutter_assets only — the sibling <abi>/ directories in the assemble output
+// hold app.so, which belongs in jniLibs, not in assets.
+val syncFlutterAssetsRelease by tasks.registering(Sync::class) {
+    group = "flutter"
+    description = "Stages the Flutter release flutter_assets/ for the release APK"
+    dependsOn(buildFlutterAotRelease)
+    into(flutterReleaseAssetsDir)
+    from(flutterAotReleaseDir) {
+        include("flutter_assets/**")
     }
 }
 
@@ -212,7 +293,7 @@ tasks.matching { it.name == "preDefaultDebugBuild" }.configureEach {
     dependsOn(buildFlutterBundleDebug)
 }
 tasks.matching { it.name == "preDefaultReleaseBuild" }.configureEach {
-    dependsOn(buildFlutterBundleRelease)
+    dependsOn(syncFlutterAotJniLibsRelease, syncFlutterAssetsRelease)
 }
 
 // Increments versionCode by ABI type
