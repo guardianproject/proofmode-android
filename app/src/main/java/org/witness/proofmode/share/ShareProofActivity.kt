@@ -659,7 +659,7 @@ class ShareProofActivity : AppCompatActivity() {
         }
 
         ladder.verifyUrl?.let { verifyUri ->
-            return shareSocialWithVerifyUri(mediaUri, verifyUri, shareUris, useCheckProofmodeWrapper = false)
+            return shareSocialWithVerifyUri(mediaUri, verifyUri, shareUris, useCheckProofmodeWrapper = true)
         }
 
         // Leaf miss / no sidecar: try legacy S3 when available; on S3 fail/unavailable → hash-only.
