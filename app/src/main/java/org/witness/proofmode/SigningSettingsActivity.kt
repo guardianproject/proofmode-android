@@ -21,10 +21,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.witness.proofmode.c2pa.C2PAManager
 import org.witness.proofmode.c2pa.PreferencesManager
+import org.witness.proofmode.c2pa.SigningMode
+import org.witness.proofmode.c2pa.proofsign.ProofSignClient
 import org.witness.proofmode.databinding.ActivitySettingsBinding
 import org.witness.proofmode.databinding.ActivitySigningSettingsBinding
 import org.witness.proofmode.library.BuildConfig
 import org.witness.proofmode.service.MediaWatcher
+import timber.log.Timber
 
 class SigningSettingsActivity : AppCompatActivity() {
 
@@ -286,12 +289,40 @@ class SigningSettingsActivity : AppCompatActivity() {
                     MODE_DISABLED -> putBoolean(ProofMode.PREF_OPTION_CREDENTIALS, false)
                 }
             }.commit()
+
+            if (mode == MODE_REMOTE) {
+
+                val c2paMan = C2PAManager(requireContext(), PreferencesManager(requireContext()))
+                val certChain = c2paMan.getDeviceAttestationCertChain("test")
+                val conformant = c2paMan.checkOSSecurityPatchDate(90, certChain)
+
+
+                if (!ProofSignClient.isPlayIntegrityAvailable(requireContext())) {
+                    // Remote signing requires Play Integrity. No-Play devices
+                    // never contact the server — sign locally instead.
+                   Toast.makeText(requireContext(),"C2PA: Play Integrity unavailable - using local signer",Toast.LENGTH_LONG).show()
+
+
+                }
+                //we only allow C2PA on devices that have been patched within 90 days
+                else if (!conformant) {
+
+                    Toast.makeText(requireContext(),"C2PA: OS Security Patches not updated within 90 days - using local keystore signer",Toast.LENGTH_LONG).show()
+                    //fall back to using a local keystore signer as fallback
+
+                }
+            }
+
             applyModeState()
         }
 
         private fun applyModeState() {
             findPreference<EditTextPreference>(ProofMode.PREF_OPTION_PROOFSIGN_SERVER)
                 ?.isEnabled = currentModeValue() == MODE_REMOTE
+
+
+
+
 
             MediaWatcher.getInstance(activity)?.resetC2PA()
         }
