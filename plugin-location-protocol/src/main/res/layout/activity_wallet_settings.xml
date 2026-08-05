@@ -286,17 +286,9 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:imeOptions="actionDone"
-                            android:inputType="textNoSuggestions"
+                            android:inputType="textPassword"
                             android:maxLines="1" />
                     </com.google.android.material.textfield.TextInputLayout>
-
-                    <TextView
-                        android:id="@+id/tv_zerodev_project_id_helper"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:textColor="#999999"
-                        android:textSize="12sp" />
 
                     <Button
                         android:id="@+id/btn_save_zerodev_project_id"
