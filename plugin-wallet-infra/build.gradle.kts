@@ -36,6 +36,13 @@ android {
 
     defaultConfig {
         minSdk = 28
+
+        // Exported into the consuming app's R8 run. libzerodev_aa.so resolves the
+        // custom-signer callbacks (signHash, signMessage, ...) by name from native
+        // code, so the app must not rename them; buildTypes.proguardFiles would
+        // only apply if this library itself were minified, which it is not.
+        consumerProguardFiles("proguard-rules.pro")
+
         buildConfigField("Boolean", "FEATURE_SPONSORSHIP_ENABLED", "true")
         buildConfigField("String", "PRIVY_APP_ID", buildConfigString(walletSecret("PRIVY_APP_ID")))
         buildConfigField("String", "PRIVY_APP_CLIENT_ID", buildConfigString(walletSecret("PRIVY_APP_CLIENT_ID")))
@@ -65,8 +72,9 @@ android {
             enableUnitTestCoverage = true
         }
         release {
+            // Not minified here; proguard-rules.pro travels to the app via
+            // defaultConfig.consumerProguardFiles above.
             isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             // Uncomment to produce a self-funded release variant:
             // buildConfigField("Boolean", "FEATURE_SPONSORSHIP_ENABLED", "false")
         }
