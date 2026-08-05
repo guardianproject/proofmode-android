@@ -1103,8 +1103,12 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
                     location?.let {
                         put ("exif:GPSVersionID", "2.2.0.0")
-                        put("exif:GPSLatitude", toXmpGpsCoordinate(it.latitude, "N", "S"))
-                        put("exif:GPSLongitude", toXmpGpsCoordinate(it.longitude, "E", "W"))
+
+			//revert to standard decimal lat and lon for now
+                        //put("exif:GPSLatitude", toXmpGpsCoordinate(it.latitude, "N", "S"))
+                        //put("exif:GPSLongitude", toXmpGpsCoordinate(it.longitude, "E", "W"))
+                        put("exif:GPSLatitude", it.latitude.toString())
+                        put("exif:GPSLongitude", it.longitude.toString())
                         put("exif:GPSAltitude", it.altitude.toString())
                         put ("exif:GPSHPositioningError", it.accuracy.toString())
                         put ("exif:GPSSpeed", it.speed.toString())
