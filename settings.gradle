@@ -14,5 +14,28 @@ include ':app', ':android-libproofmode',  ':android-libproofcam', ':android-open
         ':android-cid-lib',
         ':plugin-location-protocol', ':plugin-wallet-infra', ':plugin-ipfs-cid'
 
+// Reinstate the AGP 9 compatibility shim for the generated :flutter module.
+//
+// flutter-location-protocol/.android is ephemeral: any flutter_tools command whose
+// `shouldRunPub` is true (i.e. anything without --no-pub) runs
+// AndroidProject._regenerateLibrary(), which deletes .android wholesale and re-renders it
+// from the SDK templates. That either (a) replaces Flutter/build.gradle with the generated
+// version that NPEs under AGP 9, or (b) — if Gradle is concurrently holding files under
+// .android/Flutter/build — fails mid-delete with "Directory not empty" and leaves no
+// build.gradle at all, so :flutter configures as an empty project and every consumer fails
+// with "No matching variant of project :flutter was found ... No variants exist."
+//
+// Copying the shim here (settings evaluation, before any project build script is read)
+// makes the host build self-healing regardless of what flutter_tools last did.
+def flutterEphemeralDir = new File(settingsDir, 'flutter-location-protocol/.android')
+if (flutterEphemeralDir.isDirectory()) {
+    def shim = new File(settingsDir, 'flutter-location-protocol/flutter-android-build-shim.gradle')
+    def generated = new File(flutterEphemeralDir, 'Flutter/build.gradle')
+    if (shim.isFile() && (!generated.isFile() || generated.text != shim.text)) {
+        generated.parentFile.mkdirs()
+        generated.text = shim.text
+    }
+}
+
 setBinding(new Binding([gradle: this]))
 evaluate(new File(settingsDir, 'flutter-location-protocol/.android/include_flutter.groovy'))

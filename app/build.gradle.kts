@@ -167,7 +167,11 @@ val buildFlutterBundleDebug by tasks.registering(Exec::class) {
     group = "flutter"
     description = "Builds Flutter debug bundle assets (JIT kernel) for headless bridge runtime"
     workingDir = flutterModuleDir
-    commandLine(flutterExecutable, "build", "bundle", "--debug", "--target", "lib/main.dart")
+    // --no-pub is load-bearing, not just a speedup: without it flutter_tools regenerates
+    // flutter-location-protocol/.android from templates on every invocation, deleting the
+    // directory Gradle is actively building out of. See the shim note in settings.gradle.
+    // Run `flutter pub get` in flutter-location-protocol/ by hand after editing pubspec.yaml.
+    commandLine(flutterExecutable, "build", "bundle", "--no-pub", "--debug", "--target", "lib/main.dart")
     doLast {
         // Use workingDir (this task's own property) rather than the script-level
         // flutterModuleDir val. Capturing a script-level val causes Kotlin to compile
@@ -187,7 +191,8 @@ val buildFlutterBundleRelease by tasks.registering(Exec::class) {
     group = "flutter"
     description = "Builds Flutter release bundle assets (AOT snapshot) for headless bridge runtime"
     workingDir = flutterModuleDir
-    commandLine(flutterExecutable, "build", "bundle", "--release", "--target", "lib/main.dart")
+    // See --no-pub rationale on buildFlutterBundleDebug above.
+    commandLine(flutterExecutable, "build", "bundle", "--no-pub", "--release", "--target", "lib/main.dart")
     doLast {
         val buildDir = File(workingDir, "build")
         buildDir.resolve("test_cache").deleteRecursively()
