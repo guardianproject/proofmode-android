@@ -7,7 +7,8 @@ import org.witness.proofmode.storage.proofset.MediaInclusion
 import org.witness.proofmode.storage.proofset.ProofSetUploadOutcome
 
 /**
- * Strategy: per-member S3 upload via [StorageProvider.saveBytes] + image URI sidecar persistence.
+ * Strategy: per-member S3 upload via [FilebaseStorageProvider.saveArtifact] + image URI sidecar
+ * persistence. Members stream from their sources, so the media leaf is never buffered.
  *
  * Returns [ProofSetUploadOutcome]; does not advance the membership stamp or forward a UX listener.
  * Facade notifies from the Outcome.
@@ -26,7 +27,7 @@ internal object S3MembersUploadStrategy {
         var failed: Exception? = null
         for (artifact in artifacts) {
             if (failed != null) break
-            filebase.saveBytes(hash, artifact.identifier, artifact.data, object : StorageListener {
+            filebase.saveArtifact(hash, artifact, object : StorageListener {
                 override fun saveSuccessful(resultHash: String?, uri: String?) {
                     if (mediaBasename != null && artifact.identifier == mediaBasename) {
                         mediaUri = uri
@@ -34,7 +35,7 @@ internal object S3MembersUploadStrategy {
                 }
 
                 override fun saveFailed(exception: Exception?) {
-                    failed = exception ?: RuntimeException("saveBytes failed")
+                    failed = exception ?: RuntimeException("saveArtifact failed")
                 }
             })
         }

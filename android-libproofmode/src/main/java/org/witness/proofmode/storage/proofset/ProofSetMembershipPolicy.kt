@@ -107,9 +107,9 @@ object ProofSetMembershipPolicy {
         proofSetHash: String,
         onDiskIdentifiers: Collection<String>,
         mediaInclusion: MediaInclusion,
-        mediaBytesAvailable: Boolean,
+        mediaAvailable: Boolean,
     ): Boolean {
-        if (mediaInclusion == MediaInclusion.INCLUDE_MEDIA && !mediaBytesAvailable) return false
+        if (mediaInclusion == MediaInclusion.INCLUDE_MEDIA && !mediaAvailable) return false
         return requiredCoreBasenames(proofSetHash).all { it in onDiskIdentifiers }
     }
 

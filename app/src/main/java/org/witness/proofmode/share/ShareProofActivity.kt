@@ -70,6 +70,7 @@ import org.witness.proofmode.storage.DefaultStorageProvider
 import org.witness.proofmode.storage.filebase.FilebaseConfig
 import org.witness.proofmode.storage.filebase.FilebaseStorageProvider
 import org.witness.proofmode.storage.filebase.FilebaseSidecarContract
+import org.witness.proofmode.storage.proofset.ProofSetMediaSource
 import org.witness.proofmode.storage.proofset.ProofSetUploader
 import org.witness.proofmode.storage.StorageListener
 import org.witness.proofmode.storage.StorageProvider
@@ -305,14 +306,9 @@ class ShareProofActivity : AppCompatActivity() {
                     Toast.makeText(appCtx, "$failMessagePrefix: $msg", Toast.LENGTH_LONG).show()
                 },
             )
-            val mediaBytes = withContext(Dispatchers.IO) {
-                contentResolver.openInputStream(mediaUri)?.use { it.readBytes() }
-            }
-            if (mediaBytes == null) {
-                displaySharePrompt()
-                showFilebaseNotReady()
-                return@launch
-            }
+            // Media is handed over as a re-openable source, never read into memory here — a large
+            // video would exceed the heap outright.
+            val mediaSource = ProofSetMediaSource.fromUri(appCtx, mediaUri, mime)
             // NEW-B2: activity-local primary — same disk as proof set
             val primary = mStorageProvider ?: DefaultStorageProvider(applicationContext)
             val filebase = FilebaseStorageProvider.from(config)
@@ -323,7 +319,7 @@ class ShareProofActivity : AppCompatActivity() {
             }
             val started = withContext(Dispatchers.IO) {
                 ProofSetUploader.enqueueProofSetUpload(
-                    appCtx, hash, primary, filebase, mediaBytes, mime, uploadMode,
+                    appCtx, hash, primary, filebase, mediaSource, uploadMode,
                     mediaInclusionForShareUpload(), listener,
                 )
             }

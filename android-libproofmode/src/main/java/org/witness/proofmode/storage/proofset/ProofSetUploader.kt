@@ -1,7 +1,6 @@
 package org.witness.proofmode.storage.proofset
 
 import android.content.Context
-import android.net.Uri
 import android.util.Log
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineDispatcher
@@ -22,7 +21,10 @@ import org.witness.proofmode.storage.filebase.S3MembersUploadStrategy
 
 /**
  * Assembles first-pass proof-set members + media and uploads via Filebase IPFS directory
- * or per-member S3 [StorageProvider.saveBytes].
+ * or per-member S3 [FilebaseStorageProvider.saveArtifact].
+ *
+ * Members are carried as [DeferredArtifact] stream handles, never as buffers — see that class for
+ * why the media leaf must not be materialized.
  *
  * Facade: owns Mutex-per-hash coordination, membership stamp compare/advance,
  * Strategy dispatch, and sole UX listener notify from [ProofSetUploadOutcome].
@@ -64,16 +66,16 @@ object ProofSetUploader {
      */
     private val mutexByHash = ConcurrentHashMap<String, Mutex>()
 
-    /** Last enqueue args captured for unit tests (Composite mediaUriProvider contract). */
+    /** Last enqueue args captured for unit tests (Composite media-source contract). */
     @Volatile
     internal var lastEnqueueForTesting: EnqueueCapture? = null
 
     internal data class EnqueueCapture(
-        val mediaBytesSize: Int?,
+        val mediaLength: Long?,
         val mediaMimeType: String?,
         val mode: FilebaseConfig.UploadMode,
         val mediaInclusion: MediaInclusion,
-        val mediaUriProvider: (() -> Pair<Uri, String?>?)?,
+        val hasMediaSource: Boolean,
     )
 
     internal fun clearMapsForTesting(dispatcher: CoroutineDispatcher = Dispatchers.IO) {
@@ -93,9 +95,9 @@ object ProofSetUploader {
      * Returns `true` ("accepted/scheduled") only when first-pass membership is **complete**
      * (required names present + media available when [mediaInclusion] is [MediaInclusion.INCLUDE_MEDIA]).
      * Returns `false` ("not ready") — without invoking [listener].[saveFailed][StorageListener.saveFailed]
-     * — when membership is incomplete. Unreadable bytes are **not** a pre-enqueue rejection; after
-     * `started=true`, post-acquire assemble failure or stamp-match with unreadable / null-empty
-     * injected media (INCLUDE_MEDIA) → `saveFailed`.
+     * — when membership is incomplete. Unreadable members are **not** a pre-enqueue rejection; after
+     * `started=true`, post-acquire assemble failure or stamp-match with media that no longer
+     * resolves (INCLUDE_MEDIA) → `saveFailed`.
      *
      * The actual upload runs asynchronously on [processScope]. Listeners receive outcomes
      * asynchronously after the coroutine acquires the per-hash [Mutex], reassembles membership
@@ -106,27 +108,23 @@ object ProofSetUploader {
         hash: String,
         primary: StorageProvider,
         filebase: FilebaseStorageProvider,
-        mediaBytes: ByteArray?,
-        mediaMimeType: String?,
+        mediaSource: ProofSetMediaSource?,
         mode: FilebaseConfig.UploadMode,
         mediaInclusion: MediaInclusion,
         listener: StorageListener?,
-        mediaUriProvider: (() -> Pair<Uri, String?>?)? = null,
     ): Boolean {
+        val capturedMedia = resolveMedia(mediaSource, mediaInclusion)
         lastEnqueueForTesting = EnqueueCapture(
-            mediaBytesSize = mediaBytes?.size,
-            mediaMimeType = mediaMimeType,
+            mediaLength = capturedMedia?.length,
+            mediaMimeType = capturedMedia?.mimeType,
             mode = mode,
             mediaInclusion = mediaInclusion,
-            mediaUriProvider = mediaUriProvider,
+            hasMediaSource = mediaSource != null,
         )
         if (mode == FilebaseConfig.UploadMode.NONE) return false
 
         // Pre-enqueue gate: completeness only (names + media present when required). Does not assemble.
-        if (!isFirstPassReadyForEnqueue(
-                context, hash, primary, mediaBytes, mediaMimeType, mediaInclusion, mediaUriProvider,
-            )
-        ) {
+        if (!isFirstPassReadyForEnqueue(context, hash, primary, capturedMedia, mediaInclusion)) {
             return false
         }
 
@@ -135,10 +133,10 @@ object ProofSetUploader {
             // Mutex held for the full pipeline: acquire → reassemble fresh → stamp compare →
             // sync Strategy upload → advance stamp on Success. withLock releases in finally.
             mutex.withLock {
-                // Re-resolve media under the lock. If mediaUriProvider returns a Pair, that path wins
-                // (fresh open from the stash) with no fallback to the bytes Composite passed in —
-                // even when the URI read fails. Otherwise use the enqueue-time mediaBytes/mime.
-                val (resolvedBytes, resolvedMime) = resolveMedia(context, mediaBytes, mediaMimeType, mediaUriProvider)
+                // Re-resolve media under the lock so a rebind while we waited takes effect. The
+                // handle is a length + stream opener; media bytes are never held here.
+                val media = resolveMedia(mediaSource, mediaInclusion)
+                val resolvedMime = media?.mimeType
                 // Re-list primary under the lock so membership reflects sidecars that landed while
                 // waiting for the mutex, then rebuild the candidate stamp from that snapshot.
                 val onDisk = primary.getProofSet(hash)
@@ -158,18 +156,16 @@ object ProofSetUploader {
                 //   - Not equal: first-pass re-check → assemble → Strategy upload → advance stamp on success.
                 if (candidate == lastUploadedMembershipByHash[hash]) {
                     // Stamp-skip fail-closed: always assemble included members.
-                    // INCLUDE_MEDIA: also fail-closed on null/empty injected media.
+                    // INCLUDE_MEDIA: also fail-closed on media that no longer resolves.
                     // SIDECARS_ONLY: do not fail solely for missing media.
-                    if (mediaInclusion == MediaInclusion.INCLUDE_MEDIA &&
-                        (resolvedBytes == null || resolvedBytes.isEmpty())
-                    ) {
+                    if (mediaInclusion == MediaInclusion.INCLUDE_MEDIA && media == null) {
                         listener?.saveFailed(
                             IllegalStateException("Stamp match but injected media missing or empty"),
                         )
                         return@withLock
                     }
                     val readable = assembleArtifacts(
-                        context, hash, onDisk, resolvedBytes, resolvedMime, primary, mediaInclusion,
+                        context, hash, onDisk, media, primary, mediaInclusion,
                     )
                     if (readable == null) {
                         listener?.saveFailed(
@@ -181,12 +177,11 @@ object ProofSetUploader {
                     return@withLock
                 }
 
-                val mediaOk = resolvedBytes != null && resolvedBytes.isNotEmpty()
                 // Re-check first-pass completeness on the post-acquire snapshot. Catches cases where
                 // primary/media became incomplete while waiting (e.g. required core missing, or
                 // injected media unreadable) — not "another upload removed members."
                 if (!ProofSetMembershipPolicy.isFirstPassComplete(
-                        context, hash, onDisk, mediaInclusion, mediaOk,
+                        context, hash, onDisk, mediaInclusion, media != null,
                     )
                 ) {
                     listener?.saveFailed(
@@ -195,10 +190,11 @@ object ProofSetUploader {
                     return@withLock
                 }
 
-                // Materialize bytes for the onDisk membership snapshot already taken under the lock
-                // (plus resolvedBytes). Does not re-list primary; fails closed if any member is unreadable.
+                // Build the upload set for the onDisk membership snapshot already taken under the
+                // lock (plus the resolved media handle). Does not re-list primary; fails closed if
+                // any member is unreadable.
                 val artifacts = assembleArtifacts(
-                    context, hash, onDisk, resolvedBytes, resolvedMime, primary, mediaInclusion,
+                    context, hash, onDisk, media, primary, mediaInclusion,
                 )
                 if (artifacts == null) {
                     listener?.saveFailed(
@@ -251,62 +247,66 @@ object ProofSetUploader {
         context: Context,
         hash: String,
         primary: StorageProvider,
-        mediaBytes: ByteArray?,
-        mediaMimeType: String?,
+        media: ResolvedMedia?,
         mediaInclusion: MediaInclusion,
-        mediaUriProvider: (() -> Pair<Uri, String?>?)?,
     ): Boolean {
-        val (resolvedBytes, _) = resolveMedia(context, mediaBytes, mediaMimeType, mediaUriProvider)
         val onDisk = primary.getProofSet(hash)
             .mapNotNull { ProofSetMembershipPolicy.fromProofSetUri(it) }
             .toSet()
-        val mediaOk = resolvedBytes != null && resolvedBytes.isNotEmpty()
         return ProofSetMembershipPolicy.isFirstPassComplete(
-            context, hash, onDisk, mediaInclusion, mediaOk,
+            context, hash, onDisk, mediaInclusion, media != null,
         )
     }
 
+    /**
+     * Snapshot [mediaSource] for one pass, or `null` when it is absent, unresolvable, or not wanted.
+     *
+     * Under [MediaInclusion.SIDECARS_ONLY] the source is never touched — that is what keeps the
+     * media Uri unopened when the user has auto-include off.
+     */
     private fun resolveMedia(
-        context: Context,
-        mediaBytes: ByteArray?,
-        mediaMimeType: String?,
-        mediaUriProvider: (() -> Pair<Uri, String?>?)?,
-    ): Pair<ByteArray?, String?> {
-        mediaUriProvider?.invoke()?.let { (uri, mime) ->
-            val bytes = try {
-                context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to read media from uri provider", e)
-                null
-            }
-            return bytes to (mime ?: mediaMimeType)
+        mediaSource: ProofSetMediaSource?,
+        mediaInclusion: MediaInclusion,
+    ): ResolvedMedia? {
+        if (mediaInclusion != MediaInclusion.INCLUDE_MEDIA) return null
+        return try {
+            mediaSource?.resolve()
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to resolve media for proof-set upload", e)
+            null
         }
-        return mediaBytes to mediaMimeType
     }
 
     /**
-     * SIDECARS_ONLY: mediaBytes may be null; media leaf omitted.
-     * INCLUDE_MEDIA: non-null non-empty bytes required (caller fail-closes before call).
+     * SIDECARS_ONLY: [media] may be null; media leaf omitted.
+     * INCLUDE_MEDIA: a resolved handle is required (caller fail-closes before call).
+     *
+     * Sidecars are read into memory — they are a few KB each. The media leaf contributes only its
+     * length and a stream opener, so the upload streams it rather than buffering it.
      */
     private fun assembleArtifacts(
         context: Context,
         hash: String,
         onDisk: Set<String>,
-        mediaBytes: ByteArray?,
-        mediaMimeType: String?,
+        media: ResolvedMedia?,
         primary: StorageProvider,
         mediaInclusion: MediaInclusion,
     ): List<DeferredArtifact>? {
         val artifacts = mutableListOf<DeferredArtifact>()
         for (id in ProofSetMembershipPolicy.manifestMemberBasenames(context, hash, onDisk)) {
             val bytes = primary.getInputStream(hash, id)?.use { it.readBytes() } ?: return null
-            artifacts.add(DeferredArtifact(id, bytes, ProofSetContentTypes.contentTypeFor(id)))
+            artifacts.add(DeferredArtifact.ofBytes(id, bytes, ProofSetContentTypes.contentTypeFor(id)))
         }
         if (mediaInclusion == MediaInclusion.INCLUDE_MEDIA) {
-            val bytes = mediaBytes ?: return null
-            if (bytes.isEmpty()) return null
-            val mediaName = ProofSetMembershipPolicy.manifestLinkNameForMedia(hash, mediaMimeType)
-            artifacts.add(DeferredArtifact(mediaName, bytes, mediaMimeType ?: "application/octet-stream"))
+            val resolved = media ?: return null
+            val mediaName = ProofSetMembershipPolicy.manifestLinkNameForMedia(hash, resolved.mimeType)
+            artifacts.add(
+                DeferredArtifact(
+                    mediaName,
+                    resolved.mimeType ?: "application/octet-stream",
+                    resolved.length,
+                ) { resolved.openStream() },
+            )
         }
         artifacts.sortBy { it.identifier }
         return artifacts

@@ -144,8 +144,8 @@ class FilebaseStorageProviderIpfsTest {
 
         val provider = FakeHttpFilebaseStorageProvider(fakeCode = 200, fakeBody = ndjson)
         val artifacts = listOf(
-            DeferredArtifact("photo.jpg", byteArrayOf(1, 2), "image/jpeg"),
-            DeferredArtifact("photo.proof.csv", byteArrayOf(3, 4), "text/csv"),
+            DeferredArtifact.ofBytes("photo.jpg", byteArrayOf(1, 2), "image/jpeg"),
+            DeferredArtifact.ofBytes("photo.proof.csv", byteArrayOf(3, 4), "text/csv"),
         )
 
         val result = provider.uploadDirectory("abc123", artifacts, "photo.jpg", null)
@@ -161,7 +161,7 @@ class FilebaseStorageProviderIpfsTest {
     @Test
     fun uploadDirectory_returnsNull_onNon2xxResponse() {
         val provider = FakeHttpFilebaseStorageProvider(fakeCode = 500, fakeBody = "internal error")
-        val artifacts = listOf(DeferredArtifact("photo.jpg", byteArrayOf(1), "image/jpeg"))
+        val artifacts = listOf(DeferredArtifact.ofBytes("photo.jpg", byteArrayOf(1), "image/jpeg"))
 
         assertNull(provider.uploadDirectory("abc123", artifacts, "photo.jpg", null))
     }
@@ -174,7 +174,7 @@ class FilebaseStorageProviderIpfsTest {
             bucketName = "b",
             ipfsBearerToken = "",
         )
-        val artifacts = listOf(DeferredArtifact("photo.jpg", byteArrayOf(1), "image/jpeg"))
+        val artifacts = listOf(DeferredArtifact.ofBytes("photo.jpg", byteArrayOf(1), "image/jpeg"))
 
         assertNull(provider.uploadDirectory("abc123", artifacts, "photo.jpg", null))
     }

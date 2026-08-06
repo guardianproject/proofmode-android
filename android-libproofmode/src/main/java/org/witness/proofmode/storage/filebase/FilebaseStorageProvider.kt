@@ -16,8 +16,9 @@ import javax.crypto.spec.SecretKeySpec
 import kotlin.collections.ArrayList
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import okio.BufferedSink
+import okio.source
 import org.json.JSONObject
 import org.witness.proofmode.storage.StorageListener
 import org.witness.proofmode.storage.StorageProvider
@@ -194,9 +195,7 @@ open class FilebaseStorageProvider(
         return try {
             Log.d(TAG, "Uploading directory for hash: $hash with ${artifacts.size} files")
 
-            val multipartBody = buildIpfsMultipart(
-                artifacts.map { Triple(it.identifier, it.data, it.contentType) },
-            )
+            val multipartBody = buildIpfsMultipart(artifacts)
             val url = "$IPFS_RPC_BASE_URL/api/v0/add?$IPFS_ADD_PARAM"
             val (code, body) = postIpfsAdd(url, multipartBody)
 
@@ -234,25 +233,45 @@ open class FilebaseStorageProvider(
 
     /**
      * Build a flat multipart form for IPFS `/add`.
-     * Each triple is (basename, bytes, contentType?).
+     *
+     * Parts stream from their [DeferredArtifact] sources, so a multi-hundred-megabyte media leaf
+     * is written to the socket in fixed-size chunks and never sits on the heap.
      */
-    private fun buildIpfsMultipart(
-        parts: List<Triple<String, ByteArray, String?>>,
-    ): MultipartBody {
+    private fun buildIpfsMultipart(artifacts: List<DeferredArtifact>): MultipartBody {
         val multipartBuilder = MultipartBody.Builder().setType(MultipartBody.FORM)
-        for ((basename, data, contentType) in parts) {
-            val mediaType = if (contentType.isNullOrBlank()) {
+        for (artifact in artifacts) {
+            val mediaType = if (artifact.contentType.isNullOrBlank()) {
                 "application/octet-stream"
             } else {
-                contentType
+                artifact.contentType
             }
             multipartBuilder.addFormDataPart(
                 "file",
-                basename,
-                data.toRequestBody(mediaType.toMediaType()),
+                artifact.identifier,
+                StreamRequestBody(mediaType.toMediaType(), artifact.length) { artifact.openStream() },
             )
         }
         return multipartBuilder.build()
+    }
+
+    /**
+     * Request body that opens its source per write instead of holding it.
+     *
+     * OkHttp may call [writeTo] more than once (retry / redirect / auth challenge), so [open] must
+     * hand back a fresh stream every time.
+     */
+    private class StreamRequestBody(
+        private val mediaType: MediaType?,
+        private val length: Long,
+        private val open: () -> InputStream,
+    ) : RequestBody() {
+        override fun contentType(): MediaType? = mediaType
+
+        override fun contentLength(): Long = length
+
+        override fun writeTo(sink: BufferedSink) {
+            open().use { input -> sink.writeAll(input.source()) }
+        }
     }
 
     protected open fun postIpfsAdd(url: String, body: RequestBody): Pair<Int, String?> {
@@ -309,7 +328,7 @@ open class FilebaseStorageProvider(
 
         return try {
             val multipartBody = buildIpfsMultipart(
-                listOf(Triple(basename, bytes, contentType)),
+                listOf(DeferredArtifact.ofBytes(basename, bytes, contentType)),
             )
             val url = "$IPFS_RPC_BASE_URL/api/v0/add?cid-version=1"
             val (code, body) = postIpfsAdd(url, multipartBody)
@@ -331,18 +350,41 @@ open class FilebaseStorageProvider(
         }
     }
 
+    /**
+     * Upload a single proof-set member straight from its source.
+     *
+     * The artifact is streamed to the socket and hashed by streaming, so the media leaf never
+     * needs a heap buffer or a spooled copy of itself.
+     */
+    open fun saveArtifact(hash: String, artifact: DeferredArtifact, listener: StorageListener?) {
+        uploadSource(hash, artifact.identifier, artifact.length, listener) { artifact.openStream() }
+    }
+
     private fun uploadFile(hash: String, identifier: String, file: File, listener: StorageListener?) {
+        uploadSource(hash, identifier, file.length(), listener) { file.inputStream() }
+    }
+
+    private fun uploadSource(
+        hash: String,
+        identifier: String,
+        length: Long,
+        listener: StorageListener?,
+        open: () -> InputStream,
+    ) {
         try {
             val objectKey = "$hash/$identifier"
             val contentType = ProofSetContentTypes.contentTypeFor(identifier)
-            
-            val requestBody = file.asRequestBody(contentType.toMediaType())
+
+            val requestBody = StreamRequestBody(contentType.toMediaType(), length, open)
             val timestamp = getTimestamp()
             val dateStamp = getDateStamp()
+            // Digest the source once, not once per use: SigV4 needs it in the canonical headers,
+            // the canonical request, and the sent header.
+            val payloadHash = streamingSha256(open)
 
             // Create canonical request
             val canonicalHeaders = "host:${endpoint.removePrefix("https://")}\n" +
-                    "x-amz-content-sha256:${getPayloadHash(file)}\n" +
+                    "x-amz-content-sha256:$payloadHash\n" +
                     "x-amz-date:$timestamp\n"
 
             val signedHeaders = "host;x-amz-content-sha256;x-amz-date"
@@ -353,7 +395,7 @@ open class FilebaseStorageProvider(
                     "\n" +
                     signedHeaders +
                     "\n" +
-                    getPayloadHash(file)
+                    payloadHash
 
             // Create string to sign
             val credentialScope = "$dateStamp/$region/$SERVICE/aws4_request"
@@ -373,7 +415,7 @@ open class FilebaseStorageProvider(
                 .url("$endpoint/$bucketName/$objectKey")
                 .put(requestBody)
                 .addHeader("Host", endpoint.removePrefix("https://"))
-                .addHeader("x-amz-content-sha256", getPayloadHash(file))
+                .addHeader("x-amz-content-sha256", payloadHash)
                 .addHeader("x-amz-date", timestamp)
                 .addHeader("Authorization", authorization)
                 .addHeader("Content-Type", contentType)
@@ -410,8 +452,18 @@ open class FilebaseStorageProvider(
         return sdf.format(Date())
     }
 
-    private fun getPayloadHash(file: File): String {
-        return sha256(file.readBytes())
+    /** SigV4 payload digest over a source that may be far larger than the heap. */
+    private fun streamingSha256(open: () -> InputStream): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        open().use { input ->
+            val buffer = ByteArray(64 * 1024)
+            while (true) {
+                val read = input.read(buffer)
+                if (read < 0) break
+                digest.update(buffer, 0, read)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
     private fun sha256(data: String): String {

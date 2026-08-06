@@ -79,15 +79,15 @@ class ProofSetUploaderTest {
             hash,
             primary,
             filebase,
-            media,
-            "image/jpeg",
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.INCLUDE_MEDIA,
+            ProofSetMediaSource.ofBytes(media, "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
             listener,
         )
 
         assertTrue(started)
         assertEquals(1, filebase.uploadDirectoryCalls.size)
-        assertEquals(0, filebase.saveBytesCalls.size)
+        assertEquals(0, filebase.saveArtifactCalls.size)
 
         val (callHash, artifacts) = filebase.uploadDirectoryCalls.single()
         assertEquals(hash, callHash)
@@ -97,7 +97,7 @@ class ProofSetUploaderTest {
         assertEquals(coreBasenames().size + 1, artifacts.size)
 
         val mediaArt = artifacts.single { it.identifier == "$hash.jpg" }
-        assertTrue(mediaArt.data.contentEquals(media))
+        assertTrue(mediaArt.readAllBytes().contentEquals(media))
         assertEquals("image/jpeg", mediaArt.contentType)
         assertEquals(ids.sorted(), ids)
 
@@ -130,15 +130,15 @@ class ProofSetUploaderTest {
 
         assertTrue(
             ProofSetUploader.enqueueProofSetUpload(
-                context,
-                hash,
-                primary,
-                filebase,
-                byteArrayOf(1, 2, 3),
-                "image/jpeg",
-                FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.INCLUDE_MEDIA,
-                null,
-            ),
+            context,
+            hash,
+            primary,
+            filebase,
+            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
+            null,
+        ),
         )
 
         assertEquals(
@@ -176,15 +176,15 @@ class ProofSetUploaderTest {
             hash,
             primary,
             filebase,
-            byteArrayOf(9),
-            "image/jpeg",
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.INCLUDE_MEDIA,
+            ProofSetMediaSource.ofBytes(byteArrayOf(9), "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
             null,
         )
 
         assertFalse(started)
         assertTrue(filebase.uploadDirectoryCalls.isEmpty())
-        assertTrue(filebase.saveBytesCalls.isEmpty())
+        assertTrue(filebase.saveArtifactCalls.isEmpty())
         assertTrue(primary.saveTextCalls.isEmpty())
     }
 
@@ -195,30 +195,30 @@ class ProofSetUploaderTest {
 
         assertFalse(
             ProofSetUploader.enqueueProofSetUpload(
-                context,
-                hash,
-                primary,
-                filebase,
-                null,
-                "image/jpeg",
-                FilebaseConfig.UploadMode.S3_MEMBERS, MediaInclusion.INCLUDE_MEDIA,
-                null,
-            ),
+            context,
+            hash,
+            primary,
+            filebase,
+            null,
+            FilebaseConfig.UploadMode.S3_MEMBERS,
+            MediaInclusion.INCLUDE_MEDIA,
+            null,
+        ),
         )
         assertFalse(
             ProofSetUploader.enqueueProofSetUpload(
-                context,
-                hash,
-                primary,
-                filebase,
-                byteArrayOf(),
-                "image/jpeg",
-                FilebaseConfig.UploadMode.S3_MEMBERS, MediaInclusion.INCLUDE_MEDIA,
-                null,
-            ),
+            context,
+            hash,
+            primary,
+            filebase,
+            ProofSetMediaSource.ofBytes(byteArrayOf(), "image/jpeg"),
+            FilebaseConfig.UploadMode.S3_MEMBERS,
+            MediaInclusion.INCLUDE_MEDIA,
+            null,
+        ),
         )
         assertTrue(filebase.uploadDirectoryCalls.isEmpty())
-        assertTrue(filebase.saveBytesCalls.isEmpty())
+        assertTrue(filebase.saveArtifactCalls.isEmpty())
     }
 
     @Test
@@ -233,22 +233,22 @@ class ProofSetUploaderTest {
             hash,
             primary,
             filebase,
-            media,
-            "image/png",
-            FilebaseConfig.UploadMode.S3_MEMBERS, MediaInclusion.INCLUDE_MEDIA,
+            ProofSetMediaSource.ofBytes(media, "image/png"),
+            FilebaseConfig.UploadMode.S3_MEMBERS,
+            MediaInclusion.INCLUDE_MEDIA,
             listener,
         )
 
         assertTrue(started)
         assertTrue(filebase.uploadDirectoryCalls.isEmpty())
-        assertEquals(coreBasenames().size + 1, filebase.saveBytesCalls.size)
+        assertEquals(coreBasenames().size + 1, filebase.saveArtifactCalls.size)
 
-        val identifiers = filebase.saveBytesCalls.map { it.second }
+        val identifiers = filebase.saveArtifactCalls.map { it.second }
         assertTrue("$hash.png" in identifiers)
         assertTrue(coreBasenames().all { it in identifiers })
         assertEquals(identifiers.sorted(), identifiers)
 
-        val mediaCall = filebase.saveBytesCalls.single { it.second == "$hash.png" }
+        val mediaCall = filebase.saveArtifactCalls.single { it.second == "$hash.png" }
         assertTrue(mediaCall.third.contentEquals(media))
 
         val mediaUri = "s3://bucket/$hash/$hash.png"
@@ -271,15 +271,15 @@ class ProofSetUploaderTest {
 
         assertTrue(
             ProofSetUploader.enqueueProofSetUpload(
-                context,
-                hash,
-                primary,
-                filebase,
-                byteArrayOf(7, 8, 9),
-                "video/mp4",
-                FilebaseConfig.UploadMode.S3_MEMBERS, MediaInclusion.INCLUDE_MEDIA,
-                null,
-            ),
+            context,
+            hash,
+            primary,
+            filebase,
+            ProofSetMediaSource.ofBytes(byteArrayOf(7, 8, 9), "video/mp4"),
+            FilebaseConfig.UploadMode.S3_MEMBERS,
+            MediaInclusion.INCLUDE_MEDIA,
+            null,
+        ),
         )
 
         assertEquals(
@@ -299,17 +299,17 @@ class ProofSetUploaderTest {
 
         assertFalse(
             ProofSetUploader.enqueueProofSetUpload(
-                context,
-                hash,
-                primary,
-                filebase,
-                byteArrayOf(1),
-                "video/mp4",
-                FilebaseConfig.UploadMode.S3_MEMBERS, MediaInclusion.INCLUDE_MEDIA,
-                null,
-            ),
+            context,
+            hash,
+            primary,
+            filebase,
+            ProofSetMediaSource.ofBytes(byteArrayOf(1), "video/mp4"),
+            FilebaseConfig.UploadMode.S3_MEMBERS,
+            MediaInclusion.INCLUDE_MEDIA,
+            null,
+        ),
         )
-        assertTrue(filebase.saveBytesCalls.isEmpty())
+        assertTrue(filebase.saveArtifactCalls.isEmpty())
         assertTrue(filebase.uploadDirectoryCalls.isEmpty())
         assertTrue(primary.getInputStreamCalls.isEmpty())
     }
@@ -367,9 +367,9 @@ class ProofSetUploaderTest {
             hash,
             primary,
             filebase,
-            media,
-            "image/jpeg",
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.INCLUDE_MEDIA,
+            ProofSetMediaSource.ofBytes(media, "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
             null,
         )
 
@@ -402,15 +402,15 @@ class ProofSetUploaderTest {
 
         assertTrue(
             ProofSetUploader.enqueueProofSetUpload(
-                context,
-                hash,
-                primary,
-                filebase,
-                byteArrayOf(1),
-                "image/jpeg",
-                FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.INCLUDE_MEDIA,
-                null,
-            ),
+            context,
+            hash,
+            primary,
+            filebase,
+            ProofSetMediaSource.ofBytes(byteArrayOf(1), "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
+            null,
+        ),
         )
 
         assertEquals(listOf(latestCid), filebase.unpinCalls)
@@ -429,15 +429,15 @@ class ProofSetUploaderTest {
 
         assertTrue(
             ProofSetUploader.enqueueProofSetUpload(
-                context,
-                hash,
-                primary,
-                filebase,
-                byteArrayOf(1, 2, 3),
-                "image/jpeg",
-                FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.INCLUDE_MEDIA,
-                null,
-            ),
+            context,
+            hash,
+            primary,
+            filebase,
+            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
+            null,
+        ),
         )
 
         assertEquals(listOf(priorCid), filebase.unpinCalls)
@@ -471,15 +471,15 @@ class ProofSetUploaderTest {
 
         assertTrue(
             ProofSetUploader.enqueueProofSetUpload(
-                context,
-                hash,
-                primary,
-                filebase,
-                byteArrayOf(1, 2, 3),
-                "image/jpeg",
-                FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.INCLUDE_MEDIA,
-                null,
-            ),
+            context,
+            hash,
+            primary,
+            filebase,
+            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
+            null,
+        ),
         )
 
         assertEquals(listOf(priorCid), filebase.unpinCalls)
@@ -507,9 +507,9 @@ class ProofSetUploaderTest {
             hash,
             primary,
             filebase,
-            byteArrayOf(1, 2, 3),
-            "image/jpeg",
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.INCLUDE_MEDIA,
+            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
             listener,
         )
 
@@ -529,15 +529,15 @@ class ProofSetUploaderTest {
 
         assertTrue(
             ProofSetUploader.enqueueProofSetUpload(
-                context,
-                hash,
-                primary,
-                filebase,
-                byteArrayOf(1, 2, 3),
-                "image/jpeg",
-                FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.INCLUDE_MEDIA,
-                null,
-            ),
+            context,
+            hash,
+            primary,
+            filebase,
+            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
+            null,
+        ),
         )
 
         assertTrue(filebase.unpinCalls.isEmpty())
@@ -555,15 +555,15 @@ class ProofSetUploaderTest {
 
         assertTrue(
             ProofSetUploader.enqueueProofSetUpload(
-                context,
-                hash,
-                primary,
-                filebase,
-                byteArrayOf(1, 2, 3),
-                "image/jpeg",
-                FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.INCLUDE_MEDIA,
-                null,
-            ),
+            context,
+            hash,
+            primary,
+            filebase,
+            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
+            null,
+        ),
         )
 
         assertTrue(filebase.unpinCalls.isEmpty())
@@ -582,20 +582,20 @@ class ProofSetUploaderTest {
                 listener: StorageListener?,
             ): FilebaseUploadResult? {
                 uploadDirectoryCalls.add(
-                    hash to artifacts.map { DeferredArtifact(it.identifier, it.data.copyOf(), it.contentType) },
+                    hash to artifacts.map { DeferredArtifact.ofBytes(it.identifier, it.readAllBytes(), it.contentType) },
                 )
                 val leafCid = if (!mediaBasename.isNullOrBlank()) uploadDirectoryMediaLeafCid else null
                 if (uploadDirectoryCalls.size == 1) {
                     val parked = ProofSetUploader.enqueueProofSetUpload(
-                        context,
-                        hash,
-                        primary,
-                        this,
-                        byteArrayOf(1, 2, 3),
-                        "image/jpeg",
-                        FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.INCLUDE_MEDIA,
-                        shareListener,
-                    )
+            context,
+            hash,
+            primary,
+            this,
+            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
+            shareListener,
+        )
                     assertTrue(parked)
                     assertEquals(1, uploadDirectoryCalls.size)
                     assertTrue(shareListener.successes.isEmpty())
@@ -648,7 +648,7 @@ class ProofSetUploaderTest {
                 listener: StorageListener?,
             ): FilebaseUploadResult? {
                 uploadDirectoryCalls.add(
-                    hash to artifacts.map { DeferredArtifact(it.identifier, it.data.copyOf(), it.contentType) },
+                    hash to artifacts.map { DeferredArtifact.ofBytes(it.identifier, it.readAllBytes(), it.contentType) },
                 )
                 val leafCid = if (!mediaBasename.isNullOrBlank()) uploadDirectoryMediaLeafCid else null
                 if (uploadDirectoryCalls.size == 1) {
@@ -684,11 +684,10 @@ class ProofSetUploaderTest {
             hash,
             primary,
             secondary,
-            byteArrayOf(1, 2, 3),
-            "image/jpeg",
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.INCLUDE_MEDIA,
+            ProofSetMediaSource.fromUriProvider(context) { Uri.fromFile(mediaFile) to "image/jpeg" },
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
             null,
-            mediaUriProvider = { Uri.fromFile(mediaFile) to "image/jpeg" },
         )
 
         assertEquals(1, secondary.uploadDirectoryCalls.size)
@@ -704,15 +703,15 @@ class ProofSetUploaderTest {
 
         assertTrue(
             ProofSetUploader.enqueueProofSetUpload(
-                context,
-                hash,
-                primary,
-                filebase,
-                media,
-                "image/jpeg",
-                FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.INCLUDE_MEDIA,
-                null,
-            ),
+            context,
+            hash,
+            primary,
+            filebase,
+            ProofSetMediaSource.ofBytes(media, "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
+            null,
+        ),
         )
         assertEquals(1, filebase.uploadDirectoryCalls.size)
         assertEquals(1, filebase.unpinCalls.size)
@@ -723,9 +722,9 @@ class ProofSetUploaderTest {
             hash,
             primary,
             filebase,
-            media,
-            "image/jpeg",
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.INCLUDE_MEDIA,
+            ProofSetMediaSource.ofBytes(media, "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
             listener,
         )
 
@@ -747,9 +746,9 @@ class ProofSetUploaderTest {
             hash,
             primary,
             filebase,
-            byteArrayOf(9),
-            "image/jpeg",
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.INCLUDE_MEDIA,
+            ProofSetMediaSource.ofBytes(byteArrayOf(9), "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
             null,
         )
         assertFalse(leader)
@@ -759,9 +758,9 @@ class ProofSetUploaderTest {
             hash,
             primary,
             filebase,
-            byteArrayOf(9),
-            "image/jpeg",
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.INCLUDE_MEDIA,
+            ProofSetMediaSource.ofBytes(byteArrayOf(9), "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
             directListener,
         )
         assertFalse(direct)
@@ -786,9 +785,9 @@ class ProofSetUploaderTest {
             hash,
             primary,
             filebase,
-            byteArrayOf(9),
-            "image/jpeg",
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.INCLUDE_MEDIA,
+            ProofSetMediaSource.ofBytes(byteArrayOf(9), "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
             listener,
         )
 
@@ -824,21 +823,21 @@ class ProofSetUploaderTest {
                 listener: StorageListener?,
             ): FilebaseUploadResult? {
                 uploadDirectoryCalls.add(
-                    hash to artifacts.map { DeferredArtifact(it.identifier, it.data.copyOf(), it.contentType) },
+                    hash to artifacts.map { DeferredArtifact.ofBytes(it.identifier, it.readAllBytes(), it.contentType) },
                 )
                 // While Coroutine1 holds the Mutex, schedule a second enqueue (Coroutine2).
                 // With Dispatchers.Unconfined, Coroutine2 launches immediately but suspends at
                 // mutex.withLock (Mutex held by Coroutine1). enqueueProofSetUpload returns true.
                 val parked = ProofSetUploader.enqueueProofSetUpload(
-                    context,
-                    hash,
-                    primary,
-                    this,
-                    byteArrayOf(1, 2, 3),
-                    "image/jpeg",
-                    FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.INCLUDE_MEDIA,
-                    parkedListener,
-                )
+            context,
+            hash,
+            primary,
+            this,
+            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
+            parkedListener,
+        )
                 assertTrue(parked)
                 // Coroutine2 is suspended — parkedListener has NOT fired yet.
                 assertTrue(parkedListener.failures.isEmpty())
@@ -855,15 +854,15 @@ class ProofSetUploaderTest {
         // All sync under Dispatchers.Unconfined, so all state is observable after this returns.
         assertTrue(
             ProofSetUploader.enqueueProofSetUpload(
-                context,
-                hash,
-                primary,
-                filebase,
-                byteArrayOf(1, 2, 3),
-                "image/jpeg",
-                FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.INCLUDE_MEDIA,
-                null,
-            ),
+            context,
+            hash,
+            primary,
+            filebase,
+            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
+            null,
+        ),
         )
 
         assertEquals(1, filebase.uploadDirectoryCalls.size)
@@ -911,14 +910,26 @@ class ProofSetUploaderTest {
 
         // Upload hash A — should write leafCidA into A's image.uri
         ProofSetUploader.enqueueProofSetUpload(
-            context, hashA, primaryA, fakeAdapter,
-            byteArrayOf(1, 2, 3), "image/jpeg", FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.INCLUDE_MEDIA, null,
+            context,
+            hashA,
+            primaryA,
+            fakeAdapter,
+            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
+            null,
         )
 
         // Upload hash B — should NOT leak leafCidA; adapter returns null leaf for B
         ProofSetUploader.enqueueProofSetUpload(
-            context, hashB, primaryB, fakeAdapter,
-            byteArrayOf(4, 5, 6), "image/jpeg", FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.INCLUDE_MEDIA, null,
+            context,
+            hashB,
+            primaryB,
+            fakeAdapter,
+            ProofSetMediaSource.ofBytes(byteArrayOf(4, 5, 6), "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
+            null,
         )
 
         // Hash A image.uri must be leaf-form (using its own leaf CID)
@@ -948,15 +959,15 @@ class ProofSetUploaderTest {
 
         assertTrue(
             ProofSetUploader.enqueueProofSetUpload(
-                context,
-                hash,
-                primary,
-                filebase,
-                media,
-                "image/jpeg",
-                FilebaseConfig.UploadMode.S3_MEMBERS, MediaInclusion.INCLUDE_MEDIA,
-                null,
-            ),
+            context,
+            hash,
+            primary,
+            filebase,
+            ProofSetMediaSource.ofBytes(media, "image/jpeg"),
+            FilebaseConfig.UploadMode.S3_MEMBERS,
+            MediaInclusion.INCLUDE_MEDIA,
+            null,
+        ),
         )
         assertNull(
             primary.getInputStream(hash, hash + FilebaseSidecarContract.FILEBASE_IPFS_URI_SUFFIX),
@@ -973,14 +984,14 @@ class ProofSetUploaderTest {
             hash,
             primary,
             filebase,
-            media,
-            "image/jpeg",
-            FilebaseConfig.UploadMode.S3_MEMBERS, MediaInclusion.INCLUDE_MEDIA,
+            ProofSetMediaSource.ofBytes(media, "image/jpeg"),
+            FilebaseConfig.UploadMode.S3_MEMBERS,
+            MediaInclusion.INCLUDE_MEDIA,
             listener,
         )
 
         assertTrue(skipped)
-        assertEquals(coreBasenames().size + 1, filebase.saveBytesCalls.size)
+        assertEquals(coreBasenames().size + 1, filebase.saveArtifactCalls.size)
         assertEquals(1, listener.successes.size)
         assertEquals(hash to expectedImageUri, listener.successes.single())
     }
@@ -1013,7 +1024,7 @@ class ProofSetUploaderTest {
                 listener: StorageListener?,
             ): FilebaseUploadResult? {
                 uploadDirectoryCalls.add(
-                    hash to artifacts.map { DeferredArtifact(it.identifier, it.data.copyOf(), it.contentType) },
+                    hash to artifacts.map { DeferredArtifact.ofBytes(it.identifier, it.readAllBytes(), it.contentType) },
                 )
                 uploadStartedLatch.countDown()
                 // Block inside withLock so the test can enqueue concurrent callers.
@@ -1031,8 +1042,14 @@ class ProofSetUploaderTest {
 
         // First enqueue: pre-enqueue gate passes, coroutine scheduled on IO, acquires Mutex.
         val r1 = ProofSetUploader.enqueueProofSetUpload(
-            context, hash, primary, filebase,
-            byteArrayOf(1, 2, 3), "image/jpeg", FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.INCLUDE_MEDIA, makeListener(),
+            context,
+            hash,
+            primary,
+            filebase,
+            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
+            makeListener(),
         )
         assertTrue(r1)
 
@@ -1041,12 +1058,24 @@ class ProofSetUploaderTest {
 
         // Enqueue 2 and 3 while Mutex is held; their coroutines suspend at mutex.withLock.
         val r2 = ProofSetUploader.enqueueProofSetUpload(
-            context, hash, primary, filebase,
-            byteArrayOf(1, 2, 3), "image/jpeg", FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.INCLUDE_MEDIA, makeListener(),
+            context,
+            hash,
+            primary,
+            filebase,
+            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
+            makeListener(),
         )
         val r3 = ProofSetUploader.enqueueProofSetUpload(
-            context, hash, primary, filebase,
-            byteArrayOf(1, 2, 3), "image/jpeg", FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.INCLUDE_MEDIA, makeListener(),
+            context,
+            hash,
+            primary,
+            filebase,
+            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
+            makeListener(),
         )
         assertTrue(r2); assertTrue(r3)
 
@@ -1105,7 +1134,7 @@ class ProofSetUploaderTest {
                 Thread.sleep(80)
                 concurrentEntries.decrementAndGet()
                 uploadDirectoryCalls.add(
-                    hash to artifacts.map { DeferredArtifact(it.identifier, it.data.copyOf(), it.contentType) },
+                    hash to artifacts.map { DeferredArtifact.ofBytes(it.identifier, it.readAllBytes(), it.contentType) },
                 )
                 listener?.saveSuccessful(hash, uploadDirectoryResultUri)
                 return FilebaseUploadResult(uploadDirectoryResultUri, uploadDirectoryMediaLeafCid)
@@ -1116,13 +1145,18 @@ class ProofSetUploaderTest {
             Thread {
                 barrier.await(5, TimeUnit.SECONDS)  // all threads start at once
                 ProofSetUploader.enqueueProofSetUpload(
-                    context, freshHash, primary, filebase,
-                    byteArrayOf(1, 2, 3), "image/jpeg", FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.INCLUDE_MEDIA,
-                    object : StorageListener {
+            context,
+            freshHash,
+            primary,
+            filebase,
+            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
+            object : StorageListener {
                         override fun saveSuccessful(h: String?, u: String?) { allCompletedLatch.countDown() }
                         override fun saveFailed(e: Exception?) { allCompletedLatch.countDown() }
                     },
-                )
+        )
             }
         }
         threads.forEach { it.start() }
@@ -1149,20 +1183,20 @@ class ProofSetUploaderTest {
 
         assertTrue(
             ProofSetUploader.enqueueProofSetUpload(
-                context,
-                hash,
-                primary,
-                filebase,
-                byteArrayOf(4, 5, 6),
-                "image/png",
-                FilebaseConfig.UploadMode.S3_MEMBERS, MediaInclusion.INCLUDE_MEDIA,
-                null,
-            ),
+            context,
+            hash,
+            primary,
+            filebase,
+            ProofSetMediaSource.ofBytes(byteArrayOf(4, 5, 6), "image/png"),
+            FilebaseConfig.UploadMode.S3_MEMBERS,
+            MediaInclusion.INCLUDE_MEDIA,
+            null,
+        ),
         )
 
         assertTrue(filebase.unpinCalls.isEmpty())
         assertTrue(filebase.uploadDirectoryCalls.isEmpty())
-        assertEquals(coreBasenames().size + 1, filebase.saveBytesCalls.size)
+        assertEquals(coreBasenames().size + 1, filebase.saveArtifactCalls.size)
     }
 
     @Test
@@ -1183,9 +1217,9 @@ class ProofSetUploaderTest {
             hash,
             primary,
             filebase,
-            byteArrayOf(1, 2, 3),
-            "image/jpeg",
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.INCLUDE_MEDIA,
+            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
             listener,
         )
 
@@ -1202,9 +1236,15 @@ class ProofSetUploaderTest {
         val filebase = RecordingFilebaseStorageProvider()
         assertTrue(
             ProofSetUploader.enqueueProofSetUpload(
-                context, hash, primary, filebase, byteArrayOf(1, 2, 3), "image/jpeg",
-                FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.INCLUDE_MEDIA, null,
-            ),
+            context,
+            hash,
+            primary,
+            filebase,
+            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
+            null,
+        ),
         )
         val priorStamp = ProofSetUploader.lastUploadedMembership(hash)
         assertTrue(priorStamp != null && priorStamp.basenames.isNotEmpty())
@@ -1212,8 +1252,14 @@ class ProofSetUploaderTest {
         primary.unreadableIdentifiers.add(coreBasenames().first())
         val listener = RecordingListener()
         val started = ProofSetUploader.enqueueProofSetUpload(
-            context, hash, primary, filebase, byteArrayOf(1, 2, 3), "image/jpeg",
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.INCLUDE_MEDIA, listener,
+            context,
+            hash,
+            primary,
+            filebase,
+            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
+            listener,
         )
 
         assertTrue(started)
@@ -1223,18 +1269,28 @@ class ProofSetUploaderTest {
     }
 
     @Test
-    fun stampSkip_includeMedia_nullOrEmptyInjectedMedia_saveFailedNotSuccess() {
+    fun stampSkip_includeMedia_mediaNoLongerResolves_saveFailedNotSuccess() {
         val primary = primaryWithCore()
         val filebase = RecordingFilebaseStorageProvider()
         assertTrue(
             ProofSetUploader.enqueueProofSetUpload(
-                context, hash, primary, filebase, byteArrayOf(1, 2, 3), "image/jpeg",
-                FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.INCLUDE_MEDIA, null,
-            ),
+            context,
+            hash,
+            primary,
+            filebase,
+            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
+            null,
+        ),
         )
         val priorStamp = ProofSetUploader.lastUploadedMembership(hash)
         assertTrue(priorStamp != null && priorStamp.basenames.isNotEmpty())
 
+        // Media resolves for the pre-enqueue gate, then disappears before the coroutine takes
+        // the lock — the post-acquire re-resolve must fail closed.
+        val mediaFile = java.io.File(context.cacheDir, "$hash-vanishing-media.jpg")
+        mediaFile.writeBytes(byteArrayOf(1, 2, 3))
         var resolveCalls = 0
         val listener = RecordingListener()
         val started = ProofSetUploader.enqueueProofSetUpload(
@@ -1242,18 +1298,17 @@ class ProofSetUploaderTest {
             hash,
             primary,
             filebase,
-            byteArrayOf(1, 2, 3),
-            "image/jpeg",
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.INCLUDE_MEDIA,
-            listener,
-            mediaUriProvider = {
+            ProofSetMediaSource.fromUriProvider(context) {
                 resolveCalls++
                 if (resolveCalls == 1) {
-                    null // gate falls through to non-empty mediaBytes
+                    Uri.fromFile(mediaFile) to "image/jpeg"
                 } else {
                     Uri.parse("content://missing/media") to "image/jpeg"
                 }
             },
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
+            listener,
         )
 
         assertTrue(started)
@@ -1270,8 +1325,14 @@ class ProofSetUploaderTest {
         val listener = RecordingListener()
 
         val started = ProofSetUploader.enqueueProofSetUpload(
-            context, hash, primary, filebase, byteArrayOf(1, 2, 3), "image/jpeg",
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.INCLUDE_MEDIA, listener,
+            context,
+            hash,
+            primary,
+            filebase,
+            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
+            listener,
         )
 
         assertFalse(started)
@@ -1291,11 +1352,10 @@ class ProofSetUploaderTest {
             hash,
             primary,
             filebase,
-            mediaBytes = null,
-            mediaMimeType = "image/jpeg",
-            mode = FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            mediaInclusion = MediaInclusion.SIDECARS_ONLY,
-            listener = listener,
+            null,
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.SIDECARS_ONLY,
+            listener,
         )
 
         assertTrue(started)
@@ -1320,16 +1380,28 @@ class ProofSetUploaderTest {
 
         assertTrue(
             ProofSetUploader.enqueueProofSetUpload(
-                context, hash, primary, filebase, null, "image/jpeg",
-                FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.SIDECARS_ONLY, null,
-            ),
+            context,
+            hash,
+            primary,
+            filebase,
+            null,
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.SIDECARS_ONLY,
+            null,
+        ),
         )
         assertEquals(1, filebase.uploadDirectoryCalls.size)
 
         val listener = RecordingListener()
         val skipped = ProofSetUploader.enqueueProofSetUpload(
-            context, hash, primary, filebase, null, "image/jpeg",
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.SIDECARS_ONLY, listener,
+            context,
+            hash,
+            primary,
+            filebase,
+            null,
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.SIDECARS_ONLY,
+            listener,
         )
 
         assertTrue(skipped)
@@ -1344,9 +1416,15 @@ class ProofSetUploaderTest {
         val filebase = RecordingFilebaseStorageProvider()
         assertTrue(
             ProofSetUploader.enqueueProofSetUpload(
-                context, hash, primary, filebase, null, "image/jpeg",
-                FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.SIDECARS_ONLY, null,
-            ),
+            context,
+            hash,
+            primary,
+            filebase,
+            null,
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.SIDECARS_ONLY,
+            null,
+        ),
         )
         val priorStamp = ProofSetUploader.lastUploadedMembership(hash)
         assertTrue(priorStamp != null && priorStamp.basenames.isNotEmpty())
@@ -1354,8 +1432,14 @@ class ProofSetUploaderTest {
         primary.unreadableIdentifiers.add(coreBasenames().first())
         val listener = RecordingListener()
         val started = ProofSetUploader.enqueueProofSetUpload(
-            context, hash, primary, filebase, null, "image/jpeg",
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.SIDECARS_ONLY, listener,
+            context,
+            hash,
+            primary,
+            filebase,
+            null,
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.SIDECARS_ONLY,
+            listener,
         )
 
         assertTrue(started)
@@ -1371,9 +1455,15 @@ class ProofSetUploaderTest {
 
         assertTrue(
             ProofSetUploader.enqueueProofSetUpload(
-                context, hash, primary, filebase, byteArrayOf(1, 2, 3), "image/jpeg",
-                FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.INCLUDE_MEDIA, null,
-            ),
+            context,
+            hash,
+            primary,
+            filebase,
+            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
+            null,
+        ),
         )
         assertEquals(1, filebase.uploadDirectoryCalls.size)
         val includeStamp = ProofSetUploader.lastUploadedMembership(hash)!!
@@ -1382,9 +1472,15 @@ class ProofSetUploaderTest {
         val listener = RecordingListener()
         assertTrue(
             ProofSetUploader.enqueueProofSetUpload(
-                context, hash, primary, filebase, null, "image/jpeg",
-                FilebaseConfig.UploadMode.IPFS_DIRECTORY, MediaInclusion.SIDECARS_ONLY, listener,
-            ),
+            context,
+            hash,
+            primary,
+            filebase,
+            null,
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.SIDECARS_ONLY,
+            listener,
+        ),
         )
 
         assertEquals(2, filebase.uploadDirectoryCalls.size)
@@ -1405,16 +1501,15 @@ class ProofSetUploaderTest {
             hash,
             primary,
             filebase,
-            mediaBytes = null,
-            mediaMimeType = "image/jpeg",
-            mode = FilebaseConfig.UploadMode.S3_MEMBERS,
-            mediaInclusion = MediaInclusion.SIDECARS_ONLY,
-            listener = listener,
+            null,
+            FilebaseConfig.UploadMode.S3_MEMBERS,
+            MediaInclusion.SIDECARS_ONLY,
+            listener,
         )
 
         assertTrue(started)
-        assertEquals(coreBasenames().size, filebase.saveBytesCalls.size)
-        assertFalse(filebase.saveBytesCalls.any { it.second == "$hash.jpg" })
+        assertEquals(coreBasenames().size, filebase.saveArtifactCalls.size)
+        assertFalse(filebase.saveArtifactCalls.any { it.second == "$hash.jpg" })
         assertTrue(primary.saveTextCalls.isEmpty())
 
         val stamp = ProofSetUploader.lastUploadedMembership(hash)
@@ -1434,16 +1529,15 @@ class ProofSetUploaderTest {
 
         assertTrue(
             ProofSetUploader.enqueueProofSetUpload(
-                context,
-                hash,
-                primary,
-                filebase,
-                mediaBytes = null,
-                mediaMimeType = "image/jpeg",
-                mode = FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-                mediaInclusion = MediaInclusion.SIDECARS_ONLY,
-                listener = listener,
-            ),
+            context,
+            hash,
+            primary,
+            filebase,
+            null,
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.SIDECARS_ONLY,
+            listener,
+        ),
         )
 
         assertEquals(
@@ -1476,16 +1570,15 @@ class ProofSetUploaderTest {
 
         assertTrue(
             ProofSetUploader.enqueueProofSetUpload(
-                context,
-                hash,
-                primary,
-                filebase,
-                mediaBytes = null,
-                mediaMimeType = "image/jpeg",
-                mode = FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-                mediaInclusion = MediaInclusion.SIDECARS_ONLY,
-                listener = null,
-            ),
+            context,
+            hash,
+            primary,
+            filebase,
+            null,
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.SIDECARS_ONLY,
+            null,
+        ),
         )
 
         assertFalse(
@@ -1508,16 +1601,15 @@ class ProofSetUploaderTest {
 
         assertTrue(
             ProofSetUploader.enqueueProofSetUpload(
-                context,
-                hash,
-                primary,
-                filebase,
-                mediaBytes = null,
-                mediaMimeType = "image/jpeg",
-                mode = FilebaseConfig.UploadMode.S3_MEMBERS,
-                mediaInclusion = MediaInclusion.SIDECARS_ONLY,
-                listener = listener,
-            ),
+            context,
+            hash,
+            primary,
+            filebase,
+            null,
+            FilebaseConfig.UploadMode.S3_MEMBERS,
+            MediaInclusion.SIDECARS_ONLY,
+            listener,
+        ),
         )
 
         assertTrue(primary.saveTextCalls.isEmpty())
@@ -1535,16 +1627,15 @@ class ProofSetUploaderTest {
 
         assertTrue(
             ProofSetUploader.enqueueProofSetUpload(
-                context,
-                hash,
-                primary,
-                filebase,
-                byteArrayOf(7, 8, 9),
-                "video/mp4",
-                FilebaseConfig.UploadMode.S3_MEMBERS,
-                MediaInclusion.INCLUDE_MEDIA,
-                null,
-            ),
+            context,
+            hash,
+            primary,
+            filebase,
+            ProofSetMediaSource.ofBytes(byteArrayOf(7, 8, 9), "video/mp4"),
+            FilebaseConfig.UploadMode.S3_MEMBERS,
+            MediaInclusion.INCLUDE_MEDIA,
+            null,
+        ),
         )
 
         assertEquals(
@@ -1563,7 +1654,7 @@ class ProofSetUploaderTest {
         val primary = primaryWithCore()
         val filebase = RecordingFilebaseStorageProvider(uploadDirectoryMediaLeafCid = null)
         val artifacts = coreBasenames().map {
-            DeferredArtifact(it, it.toByteArray(), "application/octet-stream")
+            DeferredArtifact.ofBytes(it, it.toByteArray(), "application/octet-stream")
         }
 
         val outcome = org.witness.proofmode.storage.filebase.IpfsDirectoryUploadStrategy.upload(
@@ -1586,16 +1677,15 @@ class ProofSetUploaderTest {
         val listener = RecordingListener()
         assertTrue(
             ProofSetUploader.enqueueProofSetUpload(
-                context,
-                hash,
-                primaryWithCore(),
-                RecordingFilebaseStorageProvider(uploadDirectorySucceed = false),
-                byteArrayOf(1, 2, 3),
-                "image/jpeg",
-                FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-                MediaInclusion.INCLUDE_MEDIA,
-                listener,
-            ),
+            context,
+            hash,
+            primaryWithCore(),
+            RecordingFilebaseStorageProvider(uploadDirectorySucceed = false),
+            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
+            listener,
+        ),
         )
         assertNull(ProofSetUploader.lastUploadedMembership(hash))
         assertTrue(listener.successes.isEmpty())
@@ -1610,18 +1700,17 @@ class ProofSetUploaderTest {
 
         assertTrue(
             ProofSetUploader.enqueueProofSetUpload(
-                context,
-                hash,
-                primary,
-                filebase,
-                mediaBytes = null,
-                mediaMimeType = "image/jpeg",
-                mode = FilebaseConfig.UploadMode.S3_MEMBERS,
-                mediaInclusion = MediaInclusion.SIDECARS_ONLY,
-                listener = listener,
-            ),
+            context,
+            hash,
+            primary,
+            filebase,
+            null,
+            FilebaseConfig.UploadMode.S3_MEMBERS,
+            MediaInclusion.SIDECARS_ONLY,
+            listener,
+        ),
         )
-        assertEquals(coreBasenames().size, filebase.saveBytesCalls.size)
+        assertEquals(coreBasenames().size, filebase.saveArtifactCalls.size)
         assertTrue(primary.saveTextCalls.isEmpty())
         assertEquals(1, listener.successes.size)
 
@@ -1632,16 +1721,15 @@ class ProofSetUploaderTest {
         val switchListener = RecordingListener()
         assertTrue(
             ProofSetUploader.enqueueProofSetUpload(
-                context,
-                hash,
-                primary,
-                filebase,
-                mediaBytes = null,
-                mediaMimeType = "image/jpeg",
-                mode = FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-                mediaInclusion = MediaInclusion.SIDECARS_ONLY,
-                listener = switchListener,
-            ),
+            context,
+            hash,
+            primary,
+            filebase,
+            null,
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.SIDECARS_ONLY,
+            switchListener,
+        ),
         )
 
         assertEquals(1, filebase.uploadDirectoryCalls.size)
@@ -1676,16 +1764,15 @@ class ProofSetUploaderTest {
 
         assertTrue(
             ProofSetUploader.enqueueProofSetUpload(
-                context,
-                hash,
-                primary,
-                filebase,
-                mediaBytes = null,
-                mediaMimeType = "image/jpeg",
-                mode = FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-                mediaInclusion = MediaInclusion.SIDECARS_ONLY,
-                listener = listener,
-            ),
+            context,
+            hash,
+            primary,
+            filebase,
+            null,
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.SIDECARS_ONLY,
+            listener,
+        ),
         )
         assertEquals(1, filebase.uploadDirectoryCalls.size)
         assertEquals(1, listener.successes.size)
@@ -1697,19 +1784,18 @@ class ProofSetUploaderTest {
         val switchListener = RecordingListener()
         assertTrue(
             ProofSetUploader.enqueueProofSetUpload(
-                context,
-                hash,
-                primary,
-                filebase,
-                mediaBytes = null,
-                mediaMimeType = "image/jpeg",
-                mode = FilebaseConfig.UploadMode.S3_MEMBERS,
-                mediaInclusion = MediaInclusion.SIDECARS_ONLY,
-                listener = switchListener,
-            ),
+            context,
+            hash,
+            primary,
+            filebase,
+            null,
+            FilebaseConfig.UploadMode.S3_MEMBERS,
+            MediaInclusion.SIDECARS_ONLY,
+            switchListener,
+        ),
         )
 
-        assertEquals(coreBasenames().size, filebase.saveBytesCalls.size)
+        assertEquals(coreBasenames().size, filebase.saveArtifactCalls.size)
         assertTrue(filebase.uploadDirectoryCalls.size == 1)
         val s3Stamp = ProofSetUploader.lastUploadedMembership(hash)!!
         assertEquals(FilebaseConfig.UploadMode.S3_MEMBERS, s3Stamp.uploadMode)
@@ -1726,18 +1812,17 @@ class ProofSetUploaderTest {
 
         assertTrue(
             ProofSetUploader.enqueueProofSetUpload(
-                context,
-                hash,
-                primary,
-                filebase,
-                mediaBytes = null,
-                mediaMimeType = "image/jpeg",
-                mode = FilebaseConfig.UploadMode.S3_MEMBERS,
-                mediaInclusion = MediaInclusion.SIDECARS_ONLY,
-                listener = listener,
-            ),
+            context,
+            hash,
+            primary,
+            filebase,
+            null,
+            FilebaseConfig.UploadMode.S3_MEMBERS,
+            MediaInclusion.SIDECARS_ONLY,
+            listener,
+        ),
         )
-        assertEquals(coreBasenames().size, filebase.saveBytesCalls.size)
+        assertEquals(coreBasenames().size, filebase.saveArtifactCalls.size)
         assertEquals(1, listener.successes.size)
         val priorStamp = ProofSetUploader.lastUploadedMembership(hash)!!
 
@@ -1747,15 +1832,14 @@ class ProofSetUploaderTest {
             hash,
             primary,
             filebase,
-            mediaBytes = null,
-            mediaMimeType = "image/jpeg",
-            mode = FilebaseConfig.UploadMode.S3_MEMBERS,
-            mediaInclusion = MediaInclusion.SIDECARS_ONLY,
-            listener = skipListener,
+            null,
+            FilebaseConfig.UploadMode.S3_MEMBERS,
+            MediaInclusion.SIDECARS_ONLY,
+            skipListener,
         )
 
         assertTrue(skipped)
-        assertEquals(coreBasenames().size, filebase.saveBytesCalls.size)
+        assertEquals(coreBasenames().size, filebase.saveArtifactCalls.size)
         assertEquals(priorStamp, ProofSetUploader.lastUploadedMembership(hash))
         assertEquals(1, skipListener.successes.size)
         assertTrue(skipListener.failures.isEmpty())
@@ -1764,21 +1848,20 @@ class ProofSetUploaderTest {
     @Test
     fun s3_includeMedia_mediaMemberUriMissing_returnsFailedNotSuccessNull() {
         val primary = primaryWithCore()
-        val filebase = RecordingFilebaseStorageProvider(saveBytesNullUri = true)
+        val filebase = RecordingFilebaseStorageProvider(saveArtifactNullUri = true)
         val listener = RecordingListener()
 
         assertTrue(
             ProofSetUploader.enqueueProofSetUpload(
-                context,
-                hash,
-                primary,
-                filebase,
-                byteArrayOf(1, 2, 3),
-                "image/jpeg",
-                FilebaseConfig.UploadMode.S3_MEMBERS,
-                MediaInclusion.INCLUDE_MEDIA,
-                listener,
-            ),
+            context,
+            hash,
+            primary,
+            filebase,
+            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
+            FilebaseConfig.UploadMode.S3_MEMBERS,
+            MediaInclusion.INCLUDE_MEDIA,
+            listener,
+        ),
         )
 
         assertTrue(primary.saveTextCalls.isEmpty())
@@ -1793,10 +1876,10 @@ open class RecordingStorageProvider(
     private val proofSetUris: ArrayList<Uri> = arrayListOf(),
     private val streams: Map<String, ByteArray> = emptyMap(),
     private val markerIdentifiers: Set<String> = emptySet(),
-    var saveBytesSucceed: Boolean = true,
-    var saveBytesResultUriPrefix: String = "s3://bucket/",
+    var saveArtifactSucceed: Boolean = true,
+    var saveArtifactResultUriPrefix: String = "s3://bucket/",
 ) : StorageProvider {
-    val saveBytesCalls = mutableListOf<Triple<String, String, ByteArray>>()
+    val saveArtifactCalls = mutableListOf<Triple<String, String, ByteArray>>()
     val getProofSetCalls = mutableListOf<String>()
     val getInputStreamCalls = mutableListOf<Pair<String, String>>()
     val saveTextCalls = mutableListOf<Triple<String, String, String>>()
@@ -1808,9 +1891,9 @@ open class RecordingStorageProvider(
     }
 
     override fun saveBytes(hash: String?, identifier: String?, data: ByteArray?, listener: StorageListener?) {
-        saveBytesCalls.add(Triple(hash!!, identifier!!, data!!.copyOf()))
-        if (saveBytesSucceed) {
-            listener?.saveSuccessful(hash, "$saveBytesResultUriPrefix$hash/$identifier")
+        saveArtifactCalls.add(Triple(hash!!, identifier!!, data!!.copyOf()))
+        if (saveArtifactSucceed) {
+            listener?.saveSuccessful(hash, "$saveArtifactResultUriPrefix$hash/$identifier")
         } else {
             listener?.saveFailed(RuntimeException("saveBytes failed"))
         }
@@ -1847,17 +1930,24 @@ open class RecordingStorageProvider(
     override fun getProofItem(uri: Uri?): InputStream? = null
 }
 
-/** Filebase test double that records unpin + uploadDirectory / saveBytes without network. */
+/**
+ * Test-only: materialize an artifact's source so assertions can compare content.
+ *
+ * Production code must never do this for the media leaf — see [DeferredArtifact].
+ */
+internal fun DeferredArtifact.readAllBytes(): ByteArray = openStream().use { it.readBytes() }
+
+/** Filebase test double that records unpin + uploadDirectory / saveArtifact without network. */
 open class RecordingFilebaseStorageProvider(
     var unpinSucceeds: Boolean = true,
     var uploadDirectorySucceed: Boolean = true,
     var uploadDirectoryResultUri: String = "https://ipfs.filebase.io/ipfs/bafyRoot",
     /** When set, simulates NDJSON media-leaf CID for leaf-form image.uri. */
     var uploadDirectoryMediaLeafCid: String? = "bafyMediaLeaf",
-    var saveBytesSucceed: Boolean = true,
-    var saveBytesResultUriPrefix: String = "s3://bucket/",
-    /** When true, [saveBytes] reports success with a null URI (media member URI missing). */
-    var saveBytesNullUri: Boolean = false,
+    var saveArtifactSucceed: Boolean = true,
+    var saveArtifactResultUriPrefix: String = "s3://bucket/",
+    /** When true, [saveArtifact] reports success with a null URI (media member URI missing). */
+    var saveArtifactNullUri: Boolean = false,
 ) : FilebaseStorageProvider(
     accessKey = "",
     secretKey = "",
@@ -1866,7 +1956,7 @@ open class RecordingFilebaseStorageProvider(
 ) {
     val unpinCalls = mutableListOf<String>()
     val uploadDirectoryCalls = mutableListOf<Pair<String, List<DeferredArtifact>>>()
-    val saveBytesCalls = mutableListOf<Triple<String, String, ByteArray>>()
+    val saveArtifactCalls = mutableListOf<Triple<String, String, ByteArray>>()
 
     override fun unpinIpfsCid(cid: String): Boolean {
         unpinCalls.add(cid)
@@ -1880,7 +1970,7 @@ open class RecordingFilebaseStorageProvider(
         listener: StorageListener?,
     ): FilebaseUploadResult? {
         uploadDirectoryCalls.add(
-            hash to artifacts.map { DeferredArtifact(it.identifier, it.data.copyOf(), it.contentType) },
+            hash to artifacts.map { DeferredArtifact.ofBytes(it.identifier, it.readAllBytes(), it.contentType) },
         )
         val leafCid = if (!mediaBasename.isNullOrBlank()) uploadDirectoryMediaLeafCid else null
         return if (uploadDirectorySucceed) {
@@ -1892,13 +1982,14 @@ open class RecordingFilebaseStorageProvider(
         }
     }
 
-    override fun saveBytes(hash: String, identifier: String, data: ByteArray, listener: StorageListener?) {
-        saveBytesCalls.add(Triple(hash, identifier, data.copyOf()))
-        if (saveBytesSucceed) {
-            val uri = if (saveBytesNullUri) null else "$saveBytesResultUriPrefix$hash/$identifier"
+    override fun saveArtifact(hash: String, artifact: DeferredArtifact, listener: StorageListener?) {
+        saveArtifactCalls.add(Triple(hash, artifact.identifier, artifact.readAllBytes()))
+        if (saveArtifactSucceed) {
+            val uri =
+                if (saveArtifactNullUri) null else "$saveArtifactResultUriPrefix$hash/${artifact.identifier}"
             listener?.saveSuccessful(hash, uri)
         } else {
-            listener?.saveFailed(RuntimeException("saveBytes failed"))
+            listener?.saveFailed(RuntimeException("saveArtifact failed"))
         }
     }
 }

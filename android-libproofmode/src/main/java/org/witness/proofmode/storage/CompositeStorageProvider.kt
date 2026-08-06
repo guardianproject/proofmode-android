@@ -9,6 +9,7 @@ import java.util.concurrent.ConcurrentHashMap
 import org.witness.proofmode.storage.filebase.FilebaseConfig
 import org.witness.proofmode.storage.filebase.FilebaseStorageProvider
 import org.witness.proofmode.storage.proofset.MediaInclusion
+import org.witness.proofmode.storage.proofset.ProofSetMediaSource
 import org.witness.proofmode.storage.proofset.ProofSetMembershipPolicy
 import org.witness.proofmode.storage.proofset.ProofSetUploader
 
@@ -19,7 +20,8 @@ import org.witness.proofmode.storage.proofset.ProofSetUploader
  *
  * The media leaf (`{hash}.jpg` / etc.) is **not** saved through [saveBytes]/[saveText] — it is
  * injected at upload time from a content [Uri]. Callers (MediaWatcher) must tip Composite off
- * with [bindMedia] so [tryFlush] can read those bytes (INCLUDE_MEDIA) and choose the leaf basename/MIME.
+ * with [bindMedia] so [tryFlush] can hand the uploader a stream over those bytes (INCLUDE_MEDIA)
+ * and choose the leaf basename/MIME.
  */
 class CompositeStorageProvider(
     private val primaryProvider: StorageProvider,
@@ -37,12 +39,19 @@ class CompositeStorageProvider(
     private val mediaByHash = ConcurrentHashMap<String, Pair<Uri, String?>>()
 
     /**
+     * hash → media handle. Each handle reads [mediaByHash] on resolve and re-measures the file
+     * every time, so a later [bindMedia] — or an in-place rewrite such as C2PA embedding — is
+     * always reflected in the length the upload declares.
+     */
+    private val mediaSourceByHash = ConcurrentHashMap<String, ProofSetMediaSource>()
+
+    /**
      * Stash the source media [Uri] + MIME for a proof-set [hash] before/while proof sidecars
      * are saved.
      *
      * **Why this exists (Composite-only):** deferred proof-set upload needs an injected
      * media leaf that never goes through [saveBytes]/[saveStream]/[saveText]. Without this
-     * tip-off, [tryFlush] has no way to open media bytes or name `{hash}.<ext>`, so auto-upload
+     * tip-off, [tryFlush] has no way to open the media or name `{hash}.<ext>`, so auto-upload
      * would never start. Safe to call when [deferProofSetUpload] is false (stash is unused;
      * flush is a no-op). Always stash regardless of [MediaInclusion] — [tryFlush] gates reads.
      *
@@ -157,7 +166,7 @@ class CompositeStorageProvider(
         val ctx = appContext ?: return
         val secondary = secondaryProvider as? FilebaseStorageProvider ?: return
 
-        val (mediaUri, mime) = mediaByHash[hash] ?: return
+        val (_, mime) = mediaByHash[hash] ?: return
 
         val mode = config.resolveUploadMode()
         if (mode != FilebaseConfig.UploadMode.IPFS_DIRECTORY &&
@@ -167,18 +176,18 @@ class CompositeStorageProvider(
         }
         val inclusion = config.resolveMediaInclusionForAuto()
 
-        val mediaBytes: ByteArray? = when (inclusion) {
-            MediaInclusion.INCLUDE_MEDIA -> {
-                val bytes = try {
-                    ctx.contentResolver.openInputStream(mediaUri)?.use { it.readBytes() }
-                } catch (e: Exception) {
-                    Log.w(TAG, "Failed to read media bytes for deferred upload", e)
-                    null
-                }
-                if (bytes == null || bytes.isEmpty()) return
-                bytes
+        // Media is passed as a re-openable handle, never as bytes: tryFlush runs on every sidecar
+        // save, and reading a capture in here OOM'd the process on large video.
+        // SIDECARS_ONLY passes no source at all, so the media Uri is never opened.
+        val mediaSource = when (inclusion) {
+            MediaInclusion.INCLUDE_MEDIA -> mediaSourceByHash.computeIfAbsent(hash) {
+                ProofSetMediaSource.fromUriProvider(ctx) { mediaByHash[hash] }
             }
             MediaInclusion.SIDECARS_ONLY -> null
+        }
+        if (inclusion == MediaInclusion.INCLUDE_MEDIA && mediaSource?.resolve() == null) {
+            Log.w(TAG, "Media unavailable for deferred upload of $hash; not flushing")
+            return
         }
 
         val onDisk = primaryProvider.getProofSet(hash)
@@ -196,8 +205,7 @@ class CompositeStorageProvider(
             hash,
             primaryProvider,
             secondary,
-            mediaBytes,
-            mime,
+            mediaSource,
             mode,
             inclusion,
             object : StorageListener {
@@ -208,12 +216,6 @@ class CompositeStorageProvider(
 
                 override fun saveFailed(exception: Exception?) {
                     Log.w(TAG, "Deferred proof-set upload failed: ${exception?.message}")
-                }
-            },
-            mediaUriProvider = when (inclusion) {
-                MediaInclusion.SIDECARS_ONLY -> null
-                MediaInclusion.INCLUDE_MEDIA -> {
-                    { mediaByHash[hash] }
                 }
             },
         )

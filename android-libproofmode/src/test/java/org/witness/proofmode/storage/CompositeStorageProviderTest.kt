@@ -3,9 +3,11 @@ package org.witness.proofmode.storage
 import android.content.Context
 import android.net.Uri
 import android.preference.PreferenceManager
+import android.provider.OpenableColumns
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -15,6 +17,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows
 import org.robolectric.annotation.Config
+import org.robolectric.fakes.RoboCursor
 import org.witness.proofmode.ProofMode
 import java.io.ByteArrayInputStream
 import java.io.File
@@ -31,6 +34,7 @@ import org.witness.proofmode.storage.proofset.DeferredArtifact
 import org.witness.proofmode.storage.proofset.MediaInclusion
 import org.witness.proofmode.storage.proofset.MembershipStamp
 import org.witness.proofmode.storage.proofset.ProofSetMembershipPolicy
+import org.witness.proofmode.storage.proofset.readAllBytes
 import org.witness.proofmode.storage.proofset.ProofSetUploader
 import org.witness.proofmode.storage.proofset.RecordingFilebaseStorageProvider
 
@@ -89,6 +93,24 @@ class CompositeStorageProviderTest {
         return uri
     }
 
+    /** Media Uri that reports [size] via the SIZE column and throws if its bytes are read. */
+    private fun sizedButUnreadableMediaUri(size: Long, reads: AtomicInteger): Uri {
+        val uri = Uri.parse("content://org.witness.proofmode.test.sized/media")
+        val cursor = RoboCursor().apply {
+            setColumnNames(listOf(OpenableColumns.SIZE))
+            setResults(arrayOf(arrayOf<Any>(size)))
+        }
+        Shadows.shadowOf(context.contentResolver).setCursor(uri, cursor)
+        Shadows.shadowOf(context.contentResolver)
+            .registerInputStream(uri, object : InputStream() {
+                override fun read(): Int {
+                    reads.incrementAndGet()
+                    throw IOException("media content must not be read to flush a proof set")
+                }
+            })
+        return uri
+    }
+
     private fun deferredComposite(
         primary: AccumulatingStorageProvider = AccumulatingStorageProvider(),
         secondary: RecordingFilebaseStorageProvider = RecordingFilebaseStorageProvider(),
@@ -116,14 +138,14 @@ class CompositeStorageProviderTest {
         assertEquals(1, secondary.uploadDirectoryCalls.size)
         val capture = ProofSetUploader.lastEnqueueForTesting
         assertNotNull(capture)
-        assertNull(capture!!.mediaBytesSize)
+        assertNull(capture!!.mediaLength)
         assertEquals(MediaInclusion.SIDECARS_ONLY, capture.mediaInclusion)
-        assertNull(capture.mediaUriProvider)
+        assertFalse(capture.hasMediaSource)
         assertEquals(0, openCount.get())
     }
 
     @Test
-    fun tryFlush_includeMedia_readsBytes_andPassesIncludeMedia() {
+    fun tryFlush_includeMedia_passesMediaSource_andIncludeMedia() {
         val mediaBytes = byteArrayOf(9, 8, 7)
         val (composite, _, secondary) = deferredComposite(config = ipfsConfig(autoIncludeMedia = true))
         composite.bindMedia(hash, mediaUri(mediaBytes), "image/jpeg")
@@ -134,9 +156,9 @@ class CompositeStorageProviderTest {
         assertEquals(1, secondary.uploadDirectoryCalls.size)
         val capture = ProofSetUploader.lastEnqueueForTesting
         assertNotNull(capture)
-        assertEquals(mediaBytes.size, capture!!.mediaBytesSize)
+        assertEquals(mediaBytes.size.toLong(), capture!!.mediaLength)
         assertEquals(MediaInclusion.INCLUDE_MEDIA, capture.mediaInclusion)
-        assertNotNull(capture.mediaUriProvider)
+        assertTrue(capture.hasMediaSource)
         assertEquals(FilebaseConfig.UploadMode.IPFS_DIRECTORY, capture.mode)
     }
 
@@ -155,10 +177,10 @@ class CompositeStorageProviderTest {
         assertNotNull(capture)
         assertEquals(FilebaseConfig.UploadMode.S3_MEMBERS, capture!!.mode)
         assertEquals(MediaInclusion.INCLUDE_MEDIA, capture.mediaInclusion)
-        assertEquals(mediaBytes.size, capture.mediaBytesSize)
-        assertNotNull(capture.mediaUriProvider)
+        assertEquals(mediaBytes.size.toLong(), capture.mediaLength)
+        assertTrue(capture.hasMediaSource)
 
-        val mediaUpload = secondary.saveBytesCalls.find { it.second == mediaBasename }
+        val mediaUpload = secondary.saveArtifactCalls.find { it.second == mediaBasename }
         assertNotNull(mediaUpload)
         assertArrayEquals(mediaBytes, mediaUpload!!.third)
         assertTrue(secondary.uploadDirectoryCalls.isEmpty())
@@ -171,6 +193,26 @@ class CompositeStorageProviderTest {
         assertNull(
             primary.getInputStream(hash, hash + FilebaseSidecarContract.FILEBASE_IPFS_URI_SUFFIX),
         )
+    }
+
+    /**
+     * INCLUDE_MEDIA with membership still incomplete: tryFlush runs on every sidecar save, so the
+     * media must be measured from metadata only. Reading it here is what blew the heap on video.
+     */
+    @Test
+    fun tryFlush_includeMedia_incompleteMembership_doesNotReadMediaContent() {
+        val reads = AtomicInteger(0)
+        val (composite, _, secondary) = deferredComposite(config = ipfsConfig(autoIncludeMedia = true))
+        composite.bindMedia(hash, sizedButUnreadableMediaUri(700L * 1024 * 1024, reads), "video/mp4")
+
+        for (name in coreBasenames() - "$hash.proof.json") {
+            composite.saveBytes(hash, name, name.toByteArray(), null)
+        }
+
+        assertTrue(secondary.uploadDirectoryCalls.isEmpty())
+        assertEquals(0, reads.get())
+        // The media was still sized for the enqueue gate, not skipped outright.
+        assertEquals(700L * 1024 * 1024, ProofSetUploader.lastEnqueueForTesting?.mediaLength)
     }
 
     @Test
@@ -187,7 +229,7 @@ class CompositeStorageProviderTest {
         assertEquals(MediaInclusion.INCLUDE_MEDIA, capture.mediaInclusion)
         assertTrue(secondary.uploadDirectoryCalls.isEmpty())
         // S3 strategy uploads via saveBytes through Facade — members present after enqueue.
-        assertTrue(secondary.saveBytesCalls.isNotEmpty())
+        assertTrue(secondary.saveArtifactCalls.isNotEmpty())
     }
 
     @Test
@@ -271,7 +313,7 @@ class CompositeStorageProviderTest {
         }
 
         assertEquals(1, secondary.uploadDirectoryCalls.size)
-        assertTrue(secondary.saveBytesCalls.isEmpty())
+        assertTrue(secondary.saveArtifactCalls.isEmpty())
     }
 
     @Test
@@ -286,7 +328,7 @@ class CompositeStorageProviderTest {
         composite.bindMedia(hash, mediaUri(), "image/jpeg")
 
         assertEquals(1, secondary.uploadDirectoryCalls.size)
-        assertTrue(secondary.saveBytesCalls.isEmpty())
+        assertTrue(secondary.saveArtifactCalls.isEmpty())
     }
 
     @Test
@@ -297,7 +339,7 @@ class CompositeStorageProviderTest {
             composite.saveBytes(hash, name, name.toByteArray(), null)
         }
 
-        assertTrue(secondary.saveBytesCalls.isEmpty())
+        assertTrue(secondary.saveArtifactCalls.isEmpty())
         assertEquals(1, secondary.uploadDirectoryCalls.size)
     }
 
@@ -374,7 +416,7 @@ class CompositeStorageProviderTest {
                 listener: StorageListener?,
             ): FilebaseUploadResult? {
                 uploadDirectoryCalls.add(
-                    hash to artifacts.map { DeferredArtifact(it.identifier, it.data.copyOf(), it.contentType) },
+                    hash to artifacts.map { DeferredArtifact.ofBytes(it.identifier, it.readAllBytes(), it.contentType) },
                 )
                 val leafCid = if (!mediaBasename.isNullOrBlank()) uploadDirectoryMediaLeafCid else null
                 return if (failuresRemaining > 0) {
@@ -414,7 +456,7 @@ class CompositeStorageProviderTest {
                 listener: StorageListener?,
             ): FilebaseUploadResult? {
                 uploadDirectoryCalls.add(
-                    hash to artifacts.map { DeferredArtifact(it.identifier, it.data.copyOf(), it.contentType) },
+                    hash to artifacts.map { DeferredArtifact.ofBytes(it.identifier, it.readAllBytes(), it.contentType) },
                 )
                 if (uploadDirectoryCalls.size == 1) {
                     // Concurrent membership change while in-flight sets flushPending.
@@ -465,7 +507,7 @@ class CompositeStorageProviderTest {
                 listener: StorageListener?,
             ): FilebaseUploadResult? {
                 uploadDirectoryCalls.add(
-                    hash to artifacts.map { DeferredArtifact(it.identifier, it.data.copyOf(), it.contentType) },
+                    hash to artifacts.map { DeferredArtifact.ofBytes(it.identifier, it.readAllBytes(), it.contentType) },
                 )
                 if (uploadDirectoryCalls.size == 1) {
                     // Concurrent membership change while in-flight (lost-wake on atomic guard).

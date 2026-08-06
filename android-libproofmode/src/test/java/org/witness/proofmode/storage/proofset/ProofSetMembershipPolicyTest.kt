@@ -111,7 +111,7 @@ class ProofSetMembershipPolicyTest {
                 hash,
                 coreBasenames(),
                 mediaInclusion = MediaInclusion.INCLUDE_MEDIA,
-                mediaBytesAvailable = true,
+                mediaAvailable = true,
             ),
         )
     }
@@ -124,7 +124,7 @@ class ProofSetMembershipPolicyTest {
                 hash,
                 coreBasenames(),
                 mediaInclusion = MediaInclusion.INCLUDE_MEDIA,
-                mediaBytesAvailable = false,
+                mediaAvailable = false,
             ),
         )
     }
@@ -138,7 +138,7 @@ class ProofSetMembershipPolicyTest {
                 hash,
                 incomplete,
                 mediaInclusion = MediaInclusion.INCLUDE_MEDIA,
-                mediaBytesAvailable = true,
+                mediaAvailable = true,
             ),
         )
     }
@@ -151,7 +151,7 @@ class ProofSetMembershipPolicyTest {
             ProofSetMembershipPolicy.isFirstPassComplete(
                 context, hash, onDisk,
                 mediaInclusion = MediaInclusion.SIDECARS_ONLY,
-                mediaBytesAvailable = false,
+                mediaAvailable = false,
             ),
         )
     }
@@ -164,7 +164,7 @@ class ProofSetMembershipPolicyTest {
             ProofSetMembershipPolicy.isFirstPassComplete(
                 context, hash, onDisk,
                 mediaInclusion = MediaInclusion.INCLUDE_MEDIA,
-                mediaBytesAvailable = false,
+                mediaAvailable = false,
             ),
         )
     }
@@ -177,7 +177,7 @@ class ProofSetMembershipPolicyTest {
             ProofSetMembershipPolicy.isFirstPassComplete(
                 context, hash, onDisk,
                 mediaInclusion = MediaInclusion.INCLUDE_MEDIA,
-                mediaBytesAvailable = true,
+                mediaAvailable = true,
             ),
         )
     }
