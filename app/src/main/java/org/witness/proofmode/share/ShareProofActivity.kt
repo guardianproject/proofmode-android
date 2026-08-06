@@ -70,6 +70,7 @@ import org.witness.proofmode.storage.DefaultStorageProvider
 import org.witness.proofmode.storage.filebase.FilebaseConfig
 import org.witness.proofmode.storage.filebase.FilebaseStorageProvider
 import org.witness.proofmode.storage.filebase.FilebaseSidecarContract
+import org.witness.proofmode.storage.proofset.DeferredArtifact
 import org.witness.proofmode.storage.proofset.ProofSetMediaSource
 import org.witness.proofmode.storage.proofset.ProofSetUploader
 import org.witness.proofmode.storage.StorageListener
@@ -637,14 +638,15 @@ class ShareProofActivity : AppCompatActivity() {
                 null
             }
 
+        val mediaSource = ProofSetMediaSource.fromUri(this, mediaUri, mime)
+
         val ladder = FilebaseSocialShareHelper.resolveSocialVerifyUrl(
             primary,
             filebase,
             config,
             hash,
-            mediaUri,
+            mediaSource,
             mime,
-            contentResolver,
         )
 
         if (ladder.leafAddFailed) {
@@ -664,7 +666,7 @@ class ShareProofActivity : AppCompatActivity() {
         // Leaf miss / no sidecar: try legacy S3 when available; on S3 fail/unavailable → hash-only.
         // Never dead-end social share with only showProofError.
         if (config.hasS3Access()) {
-            if (shareSocialLegacyS3(primary, filebase!!, hash, mediaUri, shareUris)) return true
+            if (shareSocialLegacyS3(primary, filebase!!, hash, mediaUri, mediaSource, shareUris)) return true
         }
         return shareSocialHashOnly(hash, mediaUri, shareUris)
     }
@@ -705,6 +707,7 @@ class ShareProofActivity : AppCompatActivity() {
         filebase: FilebaseStorageProvider,
         hash: String,
         mediaUri: Uri,
+        mediaSource: ProofSetMediaSource,
         shareUris: ArrayList<Uri?>,
     ): Boolean {
         val publicId = "$hash.public"
@@ -713,12 +716,17 @@ class ShareProofActivity : AppCompatActivity() {
             return shareSocialWithVerifyUri(mediaUri, existingPublic, shareUris, useCheckProofmodeWrapper = true)
         }
 
-        val mediaStream = contentResolver.openInputStream(mediaUri) ?: return false
+        // saveArtifact, not saveStream: the latter spools the media to a temp file first, which for
+        // a several-hundred-megabyte capture is a full second copy on disk.
+        val resolved = mediaSource.resolve() ?: return false
+        val artifact = DeferredArtifact("public", resolved.mimeType, resolved.length) {
+            resolved.openStream()
+        }
         val latch = java.util.concurrent.CountDownLatch(1)
         var success = false
         var publicUri: String? = null
 
-        filebase.saveStream(hash, "public", mediaStream, object : StorageListener {
+        filebase.saveArtifact(hash, artifact, object : StorageListener {
             override fun saveSuccessful(h: String?, uri: String?) {
                 publicUri = uri
                 primary.replaceText(hash, publicId, uri, null)

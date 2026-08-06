@@ -125,7 +125,11 @@ class FilebaseStorageProviderIpfsTest {
             ipfsBearerToken = "",
         )
 
-        assertNull(provider.uploadFileIpfs("photo.jpg", byteArrayOf(1, 2), "image/jpeg"))
+        assertNull(
+            provider.uploadFileIpfs(
+                DeferredArtifact.ofBytes("photo.jpg", byteArrayOf(1, 2), "image/jpeg"),
+            ),
+        )
     }
 
     // --- Adapter-level uploadDirectory return-value tests ---
@@ -184,19 +188,103 @@ class FilebaseStorageProviderIpfsTest {
         val ndjson = """{"Name":"photo.jpg","Hash":"bafyLeaf","Size":"100"}"""
         val provider = FakeHttpFilebaseStorageProvider(fakeCode = 200, fakeBody = ndjson)
 
-        val uri = provider.uploadFileIpfs("photo.jpg", byteArrayOf(1, 2), "image/jpeg")
+        val uri = provider.uploadFileIpfs(
+            DeferredArtifact.ofBytes("photo.jpg", byteArrayOf(1, 2), "image/jpeg"),
+        )
 
         assertEquals("https://ipfs.filebase.io/ipfs/bafyLeaf", uri)
         assertTrue(provider.lastUrl.contains("/api/v0/add"))
         assertTrue(provider.lastUrl.contains("cid-version=1"))
         assertFalse(provider.lastUrl.contains("wrap-with-directory"))
     }
+
+    /** The media leaf is streamed: its bytes are never handed to the provider up front. */
+    @Test
+    fun uploadFileIpfs_readsSourceOnlyWhenTheBodyIsWritten() {
+        val ndjson = """{"Name":"photo.jpg","Hash":"bafyLeaf","Size":"100"}"""
+        val provider = FakeHttpFilebaseStorageProvider(fakeCode = 200, fakeBody = ndjson)
+        var opened = 0
+        val artifact = DeferredArtifact("photo.jpg", "image/jpeg", 2L) {
+            opened++
+            java.io.ByteArrayInputStream(byteArrayOf(1, 2))
+        }
+
+        assertEquals("https://ipfs.filebase.io/ipfs/bafyLeaf", provider.uploadFileIpfs(artifact))
+        // postIpfsRpc is stubbed, so the body was never written — and nothing else touched it.
+        assertEquals(0, opened)
+    }
+
+    // --- Directory-listing probe (`/api/v0/ls`) ---
+
+    @Test
+    fun parseDirectoryLeafCid_findsNamedLink() {
+        val body = """
+            {"Objects":[{"Hash":"bafyDirRoot","Links":[
+              {"Name":"abc123.proof.csv","Hash":"bafyLeafCsv","Size":100},
+              {"Name":"abc123.mp4","Hash":"bafyMediaLeaf","Size":300000000}]}]}
+        """.trimIndent()
+
+        assertEquals(
+            "bafyMediaLeaf",
+            FilebaseStorageProvider.parseDirectoryLeafCid(body, "abc123.mp4"),
+        )
+    }
+
+    @Test
+    fun parseDirectoryLeafCid_returnsNull_whenMediaNotInDirectory() {
+        val body = """
+            {"Objects":[{"Hash":"bafyDirRoot","Links":[
+              {"Name":"abc123.proof.csv","Hash":"bafyLeafCsv","Size":100}]}]}
+        """.trimIndent()
+
+        assertNull(FilebaseStorageProvider.parseDirectoryLeafCid(body, "abc123.mp4"))
+    }
+
+    @Test
+    fun parseDirectoryLeafCid_returnsNull_forUnusableBodies() {
+        assertNull(FilebaseStorageProvider.parseDirectoryLeafCid(null, "abc123.mp4"))
+        assertNull(FilebaseStorageProvider.parseDirectoryLeafCid("", "abc123.mp4"))
+        assertNull(FilebaseStorageProvider.parseDirectoryLeafCid("not json", "abc123.mp4"))
+        assertNull(FilebaseStorageProvider.parseDirectoryLeafCid("""{"Objects":[]}""", "abc123.mp4"))
+        assertNull(FilebaseStorageProvider.parseDirectoryLeafCid("""{"Objects":[{}]}""", ""))
+    }
+
+    @Test
+    fun findIpfsDirectoryLeafCid_asksLsForTheDirectoryCid() {
+        val body = """{"Objects":[{"Hash":"bafyDirRoot","Links":[
+            {"Name":"abc123.mp4","Hash":"bafyMediaLeaf","Size":300000000}]}]}"""
+        val provider = FakeHttpFilebaseStorageProvider(fakeCode = 200, fakeBody = body)
+
+        assertEquals("bafyMediaLeaf", provider.findIpfsDirectoryLeafCid("bafyDirRoot", "abc123.mp4"))
+        assertTrue(provider.lastUrl.contains("/api/v0/ls"))
+        assertTrue(provider.lastUrl.contains("arg=bafyDirRoot"))
+    }
+
+    /** An RPC without `/ls` must fall through to uploading, not to a dead share link. */
+    @Test
+    fun findIpfsDirectoryLeafCid_returnsNull_onNon2xx() {
+        val provider = FakeHttpFilebaseStorageProvider(fakeCode = 404, fakeBody = "no such method")
+
+        assertNull(provider.findIpfsDirectoryLeafCid("bafyDirRoot", "abc123.mp4"))
+    }
+
+    @Test
+    fun findIpfsDirectoryLeafCid_returnsNull_whenTokenIsBlank() {
+        val provider = FilebaseStorageProvider(
+            accessKey = "a",
+            secretKey = "s",
+            bucketName = "b",
+            ipfsBearerToken = "",
+        )
+
+        assertNull(provider.findIpfsDirectoryLeafCid("bafyDirRoot", "abc123.mp4"))
+    }
 }
 
 /**
- * Test subclass that short-circuits the real OkHttp call in [postIpfsAdd], returning a
+ * Test subclass that short-circuits the real OkHttp call in [postIpfsRpc], returning a
  * predetermined status code and body. All other production logic in [uploadDirectory] /
- * [uploadFileIpfs] runs exactly as in production.
+ * [uploadFileIpfs] / [findIpfsDirectoryLeafCid] runs exactly as in production.
  */
 private class FakeHttpFilebaseStorageProvider(
     private val fakeCode: Int,
@@ -210,7 +298,7 @@ private class FakeHttpFilebaseStorageProvider(
     var lastUrl: String = ""
         private set
 
-    override fun postIpfsAdd(url: String, body: RequestBody): Pair<Int, String?> {
+    override fun postIpfsRpc(url: String, body: RequestBody): Pair<Int, String?> {
         lastUrl = url
         return fakeCode to fakeBody
     }

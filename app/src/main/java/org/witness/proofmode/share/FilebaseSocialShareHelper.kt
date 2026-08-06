@@ -1,11 +1,11 @@
 package org.witness.proofmode.share
 
-import android.content.ContentResolver
-import android.net.Uri
 import org.witness.proofmode.storage.filebase.FilebaseConfig
 import org.witness.proofmode.storage.filebase.FilebaseGatewayUris
 import org.witness.proofmode.storage.filebase.FilebaseSidecarContract
 import org.witness.proofmode.storage.filebase.FilebaseStorageProvider
+import org.witness.proofmode.storage.proofset.DeferredArtifact
+import org.witness.proofmode.storage.proofset.ProofSetMediaSource
 import org.witness.proofmode.storage.proofset.ProofSetMembershipPolicy
 import org.witness.proofmode.storage.StorageProvider
 
@@ -49,6 +49,29 @@ object FilebaseSocialShareHelper {
     }
 
     /**
+     * Reuses the media leaf of an already-pinned proof-set directory, when there is one.
+     *
+     * [deriveAndPersistFromDirectory] cannot invent this URL because nothing on disk records whether
+     * the pin included the media. Asking IPFS for the directory's links settles it for the cost of
+     * one metadata request — and a hit means the bytes are already stored, so the upload below is
+     * skipped entirely. Returns null when there is no directory sidecar, the RPC has no `/ls`, or
+     * the pin was sidecars-only.
+     */
+    internal fun resolveFromPinnedDirectory(
+        primary: StorageProvider,
+        filebase: FilebaseStorageProvider,
+        hash: String,
+        mime: String?,
+    ): String? {
+        val rootCid = FilebaseSidecarContract.readPriorDirectoryRootCid(primary, hash) ?: return null
+        val basename = ProofSetMembershipPolicy.manifestLinkNameForMedia(hash, mime)
+        val leafCid = filebase.findIpfsDirectoryLeafCid(rootCid, basename) ?: return null
+        val leafUri = FilebaseGatewayUris.buildLeafImageUri(leafCid)
+        primary.replaceText(hash, hash + FilebaseSidecarContract.FILEBASE_IMAGE_URI_SUFFIX, leafUri, null)
+        return leafUri
+    }
+
+    /**
      * Overview display URL for the media image link. Never invents from [proofsetUrl] alone —
      * after SIDECARS_ONLY pins only an existing image sidecar is shown.
      */
@@ -57,14 +80,21 @@ object FilebaseSocialShareHelper {
         imageUrl: String?,
     ): String? = imageUrl?.takeIf { it.isNotBlank() }
 
+    /**
+     * Verify-URL ladder: existing image sidecar → directory-derived URL → media leaf already in the
+     * pinned directory → a fresh leaf upload. Everything above the last rung answers from bytes
+     * that are already stored, so the upload runs only when the media is genuinely not on IPFS.
+     *
+     * [media] is a handle, never bytes: social share runs against the original capture, and reading
+     * one into a `ByteArray` OOM'd the process on large video.
+     */
     fun resolveSocialVerifyUrl(
         primary: StorageProvider,
         filebase: FilebaseStorageProvider?,
         config: FilebaseConfig,
         hash: String,
-        mediaUri: Uri,
+        media: ProofSetMediaSource,
         mime: String?,
-        contentResolver: ContentResolver,
     ): SocialVerifyLadderResult {
         readProofText(primary, hash, hash + FilebaseSidecarContract.FILEBASE_IMAGE_URI_SUFFIX)?.let {
             return SocialVerifyLadderResult(it)
@@ -76,10 +106,19 @@ object FilebaseSocialShareHelper {
 
         var leafAddFailed = false
         if (config.hasIpfsAccess() && filebase != null) {
-            val bytes = contentResolver.openInputStream(mediaUri)?.use { it.readBytes() }
-                ?: return SocialVerifyLadderResult(null)
+            resolveFromPinnedDirectory(primary, filebase, hash, mime)?.let { pinned ->
+                return SocialVerifyLadderResult(pinned)
+            }
+
+            val resolved = media.resolve() ?: return SocialVerifyLadderResult(null)
             val basename = ProofSetMembershipPolicy.manifestLinkNameForMedia(hash, mime)
-            val leafUri = filebase.uploadFileIpfs(basename, bytes, mime)
+            val leafUri = filebase.uploadFileIpfs(
+                DeferredArtifact(
+                    basename,
+                    resolved.mimeType ?: mime,
+                    resolved.length,
+                ) { resolved.openStream() },
+            )
             if (leafUri != null) {
                 readProofText(primary, hash, hash + FilebaseSidecarContract.FILEBASE_IMAGE_URI_SUFFIX)?.let {
                     return SocialVerifyLadderResult(it)

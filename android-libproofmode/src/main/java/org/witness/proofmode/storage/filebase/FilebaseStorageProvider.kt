@@ -90,6 +90,34 @@ open class FilebaseStorageProvider(
             }
         }
 
+        /**
+         * CID of the link named [name] in an `/api/v0/ls` response, or `null` when absent.
+         *
+         * Shape: `{"Objects":[{"Hash":"<root>","Links":[{"Name":"x.jpg","Hash":"bafy…"},…]}]}`.
+         */
+        @JvmStatic
+        fun parseDirectoryLeafCid(responseBody: String?, name: String): String? {
+            if (responseBody.isNullOrBlank() || name.isBlank()) {
+                return null
+            }
+
+            return try {
+                val objects = JSONObject(responseBody).optJSONArray("Objects") ?: return null
+                for (i in 0 until objects.length()) {
+                    val links = objects.optJSONObject(i)?.optJSONArray("Links") ?: continue
+                    for (j in 0 until links.length()) {
+                        val link = links.optJSONObject(j) ?: continue
+                        if (link.optString("Name") != name) continue
+                        return link.optString("Hash").takeIf { it.isNotBlank() }
+                    }
+                }
+                null
+            } catch (e: Exception) {
+                Log.e(TAG, "Error parsing IPFS ls response (name=$name)", e)
+                null
+            }
+        }
+
         @JvmStatic
         fun buildUnpinUrl(cid: String): String {
             val encodedCid = URLEncoder.encode(cid, "UTF-8")
@@ -197,7 +225,7 @@ open class FilebaseStorageProvider(
 
             val multipartBody = buildIpfsMultipart(artifacts)
             val url = "$IPFS_RPC_BASE_URL/api/v0/add?$IPFS_ADD_PARAM"
-            val (code, body) = postIpfsAdd(url, multipartBody)
+            val (code, body) = postIpfsRpc(url, multipartBody)
 
             if (!isIpfsAddSuccess(code) || body.isNullOrBlank()) {
                 val error = IOException("IPFS RPC upload failed: $code")
@@ -274,7 +302,8 @@ open class FilebaseStorageProvider(
         }
     }
 
-    protected open fun postIpfsAdd(url: String, body: RequestBody): Pair<Int, String?> {
+    /** Single POST seam for every IPFS RPC call, so tests can stub it without a socket. */
+    protected open fun postIpfsRpc(url: String, body: RequestBody): Pair<Int, String?> {
         val request = Request.Builder()
             .url(url)
             .post(body)
@@ -318,20 +347,48 @@ open class FilebaseStorageProvider(
     }
 
     /**
-     * Standalone IPFS file add (no wrap-with-directory) for social.
-     * On success returns gateway leaf URI; on failure null.
+     * Names the leaf of [directoryCid] called [name], or `null` when the directory has no such
+     * link, the RPC declines `/ls`, or the response cannot be parsed.
+     *
+     * This is the "is the media already pinned?" probe: it answers from the pinned directory's own
+     * link table, so it costs one metadata round trip whatever the media weighs, and — unlike
+     * deriving a URL from the directory CID alone — a hit means the leaf really is there.
      */
-    fun uploadFileIpfs(basename: String, bytes: ByteArray, contentType: String?): String? {
-        if (ipfsBearerToken.isBlank() || basename.isBlank()) {
+    open fun findIpfsDirectoryLeafCid(directoryCid: String, name: String): String? {
+        if (ipfsBearerToken.isBlank() || directoryCid.isBlank() || name.isBlank()) {
             return null
         }
 
         return try {
-            val multipartBody = buildIpfsMultipart(
-                listOf(DeferredArtifact.ofBytes(basename, bytes, contentType)),
-            )
+            val url = "$IPFS_RPC_BASE_URL/api/v0/ls?arg=${URLEncoder.encode(directoryCid, "UTF-8")}"
+            val (code, body) = postIpfsRpc(url, ByteArray(0).toRequestBody(null))
+            if (!isIpfsAddSuccess(code) || body.isNullOrBlank()) {
+                Log.d(TAG, "IPFS ls unavailable for $directoryCid: HTTP $code")
+                return null
+            }
+            parseDirectoryLeafCid(body, name)
+        } catch (e: Exception) {
+            Log.d(TAG, "Error listing IPFS directory $directoryCid", e)
+            null
+        }
+    }
+
+    /**
+     * Standalone IPFS file add (no wrap-with-directory) for social.
+     * On success returns gateway leaf URI; on failure null.
+     *
+     * [artifact] is streamed to the socket — social share is reached with the original capture, so
+     * this runs against files far larger than the heap.
+     */
+    open fun uploadFileIpfs(artifact: DeferredArtifact): String? {
+        if (ipfsBearerToken.isBlank() || artifact.identifier.isBlank()) {
+            return null
+        }
+
+        return try {
+            val multipartBody = buildIpfsMultipart(listOf(artifact))
             val url = "$IPFS_RPC_BASE_URL/api/v0/add?cid-version=1"
-            val (code, body) = postIpfsAdd(url, multipartBody)
+            val (code, body) = postIpfsRpc(url, multipartBody)
             if (!isIpfsAddSuccess(code) || body.isNullOrBlank()) {
                 Log.e(TAG, "IPFS file add failed: HTTP $code")
                 return null

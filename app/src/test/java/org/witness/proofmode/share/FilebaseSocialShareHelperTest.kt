@@ -3,24 +3,27 @@ package org.witness.proofmode.share
 import org.witness.proofmode.storage.filebase.FilebaseSidecarContract
 import android.net.Uri
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 import org.witness.proofmode.storage.StorageListener
 import org.witness.proofmode.storage.StorageProvider
+import org.witness.proofmode.storage.filebase.FilebaseConfig
+import org.witness.proofmode.storage.filebase.FilebaseStorageProvider
+import org.witness.proofmode.storage.proofset.DeferredArtifact
+import org.witness.proofmode.storage.proofset.ProofSetMediaSource
+import org.witness.proofmode.storage.proofset.ResolvedMedia
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 
 /**
- * JVM unit tests for [FilebaseSocialShareHelper.deriveAndPersistFromDirectory].
+ * JVM unit tests for the social verify-URL ladder.
  *
- * Testability rationale: [FilebaseSocialShareHelper.resolveSocialVerifyUrl] takes
- * [android.content.ContentResolver] and [android.net.Uri] (Android framework types).
- * The app module has only `testImplementation(libs.junit)` — no Robolectric — so the full
- * function cannot be driven from a plain JVM test without adding a build dependency (scope
- * creep per the task brief). Instead, the persist-decision logic was extracted into the
- * internal function [FilebaseSocialShareHelper.deriveAndPersistFromDirectory], which takes
- * only [StorageProvider] (a plain Java interface) and is therefore fully testable here.
+ * [FilebaseSocialShareHelper.resolveSocialVerifyUrl] takes a [ProofSetMediaSource] rather than a
+ * `ContentResolver`/`Uri` pair, so the whole ladder — including the upload rung — is driveable
+ * from a plain JVM test (the app module has only `testImplementation(libs.junit)`, no Robolectric).
+ * The provider's network calls are stubbed by overriding them in [FakeFilebase].
  */
 class FilebaseSocialShareHelperTest {
 
@@ -129,6 +132,157 @@ class FilebaseSocialShareHelperTest {
             ),
         )
         assertNull(FilebaseSocialShareHelper.deriveAndPersistFromDirectory(primary, HASH, "image/jpeg"))
+    }
+
+    // --- Ladder: reuse an already-pinned media leaf instead of re-uploading ---
+
+    /** Fake provider: no sockets, and it records whether the media was uploaded. */
+    private inner class FakeFilebase(
+        private val directoryLeafCid: String? = null,
+    ) : FilebaseStorageProvider(
+        accessKey = "a",
+        secretKey = "s",
+        bucketName = "b",
+        ipfsBearerToken = "tok",
+    ) {
+        var uploadedArtifact: DeferredArtifact? = null
+            private set
+        var lsRequest: Pair<String, String>? = null
+            private set
+
+        override fun findIpfsDirectoryLeafCid(directoryCid: String, name: String): String? {
+            lsRequest = directoryCid to name
+            return directoryLeafCid
+        }
+
+        override fun uploadFileIpfs(artifact: DeferredArtifact): String? {
+            uploadedArtifact = artifact
+            return "https://ipfs.filebase.io/ipfs/bafyFreshLeaf"
+        }
+    }
+
+    private val ipfsConfig = FilebaseConfig(
+        accessKey = "",
+        secretKey = "",
+        bucketName = "",
+        enabled = true,
+        ipfsBearerToken = "tok",
+    )
+
+    /** A media handle that fails the test if anything reads it. */
+    private fun mediaSource(length: Long = 304_022_072L): ProofSetMediaSource =
+        ProofSetMediaSource {
+            ResolvedMedia("video/mp4", length) { ByteArrayInputStream(ByteArray(0)) }
+        }
+
+    @Test
+    fun social_reusesMediaLeafAlreadyInPinnedDirectory_withoutUploading() {
+        val primary = FakeStorageProvider()
+        primary.put(HASH, "$HASH${FilebaseSidecarContract.FILEBASE_IPFS_URI_SUFFIX}", GATEWAY_URI)
+        val filebase = FakeFilebase(directoryLeafCid = "bafyMediaLeaf")
+
+        val result = FilebaseSocialShareHelper.resolveSocialVerifyUrl(
+            primary, filebase, ipfsConfig, HASH, mediaSource(), "video/mp4",
+        )
+
+        assertEquals("https://ipfs.filebase.io/ipfs/bafyMediaLeaf", result.verifyUrl)
+        assertNull(filebase.uploadedArtifact)
+        assertFalse(result.leafAddFailed)
+        assertEquals(CID to "$HASH.mp4", filebase.lsRequest)
+        // Persisted, so the next share short-circuits on the first rung.
+        assertEquals(
+            "https://ipfs.filebase.io/ipfs/bafyMediaLeaf",
+            primary.saved["$HASH|$HASH${FilebaseSidecarContract.FILEBASE_IMAGE_URI_SUFFIX}"],
+        )
+    }
+
+    @Test
+    fun social_uploadsWhenPinnedDirectoryHasNoMediaLeaf() {
+        val primary = FakeStorageProvider()
+        primary.put(HASH, "$HASH${FilebaseSidecarContract.FILEBASE_IPFS_URI_SUFFIX}", GATEWAY_URI)
+        val filebase = FakeFilebase(directoryLeafCid = null)
+
+        val result = FilebaseSocialShareHelper.resolveSocialVerifyUrl(
+            primary, filebase, ipfsConfig, HASH, mediaSource(), "video/mp4",
+        )
+
+        assertEquals("https://ipfs.filebase.io/ipfs/bafyFreshLeaf", result.verifyUrl)
+        assertNotNull(filebase.uploadedArtifact)
+    }
+
+    /** The upload rung passes a handle with a probed length — never materialized bytes. */
+    @Test
+    fun social_uploadStreamsMedia_withProbedLength() {
+        val primary = FakeStorageProvider()
+        val filebase = FakeFilebase()
+
+        FilebaseSocialShareHelper.resolveSocialVerifyUrl(
+            primary, filebase, ipfsConfig, HASH, mediaSource(length = 304_022_072L), "video/mp4",
+        )
+
+        val artifact = filebase.uploadedArtifact
+        assertNotNull(artifact)
+        assertEquals("$HASH.mp4", artifact!!.identifier)
+        assertEquals("video/mp4", artifact.contentType)
+        assertEquals(304_022_072L, artifact.length)
+    }
+
+    @Test
+    fun social_unresolvableMedia_returnsNullWithoutClaimingFailure() {
+        val primary = FakeStorageProvider()
+        val filebase = FakeFilebase()
+
+        val result = FilebaseSocialShareHelper.resolveSocialVerifyUrl(
+            primary, filebase, ipfsConfig, HASH, ProofSetMediaSource { null }, "video/mp4",
+        )
+
+        assertNull(result.verifyUrl)
+        assertNull(filebase.uploadedArtifact)
+    }
+
+    @Test
+    fun social_existingImageSidecar_skipsDirectoryProbeAndUpload() {
+        val primary = FakeStorageProvider()
+        primary.put(HASH, "$HASH${FilebaseSidecarContract.FILEBASE_IMAGE_URI_SUFFIX}", EXISTING_IMAGE_URL)
+        val filebase = FakeFilebase(directoryLeafCid = "bafyMediaLeaf")
+
+        val result = FilebaseSocialShareHelper.resolveSocialVerifyUrl(
+            primary, filebase, ipfsConfig, HASH, mediaSource(), "video/mp4",
+        )
+
+        assertEquals(EXISTING_IMAGE_URL, result.verifyUrl)
+        assertNull(filebase.lsRequest)
+        assertNull(filebase.uploadedArtifact)
+    }
+
+    @Test
+    fun social_noIpfsAccess_reportsNoLeafFailure() {
+        val primary = FakeStorageProvider()
+        val filebase = FakeFilebase()
+
+        val result = FilebaseSocialShareHelper.resolveSocialVerifyUrl(
+            primary,
+            filebase,
+            ipfsConfig.copy(ipfsBearerToken = ""),
+            HASH,
+            mediaSource(),
+            "video/mp4",
+        )
+
+        assertNull(result.verifyUrl)
+        assertFalse(result.leafAddFailed)
+        assertNull(filebase.uploadedArtifact)
+    }
+
+    @Test
+    fun resolveFromPinnedDirectory_returnsNull_withoutDirectorySidecar() {
+        val primary = FakeStorageProvider()
+        val filebase = FakeFilebase(directoryLeafCid = "bafyMediaLeaf")
+
+        assertNull(
+            FilebaseSocialShareHelper.resolveFromPinnedDirectory(primary, filebase, HASH, "video/mp4"),
+        )
+        assertNull(filebase.lsRequest)
     }
 
     @Test
