@@ -368,6 +368,10 @@
     <string name="auto_sync_desc">Back-up proof data to Filebase.com</string>
     <string name="social">social</string>
     <string name="share_social">Shares just the media file with C2PA and a verify link for social networks</string>
+    <string name="share_mode_social_info">Shares media with a verify link for social networks</string>
+    <string name="share_info_social_title">Shares just the media file with C2PA and a verify link for social networks</string>
+    <string name="share_info_social_message">• Default shares your original photo (keeps GPS, time, and C2PA)\n• Optional watermark adds the ProofMode logo and QR; GPS and capture time are copied onto the shared JPEG\n• Best for apps that read photo location from the image</string>
+    <string name="share_info_social_watermark">Add ProofMode watermark</string>
     <string name="share_media">Share on Social</string>
     <string name="lp_action_location_attestation">Location Attestation</string>
     <string name="lp_onchain_attest">Notarize On-Chain</string>
