@@ -44,11 +44,46 @@ class SocialImageUtil {
             bm = addWaterMark(context, bm, waterMark, qrcode, null)
             var file = File.createTempFile("share", ".jpg");
             bm.compress(Bitmap.CompressFormat.JPEG, 80, FileOutputStream(file))
+            copyExifForSocialShare(ba, file)
             return Uri.fromFile(file)
         }
 
         return null
 
+    }
+
+    /**
+     * Copies GPS + DateTimeOriginal (and related GPS altitude/timestamp tags when present)
+     * from [sourceJpeg] onto [destJpegFile]. Forces orientation normal because the social
+     * card bitmap is already rotated in [decodeBitmapWithRotation].
+     */
+    fun copyExifForSocialShare(sourceJpeg: ByteArray, destJpegFile: File) {
+        val src = ExifInterface(ByteArrayInputStream(sourceJpeg))
+        val dest = ExifInterface(destJpegFile.absolutePath)
+        for (tag in SOCIAL_SHARE_EXIF_TAGS) {
+            src.getAttribute(tag)?.let { dest.setAttribute(tag, it) }
+        }
+        dest.setAttribute(
+            ExifInterface.TAG_ORIENTATION,
+            ExifInterface.ORIENTATION_NORMAL.toString(),
+        )
+        dest.saveAttributes()
+    }
+
+    companion object {
+        /** Extensible whitelist of EXIF tags preserved on watermarked social JPEGs. */
+        val SOCIAL_SHARE_EXIF_TAGS = listOf(
+            ExifInterface.TAG_DATETIME_ORIGINAL,
+            ExifInterface.TAG_DATETIME,
+            ExifInterface.TAG_GPS_LATITUDE,
+            ExifInterface.TAG_GPS_LATITUDE_REF,
+            ExifInterface.TAG_GPS_LONGITUDE,
+            ExifInterface.TAG_GPS_LONGITUDE_REF,
+            ExifInterface.TAG_GPS_ALTITUDE,
+            ExifInterface.TAG_GPS_ALTITUDE_REF,
+            ExifInterface.TAG_GPS_DATESTAMP,
+            ExifInterface.TAG_GPS_TIMESTAMP,
+        )
     }
 
     private fun addWaterMark(context: Context, src: Bitmap, waterMark: Bitmap, qrcode: Bitmap?, waterText: String?): Bitmap {

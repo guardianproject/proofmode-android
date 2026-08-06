@@ -90,6 +90,7 @@ import kotlin.math.sign
 class ShareProofActivity : AppCompatActivity() {
     private lateinit var binding: ActivityShareBinding
     private var sendMedia = true
+    private var applySocialWatermark = false // default unchecked — share original
     private var lastProcessedIntentKey: String? = null
 
     private val hashCache = HashMap<String, String?>()
@@ -154,6 +155,8 @@ class ShareProofActivity : AppCompatActivity() {
         tvInfoBasic.setOnClickListener { showInfoBasic() }
         val tvInfoRobust = binding.tvInfoRobust
         tvInfoRobust.setOnClickListener { showInfoRobust() }
+        val tvInfoSocial = binding.tvInfoSocial
+        tvInfoSocial.setOnClickListener { showInfoSocial() }
         // Get intent, action and MIME type
         val intent = intent
         val action = intent.action
@@ -682,13 +685,21 @@ class ShareProofActivity : AppCompatActivity() {
             verifyUri
         }
         val shareString = getString(R.string.verify_this_media_at) + "$displayUri #proofmode #c2pa"
-        val uriShareImage = SocialImageUtil().createImageCard(this, mediaUri, displayUri)
-        shareUris.clear()
-        if (uriShareImage != null) {
-            shareUris.add(cleanUri(uriShareImage))
+        val uriShareImage = if (applySocialWatermark) {
+            SocialImageUtil().createImageCard(this, mediaUri, displayUri)
         } else {
-            shareUris.add(cleanUri(mediaUri))
+            null
         }
+        shareUris.clear()
+        shareUris.add(
+            cleanUri(
+                SocialShareMediaUriResolver.resolveShareUri(
+                    applySocialWatermark,
+                    mediaUri,
+                    uriShareImage,
+                )
+            )
+        )
         shareMedia(this, shareString, shareUris)
         return true
     }
@@ -743,11 +754,21 @@ class ShareProofActivity : AppCompatActivity() {
         shareUris: ArrayList<Uri?>,
     ): Boolean {
         val shareString = hash
-        val uriShareImage = SocialImageUtil().createImageCard(this, mediaUri, "hash:$shareString")
-        shareUris.clear()
-        if (uriShareImage != null) {
-            shareUris.add(cleanUri(uriShareImage))
+        val uriShareImage = if (applySocialWatermark) {
+            SocialImageUtil().createImageCard(this, mediaUri, "hash:$shareString")
+        } else {
+            null
         }
+        shareUris.clear()
+        shareUris.add(
+            cleanUri(
+                SocialShareMediaUriResolver.resolveShareUri(
+                    applySocialWatermark,
+                    mediaUri,
+                    uriShareImage,
+                )
+            )
+        )
         shareMedia(this, shareString, shareUris)
         return true
     }
@@ -1440,6 +1461,21 @@ class ShareProofActivity : AppCompatActivity() {
         checkBox.isChecked = sendMedia
         checkBox.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
             sendMedia = isChecked
+        }
+        currentDialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+    }
+
+    private fun showInfoSocial() {
+        val builder = AlertDialog.Builder(this)
+        builder.setView(R.layout.dialog_share_social)
+        val currentDialog: Dialog = builder.create()
+        currentDialog.show()
+        currentDialog.findViewById<View>(R.id.btnClose)
+            .setOnClickListener { currentDialog.dismiss() }
+        val checkBox = currentDialog.findViewById<CheckBox>(R.id.checkApplySocialWatermark)
+        checkBox.isChecked = applySocialWatermark
+        checkBox.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
+            applySocialWatermark = isChecked
         }
         currentDialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
     }
