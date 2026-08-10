@@ -1275,6 +1275,23 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
          * 	"Iptc4xmpCore:AltTextAccessibility": "Photo of Erika Fictional standing in front of the Golden Gate Bridge at sunset.",
          */
 
+        // A "[a,b,c]" value (see the dc:creator example above) means the field is a
+        // JSON-LD array, not a plain string - strip the brackets and split on commas.
+        // Used for both cawgContext and cawgInfo, since either can carry one (the real
+        // caller currently only puts a bracketed value in cawgInfo's "dc:creator").
+        fun JsonObjectBuilder.putValueOrArray(key: String, value: String) {
+            if (value.startsWith("[") && value.endsWith("]")) {
+                val itemList = value.substring(1, value.length - 1)
+                val itemListTokens = StringTokenizer(itemList, ",")
+                put(key, buildJsonArray {
+                    while (itemListTokens.hasMoreTokens())
+                        add(itemListTokens.nextToken().trim().removeSurrounding("\""))
+                })
+            } else {
+                put(key, value)
+            }
+        }
+
         var result = AssertionDefinition.custom(
             label = "cawg.metadata",
             data = buildJsonObject {
@@ -1282,25 +1299,14 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                 put ("@context",
                     buildJsonObject {
                         for (cawgContextItem in cawgContext) {
-
-                            if (cawgContextItem.value.startsWith("["))
-                            {
-                                val itemList = cawgContextItem.value.substring(1,cawgContextItem.value.length-2)
-                                val itemListTokens = StringTokenizer(itemList,",")
-                                buildJsonArray() {
-                                    while (itemListTokens.hasMoreTokens())
-                                       add(itemListTokens.nextToken())
-                                }
-                            }
-                            else
-                                put (cawgContextItem.key,cawgContextItem.value)
+                            putValueOrArray(cawgContextItem.key, cawgContextItem.value)
                         }
                     }
 
                 )
 
                 for (cawgInfoItem in cawgInfo) {
-                    put (cawgInfoItem.key,cawgInfoItem.value)
+                    putValueOrArray(cawgInfoItem.key, cawgInfoItem.value)
                 }
 
             }
