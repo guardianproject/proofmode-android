@@ -203,7 +203,7 @@ class CompositeStorageProviderTest {
     fun tryFlush_includeMedia_incompleteMembership_doesNotReadMediaContent() {
         val reads = AtomicInteger(0)
         val (composite, _, secondary) = deferredComposite(config = ipfsConfig(autoIncludeMedia = true))
-        composite.bindMedia(hash, sizedButUnreadableMediaUri(700L * 1024 * 1024, reads), "video/mp4")
+        composite.bindMedia(hash, sizedButUnreadableMediaUri(10L * 1024 * 1024, reads), "video/mp4")
 
         for (name in coreBasenames() - "$hash.proof.json") {
             composite.saveBytes(hash, name, name.toByteArray(), null)
@@ -212,7 +212,7 @@ class CompositeStorageProviderTest {
         assertTrue(secondary.uploadDirectoryCalls.isEmpty())
         assertEquals(0, reads.get())
         // The media was still sized for the enqueue gate, not skipped outright.
-        assertEquals(700L * 1024 * 1024, ProofSetUploader.lastEnqueueForTesting?.mediaLength)
+        assertEquals(10L * 1024 * 1024, ProofSetUploader.lastEnqueueForTesting?.mediaLength)
     }
 
     @Test
@@ -566,6 +566,78 @@ class CompositeStorageProviderTest {
         }
 
         assertTrue(secondary.uploadDirectoryCalls.isEmpty())
+    }
+
+    @Test
+    fun tryFlush_includeMedia_overMediaLimit_enqueuesSidecarsOnly_withoutOpeningMedia() {
+        val reads = AtomicInteger(0)
+        val overLimitBytes = FilebaseConfig.FILEBASE_MEDIA_MAX_BYTES + 1L
+        val (composite, _, secondary) = deferredComposite(config = ipfsConfig(autoIncludeMedia = true))
+        composite.bindMedia(
+            hash,
+            sizedButUnreadableMediaUri(overLimitBytes, reads),
+            "video/mp4",
+        )
+        for (name in coreBasenames()) {
+            composite.saveBytes(hash, name, name.toByteArray(), null)
+        }
+
+        assertEquals(1, secondary.uploadDirectoryCalls.size)
+        val capture = ProofSetUploader.lastEnqueueForTesting
+        assertNotNull(capture)
+        assertEquals(MediaInclusion.SIDECARS_ONLY, capture!!.mediaInclusion)
+        assertFalse(capture.hasMediaSource)
+        assertNull(capture.mediaLength)
+        assertEquals(0, reads.get())
+
+        val mediaName = ProofSetMembershipPolicy.manifestLinkNameForMedia(hash, "video/mp4")
+        val stamp = ProofSetUploader.lastUploadedMembership(hash)
+        assertNotNull(stamp)
+        assertEquals(MediaInclusion.SIDECARS_ONLY, stamp!!.mediaInclusion)
+        assertTrue(mediaName !in stamp.basenames)
+    }
+
+    @Test
+    fun tryFlush_includeMedia_withinMediaLimit_stillIncludeMedia() {
+        val mediaBytes = byteArrayOf(9, 8, 7, 6)
+        val (composite, _, secondary) = deferredComposite(config = ipfsConfig(autoIncludeMedia = true))
+        composite.bindMedia(hash, mediaUri(mediaBytes), "image/jpeg")
+        for (name in coreBasenames()) {
+            composite.saveBytes(hash, name, name.toByteArray(), null)
+        }
+
+        assertEquals(1, secondary.uploadDirectoryCalls.size)
+        val capture = ProofSetUploader.lastEnqueueForTesting
+        assertNotNull(capture)
+        assertEquals(MediaInclusion.INCLUDE_MEDIA, capture!!.mediaInclusion)
+        assertTrue(capture.hasMediaSource)
+        assertEquals(mediaBytes.size.toLong(), capture.mediaLength)
+        assertTrue(
+            FilebaseConfig.isWithinFilebaseMediaLimit(capture.mediaLength!!),
+        )
+    }
+
+    @Test
+    fun tryFlush_autoIncludeOff_oversizeMedia_stillSidecarsOnly() {
+        val reads = AtomicInteger(0)
+        val overLimitBytes = FilebaseConfig.FILEBASE_MEDIA_MAX_BYTES + 1L
+        val (composite, _, secondary) = deferredComposite(config = ipfsConfig(autoIncludeMedia = false))
+        composite.bindMedia(
+            hash,
+            sizedButUnreadableMediaUri(overLimitBytes, reads),
+            "video/mp4",
+        )
+        for (name in coreBasenames()) {
+            composite.saveBytes(hash, name, name.toByteArray(), null)
+        }
+
+        assertEquals(1, secondary.uploadDirectoryCalls.size)
+        val capture = ProofSetUploader.lastEnqueueForTesting
+        assertNotNull(capture)
+        assertEquals(MediaInclusion.SIDECARS_ONLY, capture!!.mediaInclusion)
+        assertFalse(capture.hasMediaSource)
+        assertNull(capture.mediaLength)
+        assertEquals(0, reads.get())
     }
 }
 

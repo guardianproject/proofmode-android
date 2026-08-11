@@ -384,6 +384,50 @@ class FilebaseConfigTest {
         assertFalse(prefs.getBoolean(FilebaseConfig.PREF_FILEBASE_AUTO_INCLUDE_MEDIA, true))
     }
 
+    @Test
+    fun isWithinFilebaseMediaLimit_trueAtExact25MiB() {
+        assertEquals(25L * 1024 * 1024, FilebaseConfig.FILEBASE_MEDIA_MAX_BYTES)
+        assertTrue(
+            FilebaseConfig.isWithinFilebaseMediaLimit(
+                FilebaseConfig.FILEBASE_MEDIA_MAX_BYTES,
+            ),
+        )
+    }
+
+    @Test
+    fun isWithinFilebaseMediaLimit_falseJustOver25MiB() {
+        assertFalse(
+            FilebaseConfig.isWithinFilebaseMediaLimit(
+                FilebaseConfig.FILEBASE_MEDIA_MAX_BYTES + 1L,
+            ),
+        )
+    }
+
+    @Test
+    fun isWithinFilebaseMediaLimit_falseZeroOrNegative() {
+        assertFalse(FilebaseConfig.isWithinFilebaseMediaLimit(0L))
+        assertFalse(FilebaseConfig.isWithinFilebaseMediaLimit(-1L))
+    }
+
+    @Test
+    fun isWithinFilebaseMediaLimit_ignoresProofsetTotals_byApiShape() {
+        // Predicate takes media length only; callers must not sum sidecars or proofset totals.
+        val method =
+            FilebaseConfig::class.java.getMethod(
+                "isWithinFilebaseMediaLimit",
+                Long::class.javaPrimitiveType,
+            )
+        assertEquals(1, method.parameterTypes.size)
+        assertEquals(Long::class.javaPrimitiveType, method.parameterTypes[0])
+
+        assertTrue(FilebaseConfig.isWithinFilebaseMediaLimit(1L))
+        assertFalse(
+            FilebaseConfig.isWithinFilebaseMediaLimit(
+                FilebaseConfig.FILEBASE_MEDIA_MAX_BYTES + 1L,
+            ),
+        )
+    }
+
     private fun emptyPrefs() = PreferenceManager.getDefaultSharedPreferences(context)
 
     private fun prefsWith(vararg pairs: Pair<String, Any>, schema: Int? = null): SharedPreferences {

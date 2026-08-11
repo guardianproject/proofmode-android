@@ -15,6 +15,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.io.ByteArrayInputStream
+import java.io.IOException
+import java.net.SocketTimeoutException
 import java.io.InputStream
 import java.util.ArrayList
 import java.util.concurrent.CountDownLatch
@@ -1869,6 +1871,91 @@ class ProofSetUploaderTest {
         assertTrue(listener.successes.isEmpty())
         assertEquals(1, listener.failures.size)
     }
+
+
+    /**
+     * Large-upload reliability: Filebase timeout must reach the Share/Upload listener, not stall
+     * as an uncompleted enqueue.
+     */
+    @Test
+    fun ipfsUpload_socketTimeout_notifiesSaveFailed() {
+        val primary = primaryWithCore()
+        val filebase = object : RecordingFilebaseStorageProvider(uploadDirectorySucceed = false) {
+            override fun uploadDirectory(
+                hash: String,
+                artifacts: List<DeferredArtifact>,
+                mediaBasename: String?,
+                listener: StorageListener?,
+            ): FilebaseUploadResult? {
+                uploadDirectoryCalls.add(hash to artifacts)
+                val error = SocketTimeoutException("timeout")
+                listener?.saveFailed(error)
+                return null
+            }
+        }
+        val listener = RecordingListener()
+
+        assertTrue(
+            ProofSetUploader.enqueueProofSetUpload(
+                context,
+                hash,
+                primary,
+                filebase,
+                ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
+                FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+                MediaInclusion.INCLUDE_MEDIA,
+                listener,
+            ),
+        )
+
+        assertEquals(1, listener.failures.size)
+        assertTrue(listener.failures.single() is SocketTimeoutException)
+        assertTrue(listener.successes.isEmpty())
+    }
+
+    /**
+     * Large-upload reliability: HTTP 403 with a body-bearing IOException must pass through to
+     * listeners so Share can show an explicit failure (issue UX lock) once the transport seam
+     * includes the body text.
+     */
+    @Test
+    fun ipfsUpload_403WithBodyMessage_notifiesSaveFailed() {
+        val primary = primaryWithCore()
+        val filebase = object : RecordingFilebaseStorageProvider(uploadDirectorySucceed = false) {
+            override fun uploadDirectory(
+                hash: String,
+                artifacts: List<DeferredArtifact>,
+                mediaBasename: String?,
+                listener: StorageListener?,
+            ): FilebaseUploadResult? {
+                uploadDirectoryCalls.add(hash to artifacts)
+                listener?.saveFailed(
+                    IOException("IPFS RPC upload failed: 403 AccessDenied"),
+                )
+                return null
+            }
+        }
+        val listener = RecordingListener()
+
+        assertTrue(
+            ProofSetUploader.enqueueProofSetUpload(
+                context,
+                hash,
+                primary,
+                filebase,
+                ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
+                FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+                MediaInclusion.INCLUDE_MEDIA,
+                listener,
+            ),
+        )
+
+        assertEquals(1, listener.failures.size)
+        val msg = listener.failures.single()?.message.orEmpty()
+        assertTrue(msg.contains("403"))
+        assertTrue(msg.contains("AccessDenied"))
+    }
+
 }
 
 /** Test double that records saveBytes / getProofSet / getInputStream / saveText (primary storage). */

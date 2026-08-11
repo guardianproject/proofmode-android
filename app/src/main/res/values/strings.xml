@@ -353,7 +353,7 @@
     <string name="filebase_auto_upload">Automatic uploads</string>
     <string name="filebase_auto_upload_summary">When enabled, proofs are automatically uploaded on capture</string>
     <string name="filebase_auto_include_media">Include media</string>
-    <string name="filebase_auto_include_media_summary">When enabled, captured media is uploaded alongside proofs.</string>
+    <string name="filebase_auto_include_media_summary">When enabled, captured media is uploaded with proofs. Media larger than 25 MB is skipped; proofs still upload.</string>
     <string name="instructions">Instructions:</string>
     <string name="filebase_instructions_info">1. Create a free account at &lt;a href="https://filebase.com"&gt;filebase.com&lt;/a&gt;&lt;br/&gt;2. Create a new bucket to store proofEnter configuration.&lt;br/&gt;3. Generate access keys in your Filebase account dashboard.&lt;br/&gt;4. Enter either S3 credentials or a bucket-scoped IPFS token.&lt;br/&gt;5. Test connection to validate.&lt;br/&gt;6. Optionally toggle Auto sync properties for automatic uploads or manually upload through the share menu.</string>
     <string name="filebase_test_connection">Test Connection</string>
@@ -378,9 +378,35 @@
     <string name="upload_to_filebase">Upload to Filebase</string>
     <string name="filebase_not_configured_title">Filebase not configured</string>
     <string name="filebase_not_configured_message">Configure Filebase credentials in Settings to upload proofs.</string>
+    <string name="filebase_not_configured_configure">Configure</string>
+    <!-- Social-only: not configured while Upload to Filebase is on. -->
+    <string name="filebase_social_not_configured_message">Filebase isn’t set up yet. Configure it to upload or share without uploading.</string>
+    <string name="filebase_social_not_configured_share">Share without uploading</string>
     <string name="filebase_proof_not_ready">Proof is not ready for Filebase upload yet.</string>
     <string name="filebase_upload_success">Uploaded to Filebase</string>
     <string name="filebase_upload_failed">Filebase upload failed</string>
+    <string name="filebase_upload_oversize_title">Media too large to upload</string>
+    <string name="filebase_upload_oversize_message">This media is larger than 25 MB, so it won’t be uploaded. Upload the proof set without the media file?</string>
+    <string name="filebase_upload_oversize_confirm">Upload without media</string>
+    <string name="filebase_upload_oversize_cancel">Cancel</string>
+
+    <!-- Social oversize: share media without uploading (do not reuse filebase_upload_oversize_*). -->
+    <string name="filebase_social_oversize_title">Media too large to upload</string>
+    <string name="filebase_social_oversize_message">This media is larger than 25 MB, so it won’t be uploaded to Filebase. Share the media file without uploading?</string>
+    <string name="filebase_social_oversize_confirm">Share without uploading</string>
+    <string name="filebase_social_oversize_cancel">Cancel</string>
+
+    <!-- Social / shared failure: offer sharing the media file after a failed Filebase attempt. -->
+    <string name="filebase_share_just_the_file">Share just the file</string>
+    <string name="filebase_upload_failed_offer_share_file">Filebase upload failed. You can still share just the media file.</string>
+
+    <!-- Friendly copy when Filebase returns a mute IPFS 403 or AccountProblem without Message text. -->
+    <string name="filebase_failure_same_policy">Upload failed. Media may be too large. Try a smaller file, or share without Filebase.</string>
+
+    <!-- Hang watchdog / older failure-offer IDs kept for compile safety; Social CTA uses filebase_share_just_the_file. -->
+    <string name="filebase_upload_timed_out">Filebase upload timed out. You can try again later.</string>
+    <string name="filebase_upload_failed_offer_hash_only">Filebase upload failed. You can still share just the media file.</string>
+    <string name="filebase_share_hash_only">Share just the file</string>
     <string name="filebase_copy_cid">Copy</string>
     <string name="filebase_uploading">Uploading to Filebase…</string>
     <string name="filebase_uploads_group">Filebase Uploads</string>

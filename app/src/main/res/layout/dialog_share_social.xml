@@ -53,6 +53,17 @@
         android:layout_marginLeft="20dp"
         android:text="@string/share_info_social_watermark"
         />
+    <CheckBox
+        android:id="@+id/checkUploadToFilebase"
+        style="@style/OnboardingStepContentStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="left|start"
+        android:layout_marginStart="20dp"
+        android:layout_marginLeft="20dp"
+        android:checked="true"
+        android:text="@string/upload_to_filebase"
+        />
     <Button
         android:id="@+id/btnClose"
         style="@style/ShareButtonStyle"

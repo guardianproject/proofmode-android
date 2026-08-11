@@ -18,12 +18,11 @@ import java.io.ByteArrayInputStream
 import java.io.InputStream
 
 /**
- * JVM unit tests for the social verify-URL ladder.
+ * JVM unit tests for Social verify-URL resolve (read-only after proof-set upload).
  *
- * [FilebaseSocialShareHelper.resolveSocialVerifyUrl] takes a [ProofSetMediaSource] rather than a
- * `ContentResolver`/`Uri` pair, so the whole ladder — including the upload rung — is driveable
- * from a plain JVM test (the app module has only `testImplementation(libs.junit)`, no Robolectric).
- * The provider's network calls are stubbed by overriding them in [FakeFilebase].
+ * [FilebaseSocialShareHelper.resolveSocialVerifyUrl] still accepts a [ProofSetMediaSource] for
+ * call-site compatibility, but resolve does not read or upload media. Network calls are stubbed
+ * via [FakeFilebase].
  */
 class FilebaseSocialShareHelperTest {
 
@@ -197,7 +196,22 @@ class FilebaseSocialShareHelperTest {
     }
 
     @Test
-    fun social_uploadsWhenPinnedDirectoryHasNoMediaLeaf() {
+    fun resolveSocialVerifyUrl_noSidecar_doesNotLeafAddUpload() {
+        val primary = FakeStorageProvider()
+        val filebase = FakeFilebase()
+        val media = ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg")
+
+        val result = FilebaseSocialShareHelper.resolveSocialVerifyUrl(
+            primary, filebase, ipfsConfig, HASH, media, "image/jpeg",
+        )
+
+        assertNull(result.verifyUrl)
+        assertNull(filebase.uploadedArtifact)
+        assertFalse(result.leafAddFailed)
+    }
+
+    @Test
+    fun social_noPinnedMediaLeaf_doesNotLeafAddUpload() {
         val primary = FakeStorageProvider()
         primary.put(HASH, "$HASH${FilebaseSidecarContract.FILEBASE_IPFS_URI_SUFFIX}", GATEWAY_URI)
         val filebase = FakeFilebase(directoryLeafCid = null)
@@ -206,25 +220,10 @@ class FilebaseSocialShareHelperTest {
             primary, filebase, ipfsConfig, HASH, mediaSource(), "video/mp4",
         )
 
-        assertEquals("https://ipfs.filebase.io/ipfs/bafyFreshLeaf", result.verifyUrl)
-        assertNotNull(filebase.uploadedArtifact)
-    }
-
-    /** The upload rung passes a handle with a probed length — never materialized bytes. */
-    @Test
-    fun social_uploadStreamsMedia_withProbedLength() {
-        val primary = FakeStorageProvider()
-        val filebase = FakeFilebase()
-
-        FilebaseSocialShareHelper.resolveSocialVerifyUrl(
-            primary, filebase, ipfsConfig, HASH, mediaSource(length = 304_022_072L), "video/mp4",
-        )
-
-        val artifact = filebase.uploadedArtifact
-        assertNotNull(artifact)
-        assertEquals("$HASH.mp4", artifact!!.identifier)
-        assertEquals("video/mp4", artifact.contentType)
-        assertEquals(304_022_072L, artifact.length)
+        assertNull(result.verifyUrl)
+        assertNull(filebase.uploadedArtifact)
+        assertFalse(result.leafAddFailed)
+        assertEquals(CID to "$HASH.mp4", filebase.lsRequest)
     }
 
     @Test
@@ -283,6 +282,58 @@ class FilebaseSocialShareHelperTest {
             FilebaseSocialShareHelper.resolveFromPinnedDirectory(primary, filebase, HASH, "video/mp4"),
         )
         assertNull(filebase.lsRequest)
+    }
+
+    // --- Social Filebase path decision ---
+
+    @Test
+    fun socialDecision_toggleOff_skipsFilebase() {
+        assertEquals(
+            SocialFilebaseDecision.SKIP,
+            decideSocialFilebase(
+                uploadToFilebaseChecked = false,
+                configured = true,
+                mediaLengthBytes = 1024L,
+            ),
+        )
+    }
+
+    @Test
+    fun socialDecision_toggleOn_notConfigured_isNotConfigured() {
+        val d =
+            decideSocialFilebase(
+                uploadToFilebaseChecked = true,
+                configured = false,
+                mediaLengthBytes = 1L,
+            )
+        assertEquals(SocialFilebaseDecision.NOT_CONFIGURED, d)
+    }
+
+    @Test
+    fun socialDecision_overLimit_configured_toggleOn_asksShareWithoutFilebase() {
+        val maxBytes = FilebaseConfig.FILEBASE_MEDIA_MAX_BYTES
+        val d =
+            decideSocialFilebase(
+                uploadToFilebaseChecked = true,
+                configured = true,
+                mediaLengthBytes = maxBytes + 1,
+            )
+        assertEquals(
+            SocialFilebaseDecision.ASK_SHARE_WITHOUT_FILEBASE,
+            d,
+        )
+    }
+
+    @Test
+    fun socialDecision_withinLimit_configured_toggleOn_enqueues() {
+        val maxBytes = FilebaseConfig.FILEBASE_MEDIA_MAX_BYTES
+        val d =
+            decideSocialFilebase(
+                uploadToFilebaseChecked = true,
+                configured = true,
+                mediaLengthBytes = maxBytes,
+            )
+        assertEquals(SocialFilebaseDecision.ENQUEUE, d)
     }
 
     @Test

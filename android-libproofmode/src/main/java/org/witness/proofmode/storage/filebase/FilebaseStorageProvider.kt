@@ -221,14 +221,15 @@ open class FilebaseStorageProvider(
         }
 
         return try {
-            Log.d(TAG, "Uploading directory for hash: $hash with ${artifacts.size} files")
+            val partLengths = artifacts.joinToString(",") { "${it.identifier}=${it.length}" }
+            Log.d(TAG, "Uploading directory for hash: $hash with ${artifacts.size} files lengths=[$partLengths]")
 
             val multipartBody = buildIpfsMultipart(artifacts)
             val url = "$IPFS_RPC_BASE_URL/api/v0/add?$IPFS_ADD_PARAM"
             val (code, body) = postIpfsRpc(url, multipartBody)
 
             if (!isIpfsAddSuccess(code) || body.isNullOrBlank()) {
-                val error = IOException("IPFS RPC upload failed: $code")
+                val error = IOException(formatIpfsHttpFailure(code, body, multipartBody))
                 Log.e(TAG, "Directory upload failed", error)
                 listener?.saveFailed(error)
                 return null
@@ -309,12 +310,32 @@ open class FilebaseStorageProvider(
             .post(body)
             .addHeader("Authorization", "Bearer $ipfsBearerToken")
             .build()
-        Log.d(TAG, "Sending IPFS RPC request to: $url")
+        val declaredLength = runCatching { body.contentLength() }.getOrDefault(-1L)
+        Log.d(TAG, "Sending IPFS RPC request to: $url declaredContentLength=$declaredLength")
         client.newCall(request).execute().use { response ->
             val responseBody = response.body?.string()
-            Log.d(TAG, "IPFS RPC response code: ${response.code}")
+            if (response.isSuccessful) {
+                Log.d(TAG, "IPFS RPC response code: ${response.code}")
+            } else {
+                Log.e(
+                    TAG,
+                    "IPFS RPC response code: ${response.code} declaredContentLength=$declaredLength body=${truncateForLog(responseBody)}",
+                )
+            }
             return response.code to responseBody
         }
+    }
+
+    /** Compact non-2xx detail for Logcat + saveFailed (status, body snippet, declared length). */
+    private fun formatIpfsHttpFailure(code: Int, body: String?, requestBody: RequestBody): String {
+        val declared = runCatching { requestBody.contentLength() }.getOrDefault(-1L)
+        return "IPFS RPC upload failed: $code declaredContentLength=$declared body=${truncateForLog(body)}"
+    }
+
+    private fun truncateForLog(body: String?, maxChars: Int = 2048): String {
+        if (body.isNullOrBlank()) return "(empty)"
+        val trimmed = body.trim()
+        return if (trimmed.length <= maxChars) trimmed else trimmed.take(maxChars) + "…"
     }
 
     private fun isIpfsAddSuccess(code: Int): Boolean = code in 200..299
@@ -390,7 +411,10 @@ open class FilebaseStorageProvider(
             val url = "$IPFS_RPC_BASE_URL/api/v0/add?cid-version=1"
             val (code, body) = postIpfsRpc(url, multipartBody)
             if (!isIpfsAddSuccess(code) || body.isNullOrBlank()) {
-                Log.e(TAG, "IPFS file add failed: HTTP $code")
+                Log.e(
+                    TAG,
+                    "IPFS file add failed: ${formatIpfsHttpFailure(code, body, multipartBody)}",
+                )
                 return null
             }
 
@@ -486,7 +510,10 @@ open class FilebaseStorageProvider(
                     Log.d(TAG, "IPFS CID: $ipfsCid")
                     listener?.saveSuccessful(hash, "https://ipfs.filebase.io/ipfs/$ipfsCid")
                 } else {
-                    val error = IOException("Upload failed: ${response.code} ${response.message}")
+                    val bodySnippet = truncateForLog(response.body?.string())
+                    val error = IOException(
+                        "Upload failed: ${response.code} ${response.message} key=$objectKey contentLength=$length body=$bodySnippet",
+                    )
                     Log.e(TAG, "Upload failed", error)
                     listener?.saveFailed(error)
                 }

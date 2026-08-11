@@ -125,6 +125,23 @@ class ProofSetMediaSourceTest {
         assertNull(ProofSetMediaSource.fromUri(context, Uri.fromFile(empty), "image/jpeg").resolve())
     }
 
+    /**
+     * Contract for Filebase Content-Length: after resolve(), openStream() byte count must equal
+     * [ResolvedMedia.length]. A mismatch is the Android-side 403/abort hypothesis vs curl.
+     */
+    @Test
+    fun resolve_streamByteCountMatchesDeclaredLength_forFileUri() {
+        val file = File(context.cacheDir, "media-source-length-contract.jpg")
+        val payload = ByteArray(64) { it.toByte() }
+        file.writeBytes(payload)
+
+        val resolved = ProofSetMediaSource.fromUri(context, Uri.fromFile(file), "image/jpeg").resolve()
+
+        assertNotNull(resolved)
+        assertEquals(payload.size.toLong(), resolved!!.length)
+        assertEquals(resolved.length, resolved.openStream().use { it.readBytes().size.toLong() })
+    }
+
     @Test
     fun resolve_followsProviderToTheCurrentUri() {
         val first = File(context.cacheDir, "media-source-first.jpg")

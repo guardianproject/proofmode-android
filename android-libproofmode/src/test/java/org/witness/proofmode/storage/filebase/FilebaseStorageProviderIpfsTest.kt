@@ -1,14 +1,20 @@
 package org.witness.proofmode.storage.filebase
 
+import java.io.ByteArrayInputStream
+import java.io.IOException
+import java.net.SocketTimeoutException
 import okhttp3.RequestBody
+import okio.Buffer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.witness.proofmode.storage.StorageListener
 import org.witness.proofmode.storage.proofset.DeferredArtifact
 
 @RunWith(RobolectricTestRunner::class)
@@ -279,6 +285,119 @@ class FilebaseStorageProviderIpfsTest {
 
         assertNull(provider.findIpfsDirectoryLeafCid("bafyDirRoot", "abc123.mp4"))
     }
+
+    // --- Large-upload reliability hypotheses (length mismatch / 403 body / timeout) ---
+    //
+    // Production `postIpfsRpc` stubs in FakeHttp never write the RequestBody, so Content-Length
+    // mismatches never surface. BodyDrainingFake writes the body (and enforces OkHttp's
+    // declared-vs-actual byte contract) so those failure modes are observable without a socket.
+
+    /**
+     * Hypothesis: stale/wrong [DeferredArtifact.length] vs stream bytes → OkHttp aborts the POST
+     * ("expected N bytes but received M"). Directory upload must fail closed, not hang.
+     */
+    @Test
+    fun uploadDirectory_failsClosed_whenDeclaredContentLengthMismatchesStreamBytes() {
+        val provider = BodyDrainingFakeHttpFilebaseStorageProvider(fakeCode = 200, fakeBody = """{"Name":"","Hash":"bafy"}""")
+        val listener = CapturingStorageListener()
+        // Declares 10 bytes; stream yields only 3 — the Content-Length promise is broken.
+        val mismatched = DeferredArtifact("photo.jpg", "image/jpeg", 10L) {
+            ByteArrayInputStream(byteArrayOf(1, 2, 3))
+        }
+
+        assertNull(provider.uploadDirectory("abc123", listOf(mismatched), "photo.jpg", listener))
+        assertEquals(1, listener.failures.size)
+        val err = listener.failures.single()
+        assertNotNull(err)
+        assertTrue(
+            "expected length-mismatch IOException, got: $err",
+            err is IOException && (
+                err.message?.contains("expected") == true ||
+                    err.message?.contains("bytes") == true ||
+                    err.cause?.message?.contains("expected") == true
+                ),
+        )
+        assertTrue(provider.bodyWasWritten)
+    }
+
+    /**
+     * Matching length + drained body still succeeds (control for the mismatch test above).
+     */
+    @Test
+    fun uploadDirectory_succeeds_whenDeclaredLengthMatchesStreamBytes() {
+        val ndjson = """
+            {"Name":"photo.jpg","Hash":"bafyMediaLeaf","Size":"2"}
+            {"Name":"","Hash":"bafyDirRoot","Size":"3"}
+        """.trimIndent()
+        val provider = BodyDrainingFakeHttpFilebaseStorageProvider(fakeCode = 200, fakeBody = ndjson)
+        val artifact = DeferredArtifact.ofBytes("photo.jpg", byteArrayOf(1, 2), "image/jpeg")
+
+        val result = provider.uploadDirectory("abc123", listOf(artifact), "photo.jpg", null)
+
+        assertEquals("bafyMediaLeaf", result?.mediaLeafCid)
+        assertTrue(provider.bodyWasWritten)
+        assertEquals(provider.lastDeclaredContentLength, provider.lastWrittenBytes)
+    }
+
+    /** Non-2xx folds response body + declared Content-Length into saveFailed (issue 2026-08-07). */
+    @Test
+    fun uploadDirectory_on403_saveFailedIncludesResponseBody() {
+        val body = """{"Message":"Access Denied","Code":"AccessDenied"}"""
+        val provider = FakeHttpFilebaseStorageProvider(fakeCode = 403, fakeBody = body)
+        val listener = CapturingStorageListener()
+
+        assertNull(provider.uploadDirectory(
+            "abc123",
+            listOf(DeferredArtifact.ofBytes("photo.jpg", byteArrayOf(1), "image/jpeg")),
+            "photo.jpg",
+            listener,
+        ))
+
+        assertEquals(1, listener.failures.size)
+        val msg = listener.failures.single()?.message.orEmpty()
+        assertTrue(msg.contains("403"))
+        assertTrue(msg.contains("AccessDenied") || msg.contains("Access Denied"))
+        assertTrue(msg.contains("declaredContentLength="))
+    }
+
+    /**
+     * Hypothesis: OkHttp 120s write/read timeout → SocketTimeoutException. uploadDirectory must
+     * catch, notify saveFailed, and return null (no hang / no uncaught).
+     */
+    @Test
+    fun uploadDirectory_surfacesSocketTimeout_viaSaveFailed() {
+        val provider = object : FakeHttpFilebaseStorageProvider(fakeCode = 200, fakeBody = "unused") {
+            override fun postIpfsRpc(url: String, body: RequestBody): Pair<Int, String?> {
+                throw SocketTimeoutException("timeout")
+            }
+        }
+        val listener = CapturingStorageListener()
+
+        assertNull(provider.uploadDirectory(
+            "abc123",
+            listOf(DeferredArtifact.ofBytes("photo.jpg", byteArrayOf(1), "image/jpeg")),
+            "photo.jpg",
+            listener,
+        ))
+
+        assertEquals(1, listener.failures.size)
+        assertTrue(listener.failures.single() is SocketTimeoutException)
+    }
+
+    @Test
+    fun uploadFileIpfs_surfacesSocketTimeout_asNull() {
+        val provider = object : FakeHttpFilebaseStorageProvider(fakeCode = 200, fakeBody = "unused") {
+            override fun postIpfsRpc(url: String, body: RequestBody): Pair<Int, String?> {
+                throw SocketTimeoutException("timeout")
+            }
+        }
+
+        assertNull(
+            provider.uploadFileIpfs(
+                DeferredArtifact.ofBytes("photo.jpg", byteArrayOf(1, 2), "image/jpeg"),
+            ),
+        )
+    }
 }
 
 /**
@@ -286,7 +405,7 @@ class FilebaseStorageProviderIpfsTest {
  * predetermined status code and body. All other production logic in [uploadDirectory] /
  * [uploadFileIpfs] / [findIpfsDirectoryLeafCid] runs exactly as in production.
  */
-private class FakeHttpFilebaseStorageProvider(
+private open class FakeHttpFilebaseStorageProvider(
     private val fakeCode: Int,
     private val fakeBody: String?,
 ) : FilebaseStorageProvider(
@@ -296,10 +415,52 @@ private class FakeHttpFilebaseStorageProvider(
     ipfsBearerToken = "tok",
 ) {
     var lastUrl: String = ""
-        private set
+        protected set
 
     override fun postIpfsRpc(url: String, body: RequestBody): Pair<Int, String?> {
         lastUrl = url
         return fakeCode to fakeBody
+    }
+}
+
+/**
+ * Like [FakeHttpFilebaseStorageProvider], but drains [RequestBody] the way OkHttp would on the
+ * wire and fails when declared [RequestBody.contentLength] disagrees with bytes written.
+ */
+private class BodyDrainingFakeHttpFilebaseStorageProvider(
+    fakeCode: Int,
+    fakeBody: String?,
+) : FakeHttpFilebaseStorageProvider(fakeCode, fakeBody) {
+    var bodyWasWritten: Boolean = false
+        private set
+    var lastDeclaredContentLength: Long = -1
+        private set
+    var lastWrittenBytes: Long = -1
+        private set
+
+    override fun postIpfsRpc(url: String, body: RequestBody): Pair<Int, String?> {
+        lastUrl = url
+        lastDeclaredContentLength = body.contentLength()
+        val buffer = Buffer()
+        body.writeTo(buffer)
+        bodyWasWritten = true
+        lastWrittenBytes = buffer.size
+        if (lastDeclaredContentLength >= 0L && lastWrittenBytes != lastDeclaredContentLength) {
+            // Mirror OkHttp RealCall wording so product catch paths stay realistic.
+            throw IOException(
+                "expected $lastDeclaredContentLength bytes but received $lastWrittenBytes",
+            )
+        }
+        return super.postIpfsRpc(url, body)
+    }
+}
+
+private class CapturingStorageListener : StorageListener {
+    val failures = mutableListOf<Exception?>()
+
+    override fun saveSuccessful(hash: String?, uri: String?) = Unit
+
+    override fun saveFailed(exception: Exception?) {
+        failures.add(exception)
     }
 }

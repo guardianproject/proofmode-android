@@ -75,6 +75,18 @@ data class FilebaseConfig(
         const val PREF_FILEBASE_PREFS_SCHEMA_VERSION = "filebase_prefs_schema_version"
         const val FILEBASE_PREFS_SCHEMA_VERSION = 2
 
+        /** Media-object-only Filebase free-tier size limit (never proofset/sidecar aggregate). */
+        const val FILEBASE_MEDIA_MAX_BYTES: Long = 25L * 1024 * 1024
+
+        /**
+         * True when [lengthBytes] is a known positive media size within [FILEBASE_MEDIA_MAX_BYTES].
+         * Unknown/non-positive lengths are outside the limit (callers must not invent oversize force
+         * from unresolved media — Auto Sync keeps the existing "Media unavailable" non-flush).
+         */
+        @JvmStatic
+        fun isWithinFilebaseMediaLimit(lengthBytes: Long): Boolean =
+            lengthBytes > 0L && lengthBytes <= FILEBASE_MEDIA_MAX_BYTES
+
         /**
          * One-shot wipe of Filebase keys when stored schema is older than
          * [FILEBASE_PREFS_SCHEMA_VERSION]. Prevents half-migrated credential shapes from

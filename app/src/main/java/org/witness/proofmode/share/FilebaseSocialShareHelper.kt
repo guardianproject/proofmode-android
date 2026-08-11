@@ -4,15 +4,34 @@ import org.witness.proofmode.storage.filebase.FilebaseConfig
 import org.witness.proofmode.storage.filebase.FilebaseGatewayUris
 import org.witness.proofmode.storage.filebase.FilebaseSidecarContract
 import org.witness.proofmode.storage.filebase.FilebaseStorageProvider
-import org.witness.proofmode.storage.proofset.DeferredArtifact
 import org.witness.proofmode.storage.proofset.ProofSetMediaSource
 import org.witness.proofmode.storage.proofset.ProofSetMembershipPolicy
 import org.witness.proofmode.storage.StorageProvider
 
 data class SocialVerifyLadderResult(
     val verifyUrl: String?,
+    /** Leftover from the old leaf-add upload path; always false — resolve no longer uploads. */
     val leafAddFailed: Boolean = false,
 )
+
+internal enum class SocialFilebaseDecision {
+    SKIP,
+    NOT_CONFIGURED,
+    ASK_SHARE_WITHOUT_FILEBASE,
+    ENQUEUE,
+}
+
+internal fun decideSocialFilebase(
+    uploadToFilebaseChecked: Boolean,
+    configured: Boolean,
+    mediaLengthBytes: Long,
+): SocialFilebaseDecision = when {
+    !uploadToFilebaseChecked -> SocialFilebaseDecision.SKIP
+    !configured -> SocialFilebaseDecision.NOT_CONFIGURED
+    !FilebaseConfig.isWithinFilebaseMediaLimit(mediaLengthBytes) ->
+        SocialFilebaseDecision.ASK_SHARE_WITHOUT_FILEBASE
+    else -> SocialFilebaseDecision.ENQUEUE
+}
 
 object FilebaseSocialShareHelper {
 
@@ -53,9 +72,8 @@ object FilebaseSocialShareHelper {
      *
      * [deriveAndPersistFromDirectory] cannot invent this URL because nothing on disk records whether
      * the pin included the media. Asking IPFS for the directory's links settles it for the cost of
-     * one metadata request — and a hit means the bytes are already stored, so the upload below is
-     * skipped entirely. Returns null when there is no directory sidecar, the RPC has no `/ls`, or
-     * the pin was sidecars-only.
+     * one metadata request — a hit means the bytes are already stored. Returns null when there is
+     * no directory sidecar, the RPC has no `/ls`, or the pin was sidecars-only.
      */
     internal fun resolveFromPinnedDirectory(
         primary: StorageProvider,
@@ -81,12 +99,9 @@ object FilebaseSocialShareHelper {
     ): String? = imageUrl?.takeIf { it.isNotBlank() }
 
     /**
-     * Verify-URL ladder: existing image sidecar → directory-derived URL → media leaf already in the
-     * pinned directory → a fresh leaf upload. Everything above the last rung answers from bytes
-     * that are already stored, so the upload runs only when the media is genuinely not on IPFS.
-     *
-     * [media] is a handle, never bytes: social share runs against the original capture, and reading
-     * one into a `ByteArray` OOM'd the process on large video.
+     * Read-only verify URL after a successful proof-set upload: existing image sidecar →
+     * directory-derived URL → media leaf already in the pinned directory. Does not read [media]
+     * or upload; missing URLs come from the upload path that enqueued the proof set.
      */
     fun resolveSocialVerifyUrl(
         primary: StorageProvider,
@@ -104,39 +119,12 @@ object FilebaseSocialShareHelper {
             return SocialVerifyLadderResult(derived)
         }
 
-        var leafAddFailed = false
         if (config.hasIpfsAccess() && filebase != null) {
             resolveFromPinnedDirectory(primary, filebase, hash, mime)?.let { pinned ->
                 return SocialVerifyLadderResult(pinned)
             }
-
-            val resolved = media.resolve() ?: return SocialVerifyLadderResult(null)
-            val basename = ProofSetMembershipPolicy.manifestLinkNameForMedia(hash, mime)
-            val leafUri = filebase.uploadFileIpfs(
-                DeferredArtifact(
-                    basename,
-                    resolved.mimeType ?: mime,
-                    resolved.length,
-                ) { resolved.openStream() },
-            )
-            if (leafUri != null) {
-                readProofText(primary, hash, hash + FilebaseSidecarContract.FILEBASE_IMAGE_URI_SUFFIX)?.let {
-                    return SocialVerifyLadderResult(it)
-                }
-                deriveAndPersistFromDirectory(primary, hash, mime)?.let { derived ->
-                    return SocialVerifyLadderResult(derived)
-                }
-                primary.replaceText(
-                    hash,
-                    hash + FilebaseSidecarContract.FILEBASE_IMAGE_URI_SUFFIX,
-                    leafUri,
-                    null,
-                )
-                return SocialVerifyLadderResult(leafUri)
-            }
-            leafAddFailed = true
         }
 
-        return SocialVerifyLadderResult(null, leafAddFailed)
+        return SocialVerifyLadderResult(null)
     }
 }

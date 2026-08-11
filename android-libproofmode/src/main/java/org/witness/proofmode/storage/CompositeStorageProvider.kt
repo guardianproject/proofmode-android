@@ -190,13 +190,24 @@ class CompositeStorageProvider(
             return
         }
 
+        // If media is too large, upload sidecars only.
+        var adjustedInclusion = inclusion
+        var adjustedMediaSource = mediaSource
+        if (inclusion == MediaInclusion.INCLUDE_MEDIA) {
+            val length = mediaSource?.resolve()?.length
+            if (length != null && !FilebaseConfig.isWithinFilebaseMediaLimit(length)) {
+                adjustedInclusion = MediaInclusion.SIDECARS_ONLY
+                adjustedMediaSource = null
+            }
+        }
+
         val onDisk = primaryProvider.getProofSet(hash)
             .mapNotNull { ProofSetMembershipPolicy.fromProofSetUri(it) }
         val memberBasenames = onDisk
             .filter { ProofSetMembershipPolicy.isManifestMember(ctx, hash, it) }
             .toSet()
         val candidate = ProofSetUploader.buildMembershipStamp(
-            hash, mode, inclusion, memberBasenames, mime,
+            hash, mode, adjustedInclusion, memberBasenames, mime,
         )
         if (candidate == ProofSetUploader.lastUploadedMembership(hash)) return
 
@@ -205,9 +216,9 @@ class CompositeStorageProvider(
             hash,
             primaryProvider,
             secondary,
-            mediaSource,
+            adjustedMediaSource,
             mode,
-            inclusion,
+            adjustedInclusion,
             object : StorageListener {
                 override fun saveSuccessful(resultHash: String?, uri: String?) {
                     Log.d(TAG, "Deferred proof-set upload succeeded for $hash at: $uri")

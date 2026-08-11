@@ -70,7 +70,7 @@ import org.witness.proofmode.storage.DefaultStorageProvider
 import org.witness.proofmode.storage.filebase.FilebaseConfig
 import org.witness.proofmode.storage.filebase.FilebaseStorageProvider
 import org.witness.proofmode.storage.filebase.FilebaseSidecarContract
-import org.witness.proofmode.storage.proofset.DeferredArtifact
+import org.witness.proofmode.storage.proofset.MediaInclusion
 import org.witness.proofmode.storage.proofset.ProofSetMediaSource
 import org.witness.proofmode.storage.proofset.ProofSetUploader
 import org.witness.proofmode.storage.StorageListener
@@ -93,6 +93,7 @@ class ShareProofActivity : AppCompatActivity() {
     private lateinit var binding: ActivityShareBinding
     private var sendMedia = true
     private var applySocialWatermark = false // default unchecked — share original
+    private var uploadToFilebaseSocial: Boolean = true // Social "Upload to Filebase" defaults on
     private var lastProcessedIntentKey: String? = null
 
     private val hashCache = HashMap<String, String?>()
@@ -275,7 +276,8 @@ class ShareProofActivity : AppCompatActivity() {
         val isImage = true
         if (isImage) {
             displayProgress("Preparing media for social share...")
-            shareSocialAsync()
+            val hangWatchdog = startFilebaseHangWatchdog(offerHashOnlyOnTimeout = true)
+            shareSocialAsync(hangWatchdog)
         }
     }
 
@@ -289,49 +291,123 @@ class ShareProofActivity : AppCompatActivity() {
         val hash = resolveShareProofHash(mediaUri) ?: run { showFilebaseNotReady(); return }
         val mime = contentResolver.getType(mediaUri)
         displayProgress(getString(R.string.filebase_uploading))
+        val hangWatchdog = startFilebaseHangWatchdog(offerHashOnlyOnTimeout = false)
         // Stay on Main for DestroyedSafeStorageListener (Lifecycle.addObserver); IO only for I/O.
         lifecycleScope.launch {
             val appCtx = applicationContext
             val activityRef = java.lang.ref.WeakReference(this@ShareProofActivity)
-            val failMessagePrefix = appCtx.getString(R.string.filebase_upload_failed)
+            // Media is handed over as a re-openable source, never read into memory here — a large
+            // video would exceed the heap outright.
+            val mediaSource = ProofSetMediaSource.fromUri(appCtx, mediaUri, mime)
+            // Same on-disk primary used for the proof set (activity field, or default).
+            val primary = mStorageProvider ?: DefaultStorageProvider(applicationContext)
+            val filebase = FilebaseStorageProvider.from(config)
+            val uploadMode = config.resolveUploadMode()
+            if (uploadMode == FilebaseConfig.UploadMode.NONE) {
+                hangWatchdog.cancel()
+                showFilebaseNotConfiguredDialog()
+                return@launch
+            }
+            val resolved = withContext(Dispatchers.IO) { mediaSource.resolve() }
+            if (resolved == null) {
+                hangWatchdog.cancel()
+                displaySharePrompt()
+                showFilebaseNotReady()
+                return@launch
+            }
+
+            if (isShareUploadOversize(resolved.length)) {
+                hangWatchdog.cancel() // dialog is interactive; start a fresh watchdog on confirm
+                displaySharePrompt()
+                showUploadProofsetWithoutMediaDialog(
+                    onConfirm = {
+                        displayProgress(getString(R.string.filebase_uploading))
+                        val confirmWatchdog = startFilebaseHangWatchdog(offerHashOnlyOnTimeout = false)
+                        lifecycleScope.launch {
+                            val sidecarsListener = DestroyedSafeStorageListener(
+                                appCtx,
+                                lifecycle,
+                                onSuccess = { uri ->
+                                    confirmWatchdog.cancel()
+                                    val activity = activityRef.get() ?: return@DestroyedSafeStorageListener
+                                    if (activity.isDestroyed) return@DestroyedSafeStorageListener
+                                    activity.displaySharePrompt()
+                                    activity.showFilebaseUploadSuccess(uri ?: "")
+                                },
+                                onFailureMessage = { msg ->
+                                    confirmWatchdog.cancel()
+                                    val activity = activityRef.get() ?: return@DestroyedSafeStorageListener
+                                    if (activity.isDestroyed) return@DestroyedSafeStorageListener
+                                    activity.displaySharePrompt()
+                                    activity.showFilebaseUploadFailedDialog(detail = msg, offerHashOnly = null)
+                                },
+                            )
+                            enqueueShareFilebaseUpload(
+                                appCtx, hash, primary, filebase,
+                                /* mediaSource */ null,
+                                uploadMode,
+                                shareUploadSidecarsOnly(),
+                                sidecarsListener,
+                                confirmWatchdog,
+                            )
+                        }
+                    },
+                    onDecline = {
+                        displaySharePrompt()
+                    },
+                )
+                return@launch
+            }
+
+            // Under the media size limit: enqueue with media; listener closes over hangWatchdog.
             val listener = DestroyedSafeStorageListener(
                 appCtx,
                 lifecycle,
                 onSuccess = { uri ->
+                    hangWatchdog.cancel()
                     val activity = activityRef.get() ?: return@DestroyedSafeStorageListener
                     if (activity.isDestroyed) return@DestroyedSafeStorageListener
                     activity.displaySharePrompt()
                     activity.showFilebaseUploadSuccess(uri ?: "")
                 },
                 onFailureMessage = { msg ->
+                    hangWatchdog.cancel()
                     val activity = activityRef.get() ?: return@DestroyedSafeStorageListener
                     if (activity.isDestroyed) return@DestroyedSafeStorageListener
                     activity.displaySharePrompt()
-                    Toast.makeText(appCtx, "$failMessagePrefix: $msg", Toast.LENGTH_LONG).show()
+                    activity.showFilebaseUploadFailedDialog(detail = msg, offerHashOnly = null)
                 },
             )
-            // Media is handed over as a re-openable source, never read into memory here — a large
-            // video would exceed the heap outright.
-            val mediaSource = ProofSetMediaSource.fromUri(appCtx, mediaUri, mime)
-            // NEW-B2: activity-local primary — same disk as proof set
-            val primary = mStorageProvider ?: DefaultStorageProvider(applicationContext)
-            val filebase = FilebaseStorageProvider.from(config)
-            val uploadMode = config.resolveUploadMode()
-            if (uploadMode == FilebaseConfig.UploadMode.NONE) {
-                showFilebaseNotConfiguredDialog()
-                return@launch
-            }
-            val started = withContext(Dispatchers.IO) {
-                ProofSetUploader.enqueueProofSetUpload(
-                    appCtx, hash, primary, filebase, mediaSource, uploadMode,
-                    mediaInclusionForShareUpload(), listener,
-                )
-            }
-            if (!started) {
-                displaySharePrompt()
-                showFilebaseNotReady()
-            }
-            // NEW-B3: do NOT show success here — wait for listener
+            enqueueShareFilebaseUpload(
+                appCtx, hash, primary, filebase, mediaSource, uploadMode,
+                shareUploadWithMedia(), listener, hangWatchdog,
+            )
+            // Success/failure UI comes from the listener, not from enqueue starting.
+        }
+    }
+
+    /** Fire-and-forget enqueue; on false, cancel watchdog and restore share UI. */
+    private suspend fun enqueueShareFilebaseUpload(
+        appCtx: Context,
+        hash: String,
+        primary: StorageProvider,
+        filebase: FilebaseStorageProvider,
+        mediaSource: ProofSetMediaSource?,
+        uploadMode: FilebaseConfig.UploadMode,
+        inclusion: MediaInclusion,
+        listener: StorageListener,
+        hangWatchdog: Job,
+    ) {
+        val started = withContext(Dispatchers.IO) {
+            ProofSetUploader.enqueueProofSetUpload(
+                appCtx, hash, primary, filebase, mediaSource, uploadMode,
+                inclusion, listener,
+            )
+        }
+        if (!started) {
+            hangWatchdog.cancel()
+            displaySharePrompt()
+            showFilebaseNotReady()
         }
     }
 
@@ -505,19 +581,85 @@ class ShareProofActivity : AppCompatActivity() {
         return FilebaseConfig.fromPrefs(prefs)
     }
 
+    /** Share → Upload path: open Filebase settings or cancel. */
     private fun showFilebaseNotConfiguredDialog() {
         AlertDialog.Builder(this)
             .setTitle(R.string.filebase_not_configured_title)
             .setMessage(R.string.filebase_not_configured_message)
-            .setPositiveButton(android.R.string.ok) { _, _ ->
+            .setPositiveButton(R.string.filebase_not_configured_configure) { _, _ ->
                 startActivity(Intent(this, FilebaseSettingsActivity::class.java))
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
     }
 
+    /**
+     * Social path when Upload to Filebase is on but credentials are missing.
+     * Configure → settings; Share without uploading → this share only; Cancel → dismiss.
+     */
+    private fun showSocialFilebaseNotConfiguredDialog(
+        onShareWithoutUploading: () -> Unit,
+    ) {
+        if (isDestroyed) return
+        AlertDialog.Builder(this)
+            .setTitle(R.string.filebase_not_configured_title)
+            .setMessage(R.string.filebase_social_not_configured_message)
+            .setPositiveButton(R.string.filebase_not_configured_configure) { _, _ ->
+                startActivity(Intent(this, FilebaseSettingsActivity::class.java))
+            }
+            .setNeutralButton(R.string.filebase_social_not_configured_share) { _, _ ->
+                // This share only — do not permanently clear the More-details checkbox.
+                uploadToFilebaseSocial = false
+                onShareWithoutUploading()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .setCancelable(true)
+            .show()
+    }
+
     private fun showFilebaseNotReady() {
         Toast.makeText(this, R.string.filebase_proof_not_ready, Toast.LENGTH_LONG).show()
+    }
+
+    private fun showUploadProofsetWithoutMediaDialog(
+        onConfirm: () -> Unit,
+        onDecline: () -> Unit,
+    ) {
+        if (isDestroyed) return
+        AlertDialog.Builder(this)
+            .setTitle(R.string.filebase_upload_oversize_title)
+            .setMessage(R.string.filebase_upload_oversize_message)
+            .setPositiveButton(R.string.filebase_upload_oversize_confirm) { _, _ -> onConfirm() }
+            .setNegativeButton(R.string.filebase_upload_oversize_cancel) { _, _ -> onDecline() }
+            .setCancelable(true)
+            .setOnCancelListener { onDecline() }
+            .show()
+    }
+
+    /**
+     * Social path when media exceeds the Filebase size limit: offer to share the media file
+     * without uploading to Filebase. Do not use the Share→Upload "proofset without media" dialog —
+     * Social still shares the media file, not a sidecars-only proof set.
+     */
+    private fun showSocialShareWithoutFilebaseDialog(
+        onConfirm: () -> Unit,
+        onDecline: () -> Unit,
+    ) {
+        if (isDestroyed) return
+        AlertDialog.Builder(this)
+            .setTitle(R.string.filebase_social_oversize_title)
+            .setMessage(R.string.filebase_social_oversize_message)
+            .setPositiveButton(R.string.filebase_social_oversize_confirm) { _, _ ->
+                // Skip Filebase for this share, then share the media file only.
+                uploadToFilebaseSocial = false
+                onConfirm()
+            }
+            .setNegativeButton(R.string.filebase_social_oversize_cancel) { _, _ ->
+                onDecline()
+            }
+            .setCancelable(true)
+            .setOnCancelListener { onDecline() }
+            .show()
     }
 
     /**
@@ -603,32 +745,18 @@ class ShareProofActivity : AppCompatActivity() {
             proofZipName = "$fileName-proofmode-0x$userId-$dateString.zip"
     }
 
-    private fun shareSocial(): Boolean {
-        val intent = intent
-        val action = intent.action
-        val shareUris = ArrayList<Uri?>()
-        var lastMediaUri: Uri? = null
+    private sealed class SocialShareResult {
+        data object Shared : SocialShareResult()
+        data object Failed : SocialShareResult()
+    }
 
-        if (Intent.ACTION_SEND_MULTIPLE == action) {
-            val mediaUris =
-                intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM) ?: emptyList()
-            for (mediaUri in mediaUris) {
-                shareUris.add(cleanUri(mediaUri))
-                lastMediaUri = mediaUri
-            }
-        } else if (Intent.ACTION_SEND == action) {
-            lastMediaUri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
-            if (lastMediaUri == null) lastMediaUri = intent.data
-        }
-
-        if (shareUris.size > 1) {
-            return true
-        }
-
-        val mediaUri = lastMediaUri ?: return false
-        val hash = HashUtils.getSHA256FromFileContent(contentResolver.openInputStream(mediaUri))
-            ?: return false
-        val mime = contentResolver.getType(mediaUri)
+    /** Non-Filebase social share: read-only verify sidecar hit, else hash-only / watermark path. */
+    private fun shareSocialNonFilebase(
+        hash: String,
+        mediaUri: Uri,
+        shareUris: ArrayList<Uri?>,
+        mime: String?,
+    ): SocialShareResult {
         val primary = mStorageProvider ?: DefaultStorageProvider(applicationContext)
         val config = readFilebaseConfigFromPrefs()
         val filebase: FilebaseStorageProvider? =
@@ -637,38 +765,23 @@ class ShareProofActivity : AppCompatActivity() {
             } else {
                 null
             }
-
         val mediaSource = ProofSetMediaSource.fromUri(this, mediaUri, mime)
 
-        val ladder = FilebaseSocialShareHelper.resolveSocialVerifyUrl(
-            primary,
-            filebase,
-            config,
-            hash,
-            mediaSource,
-            mime,
-        )
-
-        if (ladder.leafAddFailed) {
-            runOnUiThread {
-                Toast.makeText(
-                    this,
-                    getString(R.string.filebase_upload_failed),
-                    Toast.LENGTH_SHORT,
-                ).show()
+        FilebaseSocialShareHelper.resolveSocialVerifyUrl(
+            primary, filebase, config, hash, mediaSource, mime,
+        ).verifyUrl?.let { verifyUri ->
+            return if (shareSocialWithVerifyUri(mediaUri, verifyUri, shareUris, useCheckProofmodeWrapper = true)) {
+                SocialShareResult.Shared
+            } else {
+                SocialShareResult.Failed
             }
         }
 
-        ladder.verifyUrl?.let { verifyUri ->
-            return shareSocialWithVerifyUri(mediaUri, verifyUri, shareUris, useCheckProofmodeWrapper = true)
+        return if (shareSocialHashOnly(hash, mediaUri, shareUris)) {
+            SocialShareResult.Shared
+        } else {
+            SocialShareResult.Failed
         }
-
-        // Leaf miss / no sidecar: try legacy S3 when available; on S3 fail/unavailable → hash-only.
-        // Never dead-end social share with only showProofError.
-        if (config.hasS3Access()) {
-            if (shareSocialLegacyS3(primary, filebase!!, hash, mediaUri, mediaSource, shareUris)) return true
-        }
-        return shareSocialHashOnly(hash, mediaUri, shareUris)
     }
 
     private fun shareSocialWithVerifyUri(
@@ -700,56 +813,6 @@ class ShareProofActivity : AppCompatActivity() {
         )
         shareMedia(this, shareString, shareUris)
         return true
-    }
-
-    private fun shareSocialLegacyS3(
-        primary: StorageProvider,
-        filebase: FilebaseStorageProvider,
-        hash: String,
-        mediaUri: Uri,
-        mediaSource: ProofSetMediaSource,
-        shareUris: ArrayList<Uri?>,
-    ): Boolean {
-        val publicId = "$hash.public"
-        val existingPublic = primary.getInputStream(hash, publicId)?.bufferedReader()?.use { it.readText() }
-        if (!existingPublic.isNullOrBlank()) {
-            return shareSocialWithVerifyUri(mediaUri, existingPublic, shareUris, useCheckProofmodeWrapper = true)
-        }
-
-        // saveArtifact, not saveStream: the latter spools the media to a temp file first, which for
-        // a several-hundred-megabyte capture is a full second copy on disk.
-        val resolved = mediaSource.resolve() ?: return false
-        val artifact = DeferredArtifact("public", resolved.mimeType, resolved.length) {
-            resolved.openStream()
-        }
-        val latch = java.util.concurrent.CountDownLatch(1)
-        var success = false
-        var publicUri: String? = null
-
-        filebase.saveArtifact(hash, artifact, object : StorageListener {
-            override fun saveSuccessful(h: String?, uri: String?) {
-                publicUri = uri
-                primary.replaceText(hash, publicId, uri, null)
-                uri?.let {
-                    primary.replaceText(
-                        hash,
-                        hash + FilebaseSidecarContract.FILEBASE_IMAGE_URI_SUFFIX,
-                        it,
-                        null,
-                    )
-                }
-                success = true
-                latch.countDown()
-            }
-
-            override fun saveFailed(exception: Exception?) {
-                Timber.w(exception, "legacy S3 social upload failed")
-                latch.countDown()
-            }
-        })
-        latch.await()
-        if (!success || publicUri == null) return false
-        return shareSocialWithVerifyUri(mediaUri, publicUri!!, shareUris, useCheckProofmodeWrapper = true)
     }
 
     private fun shareSocialHashOnly(
@@ -1144,25 +1207,253 @@ class ShareProofActivity : AppCompatActivity() {
         }
     }
 
-    private fun shareSocialAsync() {
+    private fun shareSocialAsync(hangWatchdog: Job) {
         lifecycleScope.launch {
-            val result = withContext(Dispatchers.IO) {
-                try {
-                    shareSocial()
-                } catch (e: IOException) {
-                    Timber.e(e, "error sharing social")
-                    false
-                } catch (e: PGPException) {
-                    Timber.e(e, "error sharing social")
-                    false
+            val appCtx = applicationContext
+            val activityRef = java.lang.ref.WeakReference(this@ShareProofActivity)
+            val intent = intent
+            val action = intent.action
+            val shareUris = ArrayList<Uri?>()
+            var lastMediaUri: Uri? = null
+
+            if (Intent.ACTION_SEND_MULTIPLE == action) {
+                val mediaUris =
+                    intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM) ?: emptyList()
+                for (mediaUri in mediaUris) {
+                    shareUris.add(cleanUri(mediaUri))
+                    lastMediaUri = mediaUri
+                }
+            } else if (Intent.ACTION_SEND == action) {
+                lastMediaUri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+                if (lastMediaUri == null) lastMediaUri = intent.data
+            }
+
+            if (shareUris.size > 1) {
+                hangWatchdog.cancel()
+                displaySharePrompt()
+                return@launch
+            }
+
+            val mediaUri = lastMediaUri ?: run {
+                hangWatchdog.cancel()
+                showProofError()
+                return@launch
+            }
+            val hash = try {
+                withContext(Dispatchers.IO) {
+                    HashUtils.getSHA256FromFileContent(contentResolver.openInputStream(mediaUri))
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: IOException) {
+                Timber.e(e, "error sharing social")
+                hangWatchdog.cancel()
+                showProofError()
+                return@launch
+            } ?: run {
+                hangWatchdog.cancel()
+                showProofError()
+                return@launch
+            }
+            val mime = contentResolver.getType(mediaUri)
+            val config = readFilebaseConfigFromPrefs()
+            val mediaSource = ProofSetMediaSource.fromUri(appCtx, mediaUri, mime)
+            val resolved = withContext(Dispatchers.IO) { mediaSource.resolve() }
+            if (resolved == null) {
+                hangWatchdog.cancel()
+                showProofError()
+                return@launch
+            }
+
+            when (
+                decideSocialFilebase(
+                    uploadToFilebaseSocial,
+                    config.isConfigured(),
+                    resolved.length,
+                )
+            ) {
+                SocialFilebaseDecision.SKIP -> {
+                    val result = withContext(Dispatchers.IO) {
+                        try {
+                            shareSocialNonFilebase(hash, mediaUri, shareUris, mime)
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: IOException) {
+                            Timber.e(e, "error sharing social")
+                            SocialShareResult.Failed
+                        } catch (e: PGPException) {
+                            Timber.e(e, "error sharing social")
+                            SocialShareResult.Failed
+                        }
+                    }
+                    hangWatchdog.cancel()
+                    when (result) {
+                        is SocialShareResult.Shared -> displaySharePrompt()
+                        is SocialShareResult.Failed -> showProofError()
+                    }
+                }
+
+                SocialFilebaseDecision.NOT_CONFIGURED -> {
+                    hangWatchdog.cancel()
+                    displaySharePrompt()
+                    showSocialFilebaseNotConfiguredDialog(
+                        onShareWithoutUploading = {
+                            shareSocialHashOnly(hash, mediaUri, shareUris)
+                        },
+                    )
+                }
+
+                SocialFilebaseDecision.ASK_SHARE_WITHOUT_FILEBASE -> {
+                    hangWatchdog.cancel() // dialog is interactive; do not fire hang timeout during deliberation
+                    displaySharePrompt()
+                    showSocialShareWithoutFilebaseDialog(
+                        onConfirm = {
+                            shareSocialHashOnly(hash, mediaUri, shareUris)
+                        },
+                        onDecline = {
+                            // Stay on the share prompt; do not upload to Filebase.
+                        },
+                    )
+                }
+
+                SocialFilebaseDecision.ENQUEUE -> {
+                    val primary = mStorageProvider ?: DefaultStorageProvider(applicationContext)
+                    val filebase = FilebaseStorageProvider.from(config)
+                    val uploadMode = config.resolveUploadMode()
+                    if (uploadMode == FilebaseConfig.UploadMode.NONE) {
+                        hangWatchdog.cancel()
+                        displaySharePrompt()
+                        showSocialFilebaseNotConfiguredDialog(
+                            onShareWithoutUploading = {
+                                shareSocialHashOnly(hash, mediaUri, shareUris)
+                            },
+                        )
+                        return@launch
+                    }
+                    val listener = DestroyedSafeStorageListener(
+                        appCtx,
+                        lifecycle,
+                        onSuccess = { _ ->
+                            hangWatchdog.cancel()
+                            val activity = activityRef.get() ?: return@DestroyedSafeStorageListener
+                            if (activity.isDestroyed) return@DestroyedSafeStorageListener
+                            activity.lifecycleScope.launch {
+                                val verifyUrl = withContext(Dispatchers.IO) {
+                                    FilebaseSocialShareHelper.resolveSocialVerifyUrl(
+                                        primary, filebase, config, hash, mediaSource, mime,
+                                    ).verifyUrl
+                                }
+                                if (verifyUrl != null) {
+                                    activity.shareSocialWithVerifyUri(
+                                        mediaUri, verifyUrl, shareUris, useCheckProofmodeWrapper = true,
+                                    )
+                                } else {
+                                    activity.shareSocialHashOnly(hash, mediaUri, shareUris)
+                                }
+                                activity.displaySharePrompt()
+                            }
+                        },
+                        onFailureMessage = { msg ->
+                            hangWatchdog.cancel()
+                            val activity = activityRef.get() ?: return@DestroyedSafeStorageListener
+                            if (activity.isDestroyed) return@DestroyedSafeStorageListener
+                            activity.displaySharePrompt()
+                            activity.showFilebaseUploadFailedDialog(
+                                detail = msg,
+                                offerHashOnly = {
+                                    activity.shareSocialHashOnly(hash, mediaUri, shareUris)
+                                },
+                            )
+                        },
+                    )
+                    val started = withContext(Dispatchers.IO) {
+                        ProofSetUploader.enqueueProofSetUpload(
+                            appCtx,
+                            hash,
+                            primary,
+                            filebase,
+                            mediaSource,
+                            uploadMode,
+                            MediaInclusion.INCLUDE_MEDIA,
+                            listener,
+                        )
+                    }
+                    if (!started) {
+                        hangWatchdog.cancel()
+                        displaySharePrompt()
+                        showFilebaseNotReady()
+                    }
                 }
             }
-            if (!result) {
-                showProofError()
-            } else {
-                displaySharePrompt()
-            }
         }
+    }
+
+    /**
+     * UI hang watchdog for Filebase share/upload spinners. Does not cancel the OkHttp call
+     * (process-scoped / blocking execute); it only recovers the Share UI. Tunable — see issue OQ.
+     */
+    private fun startFilebaseHangWatchdog(offerHashOnlyOnTimeout: Boolean): Job {
+        return lifecycleScope.launch {
+            delay(FILEBASE_UI_HANG_WATCHDOG_MS)
+            if (isDestroyed) return@launch
+            if (binding.viewProofProgress.visibility != View.VISIBLE) return@launch
+            displaySharePrompt()
+            val timeoutMsg = getString(R.string.filebase_upload_timed_out)
+            if (offerHashOnlyOnTimeout) {
+                val mediaUri = resolveShareMediaUri()
+                val hash = mediaUri?.let { resolveShareProofHash(it) }
+                if (mediaUri != null && hash != null) {
+                    val shareUris = arrayListOf<Uri?>(cleanUri(mediaUri))
+                    showFilebaseUploadFailedDialog(
+                        detail = timeoutMsg,
+                        offerHashOnly = { shareSocialHashOnly(hash, mediaUri, shareUris) },
+                    )
+                    return@launch
+                }
+            }
+            showFilebaseUploadFailedDialog(detail = timeoutMsg, offerHashOnly = null)
+        }
+    }
+
+    private fun formatFilebaseFailureForUi(raw: String?): String {
+        val samePolicy = getString(R.string.filebase_failure_same_policy)
+        return formatFilebaseFailureMessage(
+            rawMessage = raw,
+            accountProblemFallback = samePolicy,
+            muteIpfs403Fallback = samePolicy,
+        )
+    }
+
+    private fun showFilebaseUploadFailedDialog(
+        detail: String?,
+        offerHashOnly: (() -> Unit)?,
+    ) {
+        if (isDestroyed) return
+        val formattedDetail = formatFilebaseFailureForUi(detail)
+        val message = if (offerHashOnly != null) {
+            buildString {
+                append(getString(R.string.filebase_upload_failed_offer_share_file))
+                if (formattedDetail.isNotBlank()) {
+                    append("\n\n")
+                    append(formattedDetail)
+                }
+            }
+        } else {
+            formattedDetail.ifBlank { getString(R.string.filebase_upload_failed) }
+        }
+        val builder = AlertDialog.Builder(this)
+            .setTitle(R.string.filebase_upload_failed)
+            .setMessage(message)
+            .setCancelable(true)
+        if (offerHashOnly != null) {
+            builder.setPositiveButton(R.string.filebase_share_just_the_file) { _, _ ->
+                offerHashOnly()
+            }.setNegativeButton(android.R.string.cancel, null)
+        } else {
+            builder.setPositiveButton(android.R.string.ok, null)
+        }
+        // Positive: "Share just the file" (when offered) or OK — never a Retry button.
+        builder.show()
     }
 
     private fun showProofError() {
@@ -1481,6 +1772,11 @@ class ShareProofActivity : AppCompatActivity() {
         checkBox.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
             applySocialWatermark = isChecked
         }
+        val uploadCb = currentDialog.findViewById<CheckBox>(R.id.checkUploadToFilebase)
+        uploadCb.isChecked = uploadToFilebaseSocial
+        uploadCb.setOnCheckedChangeListener { _, isChecked ->
+            uploadToFilebaseSocial = isChecked
+        }
         currentDialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
     }
 
@@ -1502,6 +1798,8 @@ class ShareProofActivity : AppCompatActivity() {
 
     companion object {
         private const val ZIP_FILE_DATETIME_FORMAT = "yyyy-MM-dd-HH-mm-ssz"
+        /** Wall-clock UI recovery for Filebase spinners (does not abort OkHttp). 10m avoids false timeouts on large cellular uploads. */
+        private const val FILEBASE_UI_HANG_WATCHDOG_MS = 600_000L
         private const val DOCUMENT_IMAGE =
             "content://com.android.providers.media.documents/document/image%3A"
         private const val MEDIA_IMAGE = "content://media/external/images/media/"
