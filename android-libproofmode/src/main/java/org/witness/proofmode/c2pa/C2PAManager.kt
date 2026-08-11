@@ -17,6 +17,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObjectBuilder
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -98,7 +99,6 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             timeZone = TimeZone.getTimeZone("UTC")
         }**/
 
-        private const val TSA_DEFAULT = BuildConfig.TSA_SERVER
 
         /**
          * Formats a signed decimal-degrees coordinate as an XMP GPSCoordinate string
@@ -379,7 +379,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             SigningMode.KEYSTORE -> createKeystoreSigner(tsaUrl)
             SigningMode.HARDWARE -> createHardwareSigner(tsaUrl)
             SigningMode.CUSTOM -> createCustomSigner(tsaUrl)
-            SigningMode.REMOTE -> createProofSignSigner ()
+            SigningMode.REMOTE -> createProofSignSigner (tsaUrl)
         }
     }
 
@@ -631,10 +631,10 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         )
     }
 
-    private suspend fun createProofSignSigner (): Signer {
-        val resolved = resolveProofSignServerUrl()
-        Timber.d("ProofSign: createProofSignSinger using serverUrl=%s", resolved)
-        val signer = ProofSignC2PASigner(context, resolved, TSA_DEFAULT)
+    private suspend fun createProofSignSigner (tsaUrl: String): Signer {
+        val resolvedSigner = resolveProofSignServerUrl()
+        Timber.d("ProofSign: createProofSignSinger using serverUrl=%s", tsaUrl)
+        val signer = ProofSignC2PASigner(context, resolvedSigner, tsaUrl)
         return signer.createSigner()
     }
 
@@ -653,10 +653,6 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
     }
 
     private fun resolveTsaUrl(mode: SigningMode): String {
-        if (mode == SigningMode.REMOTE) {
-            // Remote signing always uses the pinned TSA.
-            return BuildConfig.TSA_SERVER
-        }
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
         val configured = prefs.getString(
             ProofMode.PREF_OPTION_TSA_SERVER,
