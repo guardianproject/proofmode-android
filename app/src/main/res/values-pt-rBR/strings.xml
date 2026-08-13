@@ -30,13 +30,13 @@
     <string name="settings_notary">Notário</string>
     <string name="settings_notary_desc">Registro com um terceiro onde a sua mídia existe</string>
     <string name="settings_location">Localização</string>
-    <string name="settings_location_desc">Coordenadas do GPS quando a mídia for levada</string>
+    <string name="settings_location_desc">Coordenadas do GPS quando a mídia é criada</string>
     <string name="settings_phone">Telefone</string>
     <string name="settings_network">Rede</string>
     <string name="settings_network_desc">Nome da(s) rede(s) que você está conectado</string>
     <string name="proofmode_is_on">O PROOFMODE ESTÁ LIGADO E CAPTURANDO DADOS</string>
     <string name="tap_hold_turn_off">Toque em espera para desligar</string>
-    <string name="proofmode_is_capturing">O ProofMode está capturando um conjunto forte de metadados por padrão. Fortaleça a verificabilidade da sua mídia ao adicionar mais.</string>
+    <string name="proofmode_is_capturing">O Proofmode está capturando um conjunto forte de metadados por padrão. Fortaleça a verificabilidade da sua mídia ao adicionar mais.</string>
     <string name="proofmode_is_off">O PROOFMODE ESTÁ DESLIGADO E NÃO ESTÁ CAPTURANDO DADOS</string>
     <string name="tap_hold_turn_on">Toque em espera para ligar</string>
     <string name="share_notarization">COMPARTILHE NOTARIZAÇÃO PARA...</string>
@@ -45,8 +45,8 @@
     <string name="last_modified">alterado pela última vez em</string>
     <string name="notarize_only">Compartilhe a notarização</string>
     <string name="open_public_key_page">Abrindo a página da chave pública</string>
-    <string name="no_external_storage">AVISO: O ProofMode está ativado, mas não há armazenamento externo disponível!</string>
-    <string name="no_hash_generated">ProofMode Alerta: Não é possível acessar os arquivos na mídia</string>
+    <string name="no_external_storage">AVISO: O Proofmode está ativado, mas não há armazenamento externo disponível!</string>
+    <string name="no_hash_generated">Alerta do Proofmode: Não é possível acessar os arquivos na mídia</string>
     <string name="generating_proof_notify">Gerando provas...</string>
     <string name="include_mobile_network">Incluir a rede móvel</string>
     <string name="share_proof_action">Compartilha a prova</string>
@@ -75,11 +75,11 @@
     <string name="onboarding_privacy_continue">Continuar</string>
     <string name="onboarding_privacy_options">Opções de privacidade</string>
     <string name="permission_location_title">Precisamos da sua localização para registrar onde a sua mídia foi capturada.</string>
-    <string name="permission_location_content">Ao dar permissão, nos permite registrar as suas coordenadas do GPS. Nós jamais iremos rastreá-lo ou armazenaremos a sua localização.</string>
+    <string name="permission_location_content">Conceder a permissão permitirá registrar as suas coordenadas do GPS. Jamais iremos rastreá-lo ou armazenaremos a sua localização.</string>
     <string name="permission_location_info">Caso não queira capturar estes dados para fins de segurança ou de privacidade, não conceda a permissão.</string>
     <string name="menu_home">Casa</string>
     <string name="menu_how_it_works">Como funciona</string>
-    <string name="menu_settings">Configurações</string>
+    <string name="menu_settings">Configurar</string>
     <string name="menu_datalegend">Legenda dos dados</string>
     <string name="menu_digital_signatures">Assinaturas digitais</string>
     <string name="permissions_needed_title">Permissões necessárias</string>
@@ -191,4 +191,8 @@
     <string name="set_a_custom_name_for_the_proof_zip">Defina um nome personalizado para o arquivo ZIP de comprovação</string>
     <string name="next">Próximo</string>
     <string name="previous">Anterior</string>
+    <string name="nostr_identity_amber_title">Entrar com Amber</string>
+    <string name="nostr_identity_amber_summary">Assine com o aplicativo de assinatura remoto Amber (em breve)</string>
+    <string name="settings_location_desc_approx">Coordenadas GPS APPROX ONLY</string>
+    <string name="settings_location_desc_none">NENHUMA PERMISSÃO DADA</string>
 </resources>
