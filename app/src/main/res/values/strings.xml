@@ -414,6 +414,8 @@
     <string name="lp_auto_capture_skip_location_unavailable">Auto location attestation skipped: location data unavailable for this capture.</string>
     <string name="lp_auto_capture_skip_no_activity">Auto on-chain attestation skipped: open the app to submit on-chain.</string>
     <string name="lp_auto_capture_skip_wallet_unavailable">Auto location attestation skipped: wallet not connected.</string>
+    <string name="settings_note">Note</string>
+    <string name="settings_note_desc">Author notes</string>
     <string name="settings_version_placeholder">Version</string>
     <string name="settings_version_format">Version %1$s</string>
 
@@ -445,4 +447,5 @@
     <string name="resolution">Resolution</string>
     <string name="timer">Timer</string>
 
+    <string name="cancel">Cancel</string>
 </resources>

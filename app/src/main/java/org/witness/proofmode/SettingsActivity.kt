@@ -200,6 +200,10 @@ class SettingsActivity : AppCompatActivity() {
 
         }
 
+        binding.contentSettings.cellNote.setOnClickListener {
+            showNoteDialog()
+        }
+
     }
 
     private val REQ_ACCOUNT_CHOOSER = 9999;
@@ -214,6 +218,30 @@ class SettingsActivity : AppCompatActivity() {
 
         startActivityForResult(intent, REQ_ACCOUNT_CHOOSER)
         **/
+    }
+
+    private fun showNoteDialog() {
+        val currentNote = mPrefs.getString(ProofMode.PREF_NOTES, "")
+        val editText = android.widget.EditText(this).apply {
+            setText(currentNote)
+            if (text != null) setSelection(text.length)
+        }
+
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(R.string.settings_note)
+            .setView(editText)
+            .setPositiveButton(R.string.action_save) { _, _ ->
+                mPrefs.edit().putString(ProofMode.PREF_NOTES, editText.text.toString()).apply()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .apply {
+                if (!currentNote.isNullOrEmpty()) {
+                    setNeutralButton(R.string.delete) { _, _ ->
+                        mPrefs.edit().remove(ProofMode.PREF_NOTES).apply()
+                    }
+                }
+            }
+            .show()
     }
 
     private fun updateUI() {

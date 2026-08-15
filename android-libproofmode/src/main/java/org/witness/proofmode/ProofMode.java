@@ -59,6 +59,7 @@ public class ProofMode {
     public final static String PREF_OPTION_CREDENTIALS = "addCR";
 
     public final static String PREF_CREDENTIALS_PRIMARY = "prefCredsPrimary";
+    public final static String PREF_NOTES = "prefNotes";
 
     public final static String PREF_OPTION_REMOTE_SIGNING = "useRemoteSigning";
     public final static boolean PREF_OPTION_REMOTE_SIGNING_DEFAULT = true;

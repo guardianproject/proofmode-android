@@ -48,16 +48,16 @@ private val permissions = mutableListOf(
     }
 }
 
-// CameraViewModel takes the CameraActivity itself, so it deliberately must NOT outlive the
-// activity — viewModel()/ViewModelProvider would retain it across configuration changes and
-// leak the destroyed activity. remember{} keeps the existing lifetime while avoiding a fresh
-// view model on every recomposition.
+/**
+ * Updated to avoid the ViewModel taking the activity as a param. Better to bind the
+ * ViewModel to the Application context to avoid leaking the activity
+ */
 @SuppressLint("ViewModelConstructorInComposable")
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun CameraScreen(activity: CameraActivity, modifier: Modifier = Modifier, onClose: () -> Unit) {
+fun CameraScreen(viewModel: CameraViewModel, modifier: Modifier = Modifier, onClose: () -> Unit) {
     val lifecycleOwner = LocalLifecycleOwner.current
-    val viewModel: CameraViewModel = remember(activity) { CameraViewModel(activity, activity.application) }
+
     val navController = rememberNavController()
     val permissionsState = rememberMultiplePermissionsState(permissions)
 
@@ -76,7 +76,7 @@ fun CameraScreen(activity: CameraActivity, modifier: Modifier = Modifier, onClos
 
     CameraTheme {
         if (permissionsState.allPermissionsGranted) {
-            CameraNavigation(navController = navController, viewModel = viewModel, lifecycleOwner = lifecycleOwner,onClosed = onClose)
+            CameraNavigation(navController = navController, viewModel = viewModel, onClosed = onClose)
         } else {
             Column(modifier = modifier
                 .fillMaxSize()

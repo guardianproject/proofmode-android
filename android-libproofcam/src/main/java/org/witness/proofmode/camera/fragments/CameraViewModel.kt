@@ -54,7 +54,6 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.preference.PreferenceManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -65,25 +64,26 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.witness.proofmode.LocationCapturePolicy
 import org.witness.proofmode.ProofMode
-import org.witness.proofmode.camera.CameraActivity
+import org.witness.proofmode.c2pa.proofsign.CaptureAuthority
+import org.witness.proofmode.camera.DeviceOrientationProvider
 import org.witness.proofmode.camera.adapter.Media
-import org.witness.proofmode.camera.fragments.CameraConstants.NEW_MEDIA_EVENT
 import org.witness.proofmode.camera.utils.SharedPrefsManager
 import org.witness.proofmode.camera.utils.getMediaFlow
 import org.witness.proofmode.camera.utils.getSupportedQualities
 import org.witness.proofmode.camera.utils.isUltraHdrSupported
-import org.witness.proofmode.c2pa.proofsign.CaptureAuthority
 import org.witness.proofmode.service.MediaWatcher.Companion.getInstance
 import timber.log.Timber
 import java.io.File
 import java.io.FileNotFoundException
 import java.security.MessageDigest
 import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 import java.util.concurrent.Executors
 
-class CameraViewModel(private val activity: CameraActivity, private val app: Application) : AndroidViewModel(app) {
+class CameraViewModel(private val app: Application) : AndroidViewModel(app) {
+    private val orientationProvider = DeviceOrientationProvider(app)
+
+    val deviceRotation = orientationProvider.rotation
     private val sharedPrefsManager = SharedPrefsManager.newInstance(app.applicationContext)
     private val outputDirectory: String by lazy {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -316,7 +316,7 @@ class CameraViewModel(private val activity: CameraActivity, private val app: App
     fun toggleFlashMode( @FlashMode newMode: Int, lifecycleOwner: LifecycleOwner) {
         _flashMode.value = newMode
         imageCaptureBuilder.setFlashMode(flashMode.value)
-        bindImageUseCases(lifecycleOwner)
+        bindImageUseCases(lifecycleOwner,deviceRotation.value)
     }
 
     /**
@@ -354,7 +354,7 @@ class CameraViewModel(private val activity: CameraActivity, private val app: App
      * framed identically (WYSIWYG). The viewport's crop rect is what yields a true
      * square output for 1:1 — CameraX has no native 1:1 aspect-ratio strategy.
      */
-    private fun bindImageUseCases(lifecycleOwner: LifecycleOwner) {
+    private fun bindImageUseCases(lifecycleOwner: LifecycleOwner,rotation: Int) {
         val provider = cameraProvider ?: return
         val cameraSelector = CameraSelector.Builder()
             .requireLensFacing(lensFacing.value ?: CameraSelector.LENS_FACING_BACK)
@@ -365,7 +365,6 @@ class CameraViewModel(private val activity: CameraActivity, private val app: App
         // so the rational must follow how the device is held: portrait inverts the
         // landscape sensor rational (16:9 -> 9:16) for a tall crop, landscape keeps it
         // as-is. Without this the saved crop comes out wide even in portrait.
-        val rotation = activity.getScreenOrientation()
         val baseRational = _photoAspectRatio.value.rational
         val isPortrait = rotation == Surface.ROTATION_0 || rotation == Surface.ROTATION_180
         val orientedRational = if (isPortrait)
@@ -396,7 +395,7 @@ class CameraViewModel(private val activity: CameraActivity, private val app: App
         _photoAspectRatio.update { aspect }
         sharedPrefsManager.putString(SharedPrefsManager.KEY_PHOTO_ASPECT_RATIO, aspect.name)
         _previewAlpha.update { 0.5f }
-        bindImageUseCases(lifecycleOwner)
+        bindImageUseCases(lifecycleOwner,deviceRotation.value)
         delay(250)
         _previewAlpha.update { 1f }
     }
@@ -406,7 +405,7 @@ class CameraViewModel(private val activity: CameraActivity, private val app: App
         if (_photoQuality.value == quality) return
         _photoQuality.update { quality }
         sharedPrefsManager.putString(SharedPrefsManager.KEY_PHOTO_QUALITY, quality.name)
-        bindImageUseCases(lifecycleOwner)
+        bindImageUseCases(lifecycleOwner,deviceRotation.value)
     }
 
 
@@ -455,7 +454,9 @@ class CameraViewModel(private val activity: CameraActivity, private val app: App
             .setQualitySelector(QualitySelector.from(_selectedQuality.value!!, FallbackStrategy.lowerQualityThan(
                 _selectedQuality.value!!)))
             .build()
-        videoCapture = VideoCapture.withOutput(recorder!!)
+        videoCapture = VideoCapture.withOutput(recorder!!).apply {
+            targetRotation = deviceRotation.value
+        }
         try {
             camera = cameraProvider!!.bindToLifecycle(lifecycleOwner = lifecycleOwner,CameraSelector.Builder().requireLensFacing(lensFacing.value?:CameraSelector.LENS_FACING_BACK).build(),
                 previewUseCase,videoCapture)
@@ -491,6 +492,9 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
         .build()
     videoCapture = VideoCapture
         .withOutput(recorder!!)
+        .apply {
+            targetRotation = deviceRotation.value
+        }
     try {
         camera = cameraProvider!!.bindToLifecycle(lifecycleOwner = lifecycleOwner,CameraSelector.Builder().requireLensFacing(lensFacing.value?:CameraSelector.LENS_FACING_BACK).build(),
             previewUseCase,videoCapture)
@@ -504,13 +508,15 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
 
 }
     suspend fun bindUseCasesForImage(lifecycleOwner: LifecycleOwner) {
+        // Attach the provider to the current UI lifecycle
+        lifecycleOwner.lifecycle.addObserver(orientationProvider)
         cameraProvider = cameraProvider?: ProcessCameraProvider.awaitInstance(app.applicationContext)
         val cameraSelector = CameraSelector.Builder()
             .requireLensFacing(lensFacing.value?:CameraSelector.LENS_FACING_BACK).build()
         if (!isUltraHdrSupported(cameraSelector, cameraProvider!!)) {
             _ultraHdr.update { UltraHDRAvailabilityState.NOT_SUPPORTED }
         }
-        bindImageUseCases(lifecycleOwner)
+        bindImageUseCases(lifecycleOwner,deviceRotation.value)
     }
 
     suspend fun toggleUltraHdr(lifecycleOwner: LifecycleOwner) {
@@ -528,7 +534,7 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
             _previewAlpha.update { 0.5f }
             delay(800)
             _previewAlpha.update { 1f }
-            bindImageUseCases(lifecycleOwner)
+            bindImageUseCases(lifecycleOwner,deviceRotation.value)
         }
 
     }
@@ -536,6 +542,7 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
 
 
     fun captureImage() {
+        val rotation = deviceRotation.value
         _shutterFlashTrigger.update { it + 1 }
 
         val metadata = Metadata().apply {
@@ -574,7 +581,7 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
             OutputFileOptions.Builder(fileMedia)
         }.setMetadata(metadata).build()
 
-        imageCapture?.setTargetRotation(activity.getScreenOrientation())
+        imageCapture?.targetRotation = rotation
 
         imageCapture?.takePicture(
             outputOptions,
@@ -612,7 +619,7 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
     @SuppressLint("MissingPermission")
     @OptIn(ExperimentalPersistentRecording::class)
     fun startRecording() {
-        videoCapture?.targetRotation = activity.getScreenOrientation()
+        videoCapture?.targetRotation = deviceRotation.value
 
         if (recordingState.value != RecordingState.Idle && recordingState.value != RecordingState.Stopped) return
         val contentValues = ContentValues().apply {
@@ -708,8 +715,8 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
 
     private fun sendLocalCameraEvent(newMediaFile: Uri, cameraEventType: CameraEventType) {
 
-        val mw = getInstance(activity)
-        var prefs = PreferenceManager.getDefaultSharedPreferences(activity)
+        val mw = getInstance(app)
+        var prefs = PreferenceManager.getDefaultSharedPreferences(app)
 
         try {
 

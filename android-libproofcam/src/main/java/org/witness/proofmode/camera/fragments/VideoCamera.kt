@@ -113,6 +113,7 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
     val settingsSheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
     var showBSettingsBottomSheet by remember { mutableStateOf(false) }
+    var showNoteDialog by remember { mutableStateOf(false) }
     val cameraQualities by cameraViewModel.cameraQualities.collectAsStateWithLifecycle()
     val selectedQuality by cameraViewModel.selectedQuality.collectAsStateWithLifecycle()
     val previewAlpha by cameraViewModel.previewAlpha.collectAsStateWithLifecycle()
@@ -327,6 +328,13 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                                     tint = if (torchOn) AccentGreen else Color.White,contentDescription = if (torchOn) stringResource(
                                         R.string.turn_flash_off
                                     ) else stringResource(R.string.turn_flash_on)
+                                )
+                            }
+                            IconButton(onClick = {
+                                showNoteDialog = true
+                            }) {
+                                Icon(imageVector = if (torchOn) ImageVector.vectorResource(R.drawable.edit_note)
+                                else ImageVector.vectorResource(R.drawable.edit_note), contentDescription = stringResource(R.string.edit_note)
                                 )
                             }
                         }
@@ -605,6 +613,9 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
         }
     }
 
+    if (showNoteDialog) {
+        NoteDialog(onDismiss = { showNoteDialog = false })
+    }
 }
 
 
