@@ -1,5 +1,6 @@
 package org.witness.proofmode.share
 
+import org.witness.proofmode.storage.filebase.FilebaseGatewayUris
 import org.witness.proofmode.storage.filebase.FilebaseSidecarContract
 import android.net.Uri
 import org.junit.Assert.assertEquals
@@ -168,11 +169,86 @@ class FilebaseSocialShareHelperTest {
         ipfsBearerToken = "tok",
     )
 
+    private val s3OnlyConfig = FilebaseConfig(
+        accessKey = "a",
+        secretKey = "s",
+        bucketName = "b",
+        enabled = true,
+        ipfsBearerToken = "",
+    )
+
     /** A media handle that fails the test if anything reads it. */
     private fun mediaSource(length: Long = 304_022_072L): ProofSetMediaSource =
         ProofSetMediaSource {
             ResolvedMedia("video/mp4", length) { ByteArrayInputStream(ByteArray(0)) }
         }
+
+    @Test
+    fun social_bothSidecars_ipfs_returnsProofsetDirectoryUri() {
+        val primary = FakeStorageProvider()
+        val directoryCid = "bafyProofsetDir"
+        val proofsetUri = "https://ipfs.filebase.io/ipfs/$directoryCid"
+        val imageUri = "https://ipfs.filebase.io/ipfs/bafyMediaLeaf"
+        primary.put(HASH, "$HASH${FilebaseSidecarContract.FILEBASE_IPFS_URI_SUFFIX}", proofsetUri)
+        primary.put(HASH, "$HASH${FilebaseSidecarContract.FILEBASE_IMAGE_URI_SUFFIX}", imageUri)
+        val filebase = FakeFilebase(directoryLeafCid = "bafyMediaLeaf")
+
+        val result = FilebaseSocialShareHelper.resolveSocialVerifyUrl(
+            primary, filebase, ipfsConfig, HASH, mediaSource(), "image/jpeg",
+        )
+
+        assertEquals(proofsetUri, result.verifyUrl)
+        assertEquals(
+            FilebaseGatewayUris.buildProofsetUri(directoryCid),
+            result.verifyUrl,
+        )
+        assertNull(filebase.lsRequest)
+        assertNull(filebase.uploadedArtifact)
+        assertFalse(result.leafAddFailed)
+        // Overview leaf sidecar must stay the leaf — Social must not overwrite it.
+        assertEquals(
+            imageUri,
+            primary.saved["$HASH|$HASH${FilebaseSidecarContract.FILEBASE_IMAGE_URI_SUFFIX}"],
+        )
+    }
+
+    @Test
+    fun social_bothSidecars_unparseableProofset_fallsThroughToImageSidecar() {
+        val primary = FakeStorageProvider()
+        primary.put(
+            HASH,
+            "$HASH${FilebaseSidecarContract.FILEBASE_IPFS_URI_SUFFIX}",
+            "not-a-gateway-uri",
+        )
+        primary.put(HASH, "$HASH${FilebaseSidecarContract.FILEBASE_IMAGE_URI_SUFFIX}", EXISTING_IMAGE_URL)
+        val filebase = FakeFilebase(directoryLeafCid = "bafyMediaLeaf")
+
+        val result = FilebaseSocialShareHelper.resolveSocialVerifyUrl(
+            primary, filebase, ipfsConfig, HASH, mediaSource(), "image/jpeg",
+        )
+
+        assertEquals(EXISTING_IMAGE_URL, result.verifyUrl)
+        assertNull(filebase.lsRequest)
+        assertNull(filebase.uploadedArtifact)
+    }
+
+    @Test
+    fun social_bothSidecars_noIpfs_doesNotRewriteToDirectoryCid() {
+        val primary = FakeStorageProvider()
+        val directoryCid = "bafyProofsetDir"
+        val proofsetUri = "https://ipfs.filebase.io/ipfs/$directoryCid"
+        primary.put(HASH, "$HASH${FilebaseSidecarContract.FILEBASE_IPFS_URI_SUFFIX}", proofsetUri)
+        primary.put(HASH, "$HASH${FilebaseSidecarContract.FILEBASE_IMAGE_URI_SUFFIX}", EXISTING_IMAGE_URL)
+        val filebase = FakeFilebase(directoryLeafCid = "bafyMediaLeaf")
+
+        val result = FilebaseSocialShareHelper.resolveSocialVerifyUrl(
+            primary, filebase, s3OnlyConfig, HASH, mediaSource(), "image/jpeg",
+        )
+
+        assertEquals(EXISTING_IMAGE_URL, result.verifyUrl)
+        assertNull(filebase.lsRequest)
+        assertNull(filebase.uploadedArtifact)
+    }
 
     @Test
     fun social_reusesMediaLeafAlreadyInPinnedDirectory_withoutUploading() {

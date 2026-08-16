@@ -99,9 +99,17 @@ object FilebaseSocialShareHelper {
     ): String? = imageUrl?.takeIf { it.isNotBlank() }
 
     /**
-     * Read-only verify URL after a successful proof-set upload: existing image sidecar →
-     * directory-derived URL → media leaf already in the pinned directory. Does not read [media]
-     * or upload; missing URLs come from the upload path that enqueued the proof set.
+     * Read-only verify URL after a successful proof-set upload.
+     *
+     * When IPFS is configured and both `{hash}.filebase.ipfs.uri` and
+     * `{hash}.filebase.image.uri` exist and the proofset text parses to a directory CID,
+     * returns [FilebaseGatewayUris.buildProofsetUri] (folder, not the media leaf).
+     * Unparseable proofset text falls through.
+     *
+     * Otherwise: existing image sidecar → directory-derived URL when
+     * [deriveAndPersistFromDirectory] is allowed → media leaf already in the pinned
+     * directory via `/ls`. Does not read [media] or upload; does not overwrite the
+     * image sidecar when returning the folder URL.
      */
     fun resolveSocialVerifyUrl(
         primary: StorageProvider,
@@ -111,6 +119,22 @@ object FilebaseSocialShareHelper {
         media: ProofSetMediaSource,
         mime: String?,
     ): SocialVerifyLadderResult {
+        if (config.hasIpfsAccess()) {
+            val imageSidecar = readProofText(
+                primary, hash, hash + FilebaseSidecarContract.FILEBASE_IMAGE_URI_SUFFIX,
+            )
+            val proofsetSidecar = readProofText(
+                primary, hash, hash + FilebaseSidecarContract.FILEBASE_IPFS_URI_SUFFIX,
+            )
+            if (imageSidecar != null && proofsetSidecar != null) {
+                FilebaseGatewayUris.parseGatewayRootCid(proofsetSidecar)?.let { directoryCid ->
+                    return SocialVerifyLadderResult(
+                        FilebaseGatewayUris.buildProofsetUri(directoryCid),
+                    )
+                }
+            }
+        }
+
         readProofText(primary, hash, hash + FilebaseSidecarContract.FILEBASE_IMAGE_URI_SUFFIX)?.let {
             return SocialVerifyLadderResult(it)
         }
