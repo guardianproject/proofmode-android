@@ -5,17 +5,20 @@ import android.accounts.AccountManager
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import android.view.MenuItem
 import android.view.View
+import android.widget.Button
 import android.widget.CheckBox
 import android.widget.CompoundButton
+import android.widget.EditText
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
+import androidx.core.graphics.drawable.toDrawable
 import androidx.preference.PreferenceManager
 import org.witness.proofmode.PermissionActivity.Companion.hasPermissions
 import org.witness.proofmode.ProofMode.PREF_CREDENTIALS_PRIMARY
@@ -222,26 +225,33 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun showNoteDialog() {
         val currentNote = mPrefs.getString(ProofMode.PREF_NOTES, "")
-        val editText = android.widget.EditText(this).apply {
-            setText(currentNote)
-            if (text != null) setSelection(text.length)
+        val dialogView = layoutInflater.inflate(R.layout.notes_dialog,null)
+        val editNoteText = dialogView.findViewById<EditText>(R.id.editNoteText)
+        val btnSave = dialogView.findViewById<Button>(R.id.btnSave)
+        val btnCancel = dialogView.findViewById<Button>(R.id.btnCancel)
+        val btnDelete = dialogView.findViewById<Button>(R.id.btnDelete)
+        editNoteText.setText(currentNote)
+        btnDelete.visibility = if (currentNote.isNullOrEmpty()) View.GONE else View.VISIBLE
+
+       val dialog =  AlertDialog.Builder(this)
+           .setView(dialogView)
+           .create()
+        dialog.window?.setBackgroundDrawable(android.graphics.Color.TRANSPARENT.toDrawable())
+        btnSave.setOnClickListener {
+            mPrefs.edit { putString(ProofMode.PREF_NOTES, editNoteText.text.toString()) }
+            dialog.dismiss()
         }
 
-        androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle(R.string.settings_note)
-            .setView(editText)
-            .setPositiveButton(R.string.action_save) { _, _ ->
-                mPrefs.edit().putString(ProofMode.PREF_NOTES, editText.text.toString()).apply()
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .apply {
-                if (!currentNote.isNullOrEmpty()) {
-                    setNeutralButton(R.string.delete) { _, _ ->
-                        mPrefs.edit().remove(ProofMode.PREF_NOTES).apply()
-                    }
-                }
-            }
-            .show()
+        btnCancel.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        btnDelete.setOnClickListener {
+            mPrefs.edit { remove(ProofMode.PREF_NOTES) }
+            dialog.dismiss()
+        }
+        dialog.show()
+
     }
 
     private fun updateUI() {

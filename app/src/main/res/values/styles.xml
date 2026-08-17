@@ -142,4 +142,21 @@
         <item name="android:textColor">@color/onboarding_gray</item>
         <item name="android:textAllCaps">true</item>
     </style>
+    <style name="RoundedAlertDialog" parent="Theme.MaterialComponents.Light.Dialog.Alert">
+        <!-- 1. The rounded background -->
+        <item name="android:windowBackground">@drawable/dialog_round_bg</item>
+
+        <!-- 2. Explicitly set the color of the buttons -->
+        <item name="colorAccent">@color/colorAccent</item> <!-- Use your brand color -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+
+        <!-- 3. If they are still invisible, force the text color -->
+        <item name="android:buttonBarPositiveButtonStyle">@style/AlertButtonStyle</item>
+        <item name="android:buttonBarNegativeButtonStyle">@style/AlertButtonStyle</item>
+        <item name="android:buttonBarNeutralButtonStyle">@style/AlertButtonStyle</item>
+    </style>
+
+    <style name="AlertButtonStyle" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:textColor">@color/colorAccent</item> <!-- Force visibility -->
+    </style>
 </resources>
