@@ -203,9 +203,6 @@ class SettingsActivity : AppCompatActivity() {
 
         }
 
-        binding.contentSettings.cellNote.setOnClickListener {
-            showNoteDialog()
-        }
 
     }
 
@@ -223,36 +220,7 @@ class SettingsActivity : AppCompatActivity() {
         **/
     }
 
-    private fun showNoteDialog() {
-        val currentNote = mPrefs.getString(ProofMode.PREF_NOTES, "")
-        val dialogView = layoutInflater.inflate(R.layout.notes_dialog,null)
-        val editNoteText = dialogView.findViewById<EditText>(R.id.editNoteText)
-        val btnSave = dialogView.findViewById<Button>(R.id.btnSave)
-        val btnCancel = dialogView.findViewById<Button>(R.id.btnCancel)
-        val btnDelete = dialogView.findViewById<Button>(R.id.btnDelete)
-        editNoteText.setText(currentNote)
-        btnDelete.visibility = if (currentNote.isNullOrEmpty()) View.GONE else View.VISIBLE
 
-       val dialog =  AlertDialog.Builder(this)
-           .setView(dialogView)
-           .create()
-        dialog.window?.setBackgroundDrawable(android.graphics.Color.TRANSPARENT.toDrawable())
-        btnSave.setOnClickListener {
-            mPrefs.edit { putString(ProofMode.PREF_NOTES, editNoteText.text.toString()) }
-            dialog.dismiss()
-        }
-
-        btnCancel.setOnClickListener {
-            dialog.dismiss()
-        }
-
-        btnDelete.setOnClickListener {
-            mPrefs.edit { remove(ProofMode.PREF_NOTES) }
-            dialog.dismiss()
-        }
-        dialog.show()
-
-    }
 
     private fun updateUI() {
         switchLocation.isChecked =

@@ -32,7 +32,7 @@ fun NoteDialog(
     val context = LocalContext.current
     val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
     var noteText by remember {
-        mutableStateOf(prefs.getString(ProofMode.PREF_NOTES, "") ?: "")
+        mutableStateOf(prefs.getString(ProofMode.PREF_CAWG_NOTES, "") ?: "")
     }
 
     AlertDialog(
@@ -56,7 +56,7 @@ fun NoteDialog(
             Row {
                 if (noteText.isNotEmpty()) {
                     TextButton(onClick = {
-                        prefs.edit { remove(ProofMode.PREF_NOTES) }
+                        prefs.edit { remove(ProofMode.PREF_CAWG_NOTES) }
                         onDismiss()
                     }) {
                         Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
@@ -71,9 +71,9 @@ fun NoteDialog(
 
                 Button(onClick = {
                     if (noteText.isBlank()) {
-                        prefs.edit { remove(ProofMode.PREF_NOTES) }
+                        prefs.edit { remove(ProofMode.PREF_CAWG_NOTES) }
                     } else {
-                        prefs.edit { putString(ProofMode.PREF_NOTES, noteText.trim()) }
+                        prefs.edit { putString(ProofMode.PREF_CAWG_NOTES, noteText.trim()) }
                     }
                     onDismiss()
                 }) {

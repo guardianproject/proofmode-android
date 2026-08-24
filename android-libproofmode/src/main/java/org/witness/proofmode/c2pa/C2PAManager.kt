@@ -265,12 +265,14 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                 val cawgContext = HashMap<String, String>()
                 cawgContext.put("dc", "http://purl.org/dc/elements/1.1/")
                 cawgContext.put("exif","http://ns.adobe.com/exif/1.0/")
+                cawgContext.put("Iptc4xmpCore","http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/")
+
                 val cawgInfo = HashMap<String, String>()
                 if (cawgCreator.isNotEmpty()) {
                     cawgInfo.put("dc:creator", "[$cawgCreator]")
                     cawgInfo.put("Exif.Image.Artist",cawgCreator)
                 }
-                val authorNote = pPrefs.getString(ProofMode.PREF_NOTES, "") ?: ""
+                val authorNote = pPrefs.getString(ProofMode.PREF_CAWG_NOTES, "") ?: ""
                 if (authorNote.isNotEmpty()){
                     cawgInfo.put("dc:description",authorNote)
                     cawgInfo.put("Iptc4xmpCore:Caption-Abstract",authorNote)
