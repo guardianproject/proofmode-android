@@ -43,19 +43,18 @@ import org.contentauth.c2pa.manifest.ClaimGeneratorInfo
 import org.contentauth.c2pa.manifest.ManifestDefinition
 import org.contentauth.c2pa.manifest.ManifestValidator
 import org.json.JSONObject
-import org.witness.proofmode.ProofMode
 import org.witness.proofmode.LocationCapturePolicy
+import org.witness.proofmode.ProofMode
 import org.witness.proofmode.c2pa.proofsign.CaptureAuthority
 import org.witness.proofmode.c2pa.proofsign.CompromisedEnvironmentException
 import org.witness.proofmode.c2pa.proofsign.ProofSignC2PASigner
-import org.witness.proofmode.c2pa.proofsign.UnauthorizedCaptureException
 import org.witness.proofmode.c2pa.proofsign.ProofSignClient
 import org.witness.proofmode.c2pa.proofsign.Result
+import org.witness.proofmode.c2pa.proofsign.UnauthorizedCaptureException
 import org.witness.proofmode.c2pa.selfsign.CAWGIdentityManager
 import org.witness.proofmode.c2pa.selfsign.CertificateSigningService
 import org.witness.proofmode.crypto.HashUtils
 import org.witness.proofmode.library.BuildConfig
-import org.witness.proofmode.library.R
 import timber.log.Timber
 import java.io.ByteArrayInputStream
 import java.io.File
@@ -65,7 +64,6 @@ import java.math.BigInteger
 import java.security.KeyFactory
 import java.security.KeyPairGenerator
 import java.security.KeyStore
-import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.security.interfaces.ECPrivateKey
@@ -253,7 +251,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
 
             val certChain = getDeviceAttestationCertChain(hash)
 
-            var listAssertions = ArrayList<AssertionDefinition>()
+            val listAssertions = ArrayList<AssertionDefinition>()
 
             listAssertions.add(createProofmodeAssertion(context, inFile, certChain))
 
@@ -268,10 +266,17 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                 val cawgContext = HashMap<String, String>()
                 cawgContext.put("dc", "http://purl.org/dc/elements/1.1/")
                 cawgContext.put("exif","http://ns.adobe.com/exif/1.0/")
+                cawgContext.put("Iptc4xmpCore","http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/")
+
                 val cawgInfo = HashMap<String, String>()
                 if (cawgCreator.isNotEmpty()) {
                     cawgInfo.put("dc:creator", "[$cawgCreator]")
                     cawgInfo.put("Exif.Image.Artist",cawgCreator)
+                }
+                val authorNote = pPrefs.getString(ProofMode.PREF_CAWG_NOTES, "") ?: ""
+                if (authorNote.isNotEmpty()){
+                    cawgInfo.put("dc:description",authorNote)
+                    cawgInfo.put("Iptc4xmpCore:Caption-Abstract",authorNote)
                 }
 
                 if (cawgRights.isNotEmpty()) {

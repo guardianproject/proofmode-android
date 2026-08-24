@@ -46,6 +46,13 @@
             app:title="@string/settings_signing_cawg_rights"
             app:dialogTitle="@string/settings_signing_cawg_rights" />
 
+        <EditTextPreference
+            app:key="cawgNotes"
+            app:title="@string/cawg_creator_notes_title"
+            app:dialogTitle="@string/cawg_creator_notes_dialog" />
+
+
+
         <Preference
             app:key="editCawg"
             app:title="@string/settings_signing_cawg_edit"

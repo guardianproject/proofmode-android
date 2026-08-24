@@ -33,4 +33,10 @@
     <string name="video_settings">Video Settings</string>
     <string name="resolution">Resolution</string>
     <string name="timer">Timer</string>
+    <string name="edit_note">Add notes to captured media</string>
+    <string name="settings_note">Author Note</string>
+    <string name="action_save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="note_dialog_explanation">Notes are attached to content credentials for captured media as captions</string>
+
 </resources>

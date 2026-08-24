@@ -71,6 +71,8 @@ public class ProofMode {
     public final static boolean PREF_OPTION_CAWG_SIGNING_DEFAULT = false;
     public final static String PREF_CAWG_CREATOR = "cawgCreator";
     public final static String PREF_CAWG_RIGHTS = "cawgRights";
+    public final static String PREF_CAWG_NOTES = "cawgNotes";
+
 
     public final static boolean PREF_OPTION_NOTARY_DEFAULT = true;
     public final static boolean PREF_OPTION_NOTARY_OTS_DEFAULT = true;
