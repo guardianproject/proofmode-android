@@ -110,6 +110,7 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
     val settingsSheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
     var showBSettingsBottomSheet by remember { mutableStateOf(false) }
+    var showNoteDialog by remember { mutableStateOf(false) }
     val previewAlpha by cameraViewModel.previewAlpha.collectAsStateWithLifecycle()
     val locationEnabled by cameraViewModel.locationEnabled.collectAsStateWithLifecycle()
     val requestLocationPermission by cameraViewModel.requestLocationPermission.collectAsStateWithLifecycle()
@@ -379,7 +380,8 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                             }
                             IconButton(onClick = {
                                 showGridLines = !showGridLines
-                            }) {
+                            })
+                            {
                                 Icon(imageVector = if (showGridLines) ImageVector.vectorResource(R.drawable.ic_grid_off)
                                 else ImageVector.vectorResource(R.drawable.ic_grid_on) ,
                                     tint = Color.White,contentDescription = if (showGridLines) stringResource(
@@ -401,6 +403,14 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                             }) {
                                 Icon(ImageVector.vectorResource(R.drawable.ic_exposure) , tint = Color.White,contentDescription = stringResource(
                                     R.string.change_exposure_compensation
+                                )
+                                )
+                            }
+                            IconButton(onClick = {
+                                showNoteDialog = true
+                            }) {
+                                Icon(ImageVector.vectorResource(R.drawable.edit_note) , tint = Color.White,contentDescription = stringResource(
+                                    R.string.edit_note
                                 )
                                 )
                             }
@@ -803,5 +813,8 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
         }
     }
 
+    if (showNoteDialog) {
+        NoteDialog(onDismiss = { showNoteDialog = false })
+    }
 }
 

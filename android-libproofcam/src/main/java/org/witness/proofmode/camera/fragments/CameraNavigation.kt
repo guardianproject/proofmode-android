@@ -10,6 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -19,10 +20,10 @@ import org.witness.proofmode.camera.utils.SharedPrefsManager
 @Composable
 fun CameraNavigation(navController:NavHostController,
                      viewModel: CameraViewModel,
-                     lifecycleOwner: LifecycleOwner,
                      onClosed:()->Unit
 ) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val prefsManager = remember { SharedPrefsManager.newInstance(context) }
     val savedMode = remember {
         prefsManager.getString(SharedPrefsManager.KEY_CAMERA_MODE, CameraDestinations.PHOTO)

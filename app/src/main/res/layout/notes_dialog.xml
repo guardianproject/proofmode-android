@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto" android:layout_width="match_parent"
+    android:layout_height="wrap_content" android:background="@drawable/dialog_round_bg"
+    android:padding="24dp">
+
+    <TextView android:id="@+id/txtTitle" android:layout_width="0dp"
+        android:layout_height="wrap_content" android:text="@string/settings_note"
+        android:textSize="20sp" android:textStyle="bold"
+        android:textColor="?android:attr/textColorPrimary" app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent" />
+
+    <TextView android:id="@+id/txtSubtitle" android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/note_dialog_explanation" android:layout_marginTop="8dp"
+        android:textColor="?android:attr/textColorSecondary"
+        app:layout_constraintTop_toBottomOf="@id/txtTitle"
+        app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent" />
+
+    <EditText android:id="@+id/editNoteText" android:layout_width="0dp"
+        android:layout_height="wrap_content" android:layout_marginTop="20dp"
+        android:background="@drawable/edit_text_round_bg" android:gravity="top|start"
+        android:hint="@string/edit_note" android:minLines="3"
+        android:inputType="textMultiLine" app:layout_constraintTop_toBottomOf="@id/txtSubtitle"
+        app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent" />
+
+
+    <com.google.android.material.button.MaterialButton android:id="@+id/btnDelete"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_marginTop="24dp" android:text="@string/delete" android:textColor="@android:color/holo_red_light"
+        app:layout_constraintTop_toBottomOf="@id/editNoteText"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+
+    <com.google.android.material.button.MaterialButton android:id="@+id/btnSave"
+        style="@style/Widget.MaterialComponents.Button.TextButton" android:layout_width="wrap_content"
+        android:layout_height="wrap_content" android:text="@string/action_save"
+        app:layout_constraintTop_toTopOf="@id/btnDelete" app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+    <com.google.android.material.button.MaterialButton android:id="@+id/btnCancel"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp" android:text="@string/cancel"
+        app:layout_constraintTop_toTopOf="@id/btnSave"
+        app:layout_constraintEnd_toStartOf="@id/btnSave" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
