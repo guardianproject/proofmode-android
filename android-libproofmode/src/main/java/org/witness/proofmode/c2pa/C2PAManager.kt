@@ -850,7 +850,10 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         return Base64.decode(pemContent, Base64.NO_WRAP)
     }
 
-    private suspend fun signStream(fileName: String, sourceStream: Stream, contentType: String, destStream: Stream, manifestJSON: String, signer: Signer, embed: Boolean = true, created: Boolean = true, hash: String?) {
+    private suspend fun signStream(fileName: String, sourceStream: Stream, contentType: String, destStream: Stream, manifestJSON: String, signer: Signer, embed: Boolean = true, created: Boolean = true, hash: String?) : Boolean {
+
+        var resultSuccess = false
+
         Timber.d( "Starting signImageData")
         Timber.d( "Manifest JSON: ${manifestJSON.take(200)}...") // First 200 chars
 
@@ -965,6 +968,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                 signer = currentSigner,
             )
 
+            resultSuccess = true
 
             Timber.d( "builder.sign() completed successfully")
 
@@ -987,6 +991,8 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             if (currentSigner !== signer)
                 try { signer.close() } catch (e: Exception) { Timber.w(e, "Error closing base signer") }
         }
+
+        return resultSuccess
     }
 
     public fun validateSignedMedia(filePath: String): ValidationState {
