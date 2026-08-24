@@ -166,9 +166,7 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
                var mimeType = mContext?.contentResolver?.getType(tmpUriMedia!!)
 
                 if (tmpUriMedia != null) {
-                    CoroutineScope(Dispatchers.IO).launch {
-                        ingestMedia (tmpUriMedia, true, null, mimeType!!, null)
-                    }
+                    ingestMedia (tmpUriMedia, true, null, mimeType!!, null)
                 }
             }
         })
@@ -187,7 +185,15 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
     }
 
     @JvmOverloads
-    fun ingestMedia (uriMediaSource: Uri, autogen: Boolean, createdAt: Date?, mimeType: String?, inputHash: String?, captureNonce: ByteArray? = null)  {
+    fun ingestMedia (uriMediaSource: Uri, autogen: Boolean, createdAt: Date?, mimeType: String?, inputHash: String?, captureNonce: ByteArray? = null) {
+
+        mExec.submit(Runnable {
+            ingestMediaActual(uriMediaSource, autogen, createdAt, mimeType, inputHash, captureNonce)
+        })
+
+    }
+
+    private fun ingestMediaActual (uriMediaSource: Uri, autogen: Boolean, createdAt: Date?, mimeType: String?, inputHash: String?, captureNonce: ByteArray? = null) {
         val intent = Intent()
 
         // Target our own app package so these broadcasts reach our unexported
