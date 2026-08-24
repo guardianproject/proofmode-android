@@ -409,7 +409,7 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                             IconButton(onClick = {
                                 showNoteDialog = true
                             }) {
-                                Icon(ImageVector.vectorResource(R.drawable.edit_note) , tint = Color.White,contentDescription = stringResource(
+                                Icon(ImageVector.vectorResource(R.drawable.ic_note) , tint = Color.White,contentDescription = stringResource(
                                     R.string.edit_note
                                 )
                                 )

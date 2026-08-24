@@ -333,8 +333,8 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                             IconButton(onClick = {
                                 showNoteDialog = true
                             }) {
-                                Icon(imageVector = if (torchOn) ImageVector.vectorResource(R.drawable.edit_note)
-                                else ImageVector.vectorResource(R.drawable.edit_note), contentDescription = stringResource(R.string.edit_note)
+                                Icon(imageVector = if (torchOn) ImageVector.vectorResource(R.drawable.ic_note)
+                                else ImageVector.vectorResource(R.drawable.ic_note), contentDescription = stringResource(R.string.edit_note)
                                 )
                             }
                         }
