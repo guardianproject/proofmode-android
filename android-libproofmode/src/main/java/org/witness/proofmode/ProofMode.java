@@ -145,13 +145,15 @@ public class ProofMode {
 
             // Use WorkManager for Android 15+ (API 35) due to background network restrictions,
             // fall back to JobScheduler for older versions
+
+            /**
             if (Build.VERSION.SDK_INT >= 35) {
                 PhotosContentWorker.scheduleWork(context);
                 VideosContentWorker.scheduleWork(context);
             } else if (Build.VERSION.SDK_INT >= 24) {
                 PhotosContentJob.scheduleJob(context);
                 VideosContentJob.scheduleJob(context);
-            }
+            }**/
 
             mInit = true;
         }
@@ -175,13 +177,14 @@ public class ProofMode {
     public static void stopBackgroundService (Context context)
     {
 
+        /**
         if (Build.VERSION.SDK_INT >= 35) {
             PhotosContentWorker.cancelWork(context);
             VideosContentWorker.cancelWork(context);
         } else {
             PhotosContentJob.cancelJob(context);
             VideosContentJob.cancelJob(context);
-        }
+        }**/
 
         MediaWatcher.getInstance(context).stop();
 
