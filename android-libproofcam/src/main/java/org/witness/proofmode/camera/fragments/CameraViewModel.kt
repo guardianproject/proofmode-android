@@ -111,6 +111,10 @@ class CameraViewModel(private val app: Application) : AndroidViewModel(app) {
 
     private var _exposureState:MutableStateFlow<ExposureState?> = MutableStateFlow(null)
     val exposureState: StateFlow<ExposureState?> = _exposureState
+    // ExposureState is an immutable snapshot taken at bind time, so setting a new
+    // compensation index does not update it. The UI slider reads this instead.
+    private val _exposureIndex:MutableStateFlow<Int> = MutableStateFlow(0)
+    val exposureIndex: StateFlow<Int> = _exposureIndex
     private var _cameraDelay:MutableStateFlow<CameraDelay> = MutableStateFlow(CameraDelay.Zero)
     val cameraDelay: StateFlow<CameraDelay> = _cameraDelay
     private val previewUseCase = Preview.Builder()
@@ -378,12 +382,11 @@ class CameraViewModel(private val app: Application) : AndroidViewModel(app) {
             .setViewPort(viewPort)
             .build()
         try {
-            camera = provider.bindToLifecycle(lifecycleOwner, cameraSelector, useCaseGroup).apply {
-                _exposureState.value = cameraInfo.exposureState
-            }
+            camera = provider.bindToLifecycle(lifecycleOwner, cameraSelector, useCaseGroup)
             zoomState = camera!!.cameraInfo.zoomState
             cameraControl = camera?.cameraControl
             refreshZoomState()
+            refreshExposureState()
         } catch (ex: Exception) {
             Timber.e(ex, "Failed to bind image use cases")
         }
@@ -467,6 +470,7 @@ class CameraViewModel(private val app: Application) : AndroidViewModel(app) {
             zoomState = camera!!.cameraInfo.zoomState
             cameraControl = camera?.cameraControl
             applyTorchState()
+            refreshExposureState()
         } catch (ex: Exception) {
             Timber.e(ex, "Failed to bind video capture with quality $quality")
         }
@@ -501,6 +505,7 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
         zoomState = camera!!.cameraInfo.zoomState
         cameraControl = camera?.cameraControl
         applyTorchState()
+        refreshExposureState()
     } catch (ex:Exception){
         Timber.e("Binding failed")
     }
@@ -865,6 +870,7 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
             cameraControl = camera?.cameraControl
             refreshZoomState()
             applyTorchState()
+            refreshExposureState()
             true
         } catch (ex: Exception) {
             Timber.e(ex, "Failed to rebind video capture to lens facing %d while recording", facing)
@@ -873,7 +879,30 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
     }
 
     fun updateExposureCompensation(compensationIndex:Int){
-        cameraControl?.setExposureCompensationIndex(compensationIndex)
+        val state = _exposureState.value ?: return
+        if (!state.isExposureCompensationSupported) return
+        val clamped = compensationIndex.coerceIn(
+            state.exposureCompensationRange.lower,
+            state.exposureCompensationRange.upper
+        )
+        if (clamped == _exposureIndex.value) return
+        _exposureIndex.update { clamped }
+        cameraControl?.setExposureCompensationIndex(clamped)
+    }
+
+    /**
+     * Re-read the exposure metadata from the freshly bound [camera].
+     *
+     * [ExposureState] belongs to a specific Camera instance and the compensation
+     * index resets to 0 on every rebind (lens switch, aspect/quality change), so
+     * both the range and the current index have to be pulled again or the slider
+     * drifts out of sync with what the sensor is actually doing.
+     */
+    private fun refreshExposureState() {
+        val cameraInfo = camera?.cameraInfo ?: return
+        val state = cameraInfo.exposureState
+        _exposureState.update { state }
+        _exposureIndex.update { state.exposureCompensationIndex }
     }
 
 

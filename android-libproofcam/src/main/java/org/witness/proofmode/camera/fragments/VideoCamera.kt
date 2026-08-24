@@ -48,6 +48,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.movableContentOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -154,12 +155,26 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
     val thumbPreviewUri by cameraViewModel.thumbPreviewUri.collectAsStateWithLifecycle()
     val config  = LocalConfiguration.current
 
+    // Exposure rides alongside focus: tapping to focus reveals the left-edge slider,
+    // and any touch of it restarts the auto-hide timer via a bumped nudge counter.
+    val exposureState by cameraViewModel.exposureState.collectAsStateWithLifecycle()
+    val exposureIndex by cameraViewModel.exposureIndex.collectAsStateWithLifecycle()
+    var showExposureSlider by remember { mutableStateOf(false) }
+    var exposureNudge by remember { mutableIntStateOf(0) }
+
     // Queue hiding the request for each unique autofocus tap
     if (showAutoFocusIndicator){
         LaunchedEffect(autoRequestId) {
             delay(1000)
             // Clear the offset to finish the request and hide the indicator
             autofocusRequest = autoRequestId to Offset.Unspecified
+        }
+    }
+
+    LaunchedEffect(showExposureSlider, exposureNudge) {
+        if (showExposureSlider) {
+            delay(ExposureSliderTimeoutMs)
+            showExposureSlider = false
         }
     }
     val elapsedTime by cameraViewModel.elapsedTime.asFlow().collectAsStateWithLifecycle("")
@@ -207,7 +222,10 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                             .fillMaxSize()
                             .pointerInput(cameraViewModel, coordinateTransformer) {
                                 awaitEachGesture {
-                                    val firstDown = awaitFirstDown(requireUnconsumed = false)
+                                    // requireUnconsumed: overlays drawn on top of the
+                                    // viewfinder (the exposure slider) are hit-tested
+                                    // too, and claim the down when the touch is theirs.
+                                    val firstDown = awaitFirstDown(requireUnconsumed = true)
 
                                     var drag = Offset.Zero
                                     var pastTouchSlop = false
@@ -264,6 +282,8 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                                                 cameraViewModel.tapToFocus(tapCoordinates.transform())
                                             }
                                             autofocusRequest = UUID.randomUUID() to tapCoordinates
+                                            showExposureSlider = true
+                                            exposureNudge++
                                         }
                                     }
                                 }
@@ -284,6 +304,24 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                                 .border(1.5.dp, AccentGreen, CircleShape)
                                 .size(48.dp)
                                 .shadow(elevation = 8.dp)
+                        )
+                    }
+
+                    // Exposure lives over the preview rather than in the top bar, so it
+                    // is adjusted while looking at the scene it affects.
+                    AnimatedVisibility(
+                        visible = showExposureSlider,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .padding(start = 8.dp)
+                    ) {
+                        ExposureSlider(
+                            exposureState = exposureState,
+                            index = exposureIndex,
+                            onIndexChange = { cameraViewModel.updateExposureCompensation(it) },
+                            onInteraction = { exposureNudge++ }
                         )
                     }
                 }

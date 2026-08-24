@@ -40,20 +40,19 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -142,7 +141,7 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
     }
 
     val exposureState by cameraViewModel.exposureState.collectAsStateWithLifecycle()
-    var showExposureIndicator by remember { mutableStateOf(false) }
+    val exposureIndex by cameraViewModel.exposureIndex.collectAsStateWithLifecycle()
     val flashMode by cameraViewModel.flashMode.collectAsStateWithLifecycle()
     var showFlashModes by remember { mutableStateOf(false) }
     val ultraHdrOn by cameraViewModel.ultraHdr.collectAsStateWithLifecycle()
@@ -169,13 +168,10 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
         autofocusRequest.second
     }
 
-    val lowerSliderRange:Float = exposureState?.exposureCompensationRange?.lower?.toFloat() ?:0F
-    val upperSliderRange:Float = exposureState?.exposureCompensationRange?.upper?.toFloat() ?:0F
-    val steps = (upperSliderRange - lowerSliderRange).toInt()
-    val currentExposureIndex = exposureState?.exposureCompensationIndex ?: 0F
-    var currentSliderPosition by remember(currentExposureIndex) {
-        mutableStateOf(currentExposureIndex)
-    }
+    // Exposure rides alongside focus: tapping to focus reveals the left-edge slider,
+    // and any touch of it restarts the auto-hide timer via a bumped nudge counter.
+    var showExposureSlider by remember { mutableStateOf(false) }
+    var exposureNudge by remember { mutableIntStateOf(0) }
 
     var countDownState:CountDownState by remember { mutableStateOf(CountDownState.Idle) }
     val cameraDelay by cameraViewModel.cameraDelay.collectAsStateWithLifecycle()
@@ -186,6 +182,13 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
             delay(1000)
             // Clear the offset to finish the request and hide the indicator
             autofocusRequest = autoRequestId to Offset.Unspecified
+        }
+    }
+
+    LaunchedEffect(showExposureSlider, exposureNudge) {
+        if (showExposureSlider) {
+            delay(ExposureSliderTimeoutMs)
+            showExposureSlider = false
         }
     }
 
@@ -233,7 +236,10 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                                 .fillMaxSize()
                                 .pointerInput(cameraViewModel, coordinateTransformer) {
                                     awaitEachGesture {
-                                        val firstDown = awaitFirstDown(requireUnconsumed = false)
+                                        // requireUnconsumed: overlays drawn on top of the
+                                        // viewfinder (the exposure slider) are hit-tested
+                                        // too, and claim the down when the touch is theirs.
+                                        val firstDown = awaitFirstDown(requireUnconsumed = true)
 
                                         var drag = Offset.Zero
                                         var pastTouchSlop = false
@@ -290,6 +296,8 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                                                     cameraViewModel.tapToFocus(tapCoordinates.transform())
                                                 }
                                                 autofocusRequest = UUID.randomUUID() to tapCoordinates
+                                                showExposureSlider = true
+                                                exposureNudge++
                                             }
                                         }
                                     }
@@ -326,6 +334,24 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                                     .border(1.5.dp, AccentGreen, CircleShape)
                                     .size(48.dp)
                                     .shadow(elevation = 8.dp)
+                            )
+                        }
+
+                        // Exposure lives over the preview rather than in the top bar, so it
+                        // is adjusted while looking at the scene it affects.
+                        AnimatedVisibility(
+                            visible = showExposureSlider,
+                            enter = fadeIn(),
+                            exit = fadeOut(),
+                            modifier = Modifier
+                                .align(Alignment.CenterStart)
+                                .padding(start = 8.dp)
+                        ) {
+                            ExposureSlider(
+                                exposureState = exposureState,
+                                index = exposureIndex,
+                                onIndexChange = { cameraViewModel.updateExposureCompensation(it) },
+                                onInteraction = { exposureNudge++ }
                             )
                         }
                     }
@@ -398,14 +424,6 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                                 )
                             }
 
-                            IconButton(onClick = {
-                                showExposureIndicator = true
-                            }) {
-                                Icon(ImageVector.vectorResource(R.drawable.ic_exposure) , tint = Color.White,contentDescription = stringResource(
-                                    R.string.change_exposure_compensation
-                                )
-                                )
-                            }
                             IconButton(onClick = {
                                 showNoteDialog = true
                             }) {
@@ -784,31 +802,6 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
 
                 }
             }
-
-            if (showExposureIndicator){
-                BasicAlertDialog(onDismissRequest = {
-                    showExposureIndicator = false
-                }) {
-                    Column (modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(CameraSurface)
-                        .padding(horizontal = 20.dp, vertical = 16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally){
-                        Text("Exposure: ${currentSliderPosition.toInt()}", style = MaterialTheme.typography.titleMedium.copy(color = AccentGreen))
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Slider(
-                            valueRange = lowerSliderRange..upperSliderRange,
-                            value = currentSliderPosition.toFloat(),
-                            onValueChange = {
-                                currentSliderPosition = it
-                                cameraViewModel.updateExposureCompensation(it.toInt())
-                            },
-                            steps = steps
-                        )
-                    }
-                }
-            }
-
 
         }
     }
