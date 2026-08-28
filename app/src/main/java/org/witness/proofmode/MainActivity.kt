@@ -47,7 +47,6 @@ import org.witness.proofmode.ui.ActivityType
 import org.witness.proofmode.ui.DataLegendActivity
 import org.witness.proofmode.ui.DigitalSignaturesActivity
 import org.witness.proofmode.ui.ProofableItem
-import org.witness.proofmode.util.GPSTracker
 import timber.log.Timber
 import java.io.File
 import java.io.IOException
@@ -516,13 +515,6 @@ class MainActivity : AppCompatActivity(),
         if (!askForPermissions(optionalPermissions, REQUEST_CODE_OPTIONAL_PERMISSIONS)) {
             mPrefs.edit(commit = true) { putBoolean(ProofMode.PREF_OPTION_NETWORK, true) }
             // mPrefs.edit().putBoolean(ProofMode.PREF_OPTION_PHONE, true).commit()
-        }
-    }
-
-    private fun refreshLocation() {
-        val gpsTracker = GPSTracker(this)
-        if (gpsTracker.canGetLocation()) {
-            gpsTracker.location
         }
     }
 
