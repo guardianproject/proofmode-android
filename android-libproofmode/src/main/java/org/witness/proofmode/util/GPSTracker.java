@@ -36,8 +36,8 @@ public final class GPSTracker implements LocationListener {
     double longitude; // longitude
 
     // Minimum interval and displacement for location updates.
-    private static final long MIN_TIME_BW_UPDATES_MS = 60_000;
-    private static final float MIN_DISTANCE_CHANGE_FOR_UPDATES_M = 0f;
+    private static final long MIN_TIME_BW_UPDATES_MS = 15_000;
+    private static final float MIN_DISTANCE_CHANGE_FOR_UPDATES_M = 1f;
 
     // Declaring a Location Manager
     protected LocationManager locationManager;
@@ -71,7 +71,7 @@ public final class GPSTracker implements LocationListener {
             locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
                     MIN_TIME_BW_UPDATES_MS, MIN_DISTANCE_CHANGE_FOR_UPDATES_M, this);
         }
-        if (isNetworkEnabled) {
+        else if (isNetworkEnabled) {
             locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER,
                     MIN_TIME_BW_UPDATES_MS, MIN_DISTANCE_CHANGE_FOR_UPDATES_M, this);
         }
@@ -103,17 +103,18 @@ public final class GPSTracker implements LocationListener {
             // Start from whatever the listener has already cached, then merge in
             // any last-known fixes that are better. Don't unconditionally overwrite
             // — that would discard fresh callback-delivered fixes.
-            Location best = location;
+            Location locationNew = location;
 
             if (isNetworkEnabled) {
-                best = pickBetter(best, locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER));
+                //locationNew = pickBetter(best, locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER));
+                locationNew = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
             }
             // GPS_PROVIDER requires ACCESS_FINE_LOCATION.
-            if (hasFine && isGPSEnabled) {
-                best = pickBetter(best, locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER));
+            else if (hasFine && isGPSEnabled) {
+                locationNew = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
             }
 
-            location = best;
+            location = locationNew;
             if (location != null) {
                 latitude = location.getLatitude();
                 longitude = location.getLongitude();
@@ -126,6 +127,7 @@ public final class GPSTracker implements LocationListener {
     // Picks the "better" of two locations, preferring a significantly fresher fix
     // and otherwise the more accurate one. Modeled on the standard Android
     // isBetterLocation pattern.
+    /**
     private static Location pickBetter(Location a, Location b) {
         if (a == null) return b;
         if (b == null) return a;
@@ -141,7 +143,7 @@ public final class GPSTracker implements LocationListener {
         if (a.hasAccuracy()) return a;
         if (b.hasAccuracy()) return b;
         return ageA <= ageB ? a : b;
-    }
+    }**/
 
     /**
      * Stop using GPS listener Calling this function will stop using GPS in your
@@ -227,13 +229,18 @@ public final class GPSTracker implements LocationListener {
     @Override
     public void onLocationChanged(Location location) {
         if (location == null) return;
+
+        //let's call the logic we have to refresh
+        location = getLocation();
+
+        /**
         // Merge against any existing cached fix so a worse provider can't
         // displace a better one just because it fired more recently.
         this.location = pickBetter(this.location, location);
         if (this.location != null) {
             this.latitude = this.location.getLatitude();
             this.longitude = this.location.getLongitude();
-        }
+        }**/
     }
 
     @Override
