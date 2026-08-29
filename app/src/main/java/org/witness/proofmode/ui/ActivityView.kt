@@ -142,7 +142,8 @@ fun ProofableItemView(
     corners: RectF = RectF(
         ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS
     ),
-    showSelectionBorder: Boolean = true
+    showSelectionBorder: Boolean = true,
+    zoomable: Boolean = false
 ) {
     val selectionHandler = LocalSelectionHandler.current
     val context = LocalContext.current
@@ -240,48 +241,60 @@ fun ProofableItemView(
 
     
     Box {
-        AsyncImage(
-            model = ImageRequest.Builder(context)
-                .data(item.uri).apply {
-                    if (isVideo) {
-                        decoderFactory { result, options, _ -> VideoFrameDecoder(result.source, options) }
-                    }
-                }.build(),
-            contentDescription = "Asset view",
-            alignment = Alignment.Center,
-            contentScale = if (contain) ContentScale.Fit else ContentScale.Crop,
-            modifier = Modifier
-                .combinedClickable(
-                    onClick = {
-                        selectionHandler.onProofableItemClick(item)
-                    },
-                    onLongClick = {
-                        selectionHandler.onProofableItemLongClick(item)
-                    }
-                )
-                .clip(
-                    RoundedCornerShape(
-                        corners.left.dp,
-                        corners.top.dp,
-                        corners.right.dp,
-                        corners.bottom.dp
-                    )
-
-                )
-                //.background(ASSETS_BACKGROUND)
-                .border(
-                    width = 4.dp,
-                    color = if (showSelectionBorder && selectionHandler.isSelected(item)) Color.Blue else Color.Transparent,
-                    shape = RoundedCornerShape(
-                        corners.left.dp,
-                        corners.top.dp,
-                        corners.right.dp,
-                        corners.bottom.dp
-                    )
+        val imageModifier = Modifier
+            .combinedClickable(
+                onClick = {
+                    selectionHandler.onProofableItemClick(item)
+                },
+                onLongClick = {
+                    selectionHandler.onProofableItemLongClick(item)
+                }
+            )
+            .clip(
+                RoundedCornerShape(
+                    corners.left.dp,
+                    corners.top.dp,
+                    corners.right.dp,
+                    corners.bottom.dp
                 )
 
-                .then(modifier)
-        )
+            )
+            //.background(ASSETS_BACKGROUND)
+            .border(
+                width = 4.dp,
+                color = if (showSelectionBorder && selectionHandler.isSelected(item)) Color.Blue else Color.Transparent,
+                shape = RoundedCornerShape(
+                    corners.left.dp,
+                    corners.top.dp,
+                    corners.right.dp,
+                    corners.bottom.dp
+                )
+            )
+
+            .then(modifier)
+
+        val assetImage: @Composable (Modifier) -> Unit = { imgMod ->
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(item.uri).apply {
+                        if (isVideo) {
+                            decoderFactory { result, options, _ -> VideoFrameDecoder(result.source, options) }
+                        }
+                    }.build(),
+                contentDescription = "Asset view",
+                alignment = Alignment.Center,
+                contentScale = if (contain) ContentScale.Fit else ContentScale.Crop,
+                modifier = imgMod
+            )
+        }
+
+        if (zoomable) {
+            ZoomableBox(modifier = imageModifier) {
+                assetImage(Modifier.fillMaxSize())
+            }
+        } else {
+            assetImage(imageModifier)
+        }
 
         if (isVideo) {
             Icon(

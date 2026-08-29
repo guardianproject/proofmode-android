@@ -1110,7 +1110,8 @@ fun SingleItemView(itemWidth: Dp, allAssets: List<ProofableItem>, index: Int, se
                         // center-crop a 1:1 / 16:9 capture whenever the item was selected.
                         contain = true,
                         corners = RectF(0f, 0f, 0f, 0f),
-                        showSelectionBorder = false
+                        showSelectionBorder = false,
+                        zoomable = true
                 )
                 if (LocalSelectionHandler.current.isSelected(item)) {
                     Box(modifier = Modifier
