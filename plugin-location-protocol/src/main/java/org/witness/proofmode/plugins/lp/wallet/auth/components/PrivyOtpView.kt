@@ -21,6 +21,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import org.witness.proofmode.plugins.lp.R
+import org.witness.proofmode.plugins.lp.wallet.auth.AuthSheetImeInsets
 
 class PrivyOtpView(context: Context, attrs: AttributeSet? = null) : FrameLayout(context, attrs) {
 
@@ -69,6 +70,7 @@ class PrivyOtpView(context: Context, attrs: AttributeSet? = null) : FrameLayout(
     private val segmentedOtpView: SegmentedOtpView
     private val sendButton: Button
     private val verifyButton: Button
+    private val resendButton: Button
     private val step1ErrorLayout: LinearLayout
     private val step2ErrorLayout: LinearLayout
     private val step1ErrorTextView: TextView
@@ -94,6 +96,7 @@ class PrivyOtpView(context: Context, attrs: AttributeSet? = null) : FrameLayout(
         segmentedOtpView = findViewById(R.id.et_code)
         sendButton = findViewById(R.id.btn_send_code)
         verifyButton = findViewById(R.id.btn_verify)
+        resendButton = findViewById(R.id.btn_resend_code)
         step1ErrorLayout = findViewById(R.id.layout_step1_error)
         step2ErrorLayout = findViewById(R.id.layout_step2_error)
         step1ErrorTextView = findViewById(R.id.tv_step1_error)
@@ -127,6 +130,10 @@ class PrivyOtpView(context: Context, attrs: AttributeSet? = null) : FrameLayout(
 
     private fun bindListeners() {
         sendButton.setOnClickListener {
+            onSendCodeClicked()
+        }
+
+        resendButton.setOnClickListener {
             onSendCodeClicked()
         }
 
@@ -169,20 +176,34 @@ class PrivyOtpView(context: Context, attrs: AttributeSet? = null) : FrameLayout(
 
         val currentIdentifier = identifier.trim()
         if (currentIdentifier.isBlank()) {
-            showStep1Error("Identifier is required")
+            if (codeSent) {
+                showStep2Error("Identifier is required")
+            } else {
+                showStep1Error("Identifier is required")
+            }
             onComplete?.invoke("Identifier is required")
             return
         }
 
         val sendCodeCallback = onSendCode
         if (sendCodeCallback == null) {
-            showStep1Error("Send code action is unavailable")
-            onComplete?.invoke("Send code action is unavailable")
+            val message = "Send code action is unavailable"
+            if (codeSent) {
+                showStep2Error(message)
+            } else {
+                showStep1Error(message)
+            }
+            onComplete?.invoke(message)
             return
         }
 
-        clearStep1Error()
-        setStep1Loading(isLoading = true)
+        val loadingOnStep2 = codeSent
+        if (loadingOnStep2) {
+            clearStep2Error()
+        } else {
+            clearStep1Error()
+        }
+        setSendingLoading(isLoading = true, onStep2 = loadingOnStep2)
 
         sendingCodeJob = viewScope.launch {
             try {
@@ -191,16 +212,12 @@ class PrivyOtpView(context: Context, attrs: AttributeSet? = null) : FrameLayout(
                     identifier = currentIdentifier
                     codeSent = true
                 } else {
-                    val message = "Unable to send code"
-                    showStep1Error(message)
-                    onComplete?.invoke(message)
+                    showSendCodeError(cause = null, onStep2 = loadingOnStep2)
                 }
             } catch (t: Throwable) {
-                val message = t.message ?: "Something went wrong while sending code"
-                showStep1Error(message)
-                onComplete?.invoke(message)
+                showSendCodeError(cause = t, onStep2 = loadingOnStep2)
             } finally {
-                setStep1Loading(isLoading = false)
+                setSendingLoading(isLoading = false, onStep2 = loadingOnStep2)
             }
         }
     }
@@ -248,6 +265,14 @@ class PrivyOtpView(context: Context, attrs: AttributeSet? = null) : FrameLayout(
         }
     }
 
+    private fun setSendingLoading(isLoading: Boolean, onStep2: Boolean) {
+        if (onStep2) {
+            setStep2Loading(isLoading)
+        } else {
+            setStep1Loading(isLoading)
+        }
+    }
+
     private fun setStep1Loading(isLoading: Boolean) {
         sendButton.isEnabled = !isLoading
         step1LoadingOverlay.visibility = if (isLoading) View.VISIBLE else View.GONE
@@ -255,7 +280,22 @@ class PrivyOtpView(context: Context, attrs: AttributeSet? = null) : FrameLayout(
 
     private fun setStep2Loading(isLoading: Boolean) {
         verifyButton.isEnabled = !isLoading
+        resendButton.isEnabled = !isLoading
         step2LoadingOverlay.visibility = if (isLoading) View.VISIBLE else View.GONE
+    }
+
+    private fun showSendCodeError(cause: Throwable?, onStep2: Boolean) {
+        val message = SendCodeErrorMessages.userFacing(
+            cause = cause,
+            fallback = context.getString(R.string.auth_otp_unable_to_send_code),
+            tooManyRequests = context.getString(R.string.auth_otp_too_many_requests),
+        )
+        if (onStep2) {
+            showStep2Error(message)
+        } else {
+            showStep1Error(message)
+        }
+        onComplete?.invoke(message)
     }
 
     private fun showStep1Error(message: String) {
@@ -297,6 +337,14 @@ class PrivyOtpView(context: Context, attrs: AttributeSet? = null) : FrameLayout(
         target.post {
             val inputManager = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
             inputManager?.showSoftInput(target, InputMethodManager.SHOW_IMPLICIT)
+            var ancestor: View? = this
+            while (ancestor != null) {
+                if (ancestor.id == R.id.auth_sheet_root) {
+                    AuthSheetImeInsets.requestImePadding(ancestor)
+                    break
+                }
+                ancestor = ancestor.parent as? View
+            }
         }
     }
 

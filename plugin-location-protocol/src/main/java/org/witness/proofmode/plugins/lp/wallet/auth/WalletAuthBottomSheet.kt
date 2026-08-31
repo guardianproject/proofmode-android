@@ -8,11 +8,13 @@ import android.widget.Button
 import android.widget.CheckBox
 import android.widget.ImageButton
 import android.widget.Toast
-import androidx.core.os.bundleOf
 import androidx.activity.OnBackPressedCallback
+import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import org.witness.proofmode.plugins.lp.R
 import org.witness.proofmode.plugins.lp.wallet.WalletSigningPlugin
@@ -24,10 +26,14 @@ import org.witness.proofmode.plugins.wallet.infra.api.WalletAuthClient
 
 class WalletAuthBottomSheet() : BottomSheetDialogFragment() {
     private var viewPager: ViewPager2? = null
+    private var authHost: ViewGroup? = null
+    private var nextButton: Button? = null
+    private var skipCheckbox: CheckBox? = null
     private var pageChangeCallback: ViewPager2.OnPageChangeCallback? = null
     private var currentPage: AuthPage = AuthPage.SELECTOR
     private var sessionOnboardingCount: Int = 0
     private var onboardingTourOnly: Boolean = false
+    private var showingAuth: Boolean = false
     private lateinit var onboardingPrefs: WalletOnboardingPreferences
 
     private fun persistSkipIfNeeded(skipCheckbox: CheckBox) {
@@ -52,55 +58,44 @@ class WalletAuthBottomSheet() : BottomSheetDialogFragment() {
         sessionOnboardingCount = onboardingPrefs.initialSessionSlideCount(onboardingTourOnly)
 
         viewPager = view.findViewById(R.id.auth_view_pager)
+        authHost = view.findViewById(R.id.auth_page_host)
         val closeButton = view.findViewById<ImageButton>(R.id.btn_close_auth_sheet)
+        nextButton = view.findViewById(R.id.btn_onboarding_next)
+        skipCheckbox = view.findViewById(R.id.cb_skip_onboarding)
 
-        val nextButton = view.findViewById<Button>(R.id.btn_onboarding_next)
-        val skipCheckbox = view.findViewById<CheckBox>(R.id.cb_skip_onboarding)
-        if (sessionOnboardingCount > 0) {
-            nextButton.visibility = View.VISIBLE
-        }
-
-        nextButton.setOnClickListener {
+        nextButton?.setOnClickListener {
             val current = viewPager?.currentItem ?: 0
             if (onboardingTourOnly && current == sessionOnboardingCount - 1) {
-                persistSkipIfNeeded(skipCheckbox)
+                skipCheckbox?.let { persistSkipIfNeeded(it) }
                 dismissAllowingStateLoss()
                 return@setOnClickListener
             }
             val target = WalletOnboardingNavigation.nextOnboardingPage(current, sessionOnboardingCount)
-            if (target != null) {
-                if (target == sessionOnboardingCount) {
-                    persistSkipIfNeeded(skipCheckbox)
-                }
+            if (target == sessionOnboardingCount) {
+                skipCheckbox?.let { persistSkipIfNeeded(it) }
+                showAuthPage(AuthPage.SELECTOR)
+            } else if (target != null) {
                 viewPager?.setCurrentItem(target, true)
             }
         }
 
-        if (sessionOnboardingCount > 0) {
-            skipCheckbox.visibility = View.VISIBLE
-        }
-
-        skipCheckbox.setOnCheckedChangeListener { _, _ ->
+        skipCheckbox?.setOnCheckedChangeListener { _, _ ->
             // No persistence until onboarding completes or sheet dismisses.
         }
 
-        val authPageCount = if (onboardingTourOnly) 0 else AuthPage.entries.size
-        viewPager?.adapter = AuthPagerAdapter(this, sessionOnboardingCount, authPageCount)
-        viewPager?.isUserInputEnabled = false
-        val callback = object : ViewPager2.OnPageChangeCallback() {
-            override fun onPageSelected(position: Int) {
-                val authIndex = position - sessionOnboardingCount
-                if (authIndex >= 0) {
-                    viewPager?.isUserInputEnabled = false
-                    skipCheckbox.visibility = View.GONE
-                    nextButton.visibility = View.GONE
-                    currentPage = AuthPage.fromIndex(authIndex)
-                } else {
-                    viewPager?.isUserInputEnabled = true
-                    skipCheckbox.visibility = View.VISIBLE
-                    nextButton.visibility = View.VISIBLE
+        if (sessionOnboardingCount > 0) {
+            nextButton?.visibility = View.VISIBLE
+            skipCheckbox?.visibility = View.VISIBLE
+            viewPager?.visibility = View.VISIBLE
+            authHost?.visibility = View.GONE
+            viewPager?.adapter = AuthPagerAdapter(this, sessionOnboardingCount)
+            viewPager?.isUserInputEnabled = true
+            val callback = object : ViewPager2.OnPageChangeCallback() {
+                override fun onPageSelected(position: Int) {
+                    skipCheckbox?.visibility = View.VISIBLE
+                    nextButton?.visibility = View.VISIBLE
                     if (position == sessionOnboardingCount - 1) {
-                        nextButton.setText(
+                        nextButton?.setText(
                             if (onboardingTourOnly) {
                                 R.string.onboarding_done
                             } else {
@@ -108,14 +103,15 @@ class WalletAuthBottomSheet() : BottomSheetDialogFragment() {
                             },
                         )
                     } else {
-                        nextButton.setText(R.string.onboarding_next)
+                        nextButton?.setText(R.string.onboarding_next)
                     }
-                    currentPage = AuthPage.SELECTOR
                 }
             }
+            pageChangeCallback = callback
+            viewPager?.registerOnPageChangeCallback(callback)
+        } else if (!onboardingTourOnly) {
+            showAuthPage(AuthPage.SELECTOR)
         }
-        pageChangeCallback = callback
-        viewPager?.registerOnPageChangeCallback(callback)
 
         closeButton.setOnClickListener {
             if (!handleBackNavigation()) {
@@ -135,6 +131,18 @@ class WalletAuthBottomSheet() : BottomSheetDialogFragment() {
         )
     }
 
+    override fun onStart() {
+        super.onStart()
+        val dialog = dialog as? BottomSheetDialog ?: return
+        val root = view ?: return
+        AuthSheetImeInsets.bind(dialog, root)
+        dialog.behavior.apply {
+            skipCollapsed = true
+            state = BottomSheetBehavior.STATE_EXPANDED
+            isFitToContents = true
+        }
+    }
+
     override fun onDismiss(dialog: android.content.DialogInterface) {
         view?.findViewById<CheckBox>(R.id.cb_skip_onboarding)?.let { persistSkipIfNeeded(it) }
         super.onDismiss(dialog)
@@ -149,15 +157,18 @@ class WalletAuthBottomSheet() : BottomSheetDialogFragment() {
         pager?.adapter = null
         pageChangeCallback = null
         viewPager = null
+        authHost = null
+        nextButton = null
+        skipCheckbox = null
         super.onDestroyView()
     }
 
     fun navigateToPage(page: AuthPage) {
-        currentPage = page
-        viewPager?.setCurrentItem(sessionOnboardingCount + page.ordinal, true)
+        showAuthPage(page)
     }
 
     fun onOtpBackRequested() {
+        resetOtpCodeSentOnVisiblePages()
         navigateToPage(AuthPage.SELECTOR)
     }
 
@@ -182,39 +193,59 @@ class WalletAuthBottomSheet() : BottomSheetDialogFragment() {
 
     fun authClient(): WalletAuthClient = WalletSigningPlugin.authClient()
 
+    private fun showAuthPage(page: AuthPage) {
+        showingAuth = true
+        currentPage = page
+        viewPager?.visibility = View.GONE
+        viewPager?.isUserInputEnabled = false
+        nextButton?.visibility = View.GONE
+        skipCheckbox?.visibility = View.GONE
+        val host = authHost ?: return
+        host.visibility = View.VISIBLE
+        val fragment = when (page) {
+            AuthPage.SELECTOR -> SelectorPage()
+            AuthPage.EMAIL_OTP -> EmailOtpPage()
+            AuthPage.SMS_OTP -> SmsOtpPage()
+        }
+        childFragmentManager.beginTransaction()
+            .replace(R.id.auth_page_host, fragment, AUTH_PAGE_TAG)
+            .commitNow()
+    }
+
     private fun handleBackNavigation(): Boolean {
+        if (showingAuth) {
+            if (currentPage != AuthPage.SELECTOR) {
+                resetOtpCodeSentOnVisiblePages()
+                showAuthPage(AuthPage.SELECTOR)
+                return true
+            }
+            return false
+        }
         val currentPosition = viewPager?.currentItem ?: return false
         if (currentPosition > 0) {
-            if (currentPosition < sessionOnboardingCount) {
-                viewPager?.setCurrentItem(currentPosition - 1, true)
-            } else if (currentPage != AuthPage.SELECTOR) {
-                navigateToPage(AuthPage.SELECTOR)
-            } else {
-                return false
-            }
+            viewPager?.setCurrentItem(currentPosition - 1, true)
             return true
         }
         return false
     }
 
+    private fun resetOtpCodeSentOnVisiblePages() {
+        childFragmentManager.fragments.forEach { fragment ->
+            when (fragment) {
+                is EmailOtpPage -> fragment.resetCodeSent()
+                is SmsOtpPage -> fragment.resetCodeSent()
+            }
+        }
+    }
+
     private class AuthPagerAdapter(
         parent: Fragment,
         private val onboardingSlides: Int,
-        private val authPageCount: Int,
     ) : FragmentStateAdapter(parent) {
 
-        override fun getItemCount(): Int = onboardingSlides + authPageCount
+        override fun getItemCount(): Int = onboardingSlides
 
-        override fun createFragment(position: Int): Fragment {
-            if (position < onboardingSlides) {
-                return createOnboardingSlide(position)
-            }
-            return when (AuthPage.fromIndex(position - onboardingSlides)) {
-                AuthPage.SELECTOR -> SelectorPage()
-                AuthPage.EMAIL_OTP -> EmailOtpPage()
-                AuthPage.SMS_OTP -> SmsOtpPage()
-            }
-        }
+        override fun createFragment(position: Int): Fragment = createOnboardingSlide(position)
 
         private fun createOnboardingSlide(index: Int): Fragment {
             return when (index) {
@@ -242,13 +273,6 @@ class WalletAuthBottomSheet() : BottomSheetDialogFragment() {
         SELECTOR,
         EMAIL_OTP,
         SMS_OTP,
-        ;
-
-        companion object {
-            fun fromIndex(index: Int): AuthPage {
-                return entries.getOrElse(index) { SELECTOR }
-            }
-        }
     }
 
     companion object {
@@ -256,6 +280,7 @@ class WalletAuthBottomSheet() : BottomSheetDialogFragment() {
         const val RESULT_KEY = "wallet_auth_result"
         const val RESULT_ERROR_KEY = "wallet_auth_error"
         private const val ARG_ONBOARDING_TOUR_ONLY = "onboarding_tour_only"
+        private const val AUTH_PAGE_TAG = "wallet_auth_page"
 
         fun newConnectFlow(): WalletAuthBottomSheet = WalletAuthBottomSheet().apply {
             arguments = bundleOf(ARG_ONBOARDING_TOUR_ONLY to false)

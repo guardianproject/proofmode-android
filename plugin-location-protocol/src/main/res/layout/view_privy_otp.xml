@@ -111,6 +111,13 @@
                 android:layout_marginTop="12dp"
                 android:text="Verify" />
 
+            <Button
+                android:id="@+id/btn_resend_code"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/wallet_otp_resend" />
+
             <LinearLayout
                 android:id="@+id/layout_step2_error"
                 android:layout_width="match_parent"

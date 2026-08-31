@@ -5,6 +5,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.witness.proofmode.plugins.wallet.infra.api.WalletAuthClient
+import org.witness.proofmode.plugins.wallet.infra.config.WalletChainPolicy
 import org.witness.proofmode.plugins.wallet.infra.config.ZeroDevConfigResolver
 import org.witness.proofmode.plugins.wallet.infra.exception.WalletNotInitializedException
 import org.witness.proofmode.plugins.wallet.infra.model.WalletProviderId
@@ -20,8 +21,15 @@ object WalletProviderFactory {
         config: WalletSdkConfig,
         sessionStore: WalletSessionStore,
     ): WalletProviderSelection {
-        val restoredChainId = sessionStore.loadChainId() ?: config.defaultChainId
-        val privyConfig = config.copy(defaultChainId = restoredChainId)
+        val resolution = WalletChainPolicy.resolveSessionChainId(
+            storedChainId = sessionStore.loadChainId(),
+            sponsorshipOn = sessionStore.isSponsorTransactionsEnabled(),
+            defaultChainId = config.defaultChainId,
+        )
+        if (resolution.persistRemap) {
+            sessionStore.saveChainId(resolution.chainId)
+        }
+        val privyConfig = config.copy(defaultChainId = resolution.chainId)
         val privyConnector = PrivyWalletConnector(privyConfig, sessionStore)
         val configResolver: (String) -> ZeroDevConfig = { chainId ->
             ZeroDevConfigResolver.resolveEffectiveConfig(
@@ -39,10 +47,22 @@ object WalletProviderFactory {
         )
     }
 
-    suspend fun refreshSponsorshipForCurrentChain(selection: WalletProviderSelection) {
+    suspend fun refreshSponsorshipForCurrentChain(
+        selection: WalletProviderSelection,
+        sessionStore: WalletSessionStore,
+    ) {
         val connector = selection.activeConnector as? ZeroDevSmartAccountConnector ?: return
-        val chainId = connector.privyConnector.getIdentity()?.chainId ?: return
-        connector.setChain(chainId)
+        val candidate = connector.privyConnector.getIdentity()?.chainId
+            ?: sessionStore.loadChainId()
+            ?: return
+        val resolution = WalletChainPolicy.resolveSessionChainId(
+            storedChainId = candidate,
+            sponsorshipOn = sessionStore.isSponsorTransactionsEnabled(),
+        )
+        if (resolution.persistRemap) {
+            sessionStore.saveChainId(resolution.chainId)
+        }
+        connector.setChain(resolution.chainId)
     }
 
     fun wireSponsorshipPrefRefresh(
@@ -52,7 +72,7 @@ object WalletProviderFactory {
     ) {
         sessionStore.setOnSponsorshipPrefsChangedListener {
             scope.launch(Dispatchers.IO) {
-                runCatching { refreshSponsorshipForCurrentChain(selection) }
+                runCatching { refreshSponsorshipForCurrentChain(selection, sessionStore) }
                     .onFailure { Timber.w(it, "sponsorship pref refresh failed") }
             }
         }

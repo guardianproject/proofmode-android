@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import androidx.annotation.VisibleForTesting
 import androidx.fragment.app.Fragment
 import org.witness.proofmode.plugins.lp.R
 import org.witness.proofmode.plugins.lp.wallet.auth.WalletAuthBottomSheet
@@ -54,7 +55,7 @@ class SmsOtpPage : Fragment() {
                         true
                     } catch (e: WalletAuthException) {
                         Timber.tag(TAG).e(e, "Send SMS code failed")
-                        false
+                        throw e
                     } catch (t: Throwable) {
                         Timber.tag(TAG).e(t, "Unexpected error sending SMS code")
                         false
@@ -111,6 +112,22 @@ class SmsOtpPage : Fragment() {
         parentSheet = null
         super.onDestroyView()
     }
+
+    fun resetCodeSent() {
+        if (::otpView.isInitialized) {
+            otpView.codeSent = false
+        }
+    }
+
+    @VisibleForTesting
+    internal fun setCodeSentForTests(value: Boolean) {
+        if (!::otpView.isInitialized) return
+        otpView.codeSent = value
+    }
+
+    @VisibleForTesting
+    internal fun isCodeSentForTests(): Boolean =
+        ::otpView.isInitialized && otpView.codeSent
 
     companion object {
         private const val TAG = "SmsOtpPage"
