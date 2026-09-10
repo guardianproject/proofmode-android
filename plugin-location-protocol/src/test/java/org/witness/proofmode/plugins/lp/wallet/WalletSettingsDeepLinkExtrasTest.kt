@@ -11,7 +11,6 @@ import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.witness.proofmode.plugins.lp.R
-import org.witness.proofmode.plugins.lp.config.SUPPORTED_CHAINS
 import org.witness.proofmode.plugins.lp.deeplink.WalletDeepLinkContract
 import org.witness.proofmode.plugins.lp.TestWalletStackReset
 import org.witness.proofmode.plugins.wallet.infra.model.WalletSdkConfig
@@ -29,6 +28,9 @@ class WalletSettingsDeepLinkExtrasTest {
         WalletSettingsActivity.lastDeepLinkRejectMessageForTests = null
         WalletSigningPlugin.configure(WalletSdkConfig.fromBuildConfig())
         WalletSigningPlugin.register(context)
+        WalletSigningPlugin.sessionStore()?.saveZeroDevProjectIdOverride(
+            "550e8400-e29b-41d4-a716-446655440000",
+        )
     }
 
     @Test
@@ -63,8 +65,35 @@ class WalletSettingsDeepLinkExtrasTest {
         controller.newIntent(refreshIntent)
 
         val spinner = controller.get().findViewById<android.widget.Spinner>(R.id.spinner_chain)
-        val arbitrumIndex = SUPPORTED_CHAINS.indexOfFirst { it.caip2Id == "eip155:42161" }
-        assertEquals(arbitrumIndex, spinner.selectedItemPosition)
+        assertEquals(2, spinner.adapter.count)
+        assertEquals("Sepolia Testnet", spinner.adapter.getItem(0))
+        assertEquals(0, spinner.selectedItemPosition)
         assertNull(WalletSettingsActivity.lastDeepLinkRejectMessageForTests)
+    }
+
+    @Test
+    fun handleDeepLinkExtras_afterSponsorTrue_rebuildsAdapterOffFullCatalog() {
+        val store = WalletSigningPlugin.sessionStore()!!
+        store.saveSponsorTransactionsEnabled(false)
+        store.saveChainId("eip155:42161")
+
+        val intent = Intent(context, WalletSettingsActivity::class.java)
+        val controller = Robolectric.buildActivity(WalletSettingsActivity::class.java, intent)
+        controller.create().start().visible()
+        val spinner = controller.get().findViewById<android.widget.Spinner>(R.id.spinner_chain)
+        assertEquals(5, spinner.adapter.count)
+
+        store.saveSponsorTransactionsEnabled(true)
+        store.saveChainId("eip155:11155111")
+        val refreshIntent = Intent().apply {
+            putExtra(WalletDeepLinkContract.EXTRA_DEEP_LINK_REJECTED, false)
+            putExtra(WalletDeepLinkContract.EXTRA_DEEP_LINK_APPLIED_CHAIN, "eip155:11155111")
+            putExtra(WalletDeepLinkContract.EXTRA_DEEP_LINK_MESSAGE, "Updated")
+        }
+        controller.get().handleDeepLinkExtras(refreshIntent)
+
+        assertEquals(2, spinner.adapter.count)
+        assertEquals("Sepolia Testnet", spinner.adapter.getItem(0))
+        assertEquals(0, spinner.selectedItemPosition)
     }
 }

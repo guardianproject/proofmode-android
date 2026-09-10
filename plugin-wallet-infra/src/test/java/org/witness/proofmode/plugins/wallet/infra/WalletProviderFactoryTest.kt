@@ -68,9 +68,91 @@ class WalletProviderFactoryTest {
     fun createDefault_fallsBackToConfigDefaultChainId_whenStoreEmpty() {
         val store = mock<WalletSessionStore>()
         whenever(store.loadChainId()).thenReturn(null)
-        val config = WalletSdkConfig("app", "client", defaultChainId = "eip155:1")
+        whenever(store.isSponsorTransactionsEnabled()).thenReturn(true)
+        val config = WalletSdkConfig("app", "client")
         val selection = WalletProviderFactory.createDefault(config, store)
-        assertEquals("eip155:1", WalletProviderFactory.privyConnector(selection).getSelectedChainId())
+        assertEquals(
+            "eip155:11155111",
+            WalletProviderFactory.privyConnector(selection).getSelectedChainId(),
+        )
+    }
+
+    @Test
+    fun createDefault_sponsorshipOn_remapsLeftoverMainnetBeforePrivyConstruct() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val store = WalletSessionStore(context)
+        store.saveSponsorTransactionsEnabled(true)
+        store.saveChainId("eip155:1")
+        val config = WalletSdkConfig("app", "client")
+        val selection = WalletProviderFactory.createDefault(config, store)
+        assertEquals("eip155:11155111", store.loadChainId())
+        assertEquals(
+            "eip155:11155111",
+            WalletProviderFactory.privyConnector(selection).getSelectedChainId(),
+        )
+    }
+
+    @Test
+    fun createDefault_sponsorshipOn_remapsArbitrumOneAndBase() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        listOf("eip155:42161", "eip155:8453").forEach { leftover ->
+            val store = WalletSessionStore(context)
+            store.clear()
+            store.saveSponsorTransactionsEnabled(true)
+            store.saveChainId(leftover)
+            WalletProviderFactory.createDefault(WalletSdkConfig("app", "client"), store)
+            assertEquals("eip155:11155111", store.loadChainId())
+        }
+    }
+
+    @Test
+    fun createDefault_sponsorshipOff_preservesLeftoverMainnet() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val store = WalletSessionStore(context)
+        store.saveSponsorTransactionsEnabled(false)
+        store.saveChainId("eip155:1")
+        val selection = WalletProviderFactory.createDefault(WalletSdkConfig("app", "client"), store)
+        assertEquals("eip155:1", store.loadChainId())
+        assertEquals(
+            "eip155:1",
+            WalletProviderFactory.privyConnector(selection).getSelectedChainId(),
+        )
+    }
+
+    @Test
+    fun refreshSponsorship_sponsorshipOn_remapsStoreLeftoverThenSetChainSepolia() = kotlinx.coroutines.test.runTest {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val store = WalletSessionStore(context)
+        store.saveSponsorTransactionsEnabled(false)
+        store.saveChainId("eip155:1")
+        val selection = WalletProviderFactory.createDefault(WalletSdkConfig("app", "client"), store)
+        assertEquals("eip155:1", store.loadChainId())
+
+        store.saveSponsorTransactionsEnabled(true)
+        WalletProviderFactory.refreshSponsorshipForCurrentChain(selection, store)
+
+        assertEquals("eip155:11155111", store.loadChainId())
+        assertEquals(
+            "eip155:11155111",
+            WalletProviderFactory.privyConnector(selection).getSelectedChainId(),
+        )
+    }
+
+    @Test
+    fun refreshSponsorship_sponsorshipOff_doesNotRemap() = kotlinx.coroutines.test.runTest {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val store = WalletSessionStore(context)
+        store.saveSponsorTransactionsEnabled(false)
+        store.saveChainId("eip155:42161")
+        val selection = WalletProviderFactory.createDefault(WalletSdkConfig("app", "client"), store)
+
+        WalletProviderFactory.refreshSponsorshipForCurrentChain(selection, store)
+
+        assertEquals("eip155:42161", store.loadChainId())
+        assertEquals(
+            "eip155:42161",
+            WalletProviderFactory.privyConnector(selection).getSelectedChainId(),
+        )
     }
 
     @Test

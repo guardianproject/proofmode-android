@@ -7,6 +7,12 @@ import org.junit.Test
 class ChainConfigTest {
 
     @Test
+    fun `SUPPORTED_CHAINS still includes leftover mainnets for self-funded catalog`() {
+        val ids = SUPPORTED_CHAINS.map { it.caip2Id }.toSet()
+        assertTrue(ids.containsAll(setOf("eip155:1", "eip155:42161", "eip155:8453")))
+    }
+
+    @Test
     fun `SUPPORTED_CHAINS contains all 5 networks`() {
         assertEquals(5, SUPPORTED_CHAINS.size)
     }

@@ -16,8 +16,17 @@ class WalletSdkConfigExtendedTest {
         )
         assertEquals("app_123", config.privyAppId)
         assertEquals("client_123", config.privyAppClientId)
-        assertEquals("eip155:1", config.defaultChainId)
+        assertEquals("eip155:11155111", config.defaultChainId)
         assertTrue(config.zeroDevConfigs.isEmpty())
+    }
+
+    @Test
+    fun testOmittedDefaultChainIdIsSepolia() {
+        val config = WalletSdkConfig(
+            privyAppId = "app_123",
+            privyAppClientId = "client_123",
+        )
+        assertEquals("eip155:11155111", config.defaultChainId)
     }
 
     @Test

@@ -14,6 +14,7 @@ import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
@@ -24,12 +25,12 @@ import org.witness.proofmode.plugins.lp.deeplink.ParamOutcome
 import org.witness.proofmode.plugins.lp.deeplink.ParsedParam
 import org.witness.proofmode.plugins.lp.deeplink.WalletDeepLinkParseResult
 import org.witness.proofmode.plugins.lp.wallet.WalletSigningPlugin
+import org.witness.proofmode.plugins.wallet.infra.api.WalletConnector
 import org.witness.proofmode.plugins.wallet.infra.factory.WalletSessionStore
 import org.witness.proofmode.plugins.wallet.infra.model.WalletIdentity
 import org.witness.proofmode.plugins.wallet.infra.model.WalletProviderSelection
 import org.witness.proofmode.plugins.wallet.infra.model.WalletSdkConfig
 import org.witness.proofmode.plugins.wallet.infra.privy.PrivyWalletConnector
-import org.witness.proofmode.plugins.wallet.infra.zerodev.ZeroDevSmartAccountConnector
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -54,9 +55,8 @@ class WalletDeepLinkApplyTest {
             host = "wallet",
             isWalletRoute = true,
         )
-        val mockActive = mock<ZeroDevSmartAccountConnector>()
+        val mockActive = mock<WalletConnector>()
         val mockPrivy = mock<PrivyWalletConnector>()
-        whenever(mockActive.privyConnector).thenReturn(mockPrivy)
         val selection = mock<WalletProviderSelection>()
         whenever(selection.activeConnector).thenReturn(mockActive)
 
@@ -69,15 +69,68 @@ class WalletDeepLinkApplyTest {
     }
 
     @Test
+    fun apply_leftoverChainAndSponsorTrue_remapsToSepoliaAfterAllParams() = runTest {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val store = WalletSessionStore(context)
+        store.saveSponsorTransactionsEnabled(false)
+        store.saveChainId("eip155:8453")
+
+        val mockPrivy = mock<PrivyWalletConnector>()
+        whenever(mockPrivy.getIdentity()).thenReturn(null)
+        val selection = mock<WalletProviderSelection>()
+        whenever(selection.activeConnector).thenReturn(mockPrivy)
+
+        val parseResult = WalletDeepLinkParseResult(
+            chain = ParsedParam(ParamOutcome.VALID, "eip155:1"),
+            sponsor = ParsedParam(ParamOutcome.VALID, true),
+            projectId = null,
+            host = "wallet",
+            isWalletRoute = true,
+        )
+
+        val result = WalletDeepLinkApplier.apply(context, parseResult, store, selection)
+
+        assertEquals("eip155:11155111", store.loadChainId())
+        assertTrue(store.isSponsorTransactionsEnabled())
+        assertEquals("eip155:11155111", result.appliedChain)
+        verify(mockPrivy).setChain("eip155:11155111")
+        verify(mockPrivy, never()).setChain("eip155:1")
+    }
+
+    @Test
+    fun apply_leftoverChainSponsorshipOff_preservesMainnet() = runTest {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val store = WalletSessionStore(context)
+        store.saveSponsorTransactionsEnabled(false)
+
+        val mockPrivy = mock<PrivyWalletConnector>()
+        whenever(mockPrivy.getIdentity()).thenReturn(null)
+        val selection = mock<WalletProviderSelection>()
+        whenever(selection.activeConnector).thenReturn(mockPrivy)
+
+        val parseResult = WalletDeepLinkParseResult(
+            chain = ParsedParam(ParamOutcome.VALID, "eip155:42161"),
+            sponsor = ParsedParam(ParamOutcome.VALID, false),
+            projectId = null,
+            host = "wallet",
+            isWalletRoute = true,
+        )
+
+        WalletDeepLinkApplier.apply(context, parseResult, store, selection)
+
+        assertEquals("eip155:42161", store.loadChainId())
+        verify(mockPrivy, times(1)).setChain("eip155:42161")
+    }
+
+    @Test
     fun apply_validFullUri_persistsSessionStore_loggedOutUsesPrivySetChain() = runTest {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
-        val mockActive = mock<ZeroDevSmartAccountConnector>()
+        val store = WalletSessionStore(context)
+        store.saveSponsorTransactionsEnabled(false)
         val mockPrivy = mock<PrivyWalletConnector>()
-        whenever(mockActive.getIdentity()).thenReturn(null)
-        whenever(mockActive.privyConnector).thenReturn(mockPrivy)
+        whenever(mockPrivy.getIdentity()).thenReturn(null)
         val selection = mock<WalletProviderSelection>()
-        whenever(selection.activeConnector).thenReturn(mockActive)
-        val store = mock<WalletSessionStore>()
+        whenever(selection.activeConnector).thenReturn(mockPrivy)
 
         val parseResult = WalletDeepLinkParseResult(
             chain = ParsedParam(ParamOutcome.VALID, "eip155:42161"),
@@ -89,27 +142,28 @@ class WalletDeepLinkApplyTest {
 
         val result = WalletDeepLinkApplier.apply(context, parseResult, store, selection)
 
-        assertEquals("eip155:42161", result.appliedChain)
+        assertEquals("eip155:11155111", result.appliedChain)
         assertEquals(true, result.appliedSponsor)
         assertEquals("550e8400-e29b-41d4-a716-446655440000", result.appliedProjectId)
         assertFalse(result.rejected)
-        verify(store).saveChainId("eip155:42161")
-        verify(store).saveSponsorTransactionsEnabled(true)
-        verify(store).saveZeroDevProjectIdOverride("550e8400-e29b-41d4-a716-446655440000")
-        verify(mockPrivy).setChain("eip155:42161")
-        verify(mockActive, never()).setChain("eip155:42161")
+        assertEquals("eip155:11155111", store.loadChainId())
+        assertTrue(store.isSponsorTransactionsEnabled())
+        assertEquals("550e8400-e29b-41d4-a716-446655440000", store.loadZeroDevProjectIdOverride())
+        verify(mockPrivy).setChain("eip155:11155111")
+        verify(mockPrivy, never()).setChain("eip155:42161")
     }
 
     @Test
     fun apply_validChain_loggedInUsesActiveConnectorSetChain() = runTest {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
-        val mockActive = mock<ZeroDevSmartAccountConnector>()
+        val mockActive = mock<WalletConnector>()
         whenever(mockActive.getIdentity()).thenReturn(
             WalletIdentity("0x1234567890abcdef1234567890abcdef12345678", "eip155:1"),
         )
         val selection = mock<WalletProviderSelection>()
         whenever(selection.activeConnector).thenReturn(mockActive)
         val store = mock<WalletSessionStore>()
+        whenever(store.isSponsorTransactionsEnabled()).thenReturn(false)
 
         val parseResult = WalletDeepLinkParseResult(
             chain = ParsedParam(ParamOutcome.VALID, "eip155:42161"),
@@ -122,19 +176,18 @@ class WalletDeepLinkApplyTest {
         WalletDeepLinkApplier.apply(context, parseResult, store, selection)
 
         verify(store).saveChainId("eip155:42161")
-        verify(mockActive).setChain("eip155:42161")
+        verify(mockActive, times(1)).setChain("eip155:42161")
     }
 
     @Test
     fun apply_invalidSponsorSkipped_validChainStillApplied() = runTest {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
-        val mockActive = mock<ZeroDevSmartAccountConnector>()
         val mockPrivy = mock<PrivyWalletConnector>()
-        whenever(mockActive.getIdentity()).thenReturn(null)
-        whenever(mockActive.privyConnector).thenReturn(mockPrivy)
+        whenever(mockPrivy.getIdentity()).thenReturn(null)
         val selection = mock<WalletProviderSelection>()
-        whenever(selection.activeConnector).thenReturn(mockActive)
+        whenever(selection.activeConnector).thenReturn(mockPrivy)
         val store = mock<WalletSessionStore>()
+        whenever(store.isSponsorTransactionsEnabled()).thenReturn(false)
 
         val parseResult = WalletDeepLinkParseResult(
             chain = ParsedParam(ParamOutcome.VALID, "eip155:8453"),
@@ -177,7 +230,7 @@ class WalletDeepLinkApplyTest {
             WalletSigningPlugin.providerSelection,
         )
 
-        assertEquals("eip155:42161", store.loadChainId())
+        assertEquals("eip155:11155111", store.loadChainId())
         assertTrue(store.isSponsorTransactionsEnabled())
         assertEquals("550e8400-e29b-41d4-a716-446655440000", store.loadZeroDevProjectIdOverride())
         assertFalse(result.rejected)
@@ -207,9 +260,9 @@ class WalletDeepLinkApplyTest {
         val uri = Uri.parse("proofmode://wallet?chain=eip155:42161")
         val result = LocationProtocolPlugin.applyWalletDeepLink(context, uri)
 
-        assertEquals("eip155:42161", result.appliedChain)
+        assertEquals("eip155:11155111", result.appliedChain)
         assertEquals(
-            "eip155:42161",
+            "eip155:11155111",
             requireNotNull(WalletSigningPlugin.sessionStore()).loadChainId(),
         )
     }

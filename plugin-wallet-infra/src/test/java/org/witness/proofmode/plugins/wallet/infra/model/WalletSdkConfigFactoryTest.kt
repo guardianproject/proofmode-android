@@ -18,6 +18,8 @@ class WalletSdkConfigFactoryTest {
             org.witness.proofmode.plugins.wallet.infra.BuildConfig.PRIVY_APP_CLIENT_ID,
             config.privyAppClientId,
         )
+        assertEquals("eip155:11155111", config.defaultChainId)
+        assertEquals(5, config.zeroDevConfigs.size)
         assertEquals(
             ZeroDevConfigResolver.SPONSORED_CHAIN_IDS.toSet(),
             config.zeroDevConfigs.keys,

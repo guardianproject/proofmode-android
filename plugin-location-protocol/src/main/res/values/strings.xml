@@ -29,6 +29,9 @@
     <string name="onboarding_slide_3_title">Onchain Attestations</string>
     <string name="onboarding_slide_3_body">The Ethereum Attestation Service (EAS) anchors your proofs onchain, creating tamper-evident records that anyone can independently verify.</string>
     <string name="auth_sheet_title">Log in or sign up</string>
+    <string name="auth_otp_unable_to_send_code">Unable to send code</string>
+    <string name="auth_otp_too_many_requests">Too many requests. Please wait to try again.</string>
+    <string name="wallet_otp_resend">Resend code</string>
     <string name="close">Close</string>
     <string name="wallet_network_label">Network</string>
     <string name="powered_by_privy">Powered by Privy</string>
@@ -36,6 +39,7 @@
     <string name="wallet_sponsor_transactions_label">Sponsor transactions</string>
     <string name="wallet_sponsor_transactions_summary_on">On-chain attestations use sponsored gas when available.</string>
     <string name="wallet_sponsor_transactions_summary_off">Self-funded mode — gas is paid from your wallet balance.</string>
+    <string name="wallet_empty_sponsored_networks">Gas sponsorship is not available for any networks. Disable the gas sponsorship toggle to make self-funded on-chain transactions.</string>
     <string name="wallet_zerodev_project_id_label">Override ZeroDev Project ID</string>
     <string name="wallet_zerodev_project_id_error_invalid">Enter a valid UUID (e.g. 550e8400-e29b-41d4-a716-446655440000).</string>
     <string name="wallet_zerodev_project_id_saved">Project ID saved</string>
