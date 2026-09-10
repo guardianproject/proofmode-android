@@ -145,7 +145,6 @@ public class ProofMode {
 
             // Use WorkManager for Android 15+ (API 35) due to background network restrictions,
             // fall back to JobScheduler for older versions
-
             /**
             if (Build.VERSION.SDK_INT >= 35) {
                 PhotosContentWorker.scheduleWork(context);
