@@ -283,19 +283,25 @@ fun SingleAssetView(initialItem: ProofableItem, modifier: Modifier = Modifier, s
                     }
                 })
             }**/
-            Column(
-                modifier = Modifier
-                    .alpha(metadataOpacity)
-                    .height(with(localDensity) { (topPartHeight / 2).toDp() })
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .padding(6.dp, 6.dp)
-                    .background(Color.White)
-                    .verticalScroll(rememberScrollState())
-            ) {
+            // Only lay the metadata panel out while it is actually visible. When it is
+            // faded out the image expands over the space it occupies, and an invisible
+            // panel left in the layout keeps hit-testing - it would swallow the pinch,
+            // pan and double-tap gestures over the bottom half of the expanded image.
+            if (metadataOpacity > 0f) {
+                Column(
+                    modifier = Modifier
+                        .alpha(metadataOpacity)
+                        .height(with(localDensity) { (topPartHeight / 2).toDp() })
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(6.dp, 6.dp)
+                        .background(Color.White)
+                        .verticalScroll(rememberScrollState())
+                ) {
 
-                updateMetadata(initialItem.uri,context)
+                    updateMetadata(initialItem.uri, context)
 
+                }
             }
 
         }
@@ -1110,7 +1116,8 @@ fun SingleItemView(itemWidth: Dp, allAssets: List<ProofableItem>, index: Int, se
                         // center-crop a 1:1 / 16:9 capture whenever the item was selected.
                         contain = true,
                         corners = RectF(0f, 0f, 0f, 0f),
-                        showSelectionBorder = false
+                        showSelectionBorder = false,
+                        zoomable = true
                 )
                 if (LocalSelectionHandler.current.isSelected(item)) {
                     Box(modifier = Modifier
