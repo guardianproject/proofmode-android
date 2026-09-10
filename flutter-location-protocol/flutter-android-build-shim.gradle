@@ -75,3 +75,8 @@ dependencies {
     releaseImplementation "io.flutter:arm64_v8a_release:1.0.0-${engineVersion}"
     releaseImplementation "io.flutter:x86_64_release:1.0.0-${engineVersion}"
 }
+
+// The host LP module's unit-test asset merge depends on these Flutter plugin tasks.
+// This AGP 9 shim does not apply the Flutter Gradle plugin, so register no-ops.
+tasks.register("copyFlutterAssetsDebug")
+tasks.register("copyFlutterAssetsRelease")

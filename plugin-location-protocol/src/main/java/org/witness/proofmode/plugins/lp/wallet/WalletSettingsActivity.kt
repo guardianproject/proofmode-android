@@ -32,6 +32,7 @@ import kotlinx.coroutines.withContext
 import org.witness.proofmode.plugins.lp.R
 import org.witness.proofmode.plugins.lp.LocationProtocolPlugin
 import org.witness.proofmode.plugins.lp.config.ChainConfig
+import org.witness.proofmode.plugins.lp.config.ChainSpinnerPolicy
 import org.witness.proofmode.plugins.lp.config.SUPPORTED_CHAINS
 import org.witness.proofmode.plugins.lp.config.easScanUrl
 import org.witness.proofmode.plugins.lp.config.explorerUrl
@@ -40,6 +41,8 @@ import org.witness.proofmode.plugins.lp.wallet.auth.WalletOnboardingPreferences
 import org.witness.proofmode.plugins.lp.deeplink.WalletDeepLinkContract
 import org.witness.proofmode.plugins.lp.wallet.WalletSponsorshipSettingsPresenter
 import org.witness.proofmode.plugins.wallet.infra.BuildConfig
+import org.witness.proofmode.plugins.wallet.infra.config.WalletChainPolicy
+import org.witness.proofmode.plugins.wallet.infra.config.ZeroDevConfigResolver
 import org.witness.proofmode.plugins.wallet.infra.model.WalletAuthenticating
 import org.witness.proofmode.plugins.wallet.infra.model.WalletConnected
 import org.witness.proofmode.plugins.wallet.infra.api.WalletCapabilityProvider
@@ -60,7 +63,7 @@ class WalletSettingsActivity : AppCompatActivity() {
     private val activeWalletConnector: WalletConnector
         get() = WalletSigningPlugin.providerSelection.activeConnector
 
-    private val chainMapping: List<ChainConfig> = SUPPORTED_CHAINS
+    private var visibleChains: List<ChainConfig> = SUPPORTED_CHAINS
     private var selectedChainIndex: Int = 0
     private lateinit var spinnerChain: Spinner
     private var sponsorshipRefresh: (() -> Unit)? = null
@@ -107,19 +110,10 @@ class WalletSettingsActivity : AppCompatActivity() {
         val initialChainId = when {
             deepLinkAppliedChain != null -> deepLinkAppliedChain
             storeChain != null -> storeChain
-            else -> activeWalletConnector.getIdentity()?.chainId ?: "eip155:1"
+            else -> activeWalletConnector.getIdentity()?.chainId
+                ?: WalletChainPolicy.DEFAULT_CHAIN_ID
         }
-        val initialIndex = chainMapping.indexOfFirst { it.caip2Id == initialChainId }.coerceAtLeast(0)
-        selectedChainIndex = initialIndex
-
-        val adapter = ArrayAdapter(
-            this,
-            android.R.layout.simple_spinner_item,
-            chainMapping.map { it.displayName }
-        )
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinnerChain.adapter = adapter
-        spinnerChain.setSelection(initialIndex, false)
+        bindChainSpinner(initialChainId)
 
         val connectorType = activeWalletConnector.javaClass.simpleName
         Timber.tag(TAG).d(
@@ -132,8 +126,9 @@ class WalletSettingsActivity : AppCompatActivity() {
 
         spinnerChain.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                val previousChain = chainMapping.getOrNull(selectedChainIndex)?.caip2Id
-                val newChain = chainMapping[position]
+                if (visibleChains.isEmpty()) return
+                val previousChain = visibleChains.getOrNull(selectedChainIndex)?.caip2Id
+                val newChain = visibleChains.getOrNull(position) ?: return
                 if (position == selectedChainIndex && previousChain == newChain.caip2Id) return
 
                 selectedChainIndex = position
@@ -192,9 +187,11 @@ class WalletSettingsActivity : AppCompatActivity() {
                             cardExplorerLinks.visibility = View.VISIBLE
                             btnConnect.isEnabled = true
 
-                            val index = chainMapping.indexOfFirst { it.caip2Id == state.identity.chainId }
-                            if (index >= 0 && index != selectedChainIndex) {
-                                val previousChain = chainMapping.getOrNull(selectedChainIndex)?.caip2Id
+                            val index = visibleChains.indexOfFirst { it.caip2Id == state.identity.chainId }
+                            if (index < 0) {
+                                bindChainSpinner(state.identity.chainId)
+                            } else if (index != selectedChainIndex) {
+                                val previousChain = visibleChains.getOrNull(selectedChainIndex)?.caip2Id
                                 Timber.tag(TAG).d(
                                     "Chain synced from wallet state: %s → %s address=%s sponsorshipActive=%s",
                                     previousChain,
@@ -259,7 +256,8 @@ class WalletSettingsActivity : AppCompatActivity() {
 
         findViewById<Button>(R.id.btn_view_transactions).setOnClickListener {
             val identity = activeWalletConnector.getIdentity() ?: return@setOnClickListener
-            val config = chainMapping.getOrNull(selectedChainIndex) ?: return@setOnClickListener
+            val config = chainConfig(visibleChains.getOrNull(selectedChainIndex)?.caip2Id)
+                ?: return@setOnClickListener
             runCatching {
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(config.explorerUrl(identity.address)))
                 startActivity(intent)
@@ -268,7 +266,8 @@ class WalletSettingsActivity : AppCompatActivity() {
 
         findViewById<Button>(R.id.btn_view_attestations).setOnClickListener {
             val identity = activeWalletConnector.getIdentity() ?: return@setOnClickListener
-            val config = chainMapping.getOrNull(selectedChainIndex) ?: return@setOnClickListener
+            val config = chainConfig(visibleChains.getOrNull(selectedChainIndex)?.caip2Id)
+                ?: return@setOnClickListener
             runCatching {
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(config.easScanUrl(identity.address)))
                 startActivity(intent)
@@ -339,12 +338,7 @@ class WalletSettingsActivity : AppCompatActivity() {
         val chainId = appliedChain
             ?: WalletSigningPlugin.sessionStore()?.loadChainId()
             ?: return
-        val index = chainMapping.indexOfFirst { it.caip2Id == chainId }.takeIf { it >= 0 } ?: return
-        if (index == selectedChainIndex) return
-        selectedChainIndex = index
-        if (::spinnerChain.isInitialized) {
-            spinnerChain.setSelection(index, false)
-        }
+        bindChainSpinner(chainId)
     }
 
     override fun onStart() {
@@ -376,6 +370,52 @@ class WalletSettingsActivity : AppCompatActivity() {
     private fun abbreviateAddress(address: String): String {
         if (address.length <= 12) return address
         return "${address.take(6)}…${address.takeLast(4)}"
+    }
+
+    private fun chainConfig(caip2: String?): ChainConfig? =
+        caip2?.let { id -> SUPPORTED_CHAINS.firstOrNull { it.caip2Id == id } }
+
+    private fun hasEffectiveProjectId(): Boolean {
+        val store = WalletSigningPlugin.sessionStore()
+        val buildDefault = WalletSigningPlugin.buildDefaultZeroDevProjectId()
+        val effective = ZeroDevConfigResolver.effectiveProjectId(
+            sessionOverride = store?.loadZeroDevProjectIdOverride(),
+            buildProjectId = buildDefault,
+        )
+        return ZeroDevConfigResolver.isConfiguredSecret(effective)
+    }
+
+    private fun bindChainSpinner(savedChainId: String?) {
+        val compileOn = BuildConfig.FEATURE_SPONSORSHIP_ENABLED
+        val toggleOn = WalletSigningPlugin.sessionStore()?.isSponsorTransactionsEnabled() == true
+        val hasProject = hasEffectiveProjectId()
+        visibleChains = ChainSpinnerPolicy.visibleChains(
+            sponsorshipOn = toggleOn,
+            hasEffectiveProjectId = hasProject,
+            compileSponsorshipEnabled = compileOn,
+        )
+        val adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_item,
+            visibleChains.map { it.displayName },
+        )
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerChain.adapter = adapter
+        spinnerChain.isEnabled = visibleChains.isNotEmpty()
+        val note = findViewById<TextView>(R.id.tv_empty_sponsored_networks)
+        note.visibility = if (
+            ChainSpinnerPolicy.showEmptySponsoredNote(
+                sponsorshipOn = toggleOn,
+                hasEffectiveProjectId = hasProject,
+                compileSponsorshipEnabled = compileOn,
+            )
+        ) View.VISIBLE else View.GONE
+
+        val index = ChainSpinnerPolicy.defaultSelectionIndex(visibleChains, savedChainId)
+        selectedChainIndex = index
+        if (visibleChains.isNotEmpty()) {
+            spinnerChain.setSelection(index, false)
+        }
     }
 
     private fun configureSponsorshipSection(): (() -> Unit)? {
@@ -432,6 +472,7 @@ class WalletSettingsActivity : AppCompatActivity() {
             if (sessionStore.isSponsorTransactionsEnabled() == isChecked) return@setOnCheckedChangeListener
             sessionStore.saveSponsorTransactionsEnabled(isChecked)
             bindToggleUi()
+            bindChainSpinner(sessionStore.loadChainId())
             Timber.tag(TAG).d(
                 "Sponsor toggle saved: enabled=%s sponsorshipActive=%s",
                 isChecked,
@@ -453,6 +494,7 @@ class WalletSettingsActivity : AppCompatActivity() {
 
             sessionStore.saveZeroDevProjectIdOverride(newOverride)
             bindProjectIdUi()
+            bindChainSpinner(sessionStore.loadChainId())
             Toast.makeText(this, R.string.wallet_zerodev_project_id_saved, Toast.LENGTH_SHORT).show()
             Timber.tag(TAG).d(
                 "Project ID saved: override=%s sponsorshipActive=%s",

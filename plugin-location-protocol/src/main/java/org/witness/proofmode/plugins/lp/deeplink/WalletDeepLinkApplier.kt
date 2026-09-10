@@ -7,6 +7,7 @@ import org.witness.proofmode.plugins.lp.deeplink.ParamOutcome
 import org.witness.proofmode.plugins.lp.R
 import org.witness.proofmode.plugins.lp.deeplink.WalletDeepLinkParseResult
 import org.witness.proofmode.plugins.lp.deeplink.WalletDeepLinkResult
+import org.witness.proofmode.plugins.wallet.infra.config.WalletChainPolicy
 import org.witness.proofmode.plugins.wallet.infra.factory.WalletProviderFactory
 import org.witness.proofmode.plugins.wallet.infra.factory.WalletSessionStore
 import org.witness.proofmode.plugins.wallet.infra.model.WalletProviderSelection
@@ -38,6 +39,12 @@ internal object WalletDeepLinkApplier {
         var appliedChain: String? = null
         var appliedSponsor: Boolean? = null
         var appliedProjectId: String? = null
+        var skippedLeftoverSync = false
+
+        fun resultingSponsorshipOn(): Boolean = when (parseResult.sponsor?.outcome) {
+            ParamOutcome.VALID -> requireNotNull(parseResult.sponsor.value)
+            else -> sessionStore.isSponsorTransactionsEnabled()
+        }
 
         val hasAnyQueryParam = listOfNotNull(
             parseResult.chain,
@@ -57,7 +64,13 @@ internal object WalletDeepLinkApplier {
                     val chainId = requireNotNull(param.value)
                     sessionStore.saveChainId(chainId)
                     appliedChain = chainId
-                    syncChain(chainId, providerSelection)
+                    val skipLeftoverSync = WalletChainPolicy.isLeftoverMainnet(chainId) &&
+                        (sessionStore.isSponsorTransactionsEnabled() || resultingSponsorshipOn())
+                    if (skipLeftoverSync) {
+                        skippedLeftoverSync = true
+                    } else {
+                        syncChain(chainId, providerSelection)
+                    }
                     Timber.tag(TAG).i("Applied chain=%s", chainId)
                 }
                 ParamOutcome.INVALID -> { /* unreachable — hard reject above */ }
@@ -89,6 +102,26 @@ internal object WalletDeepLinkApplier {
                 ParamOutcome.INVALID -> skipped.add("projectId:invalid_value")
                 ParamOutcome.ABSENT -> Unit
             }
+        }
+
+        val sponsorshipOn = sessionStore.isSponsorTransactionsEnabled()
+        val current = sessionStore.loadChainId()
+        val resolution = WalletChainPolicy.resolveSessionChainId(
+            storedChainId = current,
+            sponsorshipOn = sponsorshipOn,
+        )
+        val leftoverApplied = appliedChain
+        if (resolution.persistRemap) {
+            sessionStore.saveChainId(resolution.chainId)
+            syncChain(resolution.chainId, providerSelection)
+            appliedChain = resolution.chainId
+        } else if (
+            skippedLeftoverSync &&
+            leftoverApplied != null &&
+            WalletChainPolicy.isLeftoverMainnet(leftoverApplied) &&
+            !sponsorshipOn
+        ) {
+            syncChain(leftoverApplied, providerSelection)
         }
 
         return WalletDeepLinkResult(

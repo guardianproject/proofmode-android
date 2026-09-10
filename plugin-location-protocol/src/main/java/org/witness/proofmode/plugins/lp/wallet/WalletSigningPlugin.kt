@@ -6,6 +6,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import org.witness.proofmode.plugin.ProofmodePlugin
 import org.witness.proofmode.plugins.wallet.infra.api.WalletAuthClient
+import org.witness.proofmode.plugins.wallet.infra.config.WalletChainPolicy
 import org.witness.proofmode.plugins.wallet.infra.factory.WalletProviderFactory
 import org.witness.proofmode.plugins.wallet.infra.factory.WalletSessionStore
 import org.witness.proofmode.plugins.wallet.infra.model.WalletProviderSelection
@@ -31,7 +32,7 @@ object WalletSigningPlugin : ProofmodePlugin {
         val config = sdkConfig ?: WalletSdkConfig(
             privyAppId = "",
             privyAppClientId = "",
-            defaultChainId = "eip155:1",
+            defaultChainId = WalletChainPolicy.DEFAULT_CHAIN_ID,
         )
 
         val store = WalletSessionStore(context.applicationContext)

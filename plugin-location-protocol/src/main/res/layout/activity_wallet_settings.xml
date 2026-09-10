@@ -197,6 +197,17 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp" />
+
+                    <TextView
+                        android:id="@+id/tv_empty_sponsored_networks"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:fontFamily="@font/verdana"
+                        android:text="@string/wallet_empty_sponsored_networks"
+                        android:textColor="#B00020"
+                        android:textSize="12sp"
+                        android:visibility="gone" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
