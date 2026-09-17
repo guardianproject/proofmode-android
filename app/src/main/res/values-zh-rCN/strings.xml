@@ -186,10 +186,10 @@
     <string name="bucket_name">存储桶名称</string>
     <string name="endpoint_url">端点 URL</string>
     <string name="instructions">说明：</string>
-    <string name="filebase_instructions_info">1. 在 filebase.com 创建一个免费账号\n2. 创建一个用于存储证据的新存储桶\n3. 在 Filebase 控制面板中生成访问密钥\n4. 输入上方密钥并测试连接。</string>
+    <string name="filebase_instructions_info">1. 在 &lt;a href=\"https://filebase.com\"&gt;filebase.com&lt;/a&gt; 上创建免费账户；\n2. 创建新的存储桶（Bucket）用于存储证明（proof）；\n3. 在 Filebase 账户控制面板中生成访问密钥（Access Keys）；\n4. 输入 S3 凭证或存储桶范围的 IPFS Token；\n5. 测试连接以验证配置是否正确；\n6. 可选：启用自动同步（Auto Sync）属性，实现自动上传，或通过分享菜单手动上传。</string>
     <string name="filebase_test_connection">测试连接</string>
     <string name="filebase_save_settings">保存设置</string>
-    <string name="please_fill_in_all_required_fields">请填写所有必填字段</string>
+    <string name="please_fill_in_all_required_fields">请输入 IPFS 持有者令牌（bearer token）和/或填写完整的 S3 凭证（访问密钥、密钥、存储桶）。</string>
     <string name="background_mode">自动导入</string>
     <string name="proofcheck_verifier">ProofCheck 验证器</string>
     <string name="background_mode_info">为此设备上的所有新照片和视频添加证据</string>
