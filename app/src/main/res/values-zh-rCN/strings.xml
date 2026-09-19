@@ -178,9 +178,9 @@
     <string name="second_fragment_label">第二段</string>
     <string name="share_content_credentials_info">直接分享图片或视频，并将证据元数据直接嵌入文件本身，并由 Proofmode.org 验证和签名</string>
     <string name="menu_import_creds">导入凭据…</string>
-    <string name="filebase_ipfs_storage_description">配置将证据自动上传到 Filebase.com。它们将自动发布到 IPFS。</string>
+    <string name="filebase_ipfs_storage_description">请输入 S3 身份凭证（访问密钥、私有密钥、存储桶和端点）或 IPFS Bearer Token，以允许将拍摄的媒体文件及其证明元数据上传至 Filebase。</string>
     <string name="filebase_ipfs_storage">Filebase IPFS 自动同步（测试）</string>
-    <string name="enable_filebase_upload">启用 Filebase 上传</string>
+    <string name="enable_filebase_upload">启用 Filebase</string>
     <string name="access_key">访问密钥</string>
     <string name="secret_key">密钥</string>
     <string name="bucket_name">存储桶名称</string>
@@ -194,7 +194,7 @@
     <string name="proofcheck_verifier">ProofCheck 验证器</string>
     <string name="background_mode_info">为此设备上的所有新照片和视频添加证据</string>
     <string name="auto_sync_title">自动同步</string>
-    <string name="auto_sync_desc">将证据数据备份到 Filebase.com 云端</string>
+    <string name="auto_sync_desc">将证据数据备份到 Filebase.com</string>
     <string name="social">社交</string>
     <string name="share_social">仅分享包含 C2PA 的媒体文件和社交网络的验证链接</string>
     <string name="share_media">在社交媒体上分享</string>
@@ -209,7 +209,7 @@
     <string name="c2pa_os_patch_level_error">C2PA 已禁用：操作系统安全补丁未在 90 天内更新</string>
     <string name="settings_location_desc_approx">GPS 坐标仅供参考</string>
     <string name="settings_location_desc_none">未授予权限</string>
-    <string name="settings_signing_title">签名模式</string>
+    <string name="settings_signing_title">内容凭证（C2PA）</string>
     <string name="settings_signing_mode_label">签名模式</string>
     <string name="settings_signing_remote">远程签名</string>
     <string name="settings_signing_signing_servers">签名服务器</string>
