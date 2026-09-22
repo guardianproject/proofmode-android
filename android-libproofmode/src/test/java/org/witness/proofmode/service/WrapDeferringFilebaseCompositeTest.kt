@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -18,7 +19,7 @@ import org.witness.proofmode.storage.filebase.FilebaseConfig
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
-class BuildFilebaseAutoCompositeTest {
+class WrapDeferringFilebaseCompositeTest {
 
     private lateinit var context: Context
     private lateinit var primary: StorageProvider
@@ -59,10 +60,22 @@ class BuildFilebaseAutoCompositeTest {
         return field.get(this) as FilebaseConfig?
     }
 
+    private fun CompositeStorageProvider.secondaryProviderForTest(): StorageProvider {
+        val field = CompositeStorageProvider::class.java.getDeclaredField("secondaryProvider")
+        field.isAccessible = true
+        return field.get(this) as StorageProvider
+    }
+
+    private fun CompositeStorageProvider.primaryProviderForTest(): StorageProvider {
+        val field = CompositeStorageProvider::class.java.getDeclaredField("primaryProvider")
+        field.isAccessible = true
+        return field.get(this) as StorageProvider
+    }
+
     @Test
     fun s3AutoUpload_returnsCompositeWithDeferTrue() {
         val config = s3Config()
-        val result = buildFilebaseAutoComposite(context, primary, config)
+        val result = wrapDeferringFilebaseComposite(context, primary, config)
 
         assertTrue(result is CompositeStorageProvider)
         val composite = result as CompositeStorageProvider
@@ -72,34 +85,35 @@ class BuildFilebaseAutoCompositeTest {
     }
 
     @Test
-    fun ipfsAutoUpload_returnsCompositeWithDeferTrue() {
-        val config = ipfsConfig()
-        val result = buildFilebaseAutoComposite(context, primary, config)
+    fun autoUploadFalse_configured_returnsDeferringComposite() {
+        val s3 = wrapDeferringFilebaseComposite(context, primary, s3Config(autoUpload = false))
+        assertTrue(s3 is CompositeStorageProvider)
+        assertTrue((s3 as CompositeStorageProvider).deferProofSetUploadForTest())
+        assertEquals(s3Config(autoUpload = false), s3.filebaseConfigForTest())
 
-        assertTrue(result is CompositeStorageProvider)
-        val composite = result as CompositeStorageProvider
-        assertTrue(composite.deferProofSetUploadForTest())
-        assertNotNull(composite.filebaseConfigForTest())
-        assertEquals(config, composite.filebaseConfigForTest())
+        val ipfsPrimary = AccumulatingStorageProvider()
+        val ipfs = wrapDeferringFilebaseComposite(
+            context, ipfsPrimary, ipfsConfig(autoUpload = false),
+        )
+        assertTrue(ipfs is CompositeStorageProvider)
+        assertTrue((ipfs as CompositeStorageProvider).deferProofSetUploadForTest())
+        assertEquals(ipfsConfig(autoUpload = false), ipfs.filebaseConfigForTest())
     }
 
     @Test
-    fun autoUploadFalse_returnsNull() {
-        assertNull(buildFilebaseAutoComposite(context, primary, s3Config(autoUpload = false)))
-        assertNull(buildFilebaseAutoComposite(context, primary, ipfsConfig(autoUpload = false)))
+    fun nullRefresh_twice_doesNotIdentityKeepSecondary() {
+        val first = wrapDeferringFilebaseComposite(
+            context, AccumulatingStorageProvider(), ipfsConfig(autoUpload = false),
+        ) as CompositeStorageProvider
+        val second = wrapDeferringFilebaseComposite(
+            context, AccumulatingStorageProvider(), ipfsConfig(autoUpload = false),
+        ) as CompositeStorageProvider
+        assertNotSame(first.secondaryProviderForTest(), second.secondaryProviderForTest())
     }
 
     @Test
     fun notConfigured_returnsNull() {
         val config = FilebaseConfig("", "", "", enabled = false, autoUpload = true)
-        assertNull(buildFilebaseAutoComposite(context, primary, config))
-    }
-
-    @Test
-    fun noneMode_whenNotConfigured_returnsNull() {
-        // resolveUploadMode() is NONE only when neither S3 nor IPFS credentials exist,
-        // which also makes isConfigured() false — factory returns null, not primary.
-        val config = FilebaseConfig("", "", "", enabled = true, autoUpload = true)
-        assertNull(buildFilebaseAutoComposite(context, primary, config))
+        assertNull(wrapDeferringFilebaseComposite(context, primary, config))
     }
 }

@@ -326,6 +326,7 @@
     <string name="onchain_location_attestation">Atestado de localização em cadeia</string>
     <string name="artifact_tap_to_view">Toque para ver</string>
     <string name="artifact_tap_to_view_manifest">Toque para ver o manifesto completo</string>
+    <string name="lp_attestation_in_progress">Atestado em andamento…</string>
     <string name="view_on_eas_scan">Ver no EAS Scan</string>
     <string name="artifact_loading">Carregando…</string>
     <string name="filebase_ipfs_storage">Sincronização Automática com IPFS da Filebase (BETA)</string>

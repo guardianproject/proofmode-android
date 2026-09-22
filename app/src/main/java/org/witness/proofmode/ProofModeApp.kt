@@ -72,6 +72,8 @@ internal fun registerExperimentalPluginsIfEnabled(
 class ProofModeApp : Application(), Configuration.Provider {
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
+    fun applicationCoroutineScope(): CoroutineScope = applicationScope
+
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
             .setMinimumLoggingLevel(android.util.Log.INFO)

@@ -453,23 +453,10 @@ object Activities: ViewModel()
     }**/
 
     fun selectedItems(context: Context, selection: List<String>): List<ProofableItem> {
-        // TODO - We don't really care about the ids here, so we match on the uri and just select
-        // the first id one, if more than one mapping from id -> uri.
-       // return getAllCapturedAndImportedItems(context).filter { selection.contains(it.uri.toString()) }
-        var listItems = ArrayList<ProofableItem>()
-
-        viewModelScope.launch {
-            for (selectId in selection) {
-                var item = db.activitiesDao().activityFromProofableItemId(selectId)
-                if (item != null) {
-                    var pItem = ProofableItem(item.id, Uri.parse(selectId))
-                    if (!listItems.contains(pItem))
-                        listItems.add(pItem)
-                }
-            }
-        }
-
-        return listItems
+        val wanted = selection.toHashSet()
+        return activities.flatMap { getActivityProofableItems(it) }
+            .filter { wanted.contains(it.uri.toString()) }
+            .distinctBy { it.uri.toString() }
     }
 
     fun dateForItem(item: ProofableItem, context: Context, onDate: (Date) -> Unit) {

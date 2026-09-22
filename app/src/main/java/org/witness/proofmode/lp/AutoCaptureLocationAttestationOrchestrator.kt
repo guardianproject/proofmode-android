@@ -432,14 +432,16 @@ internal class OrchestratorEngine(
             mediaHash = job.mediaHash,
             mediaUri = job.mediaUri,
             context = appContext,
-            onchainConfirmed = { AutoCaptureLpStateRegistry.notifyArtifactUpdated(it) },
+            onchainConfirmed = { hash ->
+                AutoCaptureLpStateRegistry.updateLeg(hash, LpBadgePhase.ONCHAIN, LpRunState.SUCCEEDED)
+            },
         )
         when {
             result.isFailure -> {
                 AutoCaptureLpStateRegistry.updateLeg(job.mediaHash, LpBadgePhase.ONCHAIN, LpRunState.FAILED)
             }
             storage.proofIdentifierExists(job.mediaHash, onchainPendingId) -> {
-                // Pending artifact: keep RUNNING until confirmation callback refreshes badges.
+                // Pending artifact: keep RUNNING until [onchainConfirmed] marks SUCCEEDED.
             }
             storage.proofIdentifierExists(job.mediaHash, onchainId) -> {
                 AutoCaptureLpStateRegistry.updateLeg(job.mediaHash, LpBadgePhase.ONCHAIN, LpRunState.SUCCEEDED)

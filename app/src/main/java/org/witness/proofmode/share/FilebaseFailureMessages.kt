@@ -31,12 +31,21 @@ internal fun formatFilebaseFailureMessage(
     return raw
 }
 
+/** True when the failure indicates invalid/expired Filebase credentials (AccountProblem or mute IPFS 403). */
+internal fun isFilebaseReconfigureFailure(rawMessage: String?): Boolean {
+    val raw = rawMessage?.trim().orEmpty()
+    if (raw.isEmpty()) return false
+    if (raw.contains("AccountProblem")) return true
+    if (isMuteIpfs403(raw)) return true
+    return false
+}
+
 private fun appendDetail(lead: String, detail: String): String {
     if (detail.isBlank() || detail == lead) return lead
     return "$lead\n\n$detail"
 }
 
-private fun isMuteIpfs403(raw: String): Boolean {
+internal fun isMuteIpfs403(raw: String): Boolean {
     if (!raw.contains("IPFS RPC upload failed: 403")) return false
     if (raw.contains("body=(empty)")) return true
     // Bare status / length-only lines with no useful prose body

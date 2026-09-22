@@ -24,6 +24,8 @@ import java.util.concurrent.CyclicBarrier
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import org.witness.proofmode.storage.AccumulatingStorageProvider
 import org.witness.proofmode.storage.CompositeStorageProvider
 import org.witness.proofmode.storage.StorageListener
@@ -1954,6 +1956,347 @@ class ProofSetUploaderTest {
         val msg = listener.failures.single()?.message.orEmpty()
         assertTrue(msg.contains("403"))
         assertTrue(msg.contains("AccessDenied"))
+    }
+
+    @Test
+    fun occupancy_falseEnqueue_neverOccupies() {
+        val incomplete = coreBasenames() - "$hash.proof.json"
+        val primary = primaryWithCore(proofNames = incomplete)
+        val filebase = RecordingFilebaseStorageProvider()
+
+        val started = ProofSetUploader.enqueueProofSetUpload(
+            context,
+            hash,
+            primary,
+            filebase,
+            ProofSetMediaSource.ofBytes(byteArrayOf(9), "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
+            null,
+        )
+
+        assertFalse(started)
+        assertEquals(0, ProofSetUploader.occupancyCount(hash))
+    }
+
+    @Test
+    fun occupancy_inFlightUntilStrategyReturns() {
+        val entered = java.util.concurrent.CountDownLatch(1)
+        val hold = java.util.concurrent.CountDownLatch(1)
+        val filebase = object : RecordingFilebaseStorageProvider() {
+            override fun uploadDirectory(
+                hash: String,
+                artifacts: List<DeferredArtifact>,
+                mediaBasename: String?,
+                listener: StorageListener?,
+            ): FilebaseUploadResult? {
+                entered.countDown()
+                check(hold.await(5, java.util.concurrent.TimeUnit.SECONDS))
+                return super.uploadDirectory(hash, artifacts, mediaBasename, listener)
+            }
+        }
+        ProofSetUploader.clearMapsForTesting(Dispatchers.IO)
+        val primary = primaryWithCore()
+
+        val started = ProofSetUploader.enqueueProofSetUpload(
+            context,
+            hash,
+            primary,
+            filebase,
+            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
+            null,
+        )
+        assertTrue(started)
+        assertTrue(entered.await(5, java.util.concurrent.TimeUnit.SECONDS))
+        assertEquals(1, ProofSetUploader.occupancyCount(hash))
+        val dropped = java.util.concurrent.CountDownLatch(1)
+        // occupancyUpdates is MutableSharedFlow(extraBufferCapacity = 64, replay = 0).
+        // extraBufferCapacity does not replay to a collector started after release tryEmit.
+        // Subscribe or poll occupancyCount BEFORE hold.countDown() (LP subscribe-first pattern).
+        val poller = Thread {
+            val deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(5)
+            while (ProofSetUploader.occupancyCount(hash) != 0) {
+                if (System.nanoTime() >= deadline) return@Thread
+                try {
+                    Thread.sleep(10)
+                } catch (_: InterruptedException) {
+                    return@Thread
+                }
+            }
+            dropped.countDown()
+        }.apply { start() }
+        hold.countDown()
+        assertTrue("occupancy should drop when Strategy returns", dropped.await(5, java.util.concurrent.TimeUnit.SECONDS))
+        poller.join(1_000)
+        ProofSetUploader.clearMapsForTesting(Dispatchers.Unconfined)
+    }
+
+    @Test
+    fun occupancyForReadsCurrentOccupancyWhenSubscribedLate() = runBlocking {
+        val entered = CountDownLatch(1)
+        val hold = CountDownLatch(1)
+        val filebase = object : RecordingFilebaseStorageProvider() {
+            override fun uploadDirectory(
+                hash: String,
+                artifacts: List<DeferredArtifact>,
+                mediaBasename: String?,
+                listener: StorageListener?,
+            ): FilebaseUploadResult? {
+                entered.countDown()
+                check(hold.await(5, TimeUnit.SECONDS))
+                return super.uploadDirectory(hash, artifacts, mediaBasename, listener)
+            }
+        }
+        ProofSetUploader.clearMapsForTesting(Dispatchers.IO)
+        val primary = primaryWithCore()
+
+        try {
+            assertTrue(
+                ProofSetUploader.enqueueProofSetUpload(
+                    context,
+                    hash,
+                    primary,
+                    filebase,
+                    ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
+                    FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+                    MediaInclusion.INCLUDE_MEDIA,
+                    null,
+                ),
+            )
+            assertTrue(entered.await(5, TimeUnit.SECONDS))
+            assertEquals(1, ProofSetUploader.occupancyFor(hash).first())
+        } finally {
+            hold.countDown()
+            ProofSetUploader.clearMapsForTesting(Dispatchers.Unconfined)
+        }
+    }
+
+    @Test
+    fun occupancy_sameHashOverlap_inFlightCountMatchesAcceptedJobs() {
+        // Same-hash mutex waiters must not
+        // report occupancy == accepted-job count. The old assertion (occupancy==3
+        // for 3 accepted jobs) is deleted. Occupancy 0 is waiter-idle, not the
+        // overlapping-job join — wait allCompletedLatch(3) before polling 0.
+        val entered = CountDownLatch(1)
+        val hold = CountDownLatch(1)
+        val allCompletedLatch = CountDownLatch(3)
+        val filebase = object : RecordingFilebaseStorageProvider() {
+            override fun uploadDirectory(
+                hash: String,
+                artifacts: List<DeferredArtifact>,
+                mediaBasename: String?,
+                listener: StorageListener?,
+            ): FilebaseUploadResult? {
+                entered.countDown()
+                check(hold.await(5, TimeUnit.SECONDS))
+                return super.uploadDirectory(hash, artifacts, mediaBasename, listener)
+            }
+        }
+        ProofSetUploader.clearMapsForTesting(Dispatchers.IO)
+        val primary = primaryWithCore()
+
+        fun makeListener() = object : StorageListener {
+            override fun saveSuccessful(h: String?, u: String?) { allCompletedLatch.countDown() }
+            override fun saveFailed(e: Exception?) { allCompletedLatch.countDown() }
+        }
+
+        fun enqueue(): Boolean = ProofSetUploader.enqueueProofSetUpload(
+            context,
+            hash,
+            primary,
+            filebase,
+            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
+            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+            MediaInclusion.INCLUDE_MEDIA,
+            makeListener(),
+        )
+
+        assertTrue(enqueue())
+        assertTrue(entered.await(5, TimeUnit.SECONDS))
+        assertTrue(enqueue())
+        assertTrue(enqueue())
+        assertEquals(1, ProofSetUploader.occupancyCount(hash))
+
+        hold.countDown()
+        assertTrue(
+            "all 3 listeners should fire within 10s (jobs 2–3 may stamp-skip; occupancy 0 is not the join)",
+            allCompletedLatch.await(10, TimeUnit.SECONDS),
+        )
+
+        val dropped = CountDownLatch(1)
+        val poller = Thread {
+            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+            while (ProofSetUploader.occupancyCount(hash) != 0) {
+                if (System.nanoTime() >= deadline) return@Thread
+                try {
+                    Thread.sleep(10)
+                } catch (_: InterruptedException) {
+                    return@Thread
+                }
+            }
+            dropped.countDown()
+        }.apply { start() }
+        assertTrue(
+            "occupancy 0 after all overlapping same-hash jobs complete (not waiter-idle mid-overlap)",
+            dropped.await(5, TimeUnit.SECONDS),
+        )
+        poller.join(1_000)
+        ProofSetUploader.clearMapsForTesting(Dispatchers.Unconfined)
+    }
+
+    @Test
+    fun occupancy_fourthDistinctHash_staysZeroUntilSlotFrees() {
+        val hashes = listOf("slotcap1", "slotcap2", "slotcap3", "slotcap4")
+        val entered = CountDownLatch(3)
+        val allEntered = CountDownLatch(4)
+        val hold = CountDownLatch(1)
+        val enteredHashes = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+        val filebase = object : RecordingFilebaseStorageProvider() {
+            override fun uploadDirectory(
+                hash: String,
+                artifacts: List<DeferredArtifact>,
+                mediaBasename: String?,
+                listener: StorageListener?,
+            ): FilebaseUploadResult? {
+                enteredHashes.add(hash)
+                entered.countDown()
+                allEntered.countDown()
+                check(hold.await(10, TimeUnit.SECONDS))
+                return super.uploadDirectory(hash, artifacts, mediaBasename, listener)
+            }
+        }
+
+        fun makePrimary(h: String): RecordingStorageProvider {
+            val names = ProofSetMembershipPolicy.requiredCoreBasenames(h)
+            return RecordingStorageProvider(
+                proofSetUris = ArrayList(names.map { Uri.parse("file:///proof/$it") }),
+                streams = names.associateWith { it.toByteArray() },
+            )
+        }
+
+        ProofSetUploader.clearMapsForTesting(Dispatchers.IO)
+        val primaries = hashes.associateWith { makePrimary(it) }
+
+        val accepted = hashes.map { h ->
+            ProofSetUploader.enqueueProofSetUpload(
+                context,
+                h,
+                primaries.getValue(h),
+                filebase,
+                ProofSetMediaSource.ofBytes(byteArrayOf(1), "image/jpeg"),
+                FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+                MediaInclusion.INCLUDE_MEDIA,
+                null,
+            )
+        }
+        assertTrue(accepted.all { it })
+        assertTrue("first three distinct hashes should enter Strategy", entered.await(10, TimeUnit.SECONDS))
+
+        val inSlot = hashes.filter { ProofSetUploader.occupancyCount(it) == 1 }
+        val idle = hashes.filter { ProofSetUploader.occupancyCount(it) == 0 }
+        assertEquals(3, inSlot.size)
+        assertEquals(1, idle.size)
+        assertEquals(enteredHashes.toSet(), inSlot.toSet())
+        assertEquals(0, ProofSetUploader.occupancyCount(idle.single()))
+        hashes.forEach { h ->
+            val n = ProofSetUploader.occupancyCount(h)
+            assertTrue("hash $h occupancy=$n must be 0 or 1 (in-slot, not accepted-job count)", n == 0 || n == 1)
+        }
+
+        hold.countDown()
+        assertTrue("all four strategies should run after a slot frees", allEntered.await(10, TimeUnit.SECONDS))
+
+        val dropped = CountDownLatch(1)
+        val poller = Thread {
+            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
+            while (hashes.any { ProofSetUploader.occupancyCount(it) != 0 }) {
+                if (System.nanoTime() >= deadline) return@Thread
+                try {
+                    Thread.sleep(10)
+                } catch (_: InterruptedException) {
+                    return@Thread
+                }
+            }
+            dropped.countDown()
+        }.apply { start() }
+        assertTrue("final occupancy must be 0 for all four hashes", dropped.await(10, TimeUnit.SECONDS))
+        poller.join(1_000)
+        hashes.forEach { h -> assertEquals(0, ProofSetUploader.occupancyCount(h)) }
+        ProofSetUploader.clearMapsForTesting(Dispatchers.Unconfined)
+    }
+
+    @Test
+    fun clearMapsForTesting_resetsSemaphorePermits() {
+        // processScope.cancel() does not interrupt a blocking uploadDirectory latch, so
+        // held withPermit finally may never run. clearMapsForTesting must assign a new
+        // Semaphore(proofSetUploadSlotCap) or the next three enqueues deadlock.
+        val held = listOf("slotresetA", "slotresetB", "slotresetC")
+        val after = listOf("slotresetD", "slotresetE", "slotresetF")
+        val enteredHeld = CountDownLatch(3)
+        val holdHeld = CountDownLatch(1)
+        val filebaseHeld = object : RecordingFilebaseStorageProvider() {
+            override fun uploadDirectory(
+                hash: String,
+                artifacts: List<DeferredArtifact>,
+                mediaBasename: String?,
+                listener: StorageListener?,
+            ): FilebaseUploadResult? {
+                enteredHeld.countDown()
+                check(holdHeld.await(10, TimeUnit.SECONDS))
+                return super.uploadDirectory(hash, artifacts, mediaBasename, listener)
+            }
+        }
+        val enteredAfter = CountDownLatch(3)
+        val holdAfter = CountDownLatch(1)
+        val filebaseAfter = object : RecordingFilebaseStorageProvider() {
+            override fun uploadDirectory(
+                hash: String,
+                artifacts: List<DeferredArtifact>,
+                mediaBasename: String?,
+                listener: StorageListener?,
+            ): FilebaseUploadResult? {
+                enteredAfter.countDown()
+                check(holdAfter.await(10, TimeUnit.SECONDS))
+                return super.uploadDirectory(hash, artifacts, mediaBasename, listener)
+            }
+        }
+
+        fun makePrimary(h: String): RecordingStorageProvider {
+            val names = ProofSetMembershipPolicy.requiredCoreBasenames(h)
+            return RecordingStorageProvider(
+                proofSetUris = ArrayList(names.map { Uri.parse("file:///proof/$it") }),
+                streams = names.associateWith { it.toByteArray() },
+            )
+        }
+
+        fun enqueue(h: String, filebase: RecordingFilebaseStorageProvider): Boolean =
+            ProofSetUploader.enqueueProofSetUpload(
+                context,
+                h,
+                makePrimary(h),
+                filebase,
+                ProofSetMediaSource.ofBytes(byteArrayOf(1), "image/jpeg"),
+                FilebaseConfig.UploadMode.IPFS_DIRECTORY,
+                MediaInclusion.INCLUDE_MEDIA,
+                null,
+            )
+
+        ProofSetUploader.clearMapsForTesting(Dispatchers.IO)
+        held.forEach { h -> assertTrue(enqueue(h, filebaseHeld)) }
+        assertTrue("three slots should be occupied", enteredHeld.await(10, TimeUnit.SECONDS))
+
+        ProofSetUploader.clearMapsForTesting(Dispatchers.IO)
+        after.forEach { h -> assertTrue(enqueue(h, filebaseAfter)) }
+        assertTrue(
+            "clearMapsForTesting must reset permits so three new hashes enter Strategy",
+            enteredAfter.await(10, TimeUnit.SECONDS),
+        )
+
+        holdHeld.countDown()
+        holdAfter.countDown()
+        ProofSetUploader.clearMapsForTesting(Dispatchers.Unconfined)
     }
 
 }

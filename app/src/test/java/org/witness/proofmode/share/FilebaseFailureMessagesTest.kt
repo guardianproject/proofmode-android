@@ -82,4 +82,33 @@ class FilebaseFailureMessagesTest {
         assertTrue(out.contains("Gateway timeout detail"))
         assertFalse(out == muteFallback)
     }
+
+    @Test
+    fun reconfigure_trueForAccountProblem() {
+        assertTrue(
+            isFilebaseReconfigureFailure(
+                "Upload failed: 403 Forbidden body=<Error><Code>AccountProblem</Code></Error>",
+            ),
+        )
+    }
+
+    @Test
+    fun reconfigure_trueForMuteIpfs403() {
+        assertTrue(isFilebaseReconfigureFailure("IPFS RPC upload failed: 403 body=(empty)"))
+    }
+
+    @Test
+    fun reconfigure_falseForGenericSocketTimeout() {
+        assertFalse(isFilebaseReconfigureFailure("timeout"))
+    }
+
+    @Test
+    fun reconfigure_falseForMessageOnlyBodyThatIsNotAccountProblemOrMuteIpfs403() {
+        assertFalse(
+            isFilebaseReconfigureFailure(
+                "Upload failed: 503 body=<Error><Code>SlowDown</Code>" +
+                    "<Message>Please reduce your request rate.</Message></Error>",
+            ),
+        )
+    }
 }
