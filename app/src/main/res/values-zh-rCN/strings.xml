@@ -178,23 +178,23 @@
     <string name="second_fragment_label">第二段</string>
     <string name="share_content_credentials_info">直接分享图片或视频，并将证据元数据直接嵌入文件本身，并由 Proofmode.org 验证和签名</string>
     <string name="menu_import_creds">导入凭据…</string>
-    <string name="filebase_ipfs_storage_description">配置将证据自动上传到 Filebase.com。它们将自动发布到 IPFS。</string>
+    <string name="filebase_ipfs_storage_description">请输入 S3 身份凭证（访问密钥、私有密钥、存储桶和端点）或 IPFS Bearer Token，以允许将拍摄的媒体文件及其证明元数据上传至 Filebase。</string>
     <string name="filebase_ipfs_storage">Filebase IPFS 自动同步（测试）</string>
-    <string name="enable_filebase_upload">启用 Filebase 上传</string>
+    <string name="enable_filebase_upload">启用 Filebase</string>
     <string name="access_key">访问密钥</string>
     <string name="secret_key">密钥</string>
     <string name="bucket_name">存储桶名称</string>
     <string name="endpoint_url">端点 URL</string>
     <string name="instructions">说明：</string>
-    <string name="filebase_instructions_info">1. 在 filebase.com 创建一个免费账号\n2. 创建一个用于存储证据的新存储桶\n3. 在 Filebase 控制面板中生成访问密钥\n4. 输入上方密钥并测试连接。</string>
+    <string name="filebase_instructions_info">1. 在 &lt;a href=\"https://filebase.com\"&gt;filebase.com&lt;/a&gt; 上创建免费账户；\n2. 创建新的存储桶（Bucket）用于存储证明（proof）；\n3. 在 Filebase 账户控制面板中生成访问密钥（Access Keys）；\n4. 输入 S3 凭证或存储桶范围的 IPFS Token；\n5. 测试连接以验证配置是否正确；\n6. 可选：启用自动同步（Auto Sync）属性，实现自动上传，或通过分享菜单手动上传。</string>
     <string name="filebase_test_connection">测试连接</string>
     <string name="filebase_save_settings">保存设置</string>
-    <string name="please_fill_in_all_required_fields">请填写所有必填字段</string>
+    <string name="please_fill_in_all_required_fields">请输入 IPFS 持有者令牌（bearer token）和/或填写完整的 S3 凭证（访问密钥、密钥、存储桶）。</string>
     <string name="background_mode">自动导入</string>
     <string name="proofcheck_verifier">ProofCheck 验证器</string>
     <string name="background_mode_info">为此设备上的所有新照片和视频添加证据</string>
     <string name="auto_sync_title">自动同步</string>
-    <string name="auto_sync_desc">将证据数据备份到 Filebase.com 云端</string>
+    <string name="auto_sync_desc">将证据数据备份到 Filebase.com</string>
     <string name="social">社交</string>
     <string name="share_social">仅分享包含 C2PA 的媒体文件和社交网络的验证链接</string>
     <string name="share_media">在社交媒体上分享</string>
@@ -209,7 +209,7 @@
     <string name="c2pa_os_patch_level_error">C2PA 已禁用：操作系统安全补丁未在 90 天内更新</string>
     <string name="settings_location_desc_approx">GPS 坐标仅供参考</string>
     <string name="settings_location_desc_none">未授予权限</string>
-    <string name="settings_signing_title">签名模式</string>
+    <string name="settings_signing_title">内容凭证（C2PA）</string>
     <string name="settings_signing_mode_label">签名模式</string>
     <string name="settings_signing_remote">远程签名</string>
     <string name="settings_signing_signing_servers">签名服务器</string>
