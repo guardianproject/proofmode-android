@@ -83,6 +83,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.contentauth.c2pa.C2PA
@@ -233,6 +234,19 @@ fun SingleAssetView(initialItem: ProofableItem, modifier: Modifier = Modifier, s
             metadataRevision = nextMetadataRevision(initialItem.id, hash, metadataRevision)
         }
     }
+    // initialItem is a copy taken when the view was opened; follow the live feed
+    // item so a pending capture updates here once it has been signed.
+    val item = Activities.itemForUri(initialItem.uri) ?: initialItem
+    // PROOF_GENERATED is broadcast just before the proof sidecar is written, so
+    // re-read the metadata for a few seconds after an item completes while open.
+    LaunchedEffect(item.proofStatus) {
+        if (item.proofStatus == ProofStatus.GENERATED && initialItem.proofStatus != ProofStatus.GENERATED) {
+            repeat(5) {
+                delay(1000)
+                metadataRevision++
+            }
+        }
+    }
     val metadataRefresh = metadataRevision
     val coroutineScope = rememberCoroutineScope()
     val previewItemCenterOffset = with(localDensity) {
@@ -297,6 +311,10 @@ fun SingleAssetView(initialItem: ProofableItem, modifier: Modifier = Modifier, s
                         .verticalScroll(rememberScrollState())
                 ) {
 
+                    if (item.proofStatus != ProofStatus.GENERATED) {
+                        PendingProofRow(item)
+                    }
+
                     key(metadataRefresh) {
                         updateMetadata(initialItem.uri, context)
                     }
@@ -319,6 +337,64 @@ fun SingleAssetView(initialItem: ProofableItem, modifier: Modifier = Modifier, s
                 (context as? ActivitiesViewDelegate)?.shareItems(shareItems, fileName = null, shareText = null)
             },
         )
+    }
+}
+
+// Shown in place of the (still empty) metadata for a capture that has not been
+// signed yet, e.g. because the signing server could not be reached. Retry runs it
+// back through MediaWatcher; the feed item then advances via the usual proof events.
+@Composable
+fun PendingProofRow(item: ProofableItem) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    var retrying by remember { mutableStateOf(false) }
+    var retryStatus by remember { mutableStateOf<String?>(null) }
+    val generating = item.proofStatus == ProofStatus.GENERATING
+
+    Row {
+        Text(
+            modifier = Modifier.padding(3.dp, 3.dp),
+            text = stringResource(
+                if (generating) R.string.proof_generating_message else R.string.proof_pending_message
+            ),
+            fontWeight = FontWeight.Bold
+        )
+    }
+    if (!generating) {
+        Row {
+            Button(
+                modifier = Modifier.padding(3.dp, 3.dp),
+                enabled = !retrying,
+                onClick = {
+                    retrying = true
+                    retryStatus = context.getString(R.string.retry_in_progress)
+                    coroutineScope.launch {
+                        val result = runCatching {
+                            MediaWatcher.getInstance(context.applicationContext)?.retryIngest(item.uri)
+                        }.getOrNull()
+                        retryStatus = context.getString(
+                            when (result) {
+                                MediaWatcher.RetryResult.STARTED -> R.string.retry_started
+                                MediaWatcher.RetryResult.OFFLINE -> R.string.retry_offline
+                                null -> R.string.retry_failed
+                            }
+                        )
+                        retrying = false
+                    }
+                }
+            ) {
+                Text(text = stringResource(R.string.retry_action))
+            }
+        }
+        retryStatus?.let { status ->
+            Row {
+                Text(
+                    modifier = Modifier.padding(3.dp, 3.dp),
+                    text = status,
+                    color = Color.Gray
+                )
+            }
+        }
     }
 }
 

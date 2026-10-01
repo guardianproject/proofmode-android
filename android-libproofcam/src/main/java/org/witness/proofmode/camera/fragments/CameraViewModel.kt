@@ -71,6 +71,7 @@ import org.witness.proofmode.camera.utils.SharedPrefsManager
 import org.witness.proofmode.camera.utils.getMediaFlow
 import org.witness.proofmode.camera.utils.getSupportedQualities
 import org.witness.proofmode.camera.utils.isUltraHdrSupported
+import org.witness.proofmode.crypto.HashUtils
 import org.witness.proofmode.service.MediaWatcher.Companion.getInstance
 import timber.log.Timber
 import java.io.File
@@ -751,8 +752,11 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
         // is consumed in MediaWatcher before the C2PA signing call. An
         // attacker who drives signing via Frida without going through this
         // capture path will not have a valid nonce, and signing is refused.
+
+        val digest = computeFileDigest(newMediaFile)
+        val sha256Hex = HashUtils.asHex(digest)
+
         val captureNonce: ByteArray? = try {
-            val digest = computeFileDigest(newMediaFile)
             digest?.let { CaptureAuthority.issueNonce(it) }
         } catch (e: Exception) {
             Timber.w(e, "failed to issue capture nonce for $newMediaFile")
@@ -762,7 +766,7 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
         if (cameraEventType == CameraEventType.NEW_VIDEO) {
 
             if (!prefs.getBoolean(ProofMode.PREFS_DOPROOF,false))
-                 mw?.ingestMedia(newMediaFile, true, null, "video/mp4", null, captureNonce)
+                 mw?.ingestMedia(newMediaFile, true, null, "video/mp4", sha256Hex, captureNonce)
 
 
         } else {
@@ -781,7 +785,7 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
             }
 
             if (!prefs.getBoolean(ProofMode.PREFS_DOPROOF,false))
-                mw?.ingestMedia(newMediaFile, true, null, "image/jpeg", null, captureNonce)
+                mw?.ingestMedia(newMediaFile, true, null, "image/jpeg", sha256Hex, captureNonce)
 
         }
 

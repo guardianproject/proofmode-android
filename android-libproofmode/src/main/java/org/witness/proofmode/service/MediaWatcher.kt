@@ -19,6 +19,7 @@ import com.google.android.gms.common.util.IOUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bouncycastle.openpgp.PGPException
 import org.contentauth.c2pa.C2PA
 import org.json.JSONObject
@@ -55,6 +56,8 @@ import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
+import java.net.HttpURLConnection
+import java.net.URL
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.attribute.BasicFileAttributes
@@ -64,6 +67,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -185,13 +189,173 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
     @JvmOverloads
     fun ingestMedia (uriMediaSource: Uri, autogen: Boolean, createdAt: Date?, mimeType: String?, inputHash: String?, captureNonce: ByteArray? = null) {
 
-        mExec.submit(Runnable {
-            ingestMediaActual(uriMediaSource, autogen, createdAt, mimeType, inputHash, captureNonce)
-        })
+        val im = IngestMedia()
+        im.uriMediaSource = uriMediaSource
+        im.autogen = autogen
+        im.createdAt = createdAt
+        im.mimeType = mimeType
+        im.inputHash = inputHash
+        im.captureNonce = captureNonce
+        im.fromCamera = captureNonce != null
 
+        // Remember camera captures on disk until they are signed, so a capture that
+        // could not be processed (no network, process killed) can be retried later
+        // from the Activities feed - see retryIngest().
+        if (im.fromCamera && inputHash != null)
+            savePendingCapture(im)
+
+        Timber.d("Adding media to queue: $uriMediaSource")
+        mediaQueue[uriMediaSource.toString()] = im
+
+        CoroutineScope(Dispatchers.IO).launch {
+            processMediaQueue()
+        }
+    }
+
+    enum class RetryResult { STARTED, OFFLINE }
+
+    /**
+     * Re-submit a capture that is still waiting to be signed (shown as pending in the
+     * Activities feed). Returns OFFLINE, leaving the item queued, if it needs the
+     * remote signing server and that still cannot be reached.
+     */
+    suspend fun retryIngest(uriMedia: Uri): RetryResult = withContext(Dispatchers.IO) {
+        val key = uriMedia.toString()
+
+        // Already being signed: nothing to do, the feed will update when it finishes.
+        if (inFlight.contains(key)) return@withContext RetryResult.STARTED
+
+        val im = mediaQueue[key]
+            ?: loadPendingCapture(uriMedia)
+            // No capture record (item predates the queue). We trust the feed entry
+            // enough to C2PA sign it, but refreshCaptureNonce() can't match it to a
+            // capture-time digest, so it is signed as not created in ProofMode.
+            ?: IngestMedia().apply {
+                uriMediaSource = uriMedia
+                autogen = true
+                fromCamera = true
+            }
+        im.deferred = true
+        mediaQueue[key] = im
+
+        processMediaQueue()
+
+        if (mediaQueue.containsKey(key)) RetryResult.OFFLINE else RetryResult.STARTED
+    }
+
+    private suspend fun processMediaQueue() {
+        val useRemoteSigning = mPrefs?.getBoolean(
+            ProofMode.PREF_OPTION_REMOTE_SIGNING,
+            ProofMode.PREF_OPTION_REMOTE_SIGNING_DEFAULT
+        ) ?: true
+
+        var serverReachable: Boolean? = null
+
+        for (key in mediaQueue.keys.toList()) {
+            val im = mediaQueue[key] ?: continue
+
+            // Only camera captures are C2PA signed, so only they depend on the remote
+            // signing server. They stay in the queue until we have internet.
+            if (useRemoteSigning && im.fromCamera) {
+                if (serverReachable == null)
+                    serverReachable = isRemoteSigningServerReachable()
+                if (serverReachable == false) {
+                    Timber.d("Signing server unreachable, leaving in queue: $key")
+                    im.deferred = true
+                    continue
+                }
+            }
+
+            // remove(key, value) so two concurrent passes never ingest the same entry
+            if (mediaQueue.remove(key, im)) {
+                if (im.deferred && im.fromCamera)
+                    refreshCaptureNonce(im)
+                ingestMediaActual(im)
+            }
+        }
+    }
+
+    // A capture nonce is single-use and expires after a minute, so a capture that
+    // waited in the queue needs a new one, bound to the file as it is now. If the
+    // file no longer hashes to the digest recorded at capture time (or no digest was
+    // recorded) we can't guarantee it came straight from the camera: it is still
+    // C2PA signed, but with autogen = false so createdInProofmode is false and the
+    // c2pa.actions don't claim a camera creation.
+    private fun refreshCaptureNonce(im: IngestMedia) {
+        im.captureNonce = null
+
+        val currentHash = try {
+            HashUtils.getSHA256FromFileContent(
+                mContext!!.contentResolver.openInputStream(im.uriMediaSource!!)
+            )
+        } catch (e: Exception) {
+            null
+        }
+
+        if (currentHash == null) {
+            Timber.w("Could not hash ${im.uriMediaSource} for retry")
+            im.inputHash = null
+            return
+        }
+
+        if (!currentHash.equals(im.inputHash, ignoreCase = true)) {
+            Timber.w("${im.uriMediaSource} has no matching capture digest; signing as not created in ProofMode")
+            im.autogen = false
+            im.inputHash = currentHash
+        }
+
+        im.captureNonce =
+            org.witness.proofmode.c2pa.proofsign.CaptureAuthority.issueNonce(hexToBytes(currentHash))
+    }
+
+    private fun pendingCapturePrefs(): SharedPreferences =
+        mContext!!.getSharedPreferences(PREFS_PENDING_CAPTURES, Context.MODE_PRIVATE)
+
+    private fun savePendingCapture(im: IngestMedia) {
+        pendingCapturePrefs().edit()
+            .putString(im.uriMediaSource.toString(), "${im.inputHash}|${im.mimeType.orEmpty()}")
+            .apply()
+    }
+
+    private fun loadPendingCapture(uriMedia: Uri): IngestMedia? {
+        val parts = pendingCapturePrefs().getString(uriMedia.toString(), null)?.split("|")
+            ?: return null
+        return IngestMedia().apply {
+            uriMediaSource = uriMedia
+            autogen = true
+            inputHash = parts[0]
+            mimeType = parts.getOrNull(1)?.takeIf { it.isNotEmpty() }
+            fromCamera = true
+        }
+    }
+
+    private fun clearPendingCapture(uriMedia: Uri) {
+        pendingCapturePrefs().edit().remove(uriMedia.toString()).apply()
+    }
+
+    // keyed by media uri
+    private val mediaQueue = ConcurrentHashMap<String, IngestMedia>()
+    private val inFlight: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
+    class IngestMedia {
+
+        var uriMediaSource: Uri? = null
+        var autogen: Boolean = false
+        var createdAt: Date? = null
+        var mimeType: String? = null
+        var inputHash: String? = null
+        var captureNonce: ByteArray? = null
+        var fromCamera: Boolean = false // captured in-app, i.e. eligible for C2PA signing
+        var deferred: Boolean = false   // had to wait in the queue; its nonce needs refreshing
+    }
+
+    private fun ingestMediaActual (im: IngestMedia) {
+        ingestMediaActual(im.uriMediaSource!!, im.autogen, im.createdAt, im.mimeType, im.inputHash, im.captureNonce)
     }
 
     private fun ingestMediaActual (uriMediaSource: Uri, autogen: Boolean, createdAt: Date?, mimeType: String?, inputHash: String?, captureNonce: ByteArray? = null) {
+
+       Timber.d("ingesting media: $uriMediaSource")
         val intent = Intent()
 
         // Target our own app package so these broadcasts reach our unexported
@@ -206,7 +370,11 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
 
         var mediaHash = inputHash
 
+        val queueKey = uriMediaSource.toString()
+        inFlight.add(queueKey)
+
         CoroutineScope(Dispatchers.IO).launch {
+          try {
 
             var fileMedia = File(actualUriMedia.getPath())
             var actualMimeType = mimeType
@@ -365,6 +533,7 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
                             intent.putExtra(ProofMode.EVENT_PROOF_EXTRA_HASH, mediaHash)
                             mContext!!.sendBroadcast(intent)
 
+                            clearPendingCapture(uriMediaSource)
                         }
 
                         val resultHash =
@@ -378,6 +547,9 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
 
                 }
             }
+          } finally {
+            inFlight.remove(queueKey)
+          }
         }
 
 
@@ -1287,6 +1459,8 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
 
     companion object {
         const val UTF_8: String = "UTF-8"
+        private const val PREFS_PENDING_CAPTURES = "pending_captures"
+
         const val PROOF_GENERATION_DELAY_TIME_MS: Int = 500 // 30 seconds
 
         private var mInstance: MediaWatcher? = null
@@ -1433,6 +1607,37 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
             }
 
             return mediaPath
+        }
+    }
+
+    suspend fun isRemoteSigningServerReachable(): Boolean = withContext(Dispatchers.IO) {
+
+        val remoteServer = mPrefs?.getString(
+            ProofMode.PREF_OPTION_PROOFSIGN_SERVER,
+            ""
+        )
+
+        Timber.d("checking if remote server is reachable=$remoteServer")
+
+        if (remoteServer?.isNotEmpty() == true)
+            isUrlReachable(remoteServer)
+        else
+            false
+    }
+
+    suspend fun isUrlReachable(urlString: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val url = URL(urlString)
+            val connection = (url.openConnection() as HttpURLConnection).apply {
+                connectTimeout = 5000 // 5 seconds
+                readTimeout = 5000    // 5 seconds
+                requestMethod = "HEAD"
+            }
+            val responseCode = connection.responseCode
+            // Consider 200-399 range as reachable/success
+            responseCode in 200..399
+        } catch (e: Exception) {
+            false
         }
     }
 }

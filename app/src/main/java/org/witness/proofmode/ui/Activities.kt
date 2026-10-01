@@ -217,6 +217,8 @@ object Activities: ViewModel()
 
     private lateinit var db: AppDatabase
 
+    private var interruptedItemsReset = false
+
     init {
     }
 
@@ -235,6 +237,19 @@ object Activities: ViewModel()
         viewModelScope.launch {
             //db.clearAllTables()
             val allFromDb = db.activitiesDao().getAll()
+            // Nothing can still be signing when the feed is first loaded in a new
+            // process, so an item persisted as GENERATING was interrupted. Show it
+            // as PENDING again so it can be retried.
+            if (!interruptedItemsReset) {
+                interruptedItemsReset = true
+                for (activity in allFromDb) {
+                    val items = proofItemsOf(activity) ?: continue
+                    for (i in items.indices) {
+                        if (items[i].proofStatus == ProofStatus.GENERATING)
+                            items[i] = items[i].copy(proofStatus = ProofStatus.PENDING)
+                    }
+                }
+            }
             MainScope().launch {
                 activities.clear()
                 activities.addAll(allFromDb)
@@ -305,6 +320,14 @@ object Activities: ViewModel()
             if (idx >= 0) return activity to idx
         }
         return null
+    }
+
+    // The live copy of an item, whose proof status advances as events arrive.
+    // Reads the Compose snapshot lists, so a composable calling this recomposes
+    // when the item changes.
+    fun itemForUri(uri: Uri): ProofableItem? {
+        val (activity, idx) = findItemByUri(uri.toString()) ?: return null
+        return proofItemsOf(activity)?.getOrNull(idx)
     }
 
     // Step 1 of the capture lifecycle: show the freshly-captured media right

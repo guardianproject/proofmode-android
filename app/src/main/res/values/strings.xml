@@ -331,6 +331,13 @@
     <string name="resign_in_progress">Re-signing…</string>
     <string name="resign_started">Re-signing started — a new item will appear in Activities.</string>
     <string name="resign_no_proof">Can\'t re-sign: no local ProofMode data found for this file.</string>
+    <string name="proof_pending_message">This item has not been signed yet.</string>
+    <string name="proof_generating_message">Signing this item…</string>
+    <string name="retry_action">Retry</string>
+    <string name="retry_in_progress">Retrying…</string>
+    <string name="retry_started">Signing started.</string>
+    <string name="retry_offline">Can\'t reach the signing server. Check your internet connection and try again.</string>
+    <string name="retry_failed">Retry failed. Please try again.</string>
     <string name="nostr_notarization">Nostr Notarization</string>
     <string name="cid_manifest">CID Manifest</string>
     <string name="offchain_location_attestation">Off-chain Location Attestation</string>
