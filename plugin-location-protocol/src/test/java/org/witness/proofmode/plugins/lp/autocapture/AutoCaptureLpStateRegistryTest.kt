@@ -25,6 +25,23 @@ class AutoCaptureLpStateRegistryTest {
         assertEquals(LpRunState.IDLE, state.onchain)
     }
 
+    @Test
+    fun badgeSnapshotForReadsStatePublishedBeforeCollection() = runBlocking {
+        AutoCaptureLpStateRegistry.updateLeg("hash1", LpBadgePhase.OFFCHAIN, LpRunState.RUNNING)
+
+        assertEquals(
+            AutoCaptureLpBadgeSnapshot(AutoCaptureLpItemState(offchain = LpRunState.RUNNING), 1L),
+            AutoCaptureLpStateRegistry.badgeSnapshotFor("hash1").first(),
+        )
+    }
+
+    @Test
+    fun artifactNotificationAdvancesRevisionWithSameRunState() = runBlocking {
+        AutoCaptureLpStateRegistry.notifyArtifactUpdated("hash1")
+
+        assertEquals(1L, AutoCaptureLpStateRegistry.badgeSnapshotFor("hash1").first().revision)
+    }
+
     @Test(timeout = 5_000)
     fun updates_emitsMediaHashOnChange() = runBlocking {
         val deferred = async(Dispatchers.Default) {

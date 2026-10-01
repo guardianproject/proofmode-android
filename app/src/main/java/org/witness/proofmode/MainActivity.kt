@@ -1,6 +1,7 @@
 package org.witness.proofmode
 
 import android.Manifest
+import android.app.AlertDialog
 import android.content.BroadcastReceiver
 import android.content.ClipData
 import android.content.ContentResolver
@@ -17,6 +18,13 @@ import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.launch
+import org.witness.proofmode.filebase.FilebaseOnDemandUiEvent
+import org.witness.proofmode.filebase.FilebaseOnDemandUiEvents
+import org.witness.proofmode.share.FilebaseSettingsActivity
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.graphics.Color
@@ -131,6 +139,14 @@ class MainActivity : AppCompatActivity(),
 
         mainBinding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(mainBinding.root)
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                FilebaseOnDemandUiEvents.events.collect { event ->
+                    showFilebaseOnDemandDialog(this@MainActivity, event)
+                }
+            }
+        }
 
         // Setup toolbar
         setSupportActionBar(mainBinding.toolbar)
@@ -636,4 +652,25 @@ class MainActivity : AppCompatActivity(),
             }
         }
     }
+}
+
+fun showFilebaseOnDemandDialog(activity: android.app.Activity, event: FilebaseOnDemandUiEvent) {
+    if (activity.isFinishing) return
+    val builder = AlertDialog.Builder(activity)
+        .setTitle(R.string.filebase_upload_failed)
+        .setMessage(when (event) {
+            is FilebaseOnDemandUiEvent.Reconfigure -> event.message
+            is FilebaseOnDemandUiEvent.DismissibleFailure -> event.message
+        })
+        .setCancelable(true)
+    when (event) {
+        is FilebaseOnDemandUiEvent.Reconfigure -> builder
+            .setPositiveButton(R.string.filebase_reconfigure) { _, _ ->
+                activity.startActivity(Intent(activity, FilebaseSettingsActivity::class.java))
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+        is FilebaseOnDemandUiEvent.DismissibleFailure -> builder
+            .setPositiveButton(android.R.string.ok, null)
+    }
+    builder.show()
 }

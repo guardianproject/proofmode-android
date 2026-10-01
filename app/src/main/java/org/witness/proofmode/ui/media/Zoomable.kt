@@ -1,4 +1,4 @@
-package org.witness.proofmode.ui
+package org.witness.proofmode.ui.media
 
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.tween
@@ -48,7 +48,7 @@ import kotlin.math.abs
  * between assets) keep working on top of the image.
  */
 @Composable
-fun ZoomableBox(
+internal fun ZoomableBox(
     modifier: Modifier = Modifier,
     minScale: Float = 1f,
     maxScale: Float = 5f,

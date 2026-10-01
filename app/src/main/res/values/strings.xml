@@ -337,6 +337,7 @@
     <string name="onchain_location_attestation">On-chain Location Attestation</string>
     <string name="artifact_tap_to_view">Tap to view</string>
     <string name="artifact_tap_to_view_manifest">Tap to view full manifest</string>
+    <string name="lp_attestation_in_progress">Attestation in progress…</string>
     <string name="view_on_eas_scan">View on EAS Scan</string>
     <string name="artifact_loading">Loading…</string>
     <string name="share_content_credentials_info">Shares image or video directly with proof metadata directly embedded in the file itself, verified and signed by Proofmode.org</string>
@@ -383,10 +384,12 @@
     <string name="filebase_social_not_configured_message">Filebase isn’t set up yet. Configure it to upload or share without uploading.</string>
     <string name="filebase_social_not_configured_share">Share without uploading</string>
     <string name="filebase_proof_not_ready">Proof is not ready for Filebase upload yet.</string>
+    <string name="lp_attest_nothing_to_queue">Proof is not ready for location attestation yet.</string>
     <string name="filebase_upload_success">Uploaded to Filebase</string>
     <string name="filebase_upload_failed">Filebase upload failed</string>
     <string name="filebase_upload_oversize_title">Media too large to upload</string>
     <string name="filebase_upload_oversize_message">This media is larger than 25 MB, so it won’t be uploaded. Upload the proof set without the media file?</string>
+    <string name="filebase_upload_oversize_batch_message">%d of these are over 25 MB. Upload those without the media file?</string>
     <string name="filebase_upload_oversize_confirm">Upload without media</string>
     <string name="filebase_upload_oversize_cancel">Cancel</string>
 
@@ -402,6 +405,7 @@
 
     <!-- Friendly copy when Filebase returns a mute IPFS 403 or AccountProblem without Message text. -->
     <string name="filebase_failure_same_policy">Upload failed. Media may be too large. Try a smaller file, or share without Filebase.</string>
+    <string name="filebase_reconfigure">Reconfigure</string>
 
     <!-- Hang watchdog / older failure-offer IDs kept for compile safety; Social CTA uses filebase_share_just_the_file. -->
     <string name="filebase_upload_timed_out">Filebase upload timed out. You can try again later.</string>

@@ -13,6 +13,11 @@ import org.witness.proofmode.storage.proofset.ProofSetMediaSource
 import org.witness.proofmode.storage.proofset.ProofSetMembershipPolicy
 import org.witness.proofmode.storage.proofset.ProofSetUploader
 
+private data class OnDemandMark(
+    val inclusion: MediaInclusion,
+    val listener: StorageListener?,
+)
+
 /**
  * Primary + optional secondary storage. When [deferProofSetUpload] is true (Filebase auto-upload),
  * proof sidecars are written to primary only and a proof-set upload is flushed
@@ -29,21 +34,50 @@ class CompositeStorageProvider(
     private val appContext: Context? = null,
     private val deferProofSetUpload: Boolean = false,
     private val filebaseConfig: FilebaseConfig? = null,
+    private val liveAutoUpload: () -> Boolean = { filebaseConfig?.autoUpload == true },
 ) : StorageProvider {
 
     companion object {
         private const val TAG = "CompositeStorageProvider"
+
+        /** hash → on-demand inclusion consent + optional listener. */
+        private val onDemandMarks = ConcurrentHashMap<String, OnDemandMark>()
+
+        /** hash → (media content Uri, mime) for deferred proof-set leaf injection. */
+        private val mediaByHash = ConcurrentHashMap<String, Pair<Uri, String?>>()
+
+        /**
+         * hash → media handle. Each handle reads [mediaByHash] on resolve and re-measures the file
+         * every time, so a later [bindMedia] — or an in-place rewrite such as C2PA embedding — is
+         * always reflected in the length the upload declares.
+         */
+        private val mediaSourceByHash = ConcurrentHashMap<String, ProofSetMediaSource>()
+
+        fun clearOnDemandStateForTesting() {
+            onDemandMarks.clear()
+            mediaByHash.clear()
+            mediaSourceByHash.clear()
+        }
     }
 
-    /** hash → (media content Uri, mime) for deferred proof-set leaf injection. */
-    private val mediaByHash = ConcurrentHashMap<String, Pair<Uri, String?>>()
+    fun markOnDemand(hash: String, inclusion: MediaInclusion, listener: StorageListener? = null) {
+        onDemandMarks[hash] = OnDemandMark(inclusion, listener)
+    }
 
     /**
-     * hash → media handle. Each handle reads [mediaByHash] on resolve and re-measures the file
-     * every time, so a later [bindMedia] — or an in-place rewrite such as C2PA embedding — is
-     * always reflected in the length the upload declares.
+     * Drop the caller's listener once its upload reached a terminal outcome, keeping the inclusion
+     * consent so late prefGated sidecars still flush.
+     *
+     * The listener is a UI callback owned by the tap that created it. Retaining it past the outcome
+     * both pins that object for the process lifetime and replays a user-facing dialog on every
+     * later automatic flush of the same hash.
      */
-    private val mediaSourceByHash = ConcurrentHashMap<String, ProofSetMediaSource>()
+    private fun releaseOnDemandListener(hash: String) {
+        onDemandMarks.computeIfPresent(hash) { _, mark -> mark.copy(listener = null) }
+    }
+
+    private fun shouldAutomaticFlush(hash: String): Boolean =
+        deferProofSetUpload && (onDemandMarks.containsKey(hash) || liveAutoUpload())
 
     /**
      * Stash the source media [Uri] + MIME for a proof-set [hash] before/while proof sidecars
@@ -60,14 +94,14 @@ class CompositeStorageProvider(
      */
     fun bindMedia(hash: String, mediaUri: Uri, mimeType: String) {
         mediaByHash[hash] = mediaUri to mimeType
-        if (deferProofSetUpload) tryFlush(hash)
+        if (shouldAutomaticFlush(hash)) tryFlush(hash)
     }
 
     override fun saveStream(hash: String, identifier: String, stream: InputStream, listener: StorageListener?) {
         primaryProvider.saveStream(hash, identifier, stream, listener)
 
         if (deferProofSetUpload) {
-            tryFlush(hash)
+            if (shouldAutomaticFlush(hash)) tryFlush(hash)
             return
         }
 
@@ -99,7 +133,7 @@ class CompositeStorageProvider(
         primaryProvider.saveBytes(hash, identifier, data, listener)
 
         if (deferProofSetUpload) {
-            tryFlush(hash)
+            if (shouldAutomaticFlush(hash)) tryFlush(hash)
             return
         }
 
@@ -119,7 +153,7 @@ class CompositeStorageProvider(
         primaryProvider.saveText(hash, identifier, data, listener)
 
         if (deferProofSetUpload) {
-            tryFlush(hash)
+            if (shouldAutomaticFlush(hash)) tryFlush(hash)
             return
         }
 
@@ -148,33 +182,32 @@ class CompositeStorageProvider(
     }
 
     /**
-     * Attempt upload of proof-set artifacts. The upload is delayed until all defined [ArtifactRule.RequiredCore], set
-     * in [ProofSetMembershipPolicy.RULES] are present in the primary storage space. Once the condition is met, the
-     * upload will be initiated. Any proof set artifacts defined in [ArtifactRule.PrefGated], can be triggered for later 
-     * uploads once the files are present.
+     * Attempt upload of proof-set artifacts. Delayed until required cores (and injected media
+     * when INCLUDE_MEDIA) are present. PrefGated `.ots` / `.nostr` can trigger later uploads.
      *
-     * This method supports the different upload modes defined in [FilebaseConfig.UploadMode].
-     *  - IPFS upload strategy: This strategy will group all proof set artifacts into a single directory and upload it to IPFS.
-     *  - S3 upload strategy: This strategy will upload each proof set artifact individually to S3.
-     * 
-     * Requires a prior [bindMedia] entry for [hash]; otherwise returns immediately.
-     * Gates media stream opens by [MediaInclusion] from [filebaseConfig].
+     * @return `true` iff [ProofSetUploader.enqueueProofSetUpload] returned `true`.
+     *         `false` on every early exit: `!deferProofSetUpload`, missing config/ctx/Filebase
+     *         secondary/bindMedia entry/unusable mode, INCLUDE_MEDIA unresolved media,
+     *         incomplete first-pass (`enqueueProofSetUpload` false), or stamp-peek skip
+     *         (returns **before** enqueue).
      */
-    private fun tryFlush(hash: String) {
-        if (!deferProofSetUpload) return
-        val config = filebaseConfig ?: return
-        val ctx = appContext ?: return
-        val secondary = secondaryProvider as? FilebaseStorageProvider ?: return
+    private fun tryFlush(hash: String): Boolean {
+        if (!deferProofSetUpload) return false
+        val config = filebaseConfig ?: return false
+        val ctx = appContext ?: return false
+        val secondary = secondaryProvider as? FilebaseStorageProvider
+            ?: return false
 
-        val (_, mime) = mediaByHash[hash] ?: return
+        val (_, mime) = mediaByHash[hash] ?: return false
 
+        val mark = onDemandMarks[hash]
         val mode = config.resolveUploadMode()
         if (mode != FilebaseConfig.UploadMode.IPFS_DIRECTORY &&
             mode != FilebaseConfig.UploadMode.S3_MEMBERS
         ) {
-            return
+            return false
         }
-        val inclusion = config.resolveMediaInclusionForAuto()
+        val inclusion = mark?.inclusion ?: config.resolveMediaInclusionForAuto()
 
         // Media is passed as a re-openable handle, never as bytes: tryFlush runs on every sidecar
         // save, and reading a capture in here OOM'd the process on large video.
@@ -187,13 +220,13 @@ class CompositeStorageProvider(
         }
         if (inclusion == MediaInclusion.INCLUDE_MEDIA && mediaSource?.resolve() == null) {
             Log.w(TAG, "Media unavailable for deferred upload of $hash; not flushing")
-            return
+            return false
         }
 
-        // If media is too large, upload sidecars only.
+        // If media is too large, upload sidecars only (unmarked auto-upload path only).
         var adjustedInclusion = inclusion
         var adjustedMediaSource = mediaSource
-        if (inclusion == MediaInclusion.INCLUDE_MEDIA) {
+        if (mark == null && inclusion == MediaInclusion.INCLUDE_MEDIA) {
             val length = mediaSource?.resolve()?.length
             if (length != null && !FilebaseConfig.isWithinFilebaseMediaLimit(length)) {
                 adjustedInclusion = MediaInclusion.SIDECARS_ONLY
@@ -209,9 +242,11 @@ class CompositeStorageProvider(
         val candidate = ProofSetUploader.buildMembershipStamp(
             hash, mode, adjustedInclusion, memberBasenames, mime,
         )
-        if (candidate == ProofSetUploader.lastUploadedMembership(hash)) return
+        if (candidate == ProofSetUploader.lastUploadedMembership(hash)) {
+            return false
+        }
 
-        ProofSetUploader.enqueueProofSetUpload(
+        return ProofSetUploader.enqueueProofSetUpload(
             ctx,
             hash,
             primaryProvider,
@@ -221,11 +256,15 @@ class CompositeStorageProvider(
             adjustedInclusion,
             object : StorageListener {
                 override fun saveSuccessful(resultHash: String?, uri: String?) {
+                    mark?.listener?.saveSuccessful(resultHash, uri)
+                    releaseOnDemandListener(hash)
                     Log.d(TAG, "Deferred proof-set upload succeeded for $hash at: $uri")
                     tryFlush(hash)
                 }
 
                 override fun saveFailed(exception: Exception?) {
+                    mark?.listener?.saveFailed(exception)
+                    releaseOnDemandListener(hash)
                     Log.w(TAG, "Deferred proof-set upload failed: ${exception?.message}")
                 }
             },

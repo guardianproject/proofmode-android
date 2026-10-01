@@ -54,14 +54,9 @@ import org.witness.proofmode.c2pa.SigningMode
 import org.witness.proofmode.crypto.HashUtils
 import org.witness.proofmode.crypto.pgp.PgpUtils
 import org.witness.proofmode.databinding.ActivityShareBinding
-import org.witness.proofmode.FeatureFlags
-import org.witness.proofmode.lp.LpManualLeg
 import org.witness.proofmode.lp.canonicalMediaUriKey
-import org.witness.proofmode.lp.collectShareProofMediaUris
-import org.witness.proofmode.lp.enqueueManualAttestForShareProof
 import org.witness.proofmode.getFileNameFromUri
 import org.witness.proofmode.getRealUri
-import org.witness.proofmode.plugins.lp.LocationProtocolPlugin
 import org.witness.proofmode.ui.ActivityConstants.EXTRA_FILE_NAME
 import org.witness.proofmode.ui.ActivityConstants.EXTRA_SHARE_TEXT
 import org.witness.proofmode.ui.ActivityConstants.INTENT_ACTIVITY_ITEMS_SHARED
@@ -73,7 +68,6 @@ import org.witness.proofmode.storage.filebase.FilebaseSidecarContract
 import org.witness.proofmode.storage.proofset.MediaInclusion
 import org.witness.proofmode.storage.proofset.ProofSetMediaSource
 import org.witness.proofmode.storage.proofset.ProofSetUploader
-import org.witness.proofmode.storage.StorageListener
 import org.witness.proofmode.storage.StorageProvider
 import timber.log.Timber
 import java.io.*
@@ -125,13 +119,6 @@ class ShareProofActivity : AppCompatActivity() {
         }
 
         mStorageProvider = DefaultStorageProvider(applicationContext)
-
-        refreshLpAttestContainerVisibility()
-    }
-
-    private fun refreshLpAttestContainerVisibility() {
-        val visible = FeatureFlags.lpActive
-        binding.llLpAttestContainer.visibility = if (visible) View.VISIBLE else View.GONE
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -152,7 +139,6 @@ class ShareProofActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        refreshLpAttestContainerVisibility()
 
         val tvInfoBasic = binding.tvInfoBasic
         tvInfoBasic.setOnClickListener { showInfoBasic() }
@@ -281,198 +267,8 @@ class ShareProofActivity : AppCompatActivity() {
         }
     }
 
-    fun clickUploadFilebase(button: View?) {
-        val config = readFilebaseConfigFromPrefs()
-        if (!config.isConfigured()) {
-            showFilebaseNotConfiguredDialog()
-            return
-        }
-        val mediaUri = resolveShareMediaUri() ?: run { showFilebaseNotReady(); return }
-        val hash = resolveShareProofHash(mediaUri) ?: run { showFilebaseNotReady(); return }
-        val mime = contentResolver.getType(mediaUri)
-        displayProgress(getString(R.string.filebase_uploading))
-        val hangWatchdog = startFilebaseHangWatchdog(offerHashOnlyOnTimeout = false)
-        // Stay on Main for DestroyedSafeStorageListener (Lifecycle.addObserver); IO only for I/O.
-        lifecycleScope.launch {
-            val appCtx = applicationContext
-            val activityRef = java.lang.ref.WeakReference(this@ShareProofActivity)
-            // Media is handed over as a re-openable source, never read into memory here — a large
-            // video would exceed the heap outright.
-            val mediaSource = ProofSetMediaSource.fromUri(appCtx, mediaUri, mime)
-            // Same on-disk primary used for the proof set (activity field, or default).
-            val primary = mStorageProvider ?: DefaultStorageProvider(applicationContext)
-            val filebase = FilebaseStorageProvider.from(config)
-            val uploadMode = config.resolveUploadMode()
-            if (uploadMode == FilebaseConfig.UploadMode.NONE) {
-                hangWatchdog.cancel()
-                showFilebaseNotConfiguredDialog()
-                return@launch
-            }
-            val resolved = withContext(Dispatchers.IO) { mediaSource.resolve() }
-            if (resolved == null) {
-                hangWatchdog.cancel()
-                displaySharePrompt()
-                showFilebaseNotReady()
-                return@launch
-            }
-
-            if (isShareUploadOversize(resolved.length)) {
-                hangWatchdog.cancel() // dialog is interactive; start a fresh watchdog on confirm
-                displaySharePrompt()
-                showUploadProofsetWithoutMediaDialog(
-                    onConfirm = {
-                        displayProgress(getString(R.string.filebase_uploading))
-                        val confirmWatchdog = startFilebaseHangWatchdog(offerHashOnlyOnTimeout = false)
-                        lifecycleScope.launch {
-                            val sidecarsListener = DestroyedSafeStorageListener(
-                                appCtx,
-                                lifecycle,
-                                onSuccess = { uri ->
-                                    confirmWatchdog.cancel()
-                                    val activity = activityRef.get() ?: return@DestroyedSafeStorageListener
-                                    if (activity.isDestroyed) return@DestroyedSafeStorageListener
-                                    activity.displaySharePrompt()
-                                    activity.showFilebaseUploadSuccess(uri ?: "")
-                                },
-                                onFailureMessage = { msg ->
-                                    confirmWatchdog.cancel()
-                                    val activity = activityRef.get() ?: return@DestroyedSafeStorageListener
-                                    if (activity.isDestroyed) return@DestroyedSafeStorageListener
-                                    activity.displaySharePrompt()
-                                    activity.showFilebaseUploadFailedDialog(detail = msg, offerHashOnly = null)
-                                },
-                            )
-                            enqueueShareFilebaseUpload(
-                                appCtx, hash, primary, filebase,
-                                /* mediaSource */ null,
-                                uploadMode,
-                                shareUploadSidecarsOnly(),
-                                sidecarsListener,
-                                confirmWatchdog,
-                            )
-                        }
-                    },
-                    onDecline = {
-                        displaySharePrompt()
-                    },
-                )
-                return@launch
-            }
-
-            // Under the media size limit: enqueue with media; listener closes over hangWatchdog.
-            val listener = DestroyedSafeStorageListener(
-                appCtx,
-                lifecycle,
-                onSuccess = { uri ->
-                    hangWatchdog.cancel()
-                    val activity = activityRef.get() ?: return@DestroyedSafeStorageListener
-                    if (activity.isDestroyed) return@DestroyedSafeStorageListener
-                    activity.displaySharePrompt()
-                    activity.showFilebaseUploadSuccess(uri ?: "")
-                },
-                onFailureMessage = { msg ->
-                    hangWatchdog.cancel()
-                    val activity = activityRef.get() ?: return@DestroyedSafeStorageListener
-                    if (activity.isDestroyed) return@DestroyedSafeStorageListener
-                    activity.displaySharePrompt()
-                    activity.showFilebaseUploadFailedDialog(detail = msg, offerHashOnly = null)
-                },
-            )
-            enqueueShareFilebaseUpload(
-                appCtx, hash, primary, filebase, mediaSource, uploadMode,
-                shareUploadWithMedia(), listener, hangWatchdog,
-            )
-            // Success/failure UI comes from the listener, not from enqueue starting.
-        }
-    }
-
-    /** Fire-and-forget enqueue; on false, cancel watchdog and restore share UI. */
-    private suspend fun enqueueShareFilebaseUpload(
-        appCtx: Context,
-        hash: String,
-        primary: StorageProvider,
-        filebase: FilebaseStorageProvider,
-        mediaSource: ProofSetMediaSource?,
-        uploadMode: FilebaseConfig.UploadMode,
-        inclusion: MediaInclusion,
-        listener: StorageListener,
-        hangWatchdog: Job,
-    ) {
-        val started = withContext(Dispatchers.IO) {
-            ProofSetUploader.enqueueProofSetUpload(
-                appCtx, hash, primary, filebase, mediaSource, uploadMode,
-                inclusion, listener,
-            )
-        }
-        if (!started) {
-            hangWatchdog.cancel()
-            displaySharePrompt()
-            showFilebaseNotReady()
-        }
-    }
-
     fun clickNotarize(button: View?) {
         shareProofWithProgress("", false, false)
-    }
-
-    fun clickOffchainLocationAttestation(button: View?) {
-        Timber.i("Off-chain Location Attestation button clicked")
-        startAttestation(button, onChain = false)
-    }
-
-    fun clickOnchainLocationAttestation(button: View?) {
-        Timber.i("On-chain Location Attestation button clicked")
-        logOnchainAttestationWalletState()
-        startAttestation(button, onChain = true)
-    }
-
-    private fun logOnchainAttestationWalletState() {
-        val diag = LocationProtocolPlugin.walletDiagnostics()
-        Timber.d(
-            "LocationAttestation: wallet state — chainId=%s address=%s connector=%s sponsorshipActive=%s connected=%s",
-            diag.chainId ?: "n/a",
-            diag.abbreviatedAddress() ?: "n/a",
-            diag.connectorName,
-            diag.sponsorshipActive,
-            diag.connected,
-        )
-    }
-
-    private fun startAttestation(button: View?, onChain: Boolean) {
-        val leg = if (onChain) LpManualLeg.ONCHAIN else LpManualLeg.OFFCHAIN
-        val uris = collectShareProofMediaUris(intent, ::cleanUri)
-        if (uris.isEmpty()) {
-            Timber.w("LocationAttestation: no media URIs for action=%s", intent.action)
-            return
-        }
-
-        val storage = mStorageProvider ?: run {
-            Timber.e("LocationAttestation: storage provider not initialized")
-            return
-        }
-
-        LocationProtocolPlugin.requireApplicationScope().launch {
-            val result = enqueueManualAttestForShareProof(
-                appContext = applicationContext,
-                uris = uris,
-                leg = leg,
-                hashCache = hashCache,
-                storage = storage,
-            )
-            if (result.enqueuedCount == 0 && result.hashMissCount > 0) {
-                runOnUiThread {
-                    if (isFinishing || isDestroyed) {
-                        Timber.w("LocationAttestation: hash-miss snackbar skipped — Activity finishing")
-                        return@runOnUiThread
-                    }
-                    com.google.android.material.snackbar.Snackbar.make(
-                        binding.root,
-                        "Location attestation: proof not ready yet",
-                        com.google.android.material.snackbar.Snackbar.LENGTH_LONG,
-                    ).show()
-                }
-            }
-        }
     }
 
     fun clickAll(button: View?) {
@@ -581,18 +377,6 @@ class ShareProofActivity : AppCompatActivity() {
         return FilebaseConfig.fromPrefs(prefs)
     }
 
-    /** Share → Upload path: open Filebase settings or cancel. */
-    private fun showFilebaseNotConfiguredDialog() {
-        AlertDialog.Builder(this)
-            .setTitle(R.string.filebase_not_configured_title)
-            .setMessage(R.string.filebase_not_configured_message)
-            .setPositiveButton(R.string.filebase_not_configured_configure) { _, _ ->
-                startActivity(Intent(this, FilebaseSettingsActivity::class.java))
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
-    }
-
     /**
      * Social path when Upload to Filebase is on but credentials are missing.
      * Configure → settings; Share without uploading → this share only; Cancel → dismiss.
@@ -621,21 +405,6 @@ class ShareProofActivity : AppCompatActivity() {
         Toast.makeText(this, R.string.filebase_proof_not_ready, Toast.LENGTH_LONG).show()
     }
 
-    private fun showUploadProofsetWithoutMediaDialog(
-        onConfirm: () -> Unit,
-        onDecline: () -> Unit,
-    ) {
-        if (isDestroyed) return
-        AlertDialog.Builder(this)
-            .setTitle(R.string.filebase_upload_oversize_title)
-            .setMessage(R.string.filebase_upload_oversize_message)
-            .setPositiveButton(R.string.filebase_upload_oversize_confirm) { _, _ -> onConfirm() }
-            .setNegativeButton(R.string.filebase_upload_oversize_cancel) { _, _ -> onDecline() }
-            .setCancelable(true)
-            .setOnCancelListener { onDecline() }
-            .show()
-    }
-
     /**
      * Social path when media exceeds the Filebase size limit: offer to share the media file
      * without uploading to Filebase. Do not use the Share→Upload "proofset without media" dialog —
@@ -659,20 +428,6 @@ class ShareProofActivity : AppCompatActivity() {
             }
             .setCancelable(true)
             .setOnCancelListener { onDecline() }
-            .show()
-    }
-
-    /**
-     * Share → Filebase success UX is mode-agnostic: title only, no URI/CID.
-     * Gateway/S3 URIs live in sidecars / overview; do not surface them in this dialog
-     * (keeps IPFS and S3 toasts identical, including sidecars-only / null resultUri).
-     */
-    private fun showFilebaseUploadSuccess(uri: String) {
-        val message = filebaseUploadSuccessDialogMessage(uri)
-        AlertDialog.Builder(this)
-            .setTitle(R.string.filebase_upload_success)
-            .apply { message?.let { setMessage(it) } }
-            .setPositiveButton(android.R.string.ok, null)
             .show()
     }
 

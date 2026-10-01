@@ -36,8 +36,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -48,7 +46,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -66,6 +63,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -91,16 +89,20 @@ import org.contentauth.c2pa.C2PA
 import org.json.JSONObject
 import org.witness.proofmode.ProofMode
 import org.witness.proofmode.R
+import org.witness.proofmode.ui.media.ProofItemMedia
+import org.witness.proofmode.ui.media.isVideoItem
 import org.witness.proofmode.c2pa.C2PAManager
 import org.witness.proofmode.c2pa.PreferencesManager
 import org.witness.proofmode.c2pa.ValidationState
 import org.witness.proofmode.notaries.NostrNotarizationVerifier
 import org.witness.proofmode.plugins.ipfscid.IpfsCidSidecar
 import org.witness.proofmode.plugins.lp.attestation.LocationProtocolArtifactStore
+import org.witness.proofmode.plugins.lp.autocapture.AutoCaptureLpStateRegistry
 import org.witness.proofmode.service.MediaWatcher
 import org.witness.proofmode.service.ProofModeV1Constants
 import org.witness.proofmode.share.FilebaseSocialShareHelper
 import org.witness.proofmode.storage.DefaultStorageProvider
+import org.witness.proofmode.storage.proofset.ProofSetUploader
 import org.witness.proofmode.ui.ProofOverviewArtifactSummaries
 import org.witness.proofmode.storage.filebase.FilebaseSidecarContract
 import org.witness.proofmode.util.ProofModeUtil
@@ -220,6 +222,18 @@ fun SingleAssetView(initialItem: ProofableItem, modifier: Modifier = Modifier, s
                 .times(1 - metadataOpacity)
         )
     }
+    var metadataRevision by remember(initialItem.id) { mutableStateOf(0) }
+    LaunchedEffect(initialItem.id) {
+        ProofSetUploader.occupancyUpdates.collect { hash ->
+            metadataRevision = nextMetadataRevision(initialItem.id, hash, metadataRevision)
+        }
+    }
+    LaunchedEffect(initialItem.id) {
+        AutoCaptureLpStateRegistry.updates.collect { hash ->
+            metadataRevision = nextMetadataRevision(initialItem.id, hash, metadataRevision)
+        }
+    }
+    val metadataRefresh = metadataRevision
     val coroutineScope = rememberCoroutineScope()
     val previewItemCenterOffset = with(localDensity) {
         -((topPartWidth / 2).toInt() - 28.dp.roundToPx())
@@ -267,22 +281,6 @@ fun SingleAssetView(initialItem: ProofableItem, modifier: Modifier = Modifier, s
                     setTitle = setTitle
                 )
             }
-            /**
-            Box(
-                modifier = Modifier
-                    .alpha(1f - metadataOpacity)
-                    .offset(y = (64 * metadataOpacity).dp)
-                    .height(64.dp)
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-            ) {
-                PreviewsView(allAssets = allAssets, listState = listState, selectedIndex = selectedIndex, selectIndex = { index ->
-                    selectedIndex = index
-                    coroutineScope.launch {
-                        listState.scrollToItem(selectedIndex, previewItemCenterOffset)
-                    }
-                })
-            }**/
             // Only lay the metadata panel out while it is actually visible. When it is
             // faded out the image expands over the space it occupies, and an invisible
             // panel left in the layout keeps hit-testing - it would swallow the pinch,
@@ -299,42 +297,33 @@ fun SingleAssetView(initialItem: ProofableItem, modifier: Modifier = Modifier, s
                         .verticalScroll(rememberScrollState())
                 ) {
 
-                    updateMetadata(initialItem.uri, context)
+                    key(metadataRefresh) {
+                        updateMetadata(initialItem.uri, context)
+                    }
 
                 }
             }
 
         }
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .padding(10.dp)
-        ) {
-            val items =
-                if (LocalSelectionHandler.current.anySelected()) LocalSelectionHandler.current.selectedItems() else listOf(
-                    initialItem
-                )
-            IconButton(
-                //enabled = LocalSelectionHandler.current.anySelected(),
-                modifier =
-                Modifier
-                    .width(32.dp)
-                    .height(32.dp),
-                onClick = {
-                    (context as? ActivitiesViewDelegate)?.shareItems(
-                        items,
-                        fileName = null,
-                        shareText = null
-                    )
-                }) {
-                Icon(
-                    imageVector = Icons.Default.Share,
-                    contentDescription = "Share"
-                )
-            }
-        }
+        val handler = LocalSelectionHandler.current
+        val items = actionBarItems(
+            anySelected = handler.anySelected(),
+            selectedItems = handler.selectedItems(),
+            currentItem = initialItem,
+        )
+        ProofsetActionBar(
+            items = items,
+            showCancel = false,
+            onCancel = {},
+            onShare = { shareItems ->
+                (context as? ActivitiesViewDelegate)?.shareItems(shareItems, fileName = null, shareText = null)
+            },
+        )
     }
 }
+
+fun nextMetadataRevision(itemId: String, eventHash: String, current: Int): Int =
+    if (itemId.isNotBlank() && eventHash == itemId) current + 1 else current
 
 @Composable
 fun updateMetadata (itemUri : Uri, context : Context) {
@@ -404,6 +393,8 @@ fun updateMetadata (itemUri : Uri, context : Context) {
 
         val tapToView = context.getString(R.string.artifact_tap_to_view)
         val tapManifest = context.getString(R.string.artifact_tap_to_view_manifest)
+        val lpPending = context.getString(R.string.lp_attestation_in_progress)
+        val lpState = AutoCaptureLpStateRegistry.getState(hash)
 
         val cidIdentifier = IpfsCidSidecar.sidecarBasename(hash)
         if (storageProvider.proofIdentifierExists(hash, cidIdentifier)) {
@@ -417,25 +408,37 @@ fun updateMetadata (itemUri : Uri, context : Context) {
         }
 
         val offchainId = hash + LocationProtocolArtifactStore.OFFCHAIN_SUFFIX
-        if (storageProvider.proofIdentifierExists(hash, offchainId)) {
-            OffchainLpAttestationRow(
+        val hasOffchain = storageProvider.proofIdentifierExists(hash, offchainId)
+        when (lpMetadataPhase(lpState.offchain, hasOffchain)) {
+            MetadataPhase.READY -> OffchainLpAttestationRow(
                 label = context.getString(R.string.offchain_location_attestation),
                 tapHint = tapToView,
                 mediaHash = hash,
                 identifier = offchainId,
                 storageProvider = storageProvider,
             )
+            MetadataPhase.PENDING -> addRow(
+                context.getString(R.string.offchain_location_attestation),
+                lpPending,
+            )
+            MetadataPhase.HIDDEN -> Unit
         }
 
         val onchainId = hash + LocationProtocolArtifactStore.ONCHAIN_SUFFIX
-        if (storageProvider.proofIdentifierExists(hash, onchainId)) {
-            OnchainLpAttestationRow(
+        val hasOnchain = storageProvider.proofIdentifierExists(hash, onchainId)
+        when (lpMetadataPhase(lpState.onchain, hasOnchain)) {
+            MetadataPhase.READY -> OnchainLpAttestationRow(
                 label = context.getString(R.string.onchain_location_attestation),
                 tapHint = tapToView,
                 mediaHash = hash,
                 identifier = onchainId,
                 storageProvider = storageProvider,
             )
+            MetadataPhase.PENDING -> addRow(
+                context.getString(R.string.onchain_location_attestation),
+                lpPending,
+            )
+            MetadataPhase.HIDDEN -> Unit
         }
 
         val proofsetId = hash + FilebaseSidecarContract.FILEBASE_IPFS_URI_SUFFIX
@@ -447,10 +450,14 @@ fun updateMetadata (itemUri : Uri, context : Context) {
             storageProvider.getInputStream(hash, imageId)?.bufferedReader()?.use { it.readText() }
         } else null
         val imageUrl = FilebaseSocialShareHelper.overviewFilebaseImageUrl(proofsetUrl, rawImageUrl)
-
+        val filebaseLinks = !proofsetUrl.isNullOrBlank() || !imageUrl.isNullOrBlank()
         FilebaseUploadsGroup(
             proofsetUrl = proofsetUrl?.takeIf { it.isNotBlank() },
             imageUrl = imageUrl?.takeIf { it.isNotBlank() },
+            pending = filebaseMetadataPhase(
+                occupancy = ProofSetUploader.occupancyCount(hash),
+                hasLinks = filebaseLinks,
+            ) == MetadataPhase.PENDING,
         )
 
         if (hmap?.contains(ProofModeV1Constants.PROOF_GENERATED) == true)
@@ -494,8 +501,8 @@ fun updateMetadata (itemUri : Uri, context : Context) {
     }
 }
 @Composable
-fun FilebaseUploadsGroup(proofsetUrl: String?, imageUrl: String?) {
-    if (proofsetUrl.isNullOrBlank() && imageUrl.isNullOrBlank()) return
+fun FilebaseUploadsGroup(proofsetUrl: String?, imageUrl: String?, pending: Boolean = false) {
+    if (proofsetUrl.isNullOrBlank() && imageUrl.isNullOrBlank() && !pending) return
 
     Row {
         Text(
@@ -504,17 +511,26 @@ fun FilebaseUploadsGroup(proofsetUrl: String?, imageUrl: String?) {
             fontWeight = FontWeight.Bold,
         )
     }
-    proofsetUrl?.takeIf { it.isNotBlank() }?.let { url ->
-        FilebaseUploadLink(
-            label = stringResource(R.string.filebase_view_proofset),
-            url = url,
-        )
-    }
-    imageUrl?.takeIf { it.isNotBlank() }?.let { url ->
-        FilebaseUploadLink(
-            label = stringResource(R.string.filebase_view_uploaded_media),
-            url = url,
-        )
+    if (pending && proofsetUrl.isNullOrBlank() && imageUrl.isNullOrBlank()) {
+        Row {
+            Text(
+                modifier = Modifier.padding(3.dp, 3.dp),
+                text = stringResource(R.string.filebase_uploading),
+            )
+        }
+    } else {
+        proofsetUrl?.takeIf { it.isNotBlank() }?.let { url ->
+            FilebaseUploadLink(
+                label = stringResource(R.string.filebase_view_proofset),
+                url = url,
+            )
+        }
+        imageUrl?.takeIf { it.isNotBlank() }?.let { url ->
+            FilebaseUploadLink(
+                label = stringResource(R.string.filebase_view_uploaded_media),
+                url = url,
+            )
+        }
     }
     // Match Nostr / addRow section spacing before the next metadata group.
     Row {
@@ -1098,16 +1114,14 @@ fun SingleItemView(itemWidth: Dp, allAssets: List<ProofableItem>, index: Int, se
         ) {
 
             val isVideo = remember(item) {
-                item.uri.let {uri->
-                    context.contentResolver.getType(uri)?.contains("video") ?:false
-                }
+                isVideoItem(item.uri, context.contentResolver)
             }
             if (isVideo) {
                 VideoItemView(item = item,modifier=Modifier.fillMaxSize())
             }
             else {
 
-                ProofableItemView(
+                ProofItemMedia(
                         item = item,
                         modifier = Modifier.fillMaxSize(),
                         // Always contain (Fit) in the full-screen viewer so the asset is
@@ -1116,8 +1130,7 @@ fun SingleItemView(itemWidth: Dp, allAssets: List<ProofableItem>, index: Int, se
                         // center-crop a 1:1 / 16:9 capture whenever the item was selected.
                         contain = true,
                         corners = RectF(0f, 0f, 0f, 0f),
-                        showSelectionBorder = false,
-                        zoomable = true
+                        zoomable = true,
                 )
                 if (LocalSelectionHandler.current.isSelected(item)) {
                     Box(modifier = Modifier
@@ -1231,45 +1244,6 @@ fun SingleAssetItemView(width: Dp, height: Dp, allAssets: List<ProofableItem>, s
         SingleItemView(itemWidth = itemWidth, allAssets = allAssets, index = selectedIndex, selectedIndex = selectedIndex)
         SingleItemView(itemWidth = itemWidth, allAssets = allAssets, index = selectedIndex + 1, selectedIndex = selectedIndex)
         SingleItemView(itemWidth = itemWidth, allAssets = allAssets, index = selectedIndex + 2, selectedIndex = selectedIndex)
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun PreviewsView(allAssets: List<ProofableItem>, listState: LazyListState, selectedIndex: Int, selectIndex: (Int) -> Unit) {
-    LazyRow (
-        state = listState,
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(4.dp))
-        //.horizontalScroll(scrollState))
-    {
-        allAssets.forEachIndexed { index, item ->
-            item {
-                val isSelected = selectedIndex == index
-                ProofableItemView(
-                    item = item,
-                    contain = false,
-                    showSelectionBorder = false,
-                    corners = RectF(0f, 0f, 0f, 0f),
-                    modifier = Modifier
-                        .width(if (isSelected) 56.dp else 40.dp)
-                        .combinedClickable(
-                            onClick = {
-                                selectIndex(index)
-                            },
-                            onLongClick = {
-                                // Ignore, but override default handling in ProofableItemView
-                            }
-                        )
-                        .padding(
-                            start = if (isSelected) 8.dp else 0.dp,
-                            end = if (isSelected) 8.dp else 0.dp
-                        )
-                        .background(Color.Black)
-                )
-            }
-        }
     }
 }
 

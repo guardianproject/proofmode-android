@@ -49,6 +49,7 @@ class CompositeStorageProviderTest {
         context = ApplicationProvider.getApplicationContext()
         PreferenceManager.getDefaultSharedPreferences(context).edit().clear().commit()
         ProofSetUploader.clearMapsForTesting(Dispatchers.Unconfined)
+        CompositeStorageProvider.clearOnDemandStateForTesting()
     }
 
     private fun coreBasenames(): Set<String> =
@@ -537,6 +538,7 @@ class CompositeStorageProviderTest {
     @Test
     fun mapsSurviveNewCompositeInstance() {
         val (compositeA, primary, secondary) = deferredComposite()
+        compositeA.markOnDemand(hash, MediaInclusion.INCLUDE_MEDIA)
         compositeA.bindMedia(hash, mediaUri(), "image/jpeg")
         for (name in coreBasenames()) {
             compositeA.saveBytes(hash, name, name.toByteArray(), null)
@@ -549,11 +551,42 @@ class CompositeStorageProviderTest {
             context,
             deferProofSetUpload = true,
             filebaseConfig = ipfsConfig(),
+            liveAutoUpload = { false },
         )
-        compositeB.bindMedia(hash, mediaUri(), "image/jpeg")
-        compositeB.saveBytes(hash, coreBasenames().first(), byteArrayOf(7), null)
+        compositeB.saveBytes(hash, "$hash.ots", byteArrayOf(7), null)
+        assertEquals(2, secondary.uploadDirectoryCalls.size)
+    }
 
+    @Test
+    fun onDemandListener_isNotReplayedOnLaterFlushesOfTheSameHash() {
+        val (composite, _, secondary) = deferredComposite()
+        val outcomes = mutableListOf<String>()
+        composite.markOnDemand(
+            hash,
+            MediaInclusion.INCLUDE_MEDIA,
+            object : StorageListener {
+                override fun saveSuccessful(hash: String?, uri: String?) {
+                    outcomes.add("success")
+                }
+
+                override fun saveFailed(exception: Exception?) {
+                    outcomes.add("failure")
+                }
+            },
+        )
+        composite.bindMedia(hash, mediaUri(), "image/jpeg")
+        for (name in coreBasenames()) {
+            composite.saveBytes(hash, name, name.toByteArray(), null)
+        }
         assertEquals(1, secondary.uploadDirectoryCalls.size)
+        assertEquals(listOf("success"), outcomes)
+
+        // A late prefGated sidecar must still upload — the inclusion consent outlives the tap —
+        // but it must not re-notify the tap's listener.
+        composite.saveBytes(hash, "$hash.ots", byteArrayOf(7), null)
+
+        assertEquals(2, secondary.uploadDirectoryCalls.size)
+        assertEquals(listOf("success"), outcomes)
     }
 
     @Test
@@ -618,6 +651,24 @@ class CompositeStorageProviderTest {
     }
 
     @Test
+    fun marked_autoUploadOff_saveCores_enqueuesOnceFirstPassComplete() {
+        val primary = AccumulatingStorageProvider()
+        val secondary = RecordingFilebaseStorageProvider()
+        val config = ipfsConfig().copy(autoUpload = false)
+        val composite = CompositeStorageProvider(
+            primary, secondary, context, deferProofSetUpload = true, filebaseConfig = config,
+            liveAutoUpload = { false },
+        )
+        composite.markOnDemand(hash, MediaInclusion.INCLUDE_MEDIA)
+        composite.bindMedia(hash, mediaUri(), "image/jpeg")
+        assertTrue(secondary.uploadDirectoryCalls.isEmpty())
+        for (name in coreBasenames()) {
+            composite.saveBytes(hash, name, name.toByteArray(), null)
+        }
+        assertEquals(1, secondary.uploadDirectoryCalls.size)
+    }
+
+    @Test
     fun tryFlush_autoIncludeOff_oversizeMedia_stillSidecarsOnly() {
         val reads = AtomicInteger(0)
         val overLimitBytes = FilebaseConfig.FILEBASE_MEDIA_MAX_BYTES + 1L
@@ -638,6 +689,119 @@ class CompositeStorageProviderTest {
         assertFalse(capture.hasMediaSource)
         assertNull(capture.mediaLength)
         assertEquals(0, reads.get())
+    }
+
+    @Test
+    fun markThenBindMedia_usesConsentedSidecarsOnly_notAutoIncludeMedia() {
+        val (composite, _, secondary) = deferredComposite(config = ipfsConfig(autoIncludeMedia = true))
+        composite.markOnDemand(hash, MediaInclusion.SIDECARS_ONLY)
+        composite.bindMedia(hash, mediaUri(), "image/jpeg")
+        for (name in coreBasenames()) {
+            composite.saveBytes(hash, name, name.toByteArray(), null)
+        }
+        val capture = ProofSetUploader.lastEnqueueForTesting
+        assertNotNull(capture)
+        assertEquals(MediaInclusion.SIDECARS_ONLY, capture!!.mediaInclusion)
+        assertFalse(capture.hasMediaSource)
+        assertEquals(1, secondary.uploadDirectoryCalls.size)
+    }
+
+    @Test
+    fun bindMedia_jpegMime_manifestLeafIsJpg_notBin() {
+        val (composite, _, secondary) = deferredComposite()
+        composite.markOnDemand(hash, MediaInclusion.INCLUDE_MEDIA)
+        composite.bindMedia(hash, mediaUri(), "image/jpeg")
+        for (name in coreBasenames()) {
+            composite.saveBytes(hash, name, name.toByteArray(), null)
+        }
+        val capture = ProofSetUploader.lastEnqueueForTesting
+        assertEquals("image/jpeg", capture!!.mediaMimeType)
+        val ids = secondary.uploadDirectoryCalls.single().second.map { it.identifier }
+        assertTrue("$hash.jpg" in ids)
+        assertFalse("$hash.bin" in ids)
+    }
+
+    @Test
+    fun unmarked_autoUploadOff_saveBytes_doesNotTryFlush() {
+        val auto = java.util.concurrent.atomic.AtomicBoolean(false)
+        val (composite, _, secondary) = deferredComposite(
+            config = ipfsConfig().copy(autoUpload = false),
+        ).let { (c, p, s) ->
+            Triple(
+                CompositeStorageProvider(p, s, context, true, ipfsConfig().copy(autoUpload = false), liveAutoUpload = { auto.get() }),
+                p,
+                s,
+            )
+        }
+        composite.bindMedia(hash, mediaUri(), "image/jpeg")
+        for (name in coreBasenames()) {
+            composite.saveBytes(hash, name, name.toByteArray(), null)
+        }
+        assertTrue(secondary.uploadDirectoryCalls.isEmpty())
+    }
+
+    @Test
+    fun unmarked_liveAutoUploadFlipOff_stopsAutomaticFlush() {
+        val auto = java.util.concurrent.atomic.AtomicBoolean(true)
+        val primary = AccumulatingStorageProvider()
+        val secondary = RecordingFilebaseStorageProvider()
+        val composite = CompositeStorageProvider(
+            primary, secondary, context, deferProofSetUpload = true,
+            filebaseConfig = ipfsConfig(),
+            liveAutoUpload = { auto.get() },
+        )
+        composite.bindMedia(hash, mediaUri(), "image/jpeg")
+        val firstCores = coreBasenames().toList()
+        for (name in firstCores.dropLast(1)) {
+            composite.saveBytes(hash, name, name.toByteArray(), null)
+        }
+        auto.set(false)
+        composite.saveBytes(hash, firstCores.last(), firstCores.last().toByteArray(), null)
+        assertTrue(secondary.uploadDirectoryCalls.isEmpty())
+    }
+
+    @Test
+    fun marked_autoUploadOff_prefGatedOts_reentersTryFlush() {
+        val (composite, _, secondary) = run {
+            val primary = AccumulatingStorageProvider()
+            val secondary = RecordingFilebaseStorageProvider()
+            val c = CompositeStorageProvider(
+                primary, secondary, context, deferProofSetUpload = true,
+                filebaseConfig = ipfsConfig().copy(autoUpload = false),
+                liveAutoUpload = { false },
+            )
+            Triple(c, primary, secondary)
+        }
+        composite.markOnDemand(hash, MediaInclusion.INCLUDE_MEDIA)
+        composite.bindMedia(hash, mediaUri(), "image/jpeg")
+        for (name in coreBasenames()) {
+            composite.saveBytes(hash, name, name.toByteArray(), null)
+        }
+        assertEquals(1, secondary.uploadDirectoryCalls.size)
+        composite.saveBytes(hash, "$hash.ots", byteArrayOf(9), null)
+        assertEquals(2, secondary.uploadDirectoryCalls.size)
+        val secondIds = secondary.uploadDirectoryCalls[1].second.map { it.identifier }
+        assertTrue("$hash.ots" in secondIds)
+    }
+
+    @Test
+    fun unmarked_autoUploadOff_bindMediaAfterCores_doesNotTryFlush() {
+        val (composite, _, secondary) = run {
+            val primary = AccumulatingStorageProvider()
+            val secondary = RecordingFilebaseStorageProvider()
+            val c = CompositeStorageProvider(
+                primary, secondary, context, deferProofSetUpload = true,
+                filebaseConfig = ipfsConfig().copy(autoUpload = false),
+                liveAutoUpload = { false },
+            )
+            Triple(c, primary, secondary)
+        }
+        for (name in coreBasenames()) {
+            composite.saveBytes(hash, name, name.toByteArray(), null)
+        }
+        assertTrue(secondary.uploadDirectoryCalls.isEmpty())
+        composite.bindMedia(hash, mediaUri(), "image/jpeg")
+        assertTrue(secondary.uploadDirectoryCalls.isEmpty())
     }
 }
 

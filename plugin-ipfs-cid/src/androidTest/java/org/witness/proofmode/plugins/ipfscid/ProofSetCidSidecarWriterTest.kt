@@ -276,6 +276,7 @@ fun testStorageProvider(dir: File): StorageProvider = object : StorageProvider {
 
     override fun saveStream(hash: String, identifier: String, stream: InputStream, listener: StorageListener?) {}
     override fun saveText(hash: String, identifier: String, data: String, listener: StorageListener?) {}
+    override fun replaceText(hash: String, identifier: String, data: String, listener: StorageListener?) {}
     override fun getInputStream(hash: String, identifier: String): InputStream? {
         val f = File(dir, identifier)
         return if (f.exists()) f.inputStream() else null

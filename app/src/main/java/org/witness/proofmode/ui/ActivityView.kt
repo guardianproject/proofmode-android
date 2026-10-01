@@ -7,10 +7,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -30,7 +27,6 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -39,7 +35,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.derivedStateOf
@@ -51,13 +46,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -65,31 +57,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toFile
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import coil.compose.AsyncImage
-import coil.decode.VideoFrameDecoder
-import coil.request.ImageRequest
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import org.witness.proofmode.FeatureFlags
-import org.witness.proofmode.MediaType
 import org.witness.proofmode.R
-import org.witness.proofmode.c2pa.C2PAManager
-import org.witness.proofmode.c2pa.PreferencesManager
-import org.witness.proofmode.c2pa.ValidationState
-import org.witness.proofmode.getMediaTypeFromFileUri
-import org.witness.proofmode.lp.AutoCaptureLpMarkerResolver
-import org.witness.proofmode.lp.LpBadgeUiState
-import org.witness.proofmode.lp.LpOffchainBadge
-import org.witness.proofmode.lp.LpOnchainBadge
-import org.witness.proofmode.plugins.lp.autocapture.AutoCaptureLpStateRegistry
-import org.witness.proofmode.plugins.lp.attestation.LocationProtocolArtifactStore
-import org.witness.proofmode.service.MediaWatcher
-import org.witness.proofmode.storage.DefaultStorageProvider
-import org.witness.proofmode.service.MediaWatcher.Companion.getImagePath
+import org.witness.proofmode.ui.media.GalleryItemThumb
 import java.text.SimpleDateFormat
 import java.util.Date
 
@@ -97,24 +66,6 @@ import java.util.Date
 const val ASSETS_GUTTER_SIZE = 10F
 const val ASSETS_CORNER_RADIUS = 20F
 val ASSETS_BACKGROUND = Color.Black.copy(0.1F)
-
-/**
- * Cache for C2PA verification results to avoid repeated expensive checks.
- * Results are cached for the lifespan of the process.
- */
-object C2PAVerificationCache {
-    private val cache = mutableMapOf<String, ValidationState>()
-
-    fun get(path: String): ValidationState? = cache[path]
-
-    fun put(path: String, state: ValidationState) {
-        cache[path] = state
-    }
-
-    fun clear() {
-        cache.clear()
-    }
-}
 
 interface ActivitiesViewDelegate {
     abstract fun openCamera()
@@ -130,307 +81,6 @@ sealed class CapturedAssetRow {
     class FourItems(val items: List<ProofableItem>) : CapturedAssetRow()
 }
 
-internal fun lpBadgeAllowed(lpActive: Boolean, proofStatus: ProofStatus): Boolean =
-    lpActive && proofStatus == ProofStatus.GENERATED
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun ProofableItemView(
-    item: ProofableItem,
-    modifier: Modifier = Modifier,
-    contain: Boolean = false,
-    corners: RectF = RectF(
-        ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS
-    ),
-    showSelectionBorder: Boolean = true,
-    zoomable: Boolean = false
-) {
-    val selectionHandler = LocalSelectionHandler.current
-    val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-    var lpActive by remember { mutableStateOf(FeatureFlags.lpActive) }
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                lpActive = FeatureFlags.lpActive
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
-    // Verify if Uri MIME type is image or video and if it is a video,get the thumbnail
-    val isVideo = remember(item) {
-        val uri = item.uri
-        if (uri.scheme == "content") {
-            context.contentResolver.getType(uri)?.contains("video") ?: false
-        } else{
-            getMediaTypeFromFileUri(uri) == MediaType.VIDEO
-        }
-
-    }
-
-    var c2paState by remember { mutableStateOf(ValidationState.INVALID) }
-    val uri = item.uri
-
-    // Perform C2PA check asynchronously with caching. Keyed on proofStatus too:
-    // while an item is PENDING/GENERATING its file isn't signed yet, so we skip
-    // validation (otherwise we'd cache INVALID against the unsigned file and the
-    // CR badge would never appear). Once it flips to GENERATED the effect re-runs
-    // and validates the now-signed file.
-    LaunchedEffect(uri, item.proofStatus) {
-        if (item.proofStatus != ProofStatus.GENERATED) {
-            c2paState = ValidationState.INVALID
-            return@LaunchedEffect
-        }
-
-        var filePath : String? = ""
-
-        if (uri.scheme == "file")
-            filePath = uri.toFile().canonicalPath
-        else {
-            filePath = MediaWatcher.getImagePath(context, uri)
-            if (filePath?.isEmpty()==true)
-                filePath = MediaWatcher.getVideoPath(context, uri)
-        }
-
-        filePath?.let {
-            val cachedResult = C2PAVerificationCache.get(filePath)
-            if (cachedResult != null) {
-                c2paState = cachedResult
-            } else {
-                val result = withContext(Dispatchers.IO) {
-                    try {
-                        val c2paMan = C2PAManager(context, PreferencesManager(context))
-                        c2paMan.validateSignedMedia(filePath)
-                    } catch (e: Exception) {
-                        ValidationState.INVALID
-                    }
-                }
-                C2PAVerificationCache.put(filePath, result)
-                c2paState = result
-            }
-        }
-
-    }
-
-    var lpBadgeState by remember(item.id) { mutableStateOf(LpBadgeUiState()) }
-
-    LaunchedEffect(item.id, item.proofStatus, lpActive) {
-        if (!lpBadgeAllowed(lpActive, item.proofStatus)) {
-            lpBadgeState = LpBadgeUiState()
-            return@LaunchedEffect
-        }
-        val storage = DefaultStorageProvider(context)
-        val artifactStore = LocationProtocolArtifactStore(storage)
-        suspend fun refresh() {
-            lpBadgeState = withContext(Dispatchers.IO) {
-                AutoCaptureLpMarkerResolver.resolve(
-                    mediaHash = item.id,
-                    registryState = AutoCaptureLpStateRegistry.getState(item.id),
-                    artifactStore = artifactStore,
-                    storageProvider = storage,
-                )
-            }
-        }
-        refresh()
-        AutoCaptureLpStateRegistry.updates.collect { hash ->
-            if (hash == item.id) refresh()
-        }
-    }
-
-
-    
-    Box {
-        val imageModifier = Modifier
-            .combinedClickable(
-                onClick = {
-                    selectionHandler.onProofableItemClick(item)
-                },
-                onLongClick = {
-                    selectionHandler.onProofableItemLongClick(item)
-                }
-            )
-            .clip(
-                RoundedCornerShape(
-                    corners.left.dp,
-                    corners.top.dp,
-                    corners.right.dp,
-                    corners.bottom.dp
-                )
-
-            )
-            //.background(ASSETS_BACKGROUND)
-            .border(
-                width = 4.dp,
-                color = if (showSelectionBorder && selectionHandler.isSelected(item)) Color.Blue else Color.Transparent,
-                shape = RoundedCornerShape(
-                    corners.left.dp,
-                    corners.top.dp,
-                    corners.right.dp,
-                    corners.bottom.dp
-                )
-            )
-
-            .then(modifier)
-
-        val assetImage: @Composable (Modifier) -> Unit = { imgMod ->
-            AsyncImage(
-                model = ImageRequest.Builder(context)
-                    .data(item.uri).apply {
-                        if (isVideo) {
-                            decoderFactory { result, options, _ -> VideoFrameDecoder(result.source, options) }
-                        }
-                    }.build(),
-                contentDescription = "Asset view",
-                alignment = Alignment.Center,
-                contentScale = if (contain) ContentScale.Fit else ContentScale.Crop,
-                modifier = imgMod
-            )
-        }
-
-        if (zoomable) {
-            ZoomableBox(modifier = imageModifier) {
-                assetImage(Modifier.fillMaxSize())
-            }
-        } else {
-            assetImage(imageModifier)
-        }
-
-        if (isVideo) {
-            Icon(
-                imageVector = ImageVector.vectorResource(R.drawable.videocam),
-                contentDescription = "Video",
-                tint = Color.White,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(2.dp)
-                    .background(
-                        color = Color.Black.copy(alpha = 0.6f),
-                        shape = RoundedCornerShape(2.dp)
-                    )
-                    .padding(1.dp)
-                    .size(24.dp)
-            )
-        }
-
-        if (c2paState != ValidationState.INVALID) {
-            Image(
-                painterResource(R.drawable.cricon),
-                contentDescription = "CR",
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(8.dp)
-                    .size(24.dp)
-            )
-        }
-
-        // Proof lifecycle badge, top-start corner — the same spot the CR badge
-        // lands in once verified, so the indicator progresses in one place:
-        // clock (pending) -> spinner (generating) -> CR (generated). These
-        // states are mutually exclusive in time, so they never overlap the CR.
-        when (item.proofStatus) {
-            ProofStatus.PENDING -> {
-                Icon(
-                    imageVector = ImageVector.vectorResource(R.drawable.ic_proof_pending),
-                    contentDescription = "Proof pending",
-                    tint = Color.White,
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(2.dp)
-                        .background(
-                            color = Color.Black.copy(alpha = 0.6f),
-                            shape = RoundedCornerShape(2.dp)
-                        )
-                        .padding(1.dp)
-                        .size(24.dp)
-                )
-            }
-
-            ProofStatus.GENERATING -> {
-                CircularProgressIndicator(
-                    color = Color.White,
-                    strokeWidth = 2.dp,
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(2.dp)
-                        .background(
-                            color = Color.Black.copy(alpha = 0.6f),
-                            shape = RoundedCornerShape(2.dp)
-                        )
-                        .padding(4.dp)
-                        .size(18.dp)
-                )
-            }
-
-            ProofStatus.GENERATED -> {
-                // No pending badge; the CR badge above appears once verified.
-            }
-        }
-
-        if (lpBadgeAllowed(lpActive, item.proofStatus)) {
-            Row(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(2.dp)
-                    .background(
-                        color = Color.Black.copy(alpha = 0.6f),
-                        shape = RoundedCornerShape(2.dp),
-                    )
-                    .padding(1.dp),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                when (lpBadgeState.offchain) {
-                    LpOffchainBadge.SPINNER -> {
-                        CircularProgressIndicator(
-                            color = Color.White,
-                            strokeWidth = 2.dp,
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
-                    LpOffchainBadge.FINAL -> {
-                        Image(
-                            painter = painterResource(R.drawable.ic_lp_offchain_badge),
-                            contentDescription = "LP off-chain attestation",
-                            modifier = Modifier.size(24.dp),
-                        )
-                    }
-                    LpOffchainBadge.NONE -> Unit
-                }
-                if (lpBadgeState.offchain != LpOffchainBadge.NONE &&
-                    lpBadgeState.onchain != LpOnchainBadge.NONE
-                ) {
-                    Spacer(modifier = Modifier.width(2.dp))
-                }
-                when (lpBadgeState.onchain) {
-                    LpOnchainBadge.SPINNER -> {
-                        CircularProgressIndicator(
-                            color = Color.White,
-                            strokeWidth = 2.dp,
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
-                    LpOnchainBadge.PENDING -> {
-                        Image(
-                            painter = painterResource(R.drawable.ic_lp_onchain_pending_badge),
-                            contentDescription = "LP on-chain pending",
-                            modifier = Modifier.size(24.dp),
-                        )
-                    }
-                    LpOnchainBadge.CONFIRMED -> {
-                        Image(
-                            painter = painterResource(R.drawable.ic_lp_onchain_confirmed_badge),
-                            contentDescription = "LP on-chain confirmed",
-                            modifier = Modifier.size(24.dp),
-                        )
-                    }
-                    LpOnchainBadge.NONE -> Unit
-                }
-            }
-        }
-    }
-}
-
 // Custom extension
 fun Constraints.exact(width: Int, height: Int): Constraints {
     return this.copy(minWidth = width, maxWidth = width, minHeight = height, maxHeight = height)
@@ -438,7 +88,7 @@ fun Constraints.exact(width: Int, height: Int): Constraints {
 
 @Composable
 fun OneItemAssetRowView(asset: ProofableItem) {
-    ProofableItemView(item = asset, modifier = Modifier.aspectRatio(ratio = 16 / 9f))
+    GalleryItemThumb(item = asset, modifier = Modifier.aspectRatio(ratio = 16 / 9f))
 }
 
 @Composable
@@ -446,8 +96,8 @@ fun TwoItemsAssetRowView(assets: List<ProofableItem>) {
     Layout(
         modifier = Modifier.fillMaxWidth(),
         content = {
-            ProofableItemView(item = assets[0])
-            ProofableItemView(item = assets[1])
+            GalleryItemThumb(item = assets[0])
+            GalleryItemThumb(item = assets[1])
         }
     ) { measurables, constraints ->
         val w = constraints.maxWidth
@@ -470,9 +120,9 @@ fun ThreeItemsAssetRowView(assets: List<ProofableItem>) {
     Layout(
         modifier = Modifier.fillMaxWidth(),
         content = {
-            ProofableItemView(item = assets[0])
-            ProofableItemView(item = assets[1])
-            ProofableItemView(item = assets[2])
+            GalleryItemThumb(item = assets[0])
+            GalleryItemThumb(item = assets[1])
+            GalleryItemThumb(item = assets[2])
         }
     ) { measurables, constraints ->
         val w = constraints.maxWidth
@@ -497,16 +147,16 @@ fun FourItemsAssetRowView(assets: List<ProofableItem>) {
     Layout(
         modifier = Modifier.fillMaxWidth(),
         content = {
-            ProofableItemView(item = assets[0])
-            ProofableItemView(
+            GalleryItemThumb(item = assets[0])
+            GalleryItemThumb(
                 item = assets[1],
                 corners = RectF(ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS, 0f, 0f)
             )
-            ProofableItemView(
+            GalleryItemThumb(
                 item = assets[2],
                 corners = RectF(0f, 0f, ASSETS_CORNER_RADIUS, ASSETS_CORNER_RADIUS)
             )
-            ProofableItemView(item = assets[3])
+            GalleryItemThumb(item = assets[3])
         }
     ) { measurables, constraints ->
         val w = constraints.maxWidth
@@ -656,7 +306,7 @@ fun MediaSharedActivityView(items: SnapshotStateList<ProofableItem>, fileName: S
             modifier = Modifier.padding(8.dp)
         ) {
             validItems.forEach { asset ->
-                ProofableItemView(
+                GalleryItemThumb(
                     item = asset,
                     corners = RectF(30f, 30f, 30f, 30f),
                     modifier = Modifier
@@ -854,67 +504,22 @@ fun ActivitiesView(onAnyItemSelected: ((Boolean) -> Unit)? = null) {
                     }
 
                     if (selectedAssets.size > 0) {
-                        // Selection footer
-                        //
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .padding(10.dp)
-                        ) {
-
-                            /**Text(
-                                    text = pluralStringResource(
-                                            id = R.plurals.n_items_selected,
-                                            count = selectedAssets.size,
-                                            selectedAssets.size
-                                    ),
-                                    color = Color.DarkGray,
-                                    style = MaterialTheme.typography.headlineSmall,
-                                    fontWeight = FontWeight.Bold
-
-                            )
-                            Spacer(modifier = Modifier.weight(1.0f))
-                             **/
-                            val context = LocalContext.current
-                            val selectedItems =
-                                Activities.selectedItems(context = context, selectedAssets)
-                            IconButton(
-
-                                    modifier =
-                                    Modifier
-                                        .width(48.dp)
-                                        .height(48.dp),
-                                    onClick = {
-                                        (context as? ActivitiesViewDelegate)?.shareItems(selectedItems, fileName = null, shareText = null)
-                                        selectedAssets.clear()
-
-
-                                    onAnyItemSelected?.invoke(false)
-                                }) {
-                                Icon(
-                                    imageVector = ImageVector.vectorResource(org.witness.proofmode.camera.R.drawable.ic_share),
-                                    contentDescription = "Share"
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(6.dp))
-                            IconButton(
-
-                                    modifier =
-                                    Modifier
-                                        .width(48.dp)
-                                        .height(48.dp),
-                                    onClick = {
-                                        selectedAssets.clear()
-
-
-                                    onAnyItemSelected?.invoke(false)
-                                }) {
-                                Icon(
-                                    imageVector = ImageVector.vectorResource(R.drawable.ic_close_black_24dp), tint = Color.White,
-                                    contentDescription = "Cancel"
-                                )
-                            }
-                        }
+                        val context = LocalContext.current
+                        val selectedItems = Activities.selectedItems(context = context, selectedAssets)
+                        ProofsetActionBar(
+                            items = selectedItems,
+                            showCancel = true,
+                            onCancel = {
+                                selectedAssets.clear()
+                                onAnyItemSelected?.invoke(false)
+                            },
+                            onShare = { items ->
+                                (context as? ActivitiesViewDelegate)?.shareItems(items, fileName = null, shareText = null)
+                                // Accidental: today's gallery Share clears selection. May keep or drop; not essential.
+                                selectedAssets.clear()
+                                onAnyItemSelected?.invoke(false)
+                            },
+                        )
                     }
                 }
 

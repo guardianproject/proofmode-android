@@ -103,17 +103,15 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
         mC2paManager = C2PAManager(mContext!!, PreferencesManager(mContext!!))
     }
 
-    public fun refreshStorageProvider (storageProvider: StorageProvider?) {
+    public fun refreshStorageProvider(storageProvider: StorageProvider?) {
         if (storageProvider != null) this.storageProvider = storageProvider
         else this.storageProvider = createCompositeStorageProvider(mContext!!)
-
     }
-
 
     private fun createCompositeStorageProvider(context: Context): StorageProvider {
         val primaryProvider = DefaultStorageProvider(context)
         return try {
-            buildFilebaseAutoComposite(context, primaryProvider, filebaseConfig) ?: primaryProvider
+            wrapDeferringFilebaseComposite(context, primaryProvider, filebaseConfig) ?: primaryProvider
         } catch (e: Exception) {
             Log.e("MediaWatcher", "Failed to initialize Filebase provider", e)
             primaryProvider
@@ -1440,28 +1438,35 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
 }
 
 /**
- * When Filebase auto-upload is on, wrap [primary] in a deferring [CompositeStorageProvider]
- * for both IPFS directory and S3 members modes. Returns null when auto-upload is off or
- * Filebase is not configured; returns [primary] when configured but [FilebaseConfig.UploadMode.NONE].
+ * Wrap [primary] in a deferring [CompositeStorageProvider] when Filebase is configured
+ * for IPFS directory or S3 members, including when [FilebaseConfig.autoUpload] is false.
+ *
+ * Returns null when Filebase is not configured or [FilebaseConfig.UploadMode.NONE].
+ * Idle [FilebaseStorageProvider] / OkHttpClient at wrap is accepted.
  */
-internal fun buildFilebaseAutoComposite(
+internal fun wrapDeferringFilebaseComposite(
     context: Context,
     primary: StorageProvider,
     config: FilebaseConfig,
 ): StorageProvider? {
-    if (!config.isConfigured() || !config.autoUpload) return null
+    if (!config.isConfigured()) return null
     return when (config.resolveUploadMode()) {
         FilebaseConfig.UploadMode.IPFS_DIRECTORY,
         FilebaseConfig.UploadMode.S3_MEMBERS -> {
-            val filebaseProvider = FilebaseStorageProvider.from(config)
             CompositeStorageProvider(
                 primary,
-                filebaseProvider,
+                FilebaseStorageProvider.from(config),
                 appContext = context,
                 deferProofSetUpload = true,
                 filebaseConfig = config,
+                liveAutoUpload = {
+                    FilebaseConfig.fromPrefs(
+                        PreferenceManager.getDefaultSharedPreferences(context)
+                    ).autoUpload
+                },
             )
         }
-        FilebaseConfig.UploadMode.NONE -> primary
+        FilebaseConfig.UploadMode.NONE -> null
     }
 }
+
