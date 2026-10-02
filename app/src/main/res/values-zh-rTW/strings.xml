@@ -26,4 +26,7 @@
     <string name="close">關閉</string>
     <string name="onboarding_get_started">開始使用</string>
     <string name="bucket_name">儲存桶名稱</string>
+    <string name="has_hash">SHA-256 哈希值為</string>
+    <string name="location_protocol_auto_capture_summary">在應用程式內擷取後自動執行位置驗證</string>
+    <string name="select_app">請選擇要分享憑證的應用程式...</string>
 </resources>
