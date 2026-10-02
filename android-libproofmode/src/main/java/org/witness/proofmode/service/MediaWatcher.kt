@@ -1308,12 +1308,13 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
 
         val mediaPath: String? = getImagePath(context, uriMedia)
 
-        val tz = TimeZone.getDefault()
+        // The pattern's "Z" is a quoted literal, not an offset, so the formatter itself
+        // must be in UTC or the proof claims UTC while carrying local wall-clock time.
         val df: DateFormat = SimpleDateFormat(
             ProofModeV1Constants.ISO_DATE_TIME_FORMAT,
             Locale.US
-        ) // Quoted "Z" to indicate UTC, no timezone offset
-        df.setTimeZone(tz)
+        )
+        df.setTimeZone(TimeZone.getTimeZone("UTC"))
 
         val hmProof = HashMap<String?, String?>()
 

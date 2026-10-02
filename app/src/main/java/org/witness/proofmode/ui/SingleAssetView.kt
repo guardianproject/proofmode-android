@@ -114,6 +114,7 @@ import java.lang.Float.max
 import java.lang.Float.min
 import java.text.DateFormat
 import java.text.SimpleDateFormat
+import java.util.TimeZone
 import java.util.Date
 import java.util.Locale
 
@@ -417,7 +418,8 @@ fun updateMetadata (itemUri : Uri, context : Context) {
         val dfParse: DateFormat = SimpleDateFormat(
             ProofModeV1Constants.ISO_DATE_TIME_FORMAT,
             Locale.US
-        ) // Quoted "Z" to indicate UTC, no timezone offset
+        ) // Quoted "Z" is a literal, so the UTC zone has to be set explicitly
+        dfParse.timeZone = TimeZone.getTimeZone("UTC")
 
 
         var df = SimpleDateFormat.getDateTimeInstance()
