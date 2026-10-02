@@ -34,6 +34,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
@@ -391,8 +392,21 @@ val LocalSelectionHandler =
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ActivitiesView(onAnyItemSelected: ((Boolean) -> Unit)? = null) {
+fun ActivitiesView(
+    onSingleAssetOpen: ((Boolean) -> Unit)? = null,
+    onAnyItemSelected: ((Boolean) -> Unit)? = null,
+) {
     var showSingleAssetView: ProofableItem? by remember { mutableStateOf(null) }
+
+    // The single-asset viewer brings its own toolbar, so tell the host when it is up
+    // and the host's title bar should get out of the way.
+    val singleAssetOpen = showSingleAssetView != null
+    DisposableEffect(singleAssetOpen) {
+        onSingleAssetOpen?.invoke(singleAssetOpen)
+        onDispose {
+            if (singleAssetOpen) onSingleAssetOpen?.invoke(false)
+        }
+    }
 
     val selectedAssets = remember {
         mutableStateListOf<String>()
@@ -527,6 +541,7 @@ fun ActivitiesView(onAnyItemSelected: ((Boolean) -> Unit)? = null) {
                     SingleAssetViewWithToolbar(initialItem = showSingleAssetView!!) {
                         selectedAssets.clear()
                         showSingleAssetView = null
+                        onAnyItemSelected?.invoke(false)
                     }
                 }
             }
@@ -538,6 +553,7 @@ fun ActivitiesView(onAnyItemSelected: ((Boolean) -> Unit)? = null) {
         if (showSingleAssetView != null) {
             selectedAssets.clear()
             showSingleAssetView = null
+            onAnyItemSelected?.invoke(false)
         } else {
             // If there is no single asset view, then let the back press go through
             // When you hit back button and some items were selected, then clear the selection

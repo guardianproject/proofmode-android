@@ -36,7 +36,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -73,6 +74,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -125,8 +127,9 @@ val LocalShowMetadata = compositionLocalOf<Boolean> { true }
 @Composable
 fun SingleAssetViewWithToolbar(initialItem: ProofableItem, onClose: () -> Unit) {
 
+    // Open on the media itself; the info button or a drag up brings in the metadata.
     var showMetadata by remember {
-        mutableStateOf(true)
+        mutableStateOf(false)
     }
 
     var title by remember { mutableStateOf("") }
@@ -187,20 +190,27 @@ fun SingleAssetView(initialItem: ProofableItem, modifier: Modifier = Modifier, s
         mutableStateOf(0f)
     }
 
-    val allAssets = ArrayList<ProofableItem>()
-    allAssets.add(initialItem)
+    // Everything in the activity log, newest first like the feed, so a sideways swipe
+    // walks the same sequence the user was just looking at. Taken once when the viewer
+    // opens: a capture landing mid-swipe must not shift the pages under the finger.
+    val allAssets = remember(initialItem.uri) {
+        val all = Activities.activities.asReversed()
+            .flatMap { Activities.getActivityProofableItems(it) }
+            .distinctBy { it.uri.toString() }
+            .filter { !it.isDeleted(context) }
+        if (all.any { it.uri == initialItem.uri }) all else listOf(initialItem) + all
+    }
+    val pagerState = rememberPagerState(
+        initialPage = allAssets.indexOfFirst { it.uri == initialItem.uri }.coerceAtLeast(0)
+    ) { allAssets.size }
+    val currentItem = allAssets[pagerState.currentPage.coerceIn(0, allAssets.size - 1)]
 
-    /***
-    var relatedItems = Activities.getRelatedProofableItems(context,initialItem.id)
-    for (relatedItem in relatedItems)
-        allAssets.add(relatedItem)
-
-
-    var selectedIndex by remember { mutableStateOf(allAssets.indexOfFirst { it.uri.toString() == initialItem.uri.toString() } .coerceAtLeast(0)) }
-    **/
-
-
-    var selectedIndex = 0
+    val titleFormat = stringResource(id = R.string.date_display_single_item)
+    LaunchedEffect(currentItem.id) {
+        Activities.dateForItem(item = currentItem, context = context) { date ->
+            setTitle(SimpleDateFormat(titleFormat).format(date))
+        }
+    }
 
     val showMetadata = LocalShowMetadata.current
     val metadataOpacity: Float by animateFloatAsState(
@@ -218,30 +228,27 @@ fun SingleAssetView(initialItem: ProofableItem, modifier: Modifier = Modifier, s
     val localDensity = LocalDensity.current
     val itemViewHeight = with(localDensity) {
         val dpHalfHeight = (0.5f * topPartHeight).toDp()
-        dpHalfHeight.plus(
-            dpHalfHeight
-                .minus(64.dp)
-                .times(1 - metadataOpacity)
-        )
+        // Half the space beside the metadata panel, all of it once the panel is hidden.
+        dpHalfHeight.plus(dpHalfHeight.times(1 - metadataOpacity))
     }
-    var metadataRevision by remember(initialItem.id) { mutableStateOf(0) }
-    LaunchedEffect(initialItem.id) {
+    var metadataRevision by remember(currentItem.id) { mutableStateOf(0) }
+    LaunchedEffect(currentItem.id) {
         ProofSetUploader.occupancyUpdates.collect { hash ->
-            metadataRevision = nextMetadataRevision(initialItem.id, hash, metadataRevision)
+            metadataRevision = nextMetadataRevision(currentItem.id, hash, metadataRevision)
         }
     }
-    LaunchedEffect(initialItem.id) {
+    LaunchedEffect(currentItem.id) {
         AutoCaptureLpStateRegistry.updates.collect { hash ->
-            metadataRevision = nextMetadataRevision(initialItem.id, hash, metadataRevision)
+            metadataRevision = nextMetadataRevision(currentItem.id, hash, metadataRevision)
         }
     }
-    // initialItem is a copy taken when the view was opened; follow the live feed
+    // currentItem is a copy taken when the view was opened; follow the live feed
     // item so a pending capture updates here once it has been signed.
-    val item = Activities.itemForUri(initialItem.uri) ?: initialItem
+    val item = Activities.itemForUri(currentItem.uri) ?: currentItem
     // PROOF_GENERATED is broadcast just before the proof sidecar is written, so
     // re-read the metadata for a few seconds after an item completes while open.
     LaunchedEffect(item.proofStatus) {
-        if (item.proofStatus == ProofStatus.GENERATED && initialItem.proofStatus != ProofStatus.GENERATED) {
+        if (item.proofStatus == ProofStatus.GENERATED && currentItem.proofStatus != ProofStatus.GENERATED) {
             repeat(5) {
                 delay(1000)
                 metadataRevision++
@@ -249,11 +256,6 @@ fun SingleAssetView(initialItem: ProofableItem, modifier: Modifier = Modifier, s
         }
     }
     val metadataRefresh = metadataRevision
-    val coroutineScope = rememberCoroutineScope()
-    val previewItemCenterOffset = with(localDensity) {
-        -((topPartWidth / 2).toInt() - 28.dp.roundToPx())
-    }
-    val listState = rememberLazyListState(initialFirstVisibleItemIndex = selectedIndex, initialFirstVisibleItemScrollOffset = previewItemCenterOffset)
 
     Column(modifier = Modifier.fillMaxSize()) {
         Box(modifier = Modifier
@@ -282,19 +284,36 @@ fun SingleAssetView(initialItem: ProofableItem, modifier: Modifier = Modifier, s
                     }
                 )
             ) {
-                SingleAssetItemView(
-                    width = maxWidth,
-                    height = itemViewHeight,
-                    allAssets = allAssets,
-                    selectedIndex = selectedIndex,
-                    selectIndex = { idx ->
-                        selectedIndex = idx
-                        coroutineScope.launch {
-                            listState.scrollToItem(selectedIndex, previewItemCenterOffset)
-                        }
-                    },
-                    setTitle = setTitle
+                val pageWidth = maxWidth
+                val itemSizeMultiplier by animateFloatAsState(
+                    targetValue = if (LocalSelectionHandler.current.anySelected()) 0.7f else 1f
                 )
+                // The pager only sees one-finger sideways drags the image didn't claim:
+                // ZoomableBox consumes pinches and pans while zoomed in, so a zoomed
+                // image pans instead of paging, and at 1x a swipe changes item.
+                HorizontalPager(
+                    state = pagerState,
+                    pageSpacing = 10.dp,
+                    key = { page -> allAssets[page].uri.toString() },
+                    modifier = Modifier.fillMaxSize()
+                ) { page ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                scaleX = itemSizeMultiplier
+                                scaleY = itemSizeMultiplier
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        SingleItemView(
+                            itemWidth = pageWidth,
+                            allAssets = allAssets,
+                            index = page,
+                            selectedIndex = pagerState.currentPage
+                        )
+                    }
+                }
             }
             // Only lay the metadata panel out while it is actually visible. When it is
             // faded out the image expands over the space it occupies, and an invisible
@@ -316,8 +335,10 @@ fun SingleAssetView(initialItem: ProofableItem, modifier: Modifier = Modifier, s
                         PendingProofRow(item)
                     }
 
-                    key(metadataRefresh) {
-                        updateMetadata(initialItem.uri, context)
+                    // Keyed on the item too, so the rows' expanded/loaded state
+                    // doesn't carry over from one page to the next.
+                    key(currentItem.uri, metadataRefresh) {
+                        updateMetadata(currentItem.uri, context)
                     }
 
                 }
@@ -328,7 +349,7 @@ fun SingleAssetView(initialItem: ProofableItem, modifier: Modifier = Modifier, s
         val items = actionBarItems(
             anySelected = handler.anySelected(),
             selectedItems = handler.selectedItems(),
-            currentItem = initialItem,
+            currentItem = currentItem,
         )
         ProofsetActionBar(
             items = items,
@@ -1235,93 +1256,6 @@ fun SingleItemView(itemWidth: Dp, allAssets: List<ProofableItem>, index: Int, se
             modifier = Modifier
                 .width(itemWidth)
         )
-    }
-}
-
-@Composable
-fun SingleAssetItemView(width: Dp, height: Dp, allAssets: List<ProofableItem>, selectedIndex: Int, selectIndex: (Int) -> Unit, setTitle: (String) -> Unit) {
-    var dragOffset by remember {
-        mutableStateOf(0f)
-    }
-    var dragging by remember { mutableStateOf(false) }
-    var animateFromItem by remember { mutableStateOf(selectedIndex.toFloat()) }
-    val animatedOffset: Float by animateFloatAsState(targetValue =
-        if (!dragging && animateFromItem != selectedIndex.toFloat()) selectedIndex.toFloat()
-        else animateFromItem
-    , animationSpec = tween(
-            durationMillis = if (!dragging && animateFromItem != selectedIndex.toFloat()) 300 else 0,
-            easing = FastOutSlowInEasing
-        )
-    )
-    val localDensity = LocalDensity.current
-    val itemSizeMultiplier by animateFloatAsState(targetValue = if (LocalSelectionHandler.current.anySelected()) 0.7f else 1f)
-    val itemWidth = width.times(itemSizeMultiplier)
-
-    if (selectedIndex >= 0 && selectedIndex < allAssets.size) {
-        val formatter = SimpleDateFormat(stringResource(id = R.string.date_display_single_item))
-        Activities.dateForItem(item = allAssets[selectedIndex], context = LocalContext.current) { date ->
-            val dateFormatted = formatter.format(date)
-            setTitle(dateFormatted)
-        }
-    }
-    Row(
-        modifier = Modifier
-            .height(height)
-            .requiredWidth(
-                10.dp
-                    .plus(itemWidth)
-                    .times(5)
-                    .minus(10.dp)
-            )
-            .offset(
-                x = itemWidth
-                    .plus(10.dp)
-                    .times(selectedIndex.toFloat() - animatedOffset)
-            )
-            .draggable(
-                orientation = Orientation.Horizontal,
-                state = rememberDraggableState { delta ->
-                    dragOffset += delta
-                    animateFromItem = selectedIndex.toFloat() - dragOffset / with(localDensity) {
-                        itemWidth
-                            .plus(10.dp)
-                            .toPx()
-                    }
-                },
-                onDragStarted = {
-                    dragOffset = 0f
-                    dragging = true
-                },
-                onDragStopped = { _ ->
-                    if (dragOffset > 50 && selectedIndex > 0) {
-                        animateFromItem =
-                            selectedIndex.toFloat() - dragOffset / with(localDensity) {
-                                itemWidth
-                                    .plus(10.dp)
-                                    .toPx()
-                            }
-                        selectIndex(selectedIndex - 1)
-                    } else if (dragOffset < -50 && selectedIndex < (allAssets.size - 1)) {
-                        animateFromItem =
-                            selectedIndex.toFloat() - dragOffset / with(localDensity) {
-                                itemWidth
-                                    .plus(10.dp)
-                                    .toPx()
-                            }
-                        selectIndex(selectedIndex + 1)
-                    }
-                    dragOffset = 0f
-                    dragging = false
-                }
-            )
-    , horizontalArrangement = Arrangement.spacedBy(10.dp)
-    , verticalAlignment = Alignment.CenterVertically
-    ) {
-        SingleItemView(itemWidth = itemWidth, allAssets = allAssets, index = selectedIndex - 2, selectedIndex = selectedIndex)
-        SingleItemView(itemWidth = itemWidth, allAssets = allAssets, index = selectedIndex - 1, selectedIndex = selectedIndex)
-        SingleItemView(itemWidth = itemWidth, allAssets = allAssets, index = selectedIndex, selectedIndex = selectedIndex)
-        SingleItemView(itemWidth = itemWidth, allAssets = allAssets, index = selectedIndex + 1, selectedIndex = selectedIndex)
-        SingleItemView(itemWidth = itemWidth, allAssets = allAssets, index = selectedIndex + 2, selectedIndex = selectedIndex)
     }
 }
 

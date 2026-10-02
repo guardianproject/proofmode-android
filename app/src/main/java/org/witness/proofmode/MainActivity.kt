@@ -15,7 +15,10 @@ import android.os.Bundle
 import android.provider.OpenableColumns
 import android.view.Menu
 import android.view.MenuItem
+import android.graphics.drawable.Drawable
+import androidx.core.view.WindowCompat
 import android.view.View
+import android.view.ViewGroup
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Lifecycle
@@ -181,22 +184,74 @@ class MainActivity : AppCompatActivity(),
         val activityView = findViewById<ComposeView>(R.id.activityView)
 
         activityView.setContent {
-            ActivitiesView {
+            ActivitiesView(onSingleAssetOpen = ::singleAssetOpen) {
                 itemsSelected(it)
             }
         }
     }
 
+    /**
+     * The single-asset viewer has its own toolbar; hide ours while it is open and let
+     * the Compose view take the space, then put both back on return to the feed.
+     */
+    private fun singleAssetOpen(open: Boolean) {
+        mainBinding.appBar.visibility = if (open) View.GONE else View.VISIBLE
+        val composeView = mainBinding.activityView
+        val params = composeView.layoutParams as ViewGroup.MarginLayoutParams
+        if (activityViewTopMargin < 0) activityViewTopMargin = params.topMargin
+        params.topMargin = if (open) 0 else activityViewTopMargin
+        composeView.layoutParams = params
+        singleAssetShowing = open
+        updateFabVisibility()
+        setStatusBarBlack(open)
+    }
+
+    private var feedStatusBarBackground: Drawable? = null
+    private var feedStatusBarColor = 0
+    private var feedLightStatusBars = false
+    private var statusBarIsBlack = false
+
+    /**
+     * Blacks out the status bar behind the single-asset viewer so the media reads as
+     * full screen, and restores the feed's own colours afterwards.
+     */
+    @Suppress("DEPRECATION")
+    private fun setStatusBarBlack(black: Boolean) {
+        if (black == statusBarIsBlack) return
+        statusBarIsBlack = black
+        val drawer = mainBinding.drawerLayout
+        val insetsController = WindowCompat.getInsetsController(window, drawer)
+        if (black) {
+            feedStatusBarBackground = drawer.statusBarBackgroundDrawable
+            feedStatusBarColor = window.statusBarColor
+            feedLightStatusBars = insetsController.isAppearanceLightStatusBars
+            // Under enforced edge-to-edge (Android 15+) the window colour is ignored and
+            // the strip behind the status bar is whatever the DrawerLayout paints there;
+            // on older versions the window colour is what shows. Set both.
+            drawer.setStatusBarBackgroundColor(android.graphics.Color.BLACK)
+            window.statusBarColor = android.graphics.Color.BLACK
+            insetsController.isAppearanceLightStatusBars = false
+        } else {
+            drawer.setStatusBarBackground(feedStatusBarBackground)
+            window.statusBarColor = feedStatusBarColor
+            insetsController.isAppearanceLightStatusBars = feedLightStatusBars
+        }
+    }
+
+    private var activityViewTopMargin = -1
+    private var singleAssetShowing = false
+    private var anyItemsSelected = false
+
     private fun itemsSelected(selected: Boolean) {
-        if (selected) {
-            fabPhoto.visibility = View.GONE
+        anyItemsSelected = selected
+        updateFabVisibility()
+    }
 
-        }
-        else {
-            fabPhoto.visibility = View.VISIBLE
-
-        }
-
+    // The camera button belongs to the feed: it steps aside both for a multi-select
+    // and for the single-asset viewer, whose action bar it would otherwise cover.
+    private fun updateFabVisibility() {
+        fabPhoto.visibility =
+            if (anyItemsSelected || singleAssetShowing) View.GONE else View.VISIBLE
     }
 
     private class EventReceiver (thisActivity: MainActivity) : BroadcastReceiver() {
@@ -647,7 +702,7 @@ class MainActivity : AppCompatActivity(),
         val activityView = findViewById<ComposeView>(R.id.activityView)
         checkNoPicsView()
         activityView.setContent {
-            ActivitiesView {
+            ActivitiesView(onSingleAssetOpen = ::singleAssetOpen) {
                 itemsSelected(it)
             }
         }
