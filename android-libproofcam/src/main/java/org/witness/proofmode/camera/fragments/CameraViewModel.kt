@@ -15,6 +15,8 @@ import android.provider.MediaStore
 import android.util.Range
 import android.util.Rational
 import android.view.Surface
+import androidx.camera.camera2.interop.Camera2Interop
+import androidx.camera.camera2.interop.ExperimentalCamera2Interop
 import androidx.camera.core.AspectRatio
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraControl
@@ -118,7 +120,17 @@ class CameraViewModel(private val app: Application) : AndroidViewModel(app) {
     val exposureIndex: StateFlow<Int> = _exposureIndex
     private var _cameraDelay:MutableStateFlow<CameraDelay> = MutableStateFlow(CameraDelay.Zero)
     val cameraDelay: StateFlow<CameraDelay> = _cameraDelay
+    // Manual ISO / shutter / focus / white balance for the photo "Pro" mode. Declared
+    // ahead of the preview use case, which carries its capture callback.
+    val pro = ProCameraController()
+    private val _proMode = MutableStateFlow(
+        sharedPrefsManager.getBoolean(SharedPrefsManager.KEY_PRO_MODE, false)
+    )
+    val proMode: StateFlow<Boolean> = _proMode
+
+    @androidx.annotation.OptIn(ExperimentalCamera2Interop::class)
     private val previewUseCase = Preview.Builder()
+        .also { Camera2Interop.Extender(it).setSessionCaptureCallback(pro.captureCallback) }
         .build().apply {
         setSurfaceProvider { newSurfaceRequest->
             _surfaceRequest.update { newSurfaceRequest }
@@ -145,6 +157,13 @@ class CameraViewModel(private val app: Application) : AndroidViewModel(app) {
                     _lastCapturedMedia.value = media.firstOrNull()
                 }
         }
+    }
+
+    /** Show or hide the Pro bar. Turning it off hands every manual setting back to auto. */
+    fun setProMode(enabled: Boolean) {
+        _proMode.value = enabled
+        sharedPrefsManager.putBoolean(SharedPrefsManager.KEY_PRO_MODE, enabled)
+        pro.setActive(enabled)
     }
 
     fun updateCameraDelay(delay: CameraDelay) {
@@ -388,6 +407,7 @@ class CameraViewModel(private val app: Application) : AndroidViewModel(app) {
             cameraControl = camera?.cameraControl
             refreshZoomState()
             refreshExposureState()
+            pro.bind(camera!!, active = _proMode.value)
         } catch (ex: Exception) {
             Timber.e(ex, "Failed to bind image use cases")
         }
@@ -472,6 +492,7 @@ class CameraViewModel(private val app: Application) : AndroidViewModel(app) {
             cameraControl = camera?.cameraControl
             applyTorchState()
             refreshExposureState()
+            pro.bind(camera!!, active = false)
         } catch (ex: Exception) {
             Timber.e(ex, "Failed to bind video capture with quality $quality")
         }
@@ -507,6 +528,9 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
         cameraControl = camera?.cameraControl
         applyTorchState()
         refreshExposureState()
+        // Pro settings are photo-only, but they live on the camera rather than on a
+        // use case, so they have to be cleared explicitly or they'd carry into video.
+        pro.bind(camera!!, active = false)
     } catch (ex:Exception){
         Timber.e("Binding failed")
     }
@@ -875,6 +899,7 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
             refreshZoomState()
             applyTorchState()
             refreshExposureState()
+            pro.bind(camera!!, active = false)
             true
         } catch (ex: Exception) {
             Timber.e(ex, "Failed to rebind video capture to lens facing %d while recording", facing)
@@ -957,7 +982,12 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
     fun tapToFocus(tapCoordinates: Offset) {
         val point = surfaceOrientedMeteringPointFactory?.createPoint(tapCoordinates.x,tapCoordinates.y)
         if (point != null) {
-            val meteringAction = FocusMeteringAction.Builder(point).build()
+            // With focus pinned by hand, a tap still meters exposure but must not
+            // start an AF scan that would fight the manual distance.
+            val meteringAction = if (pro.settings.value.focusDiopters != null && _proMode.value)
+                FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AE).build()
+            else
+                FocusMeteringAction.Builder(point).build()
             if (camera?.cameraInfo?.isFocusMeteringSupported(meteringAction) == true){
                 cameraControl?.startFocusAndMetering(meteringAction)
 

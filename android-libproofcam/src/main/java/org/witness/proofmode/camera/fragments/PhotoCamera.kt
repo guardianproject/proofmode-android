@@ -2,6 +2,7 @@ package org.witness.proofmode.camera.fragments
 
 import android.Manifest
 import android.content.Intent
+import android.view.Surface
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.compose.CameraXViewfinder
@@ -75,11 +76,14 @@ import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.round
 import androidx.constraintlayout.compose.ConstraintLayout
+import androidx.constraintlayout.compose.Dimension
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -100,6 +104,7 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                 onClose:()-> Unit = {}) {
 
     val context = LocalContext.current
+    val proModeDescription = stringResource(R.string.pro_mode_description)
     val thumbPreviewUri by cameraViewModel.thumbPreviewUri.collectAsStateWithLifecycle()
     val surfaceRequest by cameraViewModel.surfaceRequest.collectAsStateWithLifecycle()
     var showGridLines:Boolean by remember {
@@ -142,6 +147,8 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
 
     val exposureState by cameraViewModel.exposureState.collectAsStateWithLifecycle()
     val exposureIndex by cameraViewModel.exposureIndex.collectAsStateWithLifecycle()
+    val proMode by cameraViewModel.proMode.collectAsStateWithLifecycle()
+    val deviceRotation by cameraViewModel.deviceRotation.collectAsStateWithLifecycle()
     val flashMode by cameraViewModel.flashMode.collectAsStateWithLifecycle()
     var showFlashModes by remember { mutableStateOf(false) }
     val ultraHdrOn by cameraViewModel.ultraHdr.collectAsStateWithLifecycle()
@@ -205,7 +212,7 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                     .fillMaxSize()
                     .background(Color.Black)) {
                     val (viewFinder, topScrim, topBAr, cancelButton, countDownStateView, bottomBg, captureButton, cameraSwitcher, galleryPreview, cameraText,
-                        flashModeRow, logo, crLogo) = createRefs()
+                        flashModeRow, logo, crLogo, proControls) = createRefs()
                     // The viewfinder sits in a full-screen box and is itself sized to the
                     // selected portrait aspect (3:4 / 9:16 / 1:1), so switching ratios visibly
                     // resizes the preview window. ContentScale.Crop then fills that box with
@@ -340,7 +347,8 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                         // Exposure lives over the preview rather than in the top bar, so it
                         // is adjusted while looking at the scene it affects.
                         AnimatedVisibility(
-                            visible = showExposureSlider,
+                            // In Pro mode exposure compensation lives in the Pro bar instead.
+                            visible = showExposureSlider && !proMode,
                             enter = fadeIn(),
                             exit = fadeOut(),
                             modifier = Modifier
@@ -421,6 +429,17 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                             }) {
                                 Icon(imageVector = flashModeToIconRes(flashMode),
                                     tint = Color.White,contentDescription = stringResource(R.string.change_flash_mode_content_description)
+                                )
+                            }
+
+                            IconButton(onClick = { cameraViewModel.setProMode(!proMode) }) {
+                                Text(
+                                    stringResource(R.string.pro_mode),
+                                    color = if (proMode) AccentGreen else Color.White,
+                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                    modifier = Modifier.semantics {
+                                        contentDescription = proModeDescription
+                                    }
                                 )
                             }
 
@@ -548,6 +567,48 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                                 }
                             },
                             label = if (cameraDelay != CameraDelay.Zero) "${cameraDelay.value}" else null
+                        )
+                    }
+
+                    // Pro bar: floats just above the shutter. Its slider opens underneath
+                    // it, so the bar is pushed up rather than the slider covering the shutter.
+                    // The activity is locked to portrait, so when the phone is held in
+                    // landscape the bar is turned to read upright and moved to whichever
+                    // long edge is now physically at the bottom.
+                    val proLandscape = deviceRotation == Surface.ROTATION_90 ||
+                            deviceRotation == Surface.ROTATION_270
+                    // ROTATION_90: left edge down, so "up" for the reader is screen-right.
+                    val proOnStartEdge = deviceRotation == Surface.ROTATION_90
+                    AnimatedVisibility(
+                        visible = proMode && (countDownState == CountDownState.Idle || countDownState == CountDownState.Completed),
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                        modifier = Modifier
+                            .constrainAs(proControls) {
+                                if (proLandscape) {
+                                    // Run between the top bar and the shutter row.
+                                    top.linkTo(parent.top, margin = 116.dp)
+                                    bottom.linkTo(bottomBg.top)
+                                    height = Dimension.fillToConstraints
+                                    if (proOnStartEdge) start.linkTo(parent.start, margin = 8.dp)
+                                    else end.linkTo(parent.end, margin = 8.dp)
+                                } else {
+                                    bottom.linkTo(captureButton.top, margin = 12.dp)
+                                    start.linkTo(parent.start, margin = 12.dp)
+                                    end.linkTo(parent.end, margin = 12.dp)
+                                    width = Dimension.fillToConstraints
+                                }
+                            }
+                    ) {
+                        ProControls(
+                            pro = cameraViewModel.pro,
+                            exposureState = exposureState,
+                            exposureIndex = exposureIndex,
+                            onExposureIndexChange = { cameraViewModel.updateExposureCompensation(it) },
+                            modifier = if (proLandscape)
+                                Modifier.quarterTurn(clockwise = proOnStartEdge).fillMaxWidth()
+                            else
+                                Modifier.fillMaxWidth()
                         )
                     }
 

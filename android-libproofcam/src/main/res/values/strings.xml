@@ -37,6 +37,11 @@
     <string name="settings_note">Author Note</string>
     <string name="action_save">Save</string>
     <string name="cancel">Cancel</string>
+    <string name="pro_mode">PRO</string>
+    <string name="pro_mode_description">Toggle pro manual controls</string>
+    <string name="pro_auto">AUTO</string>
+    <string name="pro_reset_description">Reset all pro settings to auto</string>
+    <string name="pro_close_slider_description">Close slider</string>
     <string name="note_dialog_explanation">Notes are attached to content credentials for captured media as captions</string>
 
 </resources>

@@ -269,7 +269,7 @@ private fun SunThumb(modifier: Modifier = Modifier) {
  * "-0.7"). [step] is the EV each index is worth on this device — a third or a
  * half stop, typically — so the index alone is not comparable across cameras.
  */
-private fun evLabel(index: Int, step: Rational?): String {
+internal fun evLabel(index: Int, step: Rational?): String {
     val ev = step?.let { index * it.toDouble() } ?: index.toDouble()
     return String.format(Locale.US, "%+.1f", ev)
 }
