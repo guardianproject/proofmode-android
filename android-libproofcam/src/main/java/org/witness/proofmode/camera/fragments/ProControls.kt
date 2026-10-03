@@ -98,6 +98,11 @@ private class ProItem(
     val onFraction: (Float) -> Unit,
     /** Flips between auto and manual; null for settings with no auto state (EV). */
     val onToggleAuto: (() -> Unit)?,
+    /**
+     * Ruler marks, each one a haptic detent while scrubbing. Continuous settings use a
+     * fixed ruler; EV uses its real steps so every tick is an actual change.
+     */
+    val detents: Int = RulerTicks,
 )
 
 /**
@@ -182,6 +187,7 @@ fun ProControls(
                     maxLabel = evLabel(upper, step),
                     onFraction = { f -> onExposureIndexChange((lower + f * (upper - lower)).roundToInt()) },
                     onToggleAuto = null,
+                    detents = (upper - lower + 1).coerceIn(2, MaxRulerTicks),
                 ))
             }
         }
@@ -353,6 +359,7 @@ private fun ProSliderPanel(item: ProItem, onClose: () -> Unit, modifier: Modifie
                 fraction = item.fraction,
                 manual = item.manual,
                 onFraction = item.onFraction,
+                detents = item.detents,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(36.dp)
@@ -375,9 +382,14 @@ private fun ProSliderPanel(item: ProItem, onClose: () -> Unit, modifier: Modifie
 
 private const val RulerTicks = 31
 
+/** Past this many marks the ruler is a grey smear and the ticks a buzz. */
+private const val MaxRulerTicks = 61
+
 /**
  * A tick ruler with a taller marker at the current value. Touch position maps
- * straight onto the range, so a tap jumps and a drag scrubs.
+ * straight onto the range, so a tap jumps and a drag scrubs. Each mark the finger
+ * crosses gives a haptic tick, like the detents on a lens ring, so the value can be
+ * felt changing without looking away from the scene.
  */
 @Composable
 private fun ProRuler(
@@ -385,10 +397,12 @@ private fun ProRuler(
     manual: Boolean,
     onFraction: (Float) -> Unit,
     modifier: Modifier = Modifier,
+    detents: Int = RulerTicks,
 ) {
+    val haptics = rememberCameraHaptics()
     val currentOnFraction by rememberUpdatedState(onFraction)
     Canvas(
-        modifier = modifier.pointerInput(Unit) {
+        modifier = modifier.pointerInput(detents) {
             awaitEachGesture {
                 // Claim the down so a scrub that starts over the viewfinder's edge
                 // is never read as tap-to-focus.
@@ -396,12 +410,25 @@ private fun ProRuler(
                 down.consume()
                 val inset = RulerInset.toPx()
                 val travel = (size.width - 2 * inset).coerceAtLeast(1f)
-                currentOnFraction(((down.position.x - inset) / travel).coerceIn(0f, 1f))
+                fun fractionAt(x: Float) = ((x - inset) / travel).coerceIn(0f, 1f)
+                fun detentAt(f: Float) = (f * (detents - 1)).roundToInt()
+
+                val first = fractionAt(down.position.x)
+                // The tap that lands on the ruler is itself a change of value.
+                haptics.tick()
+                var lastDetent = detentAt(first)
+                currentOnFraction(first)
                 do {
                     val event = awaitPointerEvent()
                     val change = event.changes.firstOrNull { it.id == down.id } ?: break
                     if (change.pressed) {
-                        currentOnFraction(((change.position.x - inset) / travel).coerceIn(0f, 1f))
+                        val f = fractionAt(change.position.x)
+                        val detent = detentAt(f)
+                        if (detent != lastDetent) {
+                            haptics.tick()
+                            lastDetent = detent
+                        }
+                        currentOnFraction(f)
                     }
                     change.consume()
                 } while (event.changes.any { it.pressed })
@@ -412,10 +439,10 @@ private fun ProRuler(
         val travel = size.width - 2 * inset
         val centerY = size.height / 2f
         val tickHalf = 6.dp.toPx()
-        for (i in 0 until RulerTicks) {
-            val x = inset + travel * i / (RulerTicks - 1)
+        for (i in 0 until detents) {
+            val x = inset + travel * i / (detents - 1)
             // Fade the ends, so the ruler reads as a window onto a longer scale.
-            val edge = minOf(i, RulerTicks - 1 - i).coerceAtMost(4) / 4f
+            val edge = minOf(i, detents - 1 - i).coerceAtMost(4) / 4f
             drawLine(
                 color = Color.White.copy(alpha = 0.25f + 0.45f * edge),
                 start = Offset(x, centerY - tickHalf),
