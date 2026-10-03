@@ -585,7 +585,7 @@ fun updateMetadata (itemUri : Uri, context : Context) {
 
             lat?.let {
                 if (loc != null) {
-                    convertDegMinsSecs(lat, loc)?.let { it1 -> addRow("Location", it1) }
+                    convertDegMinsSecs(lat, loc)?.let { it1 -> LocationRow("Location", it1, lat, loc) }
                 }
             }
         }
@@ -599,6 +599,44 @@ fun updateMetadata (itemUri : Uri, context : Context) {
 
     }
 }
+/** OpenStreetMap link that drops a marker on the point and zooms to street level. */
+fun openStreetMapUrl(latitude: Double, longitude: Double): String =
+    // Double.toString is locale-independent, so no decimal commas end up in the URL.
+    "https://www.openstreetmap.org/?mlat=$latitude&mlon=$longitude#map=17/$latitude/$longitude"
+
+/** The location row: the coordinates as text, tappable to open them on OpenStreetMap. */
+@Composable
+private fun LocationRow(label: String, display: String, latitude: Double, longitude: Double) {
+    val context = LocalContext.current
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                try {
+                    context.startActivity(
+                        Intent(Intent.ACTION_VIEW, Uri.parse(openStreetMapUrl(latitude, longitude)))
+                    )
+                } catch (e: Exception) {
+                    Timber.e(e, "Unable to open OpenStreetMap")
+                }
+            }
+    ) {
+        Row {
+            Text(modifier = Modifier.padding(3.dp, 3.dp), text = label, fontWeight = FontWeight.Bold)
+        }
+        Row {
+            Text(
+                modifier = Modifier.padding(3.dp, 3.dp),
+                text = display,
+                color = Color(0xFF2E7D32),
+            )
+        }
+        Row {
+            Text(modifier = Modifier.padding(3.dp, 3.dp), text = "")
+        }
+    }
+}
+
 @Composable
 fun FilebaseUploadsGroup(proofsetUrl: String?, imageUrl: String?, pending: Boolean = false) {
     if (proofsetUrl.isNullOrBlank() && imageUrl.isNullOrBlank() && !pending) return
