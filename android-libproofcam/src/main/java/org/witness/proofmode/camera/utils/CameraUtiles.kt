@@ -72,6 +72,14 @@ fun isUltraHdrSupported(cameraSelector: CameraSelector, cameraProvider: CameraPr
 
 }
 
+/** Whether [cameraSelector]'s camera can deliver RAW (DNG) stills through ImageCapture. */
+fun isRawSupported(cameraSelector: CameraSelector, cameraProvider: CameraProvider): Boolean {
+    val cameraInfo = cameraProvider.getCameraInfo(cameraSelector)
+    return ImageCapture.getImageCaptureCapabilities(cameraInfo)
+        .supportedOutputFormats
+        .contains(ImageCapture.OUTPUT_FORMAT_RAW)
+}
+
 fun Quality.getName():String {
     return when (this) {
         Quality.UHD -> "4K(UHD)"

@@ -72,6 +72,7 @@ import org.witness.proofmode.camera.adapter.Media
 import org.witness.proofmode.camera.utils.SharedPrefsManager
 import org.witness.proofmode.camera.utils.getMediaFlow
 import org.witness.proofmode.camera.utils.getSupportedQualities
+import org.witness.proofmode.camera.utils.isRawSupported
 import org.witness.proofmode.camera.utils.isUltraHdrSupported
 import org.witness.proofmode.crypto.HashUtils
 import org.witness.proofmode.service.MediaWatcher.Companion.getInstance
@@ -307,6 +308,35 @@ class CameraViewModel(private val app: Application) : AndroidViewModel(app) {
         }.getOrDefault(PhotoQuality.HIGH)
     )
     val photoQuality: StateFlow<PhotoQuality> = _photoQuality
+    private val _photoFormat = MutableStateFlow(
+        runCatching {
+            PhotoFormat.valueOf(
+                sharedPrefsManager.getString(
+                    SharedPrefsManager.KEY_PHOTO_FORMAT, PhotoFormat.JPEG.name
+                )
+            )
+        }.getOrDefault(PhotoFormat.JPEG)
+    )
+    /** The user's choice; see [rawActive] for what the bound camera will actually write. */
+    val photoFormat: StateFlow<PhotoFormat> = _photoFormat
+    private val _rawSupported = MutableStateFlow(false)
+    /** Whether the bound camera can capture RAW at all (front lenses usually can't). */
+    val rawSupported: StateFlow<Boolean> = _rawSupported
+    private val _rawActive = MutableStateFlow(false)
+    /** RAW chosen *and* supported by the bound camera: the next shot is a DNG. */
+    val rawActive: StateFlow<Boolean> = _rawActive
+
+    private fun refreshRawActive() {
+        _rawActive.value = _photoFormat.value == PhotoFormat.RAW_DNG && _rawSupported.value
+    }
+
+    /**
+     * The framing actually captured. CameraX doesn't apply the ViewPort crop to RAW, so a
+     * DNG is always the full sensor; pin the preview to 4:3 (the sensor shape on nearly
+     * every phone) so what's framed is still what's saved.
+     */
+    private fun effectiveAspectRatio(): PhotoAspectRatio =
+        if (_rawActive.value) PhotoAspectRatio.RATIO_4_3 else _photoAspectRatio.value
 
     // Selected quality
     private val _selectedQuality = MutableStateFlow<Quality?>(null) // Default to FHD (1080p)
@@ -349,7 +379,7 @@ class CameraViewModel(private val app: Application) : AndroidViewModel(app) {
      * mode set elsewhere.
      */
     private fun buildImageCapture(): ImageCapture {
-        val aspect = _photoAspectRatio.value
+        val aspect = effectiveAspectRatio()
         val resolutionSelector = ResolutionSelector.Builder()
             .setAspectRatioStrategy(
                 if (aspect.baseAspectRatio == AspectRatio.RATIO_16_9)
@@ -363,10 +393,12 @@ class CameraViewModel(private val app: Application) : AndroidViewModel(app) {
             .setJpegQuality(_photoQuality.value.jpegQuality)
             .apply {
                 setOutputFormat(
-                    if (ultraHdr.value == UltraHDRAvailabilityState.ON)
-                        ImageCapture.OUTPUT_FORMAT_JPEG_ULTRA_HDR
-                    else
-                        ImageCapture.OUTPUT_FORMAT_JPEG
+                    when {
+                        _rawActive.value -> ImageCapture.OUTPUT_FORMAT_RAW
+                        ultraHdr.value == UltraHDRAvailabilityState.ON ->
+                            ImageCapture.OUTPUT_FORMAT_JPEG_ULTRA_HDR
+                        else -> ImageCapture.OUTPUT_FORMAT_JPEG
+                    }
                 )
             }
             .build()
@@ -384,12 +416,14 @@ class CameraViewModel(private val app: Application) : AndroidViewModel(app) {
             .requireLensFacing(lensFacing.value ?: CameraSelector.LENS_FACING_BACK)
             .build()
         provider.unbind(imageCapture)
+        _rawSupported.value = runCatching { isRawSupported(cameraSelector, provider) }.getOrDefault(false)
+        refreshRawActive()
         imageCapture = buildImageCapture()
         // A ViewPort's aspect ratio is expressed in the *output* (rotated) orientation,
         // so the rational must follow how the device is held: portrait inverts the
         // landscape sensor rational (16:9 -> 9:16) for a tall crop, landscape keeps it
         // as-is. Without this the saved crop comes out wide even in portrait.
-        val baseRational = _photoAspectRatio.value.rational
+        val baseRational = effectiveAspectRatio().rational
         val isPortrait = rotation == Surface.ROTATION_0 || rotation == Surface.ROTATION_180
         val orientedRational = if (isPortrait)
             Rational(baseRational.denominator, baseRational.numerator)
@@ -418,6 +452,23 @@ class CameraViewModel(private val app: Application) : AndroidViewModel(app) {
         if (_photoAspectRatio.value == aspect) return
         _photoAspectRatio.update { aspect }
         sharedPrefsManager.putString(SharedPrefsManager.KEY_PHOTO_ASPECT_RATIO, aspect.name)
+        _previewAlpha.update { 0.5f }
+        bindImageUseCases(lifecycleOwner,deviceRotation.value)
+        delay(250)
+        _previewAlpha.update { 1f }
+    }
+
+    /**
+     * Switch between JPEG and RAW (DNG) and rebind. RAW and Ultra HDR are separate
+     * output formats, so picking RAW turns Ultra HDR off.
+     */
+    suspend fun changePhotoFormat(format: PhotoFormat, lifecycleOwner: LifecycleOwner) {
+        if (_photoFormat.value == format) return
+        _photoFormat.update { format }
+        sharedPrefsManager.putString(SharedPrefsManager.KEY_PHOTO_FORMAT, format.name)
+        if (format == PhotoFormat.RAW_DNG && _ultraHdr.value == UltraHDRAvailabilityState.ON) {
+            _ultraHdr.update { UltraHDRAvailabilityState.OFF }
+        }
         _previewAlpha.update { 0.5f }
         bindImageUseCases(lifecycleOwner,deviceRotation.value)
         delay(250)
@@ -560,6 +611,11 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
                 _ultraHdr.update { UltraHDRAvailabilityState.OFF }
             } else {
                 _ultraHdr.update { UltraHDRAvailabilityState.ON }
+                // Ultra HDR is a JPEG format; it can't be combined with RAW.
+                if (_photoFormat.value == PhotoFormat.RAW_DNG) {
+                    _photoFormat.update { PhotoFormat.JPEG }
+                    sharedPrefsManager.putString(SharedPrefsManager.KEY_PHOTO_FORMAT, PhotoFormat.JPEG.name)
+                }
             }
             _previewAlpha.update { 0.5f }
             delay(800)
@@ -573,6 +629,8 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
 
     fun captureImage() {
         val rotation = deviceRotation.value
+        // Fixed per shot: the format can't change under a capture already in flight.
+        val format = if (_rawActive.value) PhotoFormat.RAW_DNG else PhotoFormat.JPEG
         _shutterFlashTrigger.update { it + 1 }
 
         val metadata = Metadata().apply {
@@ -592,8 +650,8 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
         // Options fot the output image file
         val outputOptions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val contentValues = ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, System.currentTimeMillis())
-                put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+                put(MediaStore.MediaColumns.DISPLAY_NAME, "${System.currentTimeMillis()}.${format.extension}")
+                put(MediaStore.MediaColumns.MIME_TYPE, format.mimeType)
                 put(MediaStore.MediaColumns.RELATIVE_PATH, outputDirectory)
             }
 
@@ -607,7 +665,7 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
         } else {
 
             File(outputDirectory).mkdirs()
-            val fileMedia = File(outputDirectory, "${System.currentTimeMillis()}.jpg")
+            val fileMedia = File(outputDirectory, "${System.currentTimeMillis()}.${format.extension}")
             OutputFileOptions.Builder(fileMedia)
         }.setMetadata(metadata).build()
 
@@ -630,7 +688,7 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
                         _mediaFiles.value = listOf(newMedia) + mediaFiles.value
 
                         CoroutineScope(Dispatchers.IO).launch {
-                            sendLocalCameraEvent(it, CameraEventType.NEW_IMAGE)
+                            sendLocalCameraEvent(it, CameraEventType.NEW_IMAGE, format.mimeType)
 
                         }
                     }
@@ -743,7 +801,11 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
     }
 
 
-    private fun sendLocalCameraEvent(newMediaFile: Uri, cameraEventType: CameraEventType) {
+    private fun sendLocalCameraEvent(
+        newMediaFile: Uri,
+        cameraEventType: CameraEventType,
+        imageMimeType: String = PhotoFormat.JPEG.mimeType
+    ) {
 
         val mw = getInstance(app)
         var prefs = PreferenceManager.getDefaultSharedPreferences(app)
@@ -794,7 +856,9 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
 
 
         } else {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            // insertImage decodes and re-encodes as JPEG, which for a DNG would add a
+            // lossy copy to the gallery; the media scan above is enough to index it.
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q && imageMimeType == PhotoFormat.JPEG.mimeType) {
 
                 try {
                     val f = newMediaFile.toFile()
@@ -809,7 +873,7 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
             }
 
             if (!prefs.getBoolean(ProofMode.PREFS_DOPROOF,false))
-                mw?.ingestMedia(newMediaFile, true, null, "image/jpeg", sha256Hex, captureNonce)
+                mw?.ingestMedia(newMediaFile, true, null, imageMimeType, sha256Hex, captureNonce)
 
         }
 
@@ -1037,6 +1101,12 @@ enum class PhotoAspectRatio(val label: String, val rational: Rational, val baseA
     RATIO_4_3("4:3", Rational(4, 3), AspectRatio.RATIO_4_3),
     RATIO_16_9("16:9", Rational(16, 9), AspectRatio.RATIO_16_9),
     RATIO_1_1("1:1", Rational(1, 1), AspectRatio.RATIO_4_3)
+}
+
+/** Still file format. [mimeType] is what MediaStore, ingest and C2PA signing are told. */
+enum class PhotoFormat(val label: String, val extension: String, val mimeType: String) {
+    JPEG("JPEG", "jpg", "image/jpeg"),
+    RAW_DNG("RAW (DNG)", "dng", "image/x-adobe-dng")
 }
 
 /** JPEG quality presets for stills. */

@@ -5,6 +5,7 @@ object ProofSetContentTypes {
     fun contentTypeFor(identifier: String): String = when {
         identifier.endsWith(".jpg") || identifier.endsWith(".jpeg") -> "image/jpeg"
         identifier.endsWith(".png") -> "image/png"
+        identifier.endsWith(".dng") -> "image/x-adobe-dng"
         identifier.endsWith(".mp4") -> "video/mp4"
         identifier.endsWith(".csv") -> "text/csv"
         identifier.endsWith(".asc") || identifier.endsWith(".gpg") -> "application/pgp-signature"

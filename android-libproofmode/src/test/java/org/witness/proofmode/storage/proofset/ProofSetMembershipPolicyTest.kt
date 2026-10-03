@@ -218,6 +218,7 @@ class ProofSetMembershipPolicyTest {
         assertEquals("abc123.jpg", ProofSetMembershipPolicy.manifestLinkNameForMedia("abc123", "image/jpeg"))
         assertEquals("abc123.png", ProofSetMembershipPolicy.manifestLinkNameForMedia("abc123", "image/png"))
         assertEquals("abc123.mp4", ProofSetMembershipPolicy.manifestLinkNameForMedia("abc123", "video/mp4"))
+        assertEquals("abc123.dng", ProofSetMembershipPolicy.manifestLinkNameForMedia("abc123", "image/x-adobe-dng"))
         assertEquals("abc123.bin", ProofSetMembershipPolicy.manifestLinkNameForMedia("abc123", null))
     }
 

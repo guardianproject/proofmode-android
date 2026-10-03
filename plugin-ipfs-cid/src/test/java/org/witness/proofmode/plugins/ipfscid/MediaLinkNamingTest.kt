@@ -15,6 +15,10 @@ class MediaLinkNamingTest {
         assertEquals("png", MediaLinkNaming.extensionFromMimeType("image/png"))
     }
 
+    @Test fun extensionFromMimeType_dng_returnsDng() {
+        assertEquals("dng", MediaLinkNaming.extensionFromMimeType("image/x-adobe-dng"))
+    }
+
     @Test fun extensionFromMimeType_mp4_returnsMp4() {
         assertEquals("mp4", MediaLinkNaming.extensionFromMimeType("video/mp4"))
     }

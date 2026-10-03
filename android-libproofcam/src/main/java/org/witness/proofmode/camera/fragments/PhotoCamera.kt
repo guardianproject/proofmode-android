@@ -155,12 +155,17 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
     // Still-capture framing & compression presets, surfaced in the settings sheet below.
     val photoAspectRatio by cameraViewModel.photoAspectRatio.collectAsStateWithLifecycle()
     val photoQuality by cameraViewModel.photoQuality.collectAsStateWithLifecycle()
+    val photoFormat by cameraViewModel.photoFormat.collectAsStateWithLifecycle()
+    val rawSupported by cameraViewModel.rawSupported.collectAsStateWithLifecycle()
+    val rawActive by cameraViewModel.rawActive.collectAsStateWithLifecycle()
     // Portrait display aspect (width / height, ≤ 1) for the chosen ratio: the sensor
     // rational is landscape, so invert it for the locked-portrait viewfinder window.
     // 4:3 → 3:4 (0.75), 16:9 → 9:16 (0.5625), 1:1 → 1.0.
-    val previewAspect = remember(photoAspectRatio) {
-        val n = photoAspectRatio.rational.numerator.toFloat()
-        val d = photoAspectRatio.rational.denominator.toFloat()
+    // A DNG is always the full (4:3) sensor, so RAW overrides the chosen framing.
+    val capturedAspect = if (rawActive) PhotoAspectRatio.RATIO_4_3 else photoAspectRatio
+    val previewAspect = remember(capturedAspect) {
+        val n = capturedAspect.rational.numerator.toFloat()
+        val d = capturedAspect.rational.denominator.toFloat()
         minOf(n, d) / maxOf(n, d)
     }
     var autofocusRequest by remember {
@@ -755,27 +760,70 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
 
                     }
 
+                    // File format. Only offered when the bound camera can capture RAW; the
+                    // saved choice is kept (and reapplied) across lenses that can't.
+                    if (rawSupported) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(stringResource(R.string.photo_format), style = MaterialTheme.typography.bodyLarge)
+                                Text(
+                                    if (rawActive) stringResource(R.string.photo_format_raw_description)
+                                    else photoFormat.label,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                            PhotoFormat.entries.forEach { formatOption ->
+                                val isSelectedFormat = photoFormat == formatOption
+                                Box(modifier = Modifier
+                                    .padding(start = 6.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(if (isSelectedFormat) AccentGreen else Color.White.copy(alpha = 0.1f))
+                                    .clickable {
+                                        scope.launch {
+                                            cameraViewModel.changePhotoFormat(formatOption, lifecycleOwner)
+                                        }
+                                    }
+                                    .padding(horizontal = 14.dp, vertical = 8.dp)
+                                ) {
+                                    Text(
+                                        formatOption.label,
+                                        color = if (isSelectedFormat) CameraBlack else Color.White,
+                                        style = MaterialTheme.typography.labelLarge
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(10.dp))
                     // Aspect-ratio selector. changeAspectRatio() rebinds the preview +
                     // ImageCapture under one shared ViewPort, so what you frame is what
                     // gets written (1:1 is a genuine square crop, not a letterbox).
+                    // RAW ignores both framing and JPEG compression, so these rows are
+                    // shown dimmed and inert while it is active.
                     Row(modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 4.dp),
+                        .padding(horizontal = 4.dp)
+                        .alpha(if (rawActive) 0.4f else 1f),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
                             Text("Aspect ratio", style = MaterialTheme.typography.bodyLarge)
-                            Text(photoAspectRatio.label, style = MaterialTheme.typography.bodySmall)
+                            Text(capturedAspect.label, style = MaterialTheme.typography.bodySmall)
                         }
                         Spacer(Modifier.weight(1f))
                         PhotoAspectRatio.entries.forEach { ratioOption ->
-                            val isSelectedRatio = photoAspectRatio == ratioOption
+                            val isSelectedRatio = capturedAspect == ratioOption
                             Box(modifier = Modifier
                                 .padding(start = 6.dp)
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(if (isSelectedRatio) AccentGreen else Color.White.copy(alpha = 0.1f))
-                                .clickable {
+                                .clickable(enabled = !rawActive) {
                                     // changeAspectRatio is suspend (it dims the preview
                                     // across the rebind), so it has to run in the scope.
                                     scope.launch {
@@ -800,7 +848,8 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                     // takes effect on the next capture.
                     Row(modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 4.dp),
+                        .padding(horizontal = 4.dp)
+                        .alpha(if (rawActive) 0.4f else 1f),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
@@ -814,7 +863,7 @@ fun PhotoCamera(modifier: Modifier = Modifier, cameraViewModel: CameraViewModel 
                                 .padding(start = 6.dp)
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(if (isSelectedQuality) AccentGreen else Color.White.copy(alpha = 0.1f))
-                                .clickable {
+                                .clickable(enabled = !rawActive) {
                                     cameraViewModel.changePhotoQuality(qualityOption, lifecycleOwner)
                                 }
                                 .padding(horizontal = 14.dp, vertical = 8.dp)

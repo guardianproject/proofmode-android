@@ -130,6 +130,7 @@ object ProofSetMembershipPolicy {
     fun extensionFromMimeType(mimeType: String?): String = when (mimeType) {
         "image/jpeg" -> "jpg"
         "image/png" -> "png"
+        "image/x-adobe-dng", "image/dng" -> "dng"
         "video/mp4" -> "mp4"
         else -> "bin"
     }
