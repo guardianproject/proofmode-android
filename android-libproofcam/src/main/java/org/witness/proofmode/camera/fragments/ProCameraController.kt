@@ -1,15 +1,15 @@
 package org.witness.proofmode.camera.fragments
 
-import android.content.Context
 import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
-import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CameraMetadata
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CaptureResult
 import android.hardware.camera2.TotalCaptureResult
 import android.hardware.camera2.params.ColorSpaceTransform
 import android.hardware.camera2.params.RggbChannelVector
+import android.os.Handler
+import android.os.Looper
 import androidx.annotation.OptIn
 import androidx.camera.camera2.interop.Camera2CameraControl
 import androidx.camera.camera2.interop.Camera2CameraInfo
@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import timber.log.Timber
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.ln
 import kotlin.math.pow
 
@@ -72,10 +73,7 @@ data class ProLiveReadout(
  * `active = false`, so photo-only settings never leak into a recording.
  */
 @OptIn(ExperimentalCamera2Interop::class)
-class ProCameraController(context: Context) {
-
-    private val cameraManager = context.getSystemService(CameraManager::class.java)
-
+class ProCameraController {
 
     private val _settings = MutableStateFlow(ProSettings())
     val settings: StateFlow<ProSettings> = _settings
@@ -93,6 +91,17 @@ class ProCameraController(context: Context) {
     @Volatile private var lastTransform: ColorSpaceTransform? = null
     private var frameCount = 0
 
+    /** The three independently gated groups of manual overrides. */
+    private enum class ManualControl { EXPOSURE, FOCUS, WHITE_BALANCE }
+
+    // Per bound camera: controls whose overrides the sensor was seen to follow, and
+    // ones it ignored. Main thread only.
+    private val verified = mutableSetOf<ManualControl>()
+    private val rejected = mutableSetOf<ManualControl>()
+    /** Checks in flight: control -> frames observed since it went manual. Camera thread. */
+    private val probes = ConcurrentHashMap<ManualControl, Int>()
+    private val mainHandler = Handler(Looper.getMainLooper())
+
     /** Auto white balance's last answer, frozen at the moment the user went manual. */
     private class WbAnchor(val gains: RggbChannelVector, val kelvin: Int, val transform: ColorSpaceTransform?)
     private var wbAnchor: WbAnchor? = null
@@ -107,6 +116,7 @@ class ProCameraController(context: Context) {
             request: CaptureRequest,
             result: TotalCaptureResult
         ) {
+            if (probes.isNotEmpty()) checkProbes(request, result)
             val gains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
             lastGains = gains
             lastTransform = result.get(CaptureResult.COLOR_CORRECTION_TRANSFORM)
@@ -136,6 +146,9 @@ class ProCameraController(context: Context) {
                 cameraId = info.cameraId
                 wbAnchor = null
                 _settings.value = ProSettings()
+                verified.clear()
+                rejected.clear()
+                probes.clear()
             }
             _capabilities.value = readCapabilities(info)
         } catch (e: IllegalArgumentException) {
@@ -217,21 +230,18 @@ class ProCameraController(context: Context) {
         (_live.value.shutterNs ?: DEFAULT_SHUTTER_NS).coerceIn(range)
 
     /**
-     * Decide per control from what the HAL says it will *accept*, not from the
-     * MANUAL_SENSOR / MANUAL_POST_PROCESSING capability flags. Those flags are
-     * all-or-nothing bundles, and mid-range phones commonly leave them off while still
-     * honouring parts of them: a Samsung A36's main camera lists neither, yet accepts
-     * LENS_FOCUS_DISTANCE with AF off and COLOR_CORRECTION_GAINS with AWB off (it just
-     * won't take SENSOR_SENSITIVITY / SENSOR_EXPOSURE_TIME). The available request keys
-     * are the HAL's contract for which of these it honours.
+     * Offer a control whenever the camera lists the matching "off" mode (and, where
+     * needed, a range), then let [checkProbes] confirm on first use that the sensor
+     * really follows it.
+     *
+     * Neither static signal is reliable on its own. The MANUAL_SENSOR /
+     * MANUAL_POST_PROCESSING capability flags are all-or-nothing bundles that mid-range
+     * phones leave off while honouring parts of them, and the HAL's own list of
+     * accepted request keys under-reports too: a Samsung A36 omits SENSOR_SENSITIVITY
+     * and SENSOR_EXPOSURE_TIME from it, yet sets exactly the ISO and shutter asked for.
+     * What the capture results report back is the ground truth.
      */
     private fun readCapabilities(info: Camera2CameraInfo): ProCapabilities {
-        // CameraX's interop exposes characteristics by key only, and the request-key
-        // list is a method rather than a public key, so ask CameraManager directly.
-        val requestKeys: Set<CaptureRequest.Key<*>> = runCatching {
-            cameraManager?.getCameraCharacteristics(info.cameraId)
-                ?.availableCaptureRequestKeys?.toSet()
-        }.getOrNull() ?: emptySet()
         val aeModes = info.getCameraCharacteristic(CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES)
             ?: intArrayOf()
         val afModes = info.getCameraCharacteristic(CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES)
@@ -244,13 +254,11 @@ class ProCameraController(context: Context) {
 
         // Camera2 only takes ISO or shutter with AE off, and then needs both.
         val manualExposure = CameraMetadata.CONTROL_AE_MODE_OFF in aeModes &&
-                CaptureRequest.SENSOR_SENSITIVITY in requestKeys &&
-                CaptureRequest.SENSOR_EXPOSURE_TIME in requestKeys
+                ManualControl.EXPOSURE !in rejected
         val manualFocus = CameraMetadata.CONTROL_AF_MODE_OFF in afModes &&
-                CaptureRequest.LENS_FOCUS_DISTANCE in requestKeys
+                ManualControl.FOCUS !in rejected
         val manualWhiteBalance = CameraMetadata.CONTROL_AWB_MODE_OFF in awbModes &&
-                CaptureRequest.COLOR_CORRECTION_MODE in requestKeys &&
-                CaptureRequest.COLOR_CORRECTION_GAINS in requestKeys
+                ManualControl.WHITE_BALANCE !in rejected
         Timber.d(
             "Pro capabilities for camera %s: exposure=%b focus=%b (min %s dpt) whiteBalance=%b",
             info.cameraId, manualExposure, manualFocus, minFocus, manualWhiteBalance
@@ -266,23 +274,113 @@ class ProCameraController(context: Context) {
         )
     }
 
+    /** Start checking any control that has just gone manual and isn't yet known good. */
+    private fun startProbes(inUse: Set<ManualControl>) {
+        for (c in ManualControl.entries) {
+            if (c in inUse && c !in verified) probes.putIfAbsent(c, 0) else probes.remove(c)
+        }
+    }
+
+    /**
+     * Camera thread. Compare each frame's result with the request that produced it.
+     * A control passes as soon as one frame shows the sensor following it, and fails
+     * if [PROBE_FRAMES] go by without that — at which point it is handed back to auto
+     * and hidden for this camera, rather than showing a value the photo won't have.
+     */
+    private fun checkProbes(request: CaptureRequest, result: TotalCaptureResult) {
+        for ((control, frames) in probes) {
+            if (followed(control, request, result)) {
+                probes.remove(control)
+                mainHandler.post {
+                    verified += control
+                    Timber.d("Camera %s follows manual %s", cameraId, control)
+                }
+            } else if (frames + 1 >= PROBE_FRAMES) {
+                probes.remove(control)
+                mainHandler.post { reject(control) }
+            } else {
+                probes[control] = frames + 1
+            }
+        }
+    }
+
+    private fun followed(control: ManualControl, request: CaptureRequest, result: TotalCaptureResult): Boolean =
+        when (control) {
+            ManualControl.EXPOSURE -> {
+                val wantIso = request.get(CaptureRequest.SENSOR_SENSITIVITY)
+                val wantNs = request.get(CaptureRequest.SENSOR_EXPOSURE_TIME)
+                val gotIso = result.get(CaptureResult.SENSOR_SENSITIVITY)
+                val gotNs = result.get(CaptureResult.SENSOR_EXPOSURE_TIME)
+                wantIso != null && wantNs != null &&
+                        result.get(CaptureResult.CONTROL_AE_MODE) == CameraMetadata.CONTROL_AE_MODE_OFF &&
+                        // A HAL that doesn't report the values back can't be checked;
+                        // give it the benefit of the doubt once AE is confirmed off.
+                        (gotIso == null || near(gotIso.toFloat(), wantIso.toFloat(), 0.1f)) &&
+                        (gotNs == null || near(gotNs.toFloat(), wantNs.toFloat(), 0.1f))
+            }
+            ManualControl.FOCUS -> {
+                val want = request.get(CaptureRequest.LENS_FOCUS_DISTANCE)
+                val got = result.get(CaptureResult.LENS_FOCUS_DISTANCE)
+                want != null &&
+                        result.get(CaptureResult.CONTROL_AF_MODE) == CameraMetadata.CONTROL_AF_MODE_OFF &&
+                        // Calibration is often only APPROXIMATE, hence the absolute slack.
+                        (got == null || kotlin.math.abs(got - want) <= maxOf(0.3f, want * 0.1f))
+            }
+            ManualControl.WHITE_BALANCE -> {
+                val want = request.get(CaptureRequest.COLOR_CORRECTION_GAINS)
+                val got = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
+                want != null &&
+                        result.get(CaptureResult.CONTROL_AWB_MODE) == CameraMetadata.CONTROL_AWB_MODE_OFF &&
+                        (got == null || (near(got.red, want.red, 0.05f) && near(got.blue, want.blue, 0.05f)))
+            }
+        }
+
+    private fun near(actual: Float, wanted: Float, tolerance: Float): Boolean =
+        kotlin.math.abs(actual - wanted) <= kotlin.math.abs(wanted) * tolerance
+
+    /** Main thread. The sensor ignored [control]: back to auto, and hide it for this camera. */
+    private fun reject(control: ManualControl) {
+        Timber.w("Camera %s ignored manual %s; falling back to auto", cameraId, control)
+        rejected += control
+        _settings.update {
+            when (control) {
+                ManualControl.EXPOSURE -> it.copy(iso = null, shutterNs = null)
+                ManualControl.FOCUS -> it.copy(focusDiopters = null)
+                ManualControl.WHITE_BALANCE -> it.copy(whiteBalanceK = null)
+            }
+        }
+        if (control == ManualControl.WHITE_BALANCE) wbAnchor = null
+        _capabilities.update {
+            when (control) {
+                ManualControl.EXPOSURE -> it.copy(isoRange = null, shutterRangeNs = null)
+                ManualControl.FOCUS -> it.copy(minFocusDiopters = 0f)
+                ManualControl.WHITE_BALANCE -> it.copy(manualWhiteBalance = false)
+            }
+        }
+        apply()
+    }
+
     private fun apply() {
         val control = control ?: return
         val s = _settings.value
         val caps = _capabilities.value
         if (!active) {
+            probes.clear()
             control.clearCaptureRequestOptions()
             return
         }
+        val inUse = mutableSetOf<ManualControl>()
         val options = CaptureRequestOptions.Builder()
         if (s.iso != null && s.shutterNs != null && caps.manualExposure) {
             options.setCaptureRequestOption(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF)
             options.setCaptureRequestOption(CaptureRequest.SENSOR_SENSITIVITY, s.iso)
             options.setCaptureRequestOption(CaptureRequest.SENSOR_EXPOSURE_TIME, s.shutterNs)
+            inUse += ManualControl.EXPOSURE
         }
         if (s.focusDiopters != null && caps.manualFocus) {
             options.setCaptureRequestOption(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_OFF)
             options.setCaptureRequestOption(CaptureRequest.LENS_FOCUS_DISTANCE, s.focusDiopters)
+            inUse += ManualControl.FOCUS
         }
         val anchor = wbAnchor
         if (s.whiteBalanceK != null && anchor != null && caps.manualWhiteBalance) {
@@ -298,9 +396,11 @@ class ProCameraController(context: Context) {
             anchor.transform?.let {
                 options.setCaptureRequestOption(CaptureRequest.COLOR_CORRECTION_TRANSFORM, it)
             }
+            inUse += ManualControl.WHITE_BALANCE
         }
         // Replaces whatever was set before, so a cleared setting really goes back to auto.
         control.setCaptureRequestOptions(options.build())
+        startProbes(inUse)
     }
 
     companion object {
@@ -310,6 +410,9 @@ class ProCameraController(context: Context) {
         private const val DEFAULT_SHUTTER_NS = 16_666_667L // 1/60 s
         private const val DEFAULT_ISO = 100
         private const val LIVE_READOUT_FRAME_INTERVAL = 6
+
+        /** About a second at preview rates: room for request latency and lens travel. */
+        private const val PROBE_FRAMES = 30
 
         // Used only if the HAL never reports its AWB gains: a typical daylight set.
         private val FALLBACK_GAINS = RggbChannelVector(2.0f, 1.0f, 1.0f, 1.6f)
