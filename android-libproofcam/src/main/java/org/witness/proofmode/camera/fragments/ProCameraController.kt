@@ -1,7 +1,9 @@
 package org.witness.proofmode.camera.fragments
 
+import android.content.Context
 import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CameraMetadata
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CaptureResult
@@ -70,7 +72,10 @@ data class ProLiveReadout(
  * `active = false`, so photo-only settings never leak into a recording.
  */
 @OptIn(ExperimentalCamera2Interop::class)
-class ProCameraController {
+class ProCameraController(context: Context) {
+
+    private val cameraManager = context.getSystemService(CameraManager::class.java)
+
 
     private val _settings = MutableStateFlow(ProSettings())
     val settings: StateFlow<ProSettings> = _settings
@@ -211,11 +216,24 @@ class ProCameraController {
     private fun seedShutter(range: LongRange): Long =
         (_live.value.shutterNs ?: DEFAULT_SHUTTER_NS).coerceIn(range)
 
+    /**
+     * Decide per control from what the HAL says it will *accept*, not from the
+     * MANUAL_SENSOR / MANUAL_POST_PROCESSING capability flags. Those flags are
+     * all-or-nothing bundles, and mid-range phones commonly leave them off while still
+     * honouring parts of them: a Samsung A36's main camera lists neither, yet accepts
+     * LENS_FOCUS_DISTANCE with AF off and COLOR_CORRECTION_GAINS with AWB off (it just
+     * won't take SENSOR_SENSITIVITY / SENSOR_EXPOSURE_TIME). The available request keys
+     * are the HAL's contract for which of these it honours.
+     */
     private fun readCapabilities(info: Camera2CameraInfo): ProCapabilities {
-        val available = info.getCameraCharacteristic(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
+        // CameraX's interop exposes characteristics by key only, and the request-key
+        // list is a method rather than a public key, so ask CameraManager directly.
+        val requestKeys: Set<CaptureRequest.Key<*>> = runCatching {
+            cameraManager?.getCameraCharacteristics(info.cameraId)
+                ?.availableCaptureRequestKeys?.toSet()
+        }.getOrNull() ?: emptySet()
+        val aeModes = info.getCameraCharacteristic(CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES)
             ?: intArrayOf()
-        val manualSensor = CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR in available
-        val manualPost = CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_POST_PROCESSING in available
         val afModes = info.getCameraCharacteristic(CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES)
             ?: intArrayOf()
         val awbModes = info.getCameraCharacteristic(CameraCharacteristics.CONTROL_AWB_AVAILABLE_MODES)
@@ -223,15 +241,28 @@ class ProCameraController {
         val iso = info.getCameraCharacteristic(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
         val shutter = info.getCameraCharacteristic(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
         val minFocus = info.getCameraCharacteristic(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE)
+
+        // Camera2 only takes ISO or shutter with AE off, and then needs both.
+        val manualExposure = CameraMetadata.CONTROL_AE_MODE_OFF in aeModes &&
+                CaptureRequest.SENSOR_SENSITIVITY in requestKeys &&
+                CaptureRequest.SENSOR_EXPOSURE_TIME in requestKeys
+        val manualFocus = CameraMetadata.CONTROL_AF_MODE_OFF in afModes &&
+                CaptureRequest.LENS_FOCUS_DISTANCE in requestKeys
+        val manualWhiteBalance = CameraMetadata.CONTROL_AWB_MODE_OFF in awbModes &&
+                CaptureRequest.COLOR_CORRECTION_MODE in requestKeys &&
+                CaptureRequest.COLOR_CORRECTION_GAINS in requestKeys
+        Timber.d(
+            "Pro capabilities for camera %s: exposure=%b focus=%b (min %s dpt) whiteBalance=%b",
+            info.cameraId, manualExposure, manualFocus, minFocus, manualWhiteBalance
+        )
         return ProCapabilities(
-            isoRange = iso?.takeIf { manualSensor && it.lower < it.upper }?.let { it.lower..it.upper },
+            isoRange = iso?.takeIf { manualExposure && it.lower < it.upper }?.let { it.lower..it.upper },
             // Sensors advertise exposures of many seconds; past a second the preview
             // (which shares the exposure) is too slow to frame with.
-            shutterRangeNs = shutter?.takeIf { manualSensor && it.lower < it.upper }
+            shutterRangeNs = shutter?.takeIf { manualExposure && it.lower < it.upper }
                 ?.let { it.lower..it.upper.coerceAtMost(MAX_SHUTTER_NS).coerceAtLeast(it.lower) },
-            minFocusDiopters = minFocus
-                ?.takeIf { manualSensor && CameraMetadata.CONTROL_AF_MODE_OFF in afModes } ?: 0f,
-            manualWhiteBalance = manualPost && CameraMetadata.CONTROL_AWB_MODE_OFF in awbModes,
+            minFocusDiopters = minFocus?.takeIf { manualFocus } ?: 0f,
+            manualWhiteBalance = manualWhiteBalance,
         )
     }
 

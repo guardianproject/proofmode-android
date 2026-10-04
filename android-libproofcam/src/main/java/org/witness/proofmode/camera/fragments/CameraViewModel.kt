@@ -123,7 +123,7 @@ class CameraViewModel(private val app: Application) : AndroidViewModel(app) {
     val cameraDelay: StateFlow<CameraDelay> = _cameraDelay
     // Manual ISO / shutter / focus / white balance for the photo "Pro" mode. Declared
     // ahead of the preview use case, which carries its capture callback.
-    val pro = ProCameraController()
+    val pro = ProCameraController(app)
     private val _proMode = MutableStateFlow(
         sharedPrefsManager.getBoolean(SharedPrefsManager.KEY_PRO_MODE, false)
     )
