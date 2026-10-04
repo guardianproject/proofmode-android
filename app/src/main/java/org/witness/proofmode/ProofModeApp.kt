@@ -300,7 +300,7 @@ class ProofModeApp : Application(), Configuration.Provider {
 
         val c2paMan = C2PAManager(this, PreferencesManager(this))
         val certChain = c2paMan.getDeviceAttestationCertChain("test")
-        val conformant = c2paMan.checkOSSecurityPatchDate(90, certChain)
+        val conformant = c2paMan.checkOSSecurityPatchDate(C2PAManager.DEFAULT_SECURITY_PATH_DAYS, certChain)
 
         if (!conformant)
         {

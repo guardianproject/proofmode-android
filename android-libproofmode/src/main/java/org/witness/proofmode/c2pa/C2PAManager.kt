@@ -92,6 +92,8 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
         private const val KEYSTORE_ALIAS_PREFIX = "C2PA_KEY_"
 
+        public const val DEFAULT_SECURITY_PATH_DAYS = 100
+
         /**
         private val iso8601 = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
             timeZone = TimeZone.getTimeZone("UTC")
@@ -319,7 +321,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                     createSigner(SigningMode.KEYSTORE, tsaUrl)
                 }
                 //we only allow C2PA on devices that have been patched within 90 days
-                else if (checkOSSecurityPatchDate(90, certChain)) {
+                else if (checkOSSecurityPatchDate(DEFAULT_SECURITY_PATH_DAYS, certChain)) {
                     Timber.i("C2PA: Security Patches within 90 days - enabling signer - ${signingMode.name}")
 
                     createSigner(signingMode, tsaUrl)
