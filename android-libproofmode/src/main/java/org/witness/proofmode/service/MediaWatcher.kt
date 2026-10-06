@@ -18,6 +18,9 @@ import android.util.Log
 import com.google.android.gms.common.util.IOUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bouncycastle.openpgp.PGPException
@@ -243,13 +246,33 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
         if (mediaQueue.containsKey(key)) RetryResult.OFFLINE else RetryResult.STARTED
     }
 
-    private suspend fun processMediaQueue() {
-        val useRemoteSigning = mPrefs?.getBoolean(
-            ProofMode.PREF_OPTION_REMOTE_SIGNING,
-            ProofMode.PREF_OPTION_REMOTE_SIGNING_DEFAULT
-        ) ?: true
+    private fun isRemoteSigningEnabled(): Boolean = mPrefs?.getBoolean(
+        ProofMode.PREF_OPTION_REMOTE_SIGNING,
+        ProofMode.PREF_OPTION_REMOTE_SIGNING_DEFAULT
+    ) ?: true
 
-        var serverReachable: Boolean? = null
+    // True while remote signing is selected and the last check couldn't reach the
+    // signing server; the Activities screen shows a warning banner from this.
+    private val _signingServerUnreachable = MutableStateFlow(false)
+    val signingServerUnreachable: StateFlow<Boolean> = _signingServerUnreachable.asStateFlow()
+
+    /**
+     * Re-check the remote signing server, updating [signingServerUnreachable], and if
+     * it is reachable sign any captures that were left waiting in the queue.
+     */
+    suspend fun checkSigningServer() {
+        if (!isRemoteSigningEnabled()) {
+            _signingServerUnreachable.value = false
+            return
+        }
+        if (isRemoteSigningServerReachable())
+            processMediaQueue(serverReachable = true)
+    }
+
+    private suspend fun processMediaQueue(serverReachable: Boolean? = null) {
+        val useRemoteSigning = isRemoteSigningEnabled()
+
+        var serverReachable = serverReachable
 
         for (key in mediaQueue.keys.toList()) {
             val im = mediaQueue[key] ?: continue
@@ -259,7 +282,7 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
             if (useRemoteSigning && im.fromCamera) {
                 if (serverReachable == null)
                     serverReachable = isRemoteSigningServerReachable()
-                if (serverReachable == false) {
+                if (!serverReachable) {
                     Timber.d("Signing server unreachable, leaving in queue: $key")
                     im.deferred = true
                     continue
@@ -1613,30 +1636,34 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
 
     suspend fun isRemoteSigningServerReachable(): Boolean = withContext(Dispatchers.IO) {
 
-        val remoteServer = mPrefs?.getString(
-            ProofMode.PREF_OPTION_PROOFSIGN_SERVER,
-            ""
-        )
+        // An unset pref means the build's default server, as in C2PAManager's
+        // resolveProofSignServerUrl() - most users never open the signing settings.
+        val remoteServer = mPrefs?.getString(ProofMode.PREF_OPTION_PROOFSIGN_SERVER, null)
+            ?.trim()?.trimEnd('/')
+            .takeUnless { it.isNullOrEmpty() }
+            ?: org.witness.proofmode.library.BuildConfig.SIGNING_SERVER
 
         Timber.d("checking if remote server is reachable=$remoteServer")
 
-        if (remoteServer?.isNotEmpty() == true)
-            isUrlReachable(remoteServer)
-        else
-            false
+        val reachable = remoteServer.isNotEmpty() && isUrlReachable(remoteServer)
+        _signingServerUnreachable.value = !reachable
+        reachable
     }
 
     suspend fun isUrlReachable(urlString: String): Boolean = withContext(Dispatchers.IO) {
         try {
             val url = URL(urlString)
             val connection = (url.openConnection() as HttpURLConnection).apply {
-                connectTimeout = 5000 // 5 seconds
-                readTimeout = 5000    // 5 seconds
+                connectTimeout = 20000 // 20 seconds
+                readTimeout = 20000    // 20 seconds
                 requestMethod = "HEAD"
             }
-            val responseCode = connection.responseCode
-            // Consider 200-399 range as reachable/success
-            responseCode in 200..399
+            try {
+                // Consider 200-399 range as reachable/success
+                connection.responseCode in 200..399
+            } finally {
+                connection.disconnect()
+            }
         } catch (e: Exception) {
             false
         }

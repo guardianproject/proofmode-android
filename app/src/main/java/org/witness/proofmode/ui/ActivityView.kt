@@ -62,6 +62,17 @@ import org.witness.proofmode.R
 import org.witness.proofmode.ui.media.GalleryItemThumb
 import java.text.SimpleDateFormat
 import java.util.Date
+import android.content.Intent
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import org.witness.proofmode.SigningSettingsActivity
+import org.witness.proofmode.service.MediaWatcher
 
 
 const val ASSETS_GUTTER_SIZE = 10F
@@ -491,6 +502,8 @@ fun ActivitiesView(
                     modifier = Modifier
                         .fillMaxSize()
                 ) {
+                    SigningServerBanner()
+
                     LazyColumn(
                         state = listState,
                         modifier = Modifier
@@ -569,6 +582,79 @@ fun ActivitiesView(
         }
     }
 }
+
+// Warns that remote C2PA signing can't currently work, so captures will sit as
+// pending. Checked on every resume, and re-checked every minute while the server
+// is down so the banner clears - and waiting captures get signed - once it's back.
+@Composable
+fun SigningServerBanner() {
+    val context = LocalContext.current
+    val mediaWatcher = remember { MediaWatcher.getInstance(context.applicationContext) } ?: return
+    val unreachable by mediaWatcher.signingServerUnreachable.collectAsState()
+    var checking by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (true) {
+                mediaWatcher.checkSigningServer()
+                if (!mediaWatcher.signingServerUnreachable.value) break
+                delay(SIGNING_SERVER_RECHECK_MS)
+            }
+        }
+    }
+
+    if (!unreachable) return
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 10.dp, end = 10.dp, top = 10.dp)
+            .background(Color(0xFFFFF3E0), RoundedCornerShape(8.dp))
+            .padding(12.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.signing_server_unreachable_title),
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFFE65100)
+        )
+        Text(
+            text = stringResource(R.string.signing_server_unreachable_message),
+            style = MaterialTheme.typography.bodySmall,
+            color = Color.DarkGray
+        )
+        Row(modifier = Modifier.align(Alignment.End)) {
+            TextButton(onClick = {
+                context.startActivity(Intent(context, SigningSettingsActivity::class.java))
+            }) {
+                Text(text = stringResource(R.string.menu_settings))
+            }
+            TextButton(
+                enabled = !checking,
+                onClick = {
+                    checking = true
+                    coroutineScope.launch {
+                        try {
+                            mediaWatcher.checkSigningServer()
+                        } finally {
+                            checking = false
+                        }
+                    }
+                }
+            ) {
+                Text(
+                    text = stringResource(
+                        if (checking) R.string.retry_in_progress else R.string.retry_action
+                    )
+                )
+            }
+        }
+    }
+}
+
+private const val SIGNING_SERVER_RECHECK_MS = 60_000L
 
 @Composable
 fun activityMenu(activity: Activity): (@Composable() (BoxScope.() -> Unit))? {
