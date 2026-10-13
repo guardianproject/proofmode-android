@@ -103,4 +103,45 @@ class PrivyOtpViewResendTest {
             view.findViewById<android.widget.TextView>(R.id.tv_step2_error).text.toString(),
         )
     }
+
+    @Test
+    fun `send offline shows no internet connection`() {
+        val activity = Robolectric.buildActivity(FragmentActivity::class.java).setup().get()
+        val view = PrivyOtpView(activity)
+        activity.setContentView(view)
+        view.onSendCode = {
+            throw org.witness.proofmode.plugins.wallet.infra.exception.WalletNetworkUnavailableException()
+        }
+        view.identifier = "user@example.com"
+        view.findViewById<Button>(R.id.btn_send_code).performClick()
+        Shadows.shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals(
+            "No internet connection",
+            view.findViewById<android.widget.TextView>(R.id.tv_step1_error).text.toString(),
+        )
+    }
+
+    @Test
+    fun `detaching view mid-send does not report an error`() {
+        val activity = Robolectric.buildActivity(FragmentActivity::class.java).setup().get()
+        val view = PrivyOtpView(activity)
+        activity.setContentView(view)
+        var completed = 0
+        view.onComplete = { completed += 1 }
+        view.onSendCode = { kotlinx.coroutines.awaitCancellation() }
+        view.identifier = "user@example.com"
+        view.findViewById<Button>(R.id.btn_send_code).performClick()
+        Shadows.shadowOf(Looper.getMainLooper()).idle()
+
+        // Production cancels the send job from onDetachedFromWindow when the sheet closes.
+        activity.setContentView(android.widget.FrameLayout(activity))
+        Shadows.shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals(0, completed)
+        assertEquals(
+            "",
+            view.findViewById<android.widget.TextView>(R.id.tv_step1_error).text.toString(),
+        )
+    }
 }

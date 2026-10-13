@@ -89,7 +89,7 @@ bitcoinj = "0.14.7"
 c2pa = "0.0.10"
 play-integrity = "1.6.0"
 nostr-sdk = "0.44.2"
-privy = "0.12.0"
+privy = "0.16.0"
 androidx-security-crypto = "1.1.0"
 
 # Testing

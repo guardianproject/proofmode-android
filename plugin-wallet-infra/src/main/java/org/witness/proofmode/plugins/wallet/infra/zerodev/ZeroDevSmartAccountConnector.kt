@@ -30,12 +30,15 @@ import org.witness.proofmode.plugins.wallet.infra.exception.WalletProviderSubmit
 import org.witness.proofmode.plugins.wallet.infra.exception.WalletTransactionException
 import org.witness.proofmode.plugins.wallet.infra.internal.SendTransactionErrorMapper
 import org.witness.proofmode.plugins.wallet.infra.model.WalletAuthenticating
+import org.witness.proofmode.plugins.wallet.infra.model.WalletAwaitingNetwork
 import org.witness.proofmode.plugins.wallet.infra.model.WalletCapabilities
 import org.witness.proofmode.plugins.wallet.infra.model.WalletConnected
 import org.witness.proofmode.plugins.wallet.infra.model.WalletConnecting
+import org.witness.proofmode.plugins.wallet.infra.model.WalletCreatingWallet
 import org.witness.proofmode.plugins.wallet.infra.model.WalletDisconnected
 import org.witness.proofmode.plugins.wallet.infra.model.WalletIdentity
 import org.witness.proofmode.plugins.wallet.infra.model.WalletState
+import org.witness.proofmode.plugins.wallet.infra.model.WalletUnavailable
 import org.witness.proofmode.plugins.wallet.infra.model.ZeroDevConfig
 import org.witness.proofmode.plugins.wallet.infra.privy.PrivyWalletConnector
 import timber.log.Timber
@@ -80,8 +83,15 @@ class ZeroDevSmartAccountConnector(
     init {
         privyConnector.stateFlow.onEach { privyState ->
             when (_stateFlow.value) {
-                is WalletDisconnected, is WalletAuthenticating -> {
-                    if (privyState is WalletConnected) {
+                is WalletDisconnected, is WalletAuthenticating,
+                is WalletCreatingWallet, is WalletUnavailable, is WalletAwaitingNetwork -> {
+                    if (privyState is WalletCreatingWallet ||
+                        privyState is WalletUnavailable ||
+                        ((privyState is WalletDisconnected || privyState is WalletAwaitingNetwork) &&
+                            _stateFlow.value !is WalletAuthenticating)
+                    ) {
+                        _stateFlow.value = privyState
+                    } else if (privyState is WalletConnected) {
                         val chainId = privyState.identity.chainId
                         if (isSponsorshipActive && account != null &&
                             privyConnector.getIdentity()?.chainId == chainId
@@ -154,6 +164,14 @@ class ZeroDevSmartAccountConnector(
 
     override fun unbindActivity() {
         privyConnector.unbindActivity()
+    }
+
+    override suspend fun retryWallet() {
+        privyConnector.retryWallet()
+    }
+
+    override suspend fun refreshSession() {
+        privyConnector.refreshSession()
     }
 
     override fun getCapabilities(): WalletCapabilities {

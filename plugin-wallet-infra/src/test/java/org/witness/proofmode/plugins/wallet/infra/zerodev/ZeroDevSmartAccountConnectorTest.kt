@@ -21,12 +21,17 @@ import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import org.witness.proofmode.plugins.wallet.infra.exception.WalletCreationTimedOutException
 import org.witness.proofmode.plugins.wallet.infra.exception.WalletLifecycleException
+import org.witness.proofmode.plugins.wallet.infra.model.WalletAwaitingNetwork
 import org.witness.proofmode.plugins.wallet.infra.model.WalletConnected
+import org.witness.proofmode.plugins.wallet.infra.model.WalletCreatingWallet
 import org.witness.proofmode.plugins.wallet.infra.model.WalletDisconnected
 import org.witness.proofmode.plugins.wallet.infra.model.WalletIdentity
 import org.witness.proofmode.plugins.wallet.infra.model.WalletState
+import org.witness.proofmode.plugins.wallet.infra.model.WalletUnavailable
 import org.witness.proofmode.plugins.wallet.infra.model.ZeroDevConfig
 import org.witness.proofmode.plugins.wallet.infra.privy.PrivyWalletConnector
 
@@ -462,5 +467,120 @@ class ZeroDevSmartAccountConnectorTest {
 
         connector.setChain("eip155:2")
         assertTrue(connector.stateFlow.value is WalletConnected)
+    }
+
+    @Test
+    fun `mirrors privy WalletCreatingWallet while disconnected`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        val privyState = MutableStateFlow<WalletState>(WalletDisconnected)
+        val connector = ZeroDevSmartAccountConnector(
+            mockPrivy { on { stateFlow } doReturn privyState },
+        ) { validConfig() }
+
+        privyState.value = WalletCreatingWallet
+        advanceUntilIdle()
+
+        assertEquals(WalletCreatingWallet, connector.stateFlow.value)
+    }
+
+    @Test
+    fun `mirrors privy WalletUnavailable`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        val privyState = MutableStateFlow<WalletState>(WalletDisconnected)
+        val connector = ZeroDevSmartAccountConnector(
+            mockPrivy { on { stateFlow } doReturn privyState },
+        ) { validConfig() }
+        val unavailable = WalletUnavailable(WalletCreationTimedOutException())
+
+        privyState.value = unavailable
+        advanceUntilIdle()
+
+        assertEquals(unavailable, connector.stateFlow.value)
+    }
+
+    @Test
+    fun `creating then connected runs restore path`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        val privyState = MutableStateFlow<WalletState>(WalletDisconnected)
+        val identity = WalletIdentity(privyAddress, defaultChainId)
+        val connector = ZeroDevSmartAccountConnector(
+            mockPrivy {
+                on { stateFlow } doReturn privyState
+                on { address } doReturn privyAddress
+                on { getIdentity() } doReturn identity
+            },
+        ) { validConfig() }
+        stubProvisioner(connector, testScheduler)
+
+        privyState.value = WalletCreatingWallet
+        advanceUntilIdle()
+        assertEquals(WalletCreatingWallet, connector.stateFlow.value)
+
+        privyState.value = WalletConnected(identity)
+        advanceUntilIdle()
+
+        assertTrue(connector.stateFlow.value is WalletConnected)
+        assertEquals(privyAddress, (connector.stateFlow.value as WalletConnected).identity.address)
+    }
+
+    @Test
+    fun `mirrors privy WalletAwaitingNetwork while disconnected`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        val privyState = MutableStateFlow<WalletState>(WalletDisconnected)
+        val connector = ZeroDevSmartAccountConnector(
+            mockPrivy { on { stateFlow } doReturn privyState },
+        ) { validConfig() }
+
+        privyState.value = WalletAwaitingNetwork
+        advanceUntilIdle()
+
+        assertEquals(WalletAwaitingNetwork, connector.stateFlow.value)
+    }
+
+    @Test
+    fun `awaiting network then connected runs restore path`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        val privyState = MutableStateFlow<WalletState>(WalletDisconnected)
+        val identity = WalletIdentity(privyAddress, defaultChainId)
+        val connector = ZeroDevSmartAccountConnector(
+            mockPrivy {
+                on { stateFlow } doReturn privyState
+                on { address } doReturn privyAddress
+                on { getIdentity() } doReturn identity
+            },
+        ) { validConfig() }
+        stubProvisioner(connector, testScheduler)
+
+        privyState.value = WalletAwaitingNetwork
+        advanceUntilIdle()
+        assertEquals(WalletAwaitingNetwork, connector.stateFlow.value)
+
+        privyState.value = WalletConnected(identity)
+        advanceUntilIdle()
+
+        assertTrue(connector.stateFlow.value is WalletConnected)
+        assertEquals(privyAddress, (connector.stateFlow.value as WalletConnected).identity.address)
+    }
+
+    @Test
+    fun `retryWallet delegates to privy connector`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        val privy = mockPrivy()
+        val connector = ZeroDevSmartAccountConnector(privy) { validConfig() }
+
+        connector.retryWallet()
+
+        verify(privy).retryWallet()
+    }
+
+    @Test
+    fun `refreshSession delegates to privy connector`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        val privy = mockPrivy()
+        val connector = ZeroDevSmartAccountConnector(privy) { validConfig() }
+
+        connector.refreshSession()
+
+        verify(privy).refreshSession()
     }
 }

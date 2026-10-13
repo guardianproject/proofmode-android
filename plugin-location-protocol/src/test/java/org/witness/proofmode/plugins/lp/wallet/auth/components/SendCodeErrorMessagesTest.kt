@@ -3,6 +3,7 @@ package org.witness.proofmode.plugins.lp.wallet.auth.components
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.witness.proofmode.plugins.wallet.infra.exception.WalletAuthException
+import org.witness.proofmode.plugins.wallet.infra.exception.WalletNetworkUnavailableException
 
 class SendCodeErrorMessagesTest {
 
@@ -15,6 +16,7 @@ class SendCodeErrorMessagesTest {
                 cause = error,
                 fallback = "Unable to send code",
                 tooManyRequests = "Too many requests. Please wait to try again.",
+                network = "No internet connection",
             ),
         )
     }
@@ -31,6 +33,7 @@ class SendCodeErrorMessagesTest {
                 cause = nested,
                 fallback = "Unable to send code",
                 tooManyRequests = "Too many requests. Please wait to try again.",
+                network = "No internet connection",
             ),
         )
     }
@@ -44,6 +47,33 @@ class SendCodeErrorMessagesTest {
                 cause = error,
                 fallback = "Unable to send code",
                 tooManyRequests = "Too many requests. Please wait to try again.",
+                network = "No internet connection",
+            ),
+        )
+    }
+
+    @Test
+    fun `network unavailable maps to network text`() {
+        assertEquals(
+            "N",
+            SendCodeErrorMessages.userFacing(
+                cause = WalletNetworkUnavailableException(),
+                fallback = "F",
+                tooManyRequests = "T",
+                network = "N",
+            ),
+        )
+    }
+
+    @Test
+    fun `nested network unavailable maps to network text`() {
+        assertEquals(
+            "N",
+            SendCodeErrorMessages.userFacing(
+                cause = RuntimeException("wrapper", WalletNetworkUnavailableException()),
+                fallback = "F",
+                tooManyRequests = "T",
+                network = "N",
             ),
         )
     }

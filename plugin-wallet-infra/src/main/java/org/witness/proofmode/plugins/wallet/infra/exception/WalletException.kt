@@ -33,3 +33,19 @@ class WalletChainMismatchException(
 class WalletProviderSubmitException(message: String, cause: Throwable? = null) : WalletTransactionException(message, cause)
 
 class WalletLifecycleException(message: String, cause: Throwable? = null) : WalletException(message, cause)
+
+class WalletInvalidCodeException(cause: Throwable? = null) : WalletException("Invalid verification code", cause)
+
+class WalletSessionExpiredException(cause: Throwable? = null) : WalletException("Session expired", cause)
+
+class WalletNetworkUnavailableException(cause: Throwable? = null) : WalletException("Network unavailable", cause)
+
+class WalletCreationFailedException(
+    message: String = "Wallet creation failed",
+    cause: Throwable? = null
+) : WalletException(message, cause)
+
+class WalletCreationTimedOutException : WalletException("Wallet creation timed out")
+
+class WalletSignedInWithoutWalletException(val reason: WalletException) :
+    WalletException("Signed in without wallet: ${reason.message}", reason)

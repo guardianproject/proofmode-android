@@ -8,19 +8,21 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import io.privy.auth.AuthState
 import io.privy.auth.PrivyUser
-import io.privy.auth.LinkedAccount
-import io.privy.logging.PrivyLogLevel
+import io.privy.network.isConfirmedConnected
 import io.privy.sdk.Privy
-import io.privy.sdk.PrivyConfig
 import io.privy.wallet.ethereum.EthereumRpcRequest
 import java.lang.ref.WeakReference
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.coroutineContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import org.witness.proofmode.plugins.wallet.infra.api.WalletAuthClient
@@ -33,14 +35,17 @@ import org.witness.proofmode.plugins.wallet.infra.exception.WalletCancelledExcep
 import org.witness.proofmode.plugins.wallet.infra.exception.WalletChainMismatchException
 import org.witness.proofmode.plugins.wallet.infra.exception.WalletException
 import org.witness.proofmode.plugins.wallet.infra.exception.WalletLifecycleException
+import org.witness.proofmode.plugins.wallet.infra.exception.WalletNetworkUnavailableException
 import org.witness.proofmode.plugins.wallet.infra.exception.WalletNotInitializedException
 import org.witness.proofmode.plugins.wallet.infra.exception.WalletProviderSubmitException
+import org.witness.proofmode.plugins.wallet.infra.exception.WalletSignedInWithoutWalletException
 import org.witness.proofmode.plugins.wallet.infra.exception.WalletSigningException
 import org.witness.proofmode.plugins.wallet.infra.exception.WalletTransactionException
 import org.witness.proofmode.plugins.wallet.infra.exception.WalletUnsupportedCapabilityException
 import org.witness.proofmode.plugins.wallet.infra.factory.WalletSessionStore
 import org.witness.proofmode.plugins.wallet.infra.internal.SendTransactionErrorMapper
 import org.witness.proofmode.plugins.wallet.infra.model.WalletAuthenticating
+import org.witness.proofmode.plugins.wallet.infra.model.WalletAwaitingNetwork
 import org.witness.proofmode.plugins.wallet.infra.model.WalletCapabilities
 import org.witness.proofmode.plugins.wallet.infra.model.WalletConnected
 import org.witness.proofmode.plugins.wallet.infra.model.WalletConnecting
@@ -63,10 +68,50 @@ class PrivyWalletConnector(
     private var identity: WalletIdentity? = null
     private var selectedChainId: String = config.defaultChainId
     private var authStateJob: Job? = null
-    private val _creatingWallet = AtomicBoolean(false)
+
+    /** The local session clear started by [disconnect]; entry points wait for it before touching Privy. */
+    private var logoutJob: Job? = null
+
+    /**
+     * Owned by the connector so work started here (wallet creation, logout) outlives any caller.
+     * Lazy because reading `Dispatchers.Main.immediate` throws on a JVM without a main dispatcher,
+     * and unit tests construct this connector without one.
+     */
+    private val scope by lazy { CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate) }
 
     private val _stateFlow = MutableStateFlow<WalletState>(WalletDisconnected)
     override val stateFlow: StateFlow<WalletState> = _stateFlow.asStateFlow()
+
+    /**
+     * Asks Privy to restore an unverified saved session (see [UnverifiedSessionRecovery]).
+     * Network availability comes from Privy's own network monitor (`NET_CAPABILITY_VALIDATED` on
+     * the default network).
+     */
+    private val sessionRecovery = UnverifiedSessionRecovery(
+        state = _stateFlow,
+        networkAvailable = {
+            privy?.networkStateManager?.observeNetworkChanges()?.map { it.isConfirmedConnected() }
+                ?: emptyFlow()
+        },
+        onNetworkRestored = { privy?.onNetworkRestored() },
+    )
+
+    /** Runs [UnverifiedSessionRecovery.watch]; started with the first auth-state observation. */
+    private var sessionRecoveryJob: Job? = null
+
+    private val coordinator by lazy {
+        EmbeddedWalletCoordinator(
+            scope = scope,
+            currentUser = { privy?.getUser()?.let(::LivePrivySdkUser) },
+            chainId = { selectedChainId },
+            publish = { state ->
+                // Only a connected state carries an identity; never leave a previous one behind.
+                identity = (state as? WalletConnected)?.identity
+                if (state is WalletConnected) sessionStore?.saveChainId(selectedChainId)
+                _stateFlow.value = state
+            },
+        )
+    }
 
     /** The current signer's Ethereum address, or empty string if not connected. */
     override val address: String
@@ -85,6 +130,7 @@ class PrivyWalletConnector(
 
     override suspend fun connect() {
         val activity = requireActivity()
+        logoutJob?.join()
         _stateFlow.value = WalletConnecting("Checking Privy session")
         _stateFlow.value = WalletAuthenticating
 
@@ -107,6 +153,7 @@ class PrivyWalletConnector(
 
     override suspend fun sendEmailCode(email: String) {
         val activity = requireActivity()
+        logoutJob?.join()
         _stateFlow.value = WalletConnecting("Sending email verification code")
         try {
             val client = ensurePrivy(activity, CoroutineScope(coroutineContext))
@@ -115,30 +162,43 @@ class PrivyWalletConnector(
                 throw WalletAuthException(error.message ?: "Failed to send email code", error)
             }
             _stateFlow.value = WalletDisconnected
+        } catch (e: CancellationException) {
+            _stateFlow.value = WalletDisconnected
+            throw e
         } catch (e: Throwable) {
             _stateFlow.value = WalletDisconnected
+            if (PrivyErrorMapper.isNetworkError(e)) throw WalletNetworkUnavailableException(e)
             throw mapAuthException(e)
         }
     }
 
     override suspend fun loginWithEmailCode(email: String, code: String) {
         val activity = requireActivity()
+        logoutJob?.join()
         _stateFlow.value = WalletAuthenticating
         try {
             val client = ensurePrivy(activity, CoroutineScope(coroutineContext))
             client.getAuthState()
             val user = client.email.loginWithCode(code, email).getOrElse { error ->
-                throw WalletAuthException(error.message ?: "Email login failed", error)
+                throw PrivyErrorMapper.mapLoginError(error)
             }
-            setConnectedIdentity(user)
+            coordinator.completeVerifiedLogin(LivePrivySdkUser(user))
+        } catch (e: CancellationException) {
+            // Don't strand "authenticating"; a coordinator-published state stays (its creation keeps running).
+            if (_stateFlow.value === WalletAuthenticating) _stateFlow.value = WalletDisconnected
+            throw e
+        } catch (e: WalletSignedInWithoutWalletException) {
+            // Signed in, but no wallet: the coordinator owns the state.
+            throw e
         } catch (e: Throwable) {
             _stateFlow.value = WalletDisconnected
-            throw mapAuthException(e)
+            throw PrivyErrorMapper.mapLoginError(e)
         }
     }
 
     override suspend fun sendSmsCode(phoneNumber: String) {
         val activity = requireActivity()
+        logoutJob?.join()
         _stateFlow.value = WalletConnecting("Sending SMS verification code")
         try {
             val client = ensurePrivy(activity, CoroutineScope(coroutineContext))
@@ -147,38 +207,80 @@ class PrivyWalletConnector(
                 throw WalletAuthException(error.message ?: "Failed to send SMS code", error)
             }
             _stateFlow.value = WalletDisconnected
+        } catch (e: CancellationException) {
+            _stateFlow.value = WalletDisconnected
+            throw e
         } catch (e: Throwable) {
             _stateFlow.value = WalletDisconnected
+            if (PrivyErrorMapper.isNetworkError(e)) throw WalletNetworkUnavailableException(e)
             throw mapAuthException(e)
         }
     }
 
     override suspend fun loginWithSmsCode(phoneNumber: String, code: String) {
         val activity = requireActivity()
+        logoutJob?.join()
         _stateFlow.value = WalletAuthenticating
         try {
             val client = ensurePrivy(activity, CoroutineScope(coroutineContext))
             client.getAuthState()
             val user = client.sms.loginWithCode(code, phoneNumber).getOrElse { error ->
-                throw WalletAuthException(error.message ?: "SMS login failed", error)
+                throw PrivyErrorMapper.mapLoginError(error)
             }
-            setConnectedIdentity(user)
+            coordinator.completeVerifiedLogin(LivePrivySdkUser(user))
+        } catch (e: CancellationException) {
+            // Don't strand "authenticating"; a coordinator-published state stays (its creation keeps running).
+            if (_stateFlow.value === WalletAuthenticating) _stateFlow.value = WalletDisconnected
+            throw e
+        } catch (e: WalletSignedInWithoutWalletException) {
+            // Signed in, but no wallet: the coordinator owns the state.
+            throw e
         } catch (e: Throwable) {
             _stateFlow.value = WalletDisconnected
-            throw mapAuthException(e)
+            throw PrivyErrorMapper.mapLoginError(e)
         }
     }
 
+    /**
+     * Returns without waiting on the network. Privy's `logout()` clears the local session first,
+     * then makes a best-effort server call that can run until its request timeout (60s in SDK
+     * 0.16), so it runs on the connector's own [scope]: the caller cannot cancel it. Later entry
+     * points wait for it, including that server call.
+     */
     override suspend fun disconnect() {
-        try {
-            authStateJob?.cancel()
-            privy?.logout()
-        } catch (_: Throwable) {
-        } finally {
-            authStateJob = null
-            identity = null
-            _stateFlow.value = WalletDisconnected
+        coordinator.detach()
+        authStateJob?.cancel()
+        authStateJob = null
+        identity = null
+        _stateFlow.value = WalletDisconnected
+        val previousLogout = logoutJob
+        logoutJob = scope.launch {
+            previousLogout?.join()
+            try {
+                privy?.logout()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (t: Throwable) {
+                Timber.tag(TAG).w(t, "disconnect: Privy logout failed")
+            }
         }
+    }
+
+    override suspend fun retryWallet() {
+        logoutJob?.join()
+        coordinator.retry()
+    }
+
+    /**
+     * While [WalletAwaitingNetwork], asks Privy to verify the saved session again
+     * (`Privy.onNetworkRestored()`); otherwise does nothing. Throws only cancellation.
+     */
+    suspend fun refreshUnverifiedSession() {
+        sessionRecovery.refresh()
+    }
+
+    override suspend fun refreshSession() {
+        refreshUnverifiedSession()
     }
 
     override fun getIdentity(): WalletIdentity? = identity
@@ -351,11 +453,7 @@ class PrivyWalletConnector(
 
         val created = Privy.init(
             context = appContext,
-            config = PrivyConfig(
-                appId = config.privyAppId,
-                appClientId = config.privyAppClientId,
-                logLevel = PrivyLogLevel.NONE,
-            )
+            config = PrivyConfigFactory.create(config)
         )
         privy = created
         startAuthStateObservation(appScope, created)
@@ -374,11 +472,7 @@ class PrivyWalletConnector(
 
         val created = Privy.init(
             context = activity.applicationContext,
-            config = PrivyConfig(
-                appId = config.privyAppId,
-                appClientId = config.privyAppClientId,
-                logLevel = PrivyLogLevel.NONE,
-            )
+            config = PrivyConfigFactory.create(config)
         )
         privy = created
         startAuthStateObservation(resolveObservationScope(activity, fallbackScope), created)
@@ -392,15 +486,8 @@ class PrivyWalletConnector(
         return ProcessLifecycleOwner.get().lifecycleScope
     }
 
-    private fun getEmbeddedWalletAddress(user: io.privy.auth.PrivyUser): String? {
-        val linkedAccountAddress = user.linkedAccounts
-            .asSequence()
-            .filterIsInstance<LinkedAccount.EmbeddedEthereumWalletAccount>()
-            .map { it.address }
-            .firstOrNull { it.isNotBlank() }
-
-        return linkedAccountAddress
-    }
+    private fun getEmbeddedWalletAddress(user: PrivyUser): String? =
+        LivePrivySdkUser(user).walletAddresses.firstOrNull()
 
     /**
      * Converts an app-level chain id (CAIP-2 `eip155:N` or decimal / hex quantity)
@@ -456,50 +543,29 @@ class PrivyWalletConnector(
             try {
                 authStateFlow.collect { state ->
                     when (state) {
-                        is AuthState.Authenticated -> _handleAuthenticated(state.user)
-                        is AuthState.Unauthenticated -> _stateFlow.value = WalletDisconnected
+                        is AuthState.Authenticated -> coordinator.onAuthenticated(LivePrivySdkUser(state.user))
+                        is AuthState.AuthenticatedUnverified -> coordinator.onAuthenticatedUnverified()
+                        is AuthState.Unauthenticated -> {
+                            coordinator.detach()
+                            identity = null
+                            _stateFlow.value = WalletDisconnected
+                        }
                         else -> {}
                     }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (_: Throwable) {
                 _stateFlow.value = WalletDisconnected
             }
         }
+        startSessionRecovery()
     }
 
-    private suspend fun _handleAuthenticated(user: PrivyUser) {
-        val address = getEmbeddedWalletAddress(user)
-        if (address.isNullOrBlank()) {
-            _ensureEmbeddedWallet(user)
-        } else {
-            setConnectedIdentity(user)
-        }
-    }
-
-    private suspend fun _ensureEmbeddedWallet(user: PrivyUser) {
-        if (user.embeddedEthereumWallets.isNotEmpty()) {
-            setConnectedIdentity(user)
-            return
-        }
-
-        if (!_creatingWallet.compareAndSet(false, true)) {
-            return
-        }
-
-        try {
-            val result = user.createEthereumWallet(allowAdditional = false)
-            result.onSuccess {
-                setConnectedIdentity(user)
-            }.onFailure { error ->
-                Timber.tag(TAG).e(error, "Failed to auto-create embedded wallet")
-                _stateFlow.value = WalletDisconnected
-            }
-        } catch (e: Throwable) {
-            Timber.tag(TAG).e(e, "Exception in _ensureEmbeddedWallet")
-            _stateFlow.value = WalletDisconnected
-        } finally {
-            _creatingWallet.set(false)
-        }
+    /** AwaitingNetwork is only published by the auth-state observation, so the watch starts with it. */
+    private fun startSessionRecovery() {
+        if (sessionRecoveryJob?.isActive == true) return
+        sessionRecoveryJob = scope.launch { sessionRecovery.watch() }
     }
 
     private fun setConnectedIdentity(user: PrivyUser) {

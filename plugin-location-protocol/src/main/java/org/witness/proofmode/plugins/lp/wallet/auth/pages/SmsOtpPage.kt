@@ -1,16 +1,22 @@
 package org.witness.proofmode.plugins.lp.wallet.auth.pages
 
 import android.os.Bundle
+import android.text.InputType
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import androidx.annotation.VisibleForTesting
 import androidx.fragment.app.Fragment
+import kotlinx.coroutines.CancellationException
 import org.witness.proofmode.plugins.lp.R
 import org.witness.proofmode.plugins.lp.wallet.auth.WalletAuthBottomSheet
+import org.witness.proofmode.plugins.lp.wallet.auth.components.PhoneEntry
+import org.witness.proofmode.plugins.lp.wallet.auth.components.PhoneMaskTextWatcher
 import org.witness.proofmode.plugins.lp.wallet.auth.components.PrivyOtpView
+import org.witness.proofmode.plugins.lp.wallet.auth.components.VerifyOutcome
 import org.witness.proofmode.plugins.wallet.infra.exception.WalletAuthException
+import org.witness.proofmode.plugins.wallet.infra.exception.WalletNetworkUnavailableException
 import timber.log.Timber
 
 class SmsOtpPage : Fragment() {
@@ -33,6 +39,13 @@ class SmsOtpPage : Fragment() {
         otpView = view.findViewById(R.id.otp_view)
         otpView.identifierLabel = "Phone Number"
         otpView.codeLabel = "Verification Code"
+        otpView.identifierInputType = InputType.TYPE_CLASS_PHONE
+        otpView.identifierHint = PhoneEntry.MASK
+        otpView.addIdentifierTextWatcher(PhoneMaskTextWatcher())
+        otpView.identifierValidator = { raw ->
+            val digits = PhoneEntry.nationalDigits(raw) ?: ""
+            if (PhoneEntry.check(digits) is PhoneEntry.Check.Valid) null else getString(R.string.auth_sms_phone_incomplete)
+        }
 
         otpView.onSendCode = { phone ->
             val authClient = parentSheet?.authClient()
@@ -53,8 +66,13 @@ class SmsOtpPage : Fragment() {
                     try {
                         authClient.sendSmsCode(normalizedPhone)
                         true
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: WalletAuthException) {
                         Timber.tag(TAG).e(e, "Send SMS code failed")
+                        throw e
+                    } catch (e: WalletNetworkUnavailableException) {
+                        Timber.tag(TAG).e(e, "Send SMS code failed: network unavailable")
                         throw e
                     } catch (t: Throwable) {
                         Timber.tag(TAG).e(t, "Unexpected error sending SMS code")
@@ -68,7 +86,7 @@ class SmsOtpPage : Fragment() {
             val authClient = parentSheet?.authClient()
             if (authClient == null) {
                 Timber.tag(TAG).e("Wallet auth client unavailable for loginWithSmsCode")
-                false
+                VerifyOutcome.Failed(getString(R.string.auth_otp_verify_failed))
             } else {
                 val normalizedPhone = try {
                     PrivyOtpView.phoneNumberToE164(phone)
@@ -78,17 +96,22 @@ class SmsOtpPage : Fragment() {
                 }
 
                 if (normalizedPhone == null) {
-                    false
+                    VerifyOutcome.Failed(getString(R.string.auth_otp_verify_failed))
                 } else {
                     try {
                         authClient.loginWithSmsCode(normalizedPhone, code)
-                        true
-                    } catch (e: WalletAuthException) {
-                        Timber.tag(TAG).e(e, "Login with SMS code failed")
-                        false
+                        VerifyOutcome.Verified
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (t: Throwable) {
-                        Timber.tag(TAG).e(t, "Unexpected error verifying SMS code")
-                        false
+                        Timber.tag(TAG).e(t, "Login with SMS code failed")
+                        VerifyOutcome.from(
+                            t,
+                            invalidCode = getString(R.string.auth_otp_invalid_code),
+                            network = getString(R.string.auth_otp_network_unavailable),
+                            tooManyRequests = getString(R.string.auth_otp_too_many_requests),
+                            fallback = getString(R.string.auth_otp_verify_failed),
+                        )
                     }
                 }
             }

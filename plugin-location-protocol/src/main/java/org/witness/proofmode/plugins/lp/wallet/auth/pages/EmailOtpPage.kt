@@ -7,10 +7,13 @@ import android.view.ViewGroup
 import android.widget.Button
 import androidx.annotation.VisibleForTesting
 import androidx.fragment.app.Fragment
+import kotlinx.coroutines.CancellationException
 import org.witness.proofmode.plugins.lp.R
 import org.witness.proofmode.plugins.lp.wallet.auth.WalletAuthBottomSheet
 import org.witness.proofmode.plugins.lp.wallet.auth.components.PrivyOtpView
+import org.witness.proofmode.plugins.lp.wallet.auth.components.VerifyOutcome
 import org.witness.proofmode.plugins.wallet.infra.exception.WalletAuthException
+import org.witness.proofmode.plugins.wallet.infra.exception.WalletNetworkUnavailableException
 import timber.log.Timber
 
 class EmailOtpPage : Fragment() {
@@ -43,8 +46,13 @@ class EmailOtpPage : Fragment() {
                 try {
                     authClient.sendEmailCode(email)
                     true
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: WalletAuthException) {
                     Timber.tag(TAG).e(e, "Send email code failed")
+                    throw e
+                } catch (e: WalletNetworkUnavailableException) {
+                    Timber.tag(TAG).e(e, "Send email code failed: network unavailable")
                     throw e
                 } catch (t: Throwable) {
                     Timber.tag(TAG).e(t, "Unexpected error sending email code")
@@ -57,17 +65,22 @@ class EmailOtpPage : Fragment() {
             val authClient = parentSheet?.authClient()
             if (authClient == null) {
                 Timber.tag(TAG).e("Wallet auth client unavailable for loginWithEmailCode")
-                false
+                VerifyOutcome.Failed(getString(R.string.auth_otp_verify_failed))
             } else {
                 try {
                     authClient.loginWithEmailCode(email, code)
-                    true
-                } catch (e: WalletAuthException) {
-                    Timber.tag(TAG).e(e, "Login with email code failed")
-                    false
+                    VerifyOutcome.Verified
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (t: Throwable) {
-                    Timber.tag(TAG).e(t, "Unexpected error verifying email code")
-                    false
+                    Timber.tag(TAG).e(t, "Login with email code failed")
+                    VerifyOutcome.from(
+                        t,
+                        invalidCode = getString(R.string.auth_otp_invalid_code),
+                        network = getString(R.string.auth_otp_network_unavailable),
+                        tooManyRequests = getString(R.string.auth_otp_too_many_requests),
+                        fallback = getString(R.string.auth_otp_verify_failed),
+                    )
                 }
             }
         }
