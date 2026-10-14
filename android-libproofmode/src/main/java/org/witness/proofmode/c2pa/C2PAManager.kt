@@ -886,6 +886,16 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                 put ("trust_config", trustConfig)
             })
 
+            /**
+            put ("signer", buildJsonObject {
+                put ("time_authority_url","https://tsa.trufo.ai/")
+                put ("timestamp_request_headers", buildJsonObject {
+                    put ("name", "X-API-Key")
+                    put ("value", "foo")
+                })
+            })**/
+
+
         }
 
         val settingsJsonString = settingsJson.toString()
