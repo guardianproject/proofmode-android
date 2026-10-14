@@ -438,7 +438,7 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
                         vState = mC2paManager?.validateSignedMedia(fileMedia.absolutePath)
 
                         //TODO: check manifest for any signs of AI
-                        val manifestJSON = C2PA.readFile(fileMedia.absolutePath, null)
+                        val manifestJSON = C2PA.readFile(fileMedia.absolutePath)
 
                         if (manifestJSON != null && manifestJSON.contains("algorithmic|synthetic".toRegex(RegexOption.IGNORE_CASE))) {
                            //AI detected

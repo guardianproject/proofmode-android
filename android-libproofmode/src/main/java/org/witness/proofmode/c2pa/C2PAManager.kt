@@ -1013,7 +1013,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         try {
 
             // Read and verify using C2PA
-            val manifestJSON = C2PA.readFile(filePath, null)
+            val manifestJSON = C2PA.readFile(filePath)
             Timber.d("Manifest JSON length: ${manifestJSON.length} characters")
            // Timber.d("Menifest JSON:\n${manifestJSON}")
 
@@ -1087,7 +1087,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         C2PA.loadSettings(settingsJson.toString(),"json")
 
         // Read and verify using C2PA
-        val manifestJSON = C2PA.readFile(filePath, null)
+        val manifestJSON = C2PA.readFile(filePath)
         return manifestJSON
 
     }

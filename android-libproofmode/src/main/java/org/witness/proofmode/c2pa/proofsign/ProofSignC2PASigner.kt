@@ -67,8 +67,7 @@ class ProofSignC2PASigner (
         var configTsaUrl = configuration.timestamp_url.takeIf { it.isNotEmpty() }
         if (timestampUrlOverride.isNotEmpty())
             configTsaUrl = timestampUrlOverride
-
-        timestampUrlOverride
+        
         return Signer.withCallback(
             algorithm = signingAlgorithm,
             certificateChainPEM = certificateChain,
