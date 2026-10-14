@@ -293,6 +293,7 @@
     <string name="settings_signing_signing_servers">Signing Servers</string>
     <string name="settings_signing_proofsign_server">ProofSign Server</string>
     <string name="settings_signing_tsa">Time Stamp Authority (TSA)</string>
+    <string name="settings_signing_tsa_local">On-device time stamp authority (used for Local signing)</string>
     <string name="settings_signing_identity">Identity Signing</string>
     <string name="settings_signing_cawg">Creators Assertion - BETA</string>
     <string name="settings_signing_cawg_on">CAWG Signing Enabled</string>

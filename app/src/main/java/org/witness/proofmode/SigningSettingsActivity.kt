@@ -89,7 +89,12 @@ class SigningSettingsActivity : AppCompatActivity() {
             // otherwise fall back to the env-secret default the signer actually uses (see
             // ProofModeApp/C2PAManager). These mirror BuildConfig.SIGNING_SERVER/TSA_SERVER.
             configureServerDefault(ProofMode.PREF_OPTION_PROOFSIGN_SERVER, BuildConfig.SIGNING_SERVER)
-            configureServerDefault(ProofMode.PREF_OPTION_TSA_SERVER, BuildConfig.TSA_SERVER)
+            configureServerDefault(ProofMode.PREF_OPTION_TSA_SERVER, BuildConfig.TSA_SERVER) {
+                // Local signing always uses the on-device TSA (C2PAManager.resolveTsaUrl),
+                // so say that rather than show a URL that isn't used.
+                if (currentModeValue() == MODE_LOCAL) getString(R.string.settings_signing_tsa_local) else null
+            }
+            updateServerPreferences()
 
             findPreference<Preference>(KEY_GENERATE_CAWG)?.setOnPreferenceClickListener {
                 confirmGenerateCawgIdentity()
@@ -230,11 +235,12 @@ class SigningSettingsActivity : AppCompatActivity() {
          * [default]; and so opening its dialog pre-fills [default] instead of an empty field.
          * We never persist [default] ourselves — the signer already falls back to it when the
          * stored value is empty, so seeding only happens if the user explicitly saves.
+         * A non-null [summaryOverride] replaces the summary entirely.
          */
-        private fun configureServerDefault(key: String, default: String) {
+        private fun configureServerDefault(key: String, default: String, summaryOverride: () -> String? = { null }) {
             findPreference<EditTextPreference>(key)?.apply {
                 summaryProvider = Preference.SummaryProvider<EditTextPreference> { pref ->
-                    pref.text?.takeIf { it.isNotBlank() } ?: default
+                    summaryOverride() ?: pref.text?.takeIf { it.isNotBlank() } ?: default
                 }
                 setOnBindEditTextListener { editText ->
                     if (editText.text.isNullOrBlank()) {
@@ -321,14 +327,20 @@ class SigningSettingsActivity : AppCompatActivity() {
         }
 
         private fun applyModeState() {
-            findPreference<EditTextPreference>(ProofMode.PREF_OPTION_PROOFSIGN_SERVER)
-                ?.isEnabled = currentModeValue() == MODE_REMOTE
-
-
-
-
-
+            updateServerPreferences()
             MediaWatcher.getInstance(activity)?.resetC2PA()
+        }
+
+        /** Both server URLs only apply to remote signing; local signing uses the on-device TSA. */
+        private fun updateServerPreferences() {
+            val isRemote = currentModeValue() == MODE_REMOTE
+            findPreference<EditTextPreference>(ProofMode.PREF_OPTION_PROOFSIGN_SERVER)?.isEnabled = isRemote
+            findPreference<EditTextPreference>(ProofMode.PREF_OPTION_TSA_SERVER)?.apply {
+                isEnabled = isRemote
+                // The summary depends on the mode, which isn't this preference's own
+                // value; re-setting the provider is the public way to force a rebind.
+                summaryProvider = summaryProvider
+            }
         }
 
         companion object {

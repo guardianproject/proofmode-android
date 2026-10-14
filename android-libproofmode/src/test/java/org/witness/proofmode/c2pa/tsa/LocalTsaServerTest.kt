@@ -18,6 +18,7 @@ import org.junit.Test
 import java.math.BigInteger
 import java.net.HttpURLConnection
 import java.net.URL
+import java.security.KeyPair
 import java.security.KeyPairGenerator
 import java.security.MessageDigest
 import java.security.cert.X509Certificate
@@ -30,12 +31,13 @@ import java.security.spec.ECGenParameterSpec
  */
 class LocalTsaServerTest {
 
+    private lateinit var keyPair: KeyPair
     private lateinit var cert: X509Certificate
     private lateinit var server: LocalTsaServer
 
     @Before
     fun setUp() {
-        val keyPair = KeyPairGenerator.getInstance("EC").apply { initialize(ECGenParameterSpec("secp256r1")) }
+        keyPair = KeyPairGenerator.getInstance("EC").apply { initialize(ECGenParameterSpec("secp256r1")) }
             .generateKeyPair()
         cert = LocalTsa.createTsaCertificate(keyPair.private, keyPair.public)
         server = LocalTsaServer(TimeStampResponder(keyPair.private, cert))
@@ -73,7 +75,7 @@ class LocalTsaServerTest {
         val token = resp.timeStampToken
         token.validate(JcaSimpleSignerInfoVerifierBuilder().build(cert))
         assertArrayEquals(req.messageImprintDigest, token.timeStampInfo.messageImprintDigest)
-        assertEquals(TimeStampResponder.DEFAULT_POLICY, token.timeStampInfo.policy)
+        assertEquals(TimeSource.DEVICE_CLOCK.policy, token.timeStampInfo.policy)
         assertEquals(1, token.certificates.getMatches(null).size)
         assertTrue(Math.abs(token.timeStampInfo.genTime.time - System.currentTimeMillis()) < 60_000)
     }
@@ -92,7 +94,7 @@ class LocalTsaServerTest {
 
     @Test
     fun acceptsOwnPolicy() {
-        val req = request(TimeStampResponder.DEFAULT_POLICY)
+        val req = request(TimeSource.DEVICE_CLOCK.policy)
         assertGranted(req, post(req.encoded))
     }
 
@@ -130,6 +132,58 @@ class LocalTsaServerTest {
         // RFC 3161 §2.3: critical EKU containing only id-kp-timeStamping.
         assertTrue("2.5.29.37" in cert.criticalExtensionOIDs)
         assertEquals(listOf("1.3.6.1.5.5.7.3.8"), cert.extendedKeyUsage)
+    }
+
+    @Test
+    fun gnssReadingSetsGenTimePolicyAndAccuracy() {
+        val gnssTime = java.util.Date(1_800_000_000_000L) // deliberately far from the JVM clock
+        val responder = TimeStampResponder(
+            keyPair.private, cert, clock = { TimeReading(gnssTime, TimeSource.GNSS) },
+        )
+        val req = request()
+        val resp = TimeStampResponse(responder.respond(req.encoded))
+        assertEquals(PKIStatus.GRANTED, resp.status)
+        resp.validate(req)
+        val info = resp.timeStampToken.timeStampInfo
+        assertEquals(gnssTime, info.genTime)
+        assertEquals(TimeSource.GNSS.policy, info.policy)
+        assertEquals(1, info.genTimeAccuracy.seconds)
+    }
+
+    @Test
+    fun deviceClockReadingClaimsNoAccuracy() {
+        val info = TimeStampResponse(TimeStampResponder(keyPair.private, cert).respond(request().encoded))
+            .timeStampToken.timeStampInfo
+        assertEquals(TimeSource.DEVICE_CLOCK.policy, info.policy)
+        assertEquals(null, info.genTimeAccuracy)
+    }
+
+    @Test
+    fun rejectsPolicyOfOtherTimeSource() {
+        // Device clock in use, but the client insists on the GNSS policy.
+        val resp = TimeStampResponse(
+            TimeStampResponder(keyPair.private, cert).respond(request(TimeSource.GNSS.policy).encoded),
+        )
+        assertEquals(PKIStatus.REJECTION, resp.status)
+    }
+
+    @Test
+    fun gnssExtrapolatesOnMonotonicClock() {
+        val fixUtc = 1_800_000_000_000L
+        val fixElapsed = 5_000_000_000L // 5 s after boot
+        val tenMinutes = 600_000_000_000L
+        assertEquals(java.util.Date(fixUtc + 600_000), GnssTime.extrapolate(fixUtc, fixElapsed, fixElapsed + tenMinutes))
+    }
+
+    @Test
+    fun gnssRejectsFutureAndStaleFixes() {
+        val fixUtc = 1_800_000_000_000L
+        val fixElapsed = 5_000_000_000L
+        // Fix "after" now: elapsed-realtime belongs to another boot.
+        assertEquals(null, GnssTime.extrapolate(fixUtc, fixElapsed, fixElapsed - 1))
+        val tooOld = (GnssTime.MAX_FIX_AGE_MS + 1) * 1_000_000
+        assertEquals(null, GnssTime.extrapolate(fixUtc, fixElapsed, fixElapsed + tooOld))
+        assertEquals(null, GnssTime.extrapolate(0, fixElapsed, fixElapsed))
     }
 
     @Test

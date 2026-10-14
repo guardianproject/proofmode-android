@@ -173,6 +173,11 @@ public class ProofMode {
             return mLocationTracker.getLocation();
     }
 
+    /** Newest GNSS fix from the long-lived tracker, or null; see GPSTracker#getLatestGpsFix. */
+    public static Location getLatestGpsFix () {
+        return mLocationTracker == null ? null : mLocationTracker.getLatestGpsFix();
+    }
+
     public static void stopBackgroundService (Context context)
     {
 

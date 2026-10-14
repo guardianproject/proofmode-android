@@ -10,6 +10,7 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.provider.Settings;
@@ -32,6 +33,12 @@ public final class GPSTracker implements LocationListener {
     boolean canGetLocation = false;
 
     Location currentBestLocation; // location
+
+    // Newest fix from GPS_PROVIDER specifically. Kept apart from currentBestLocation,
+    // which may be a network fix: only a GNSS fix's getTime() is satellite UTC rather
+    // than a copy of the device clock.
+    // volatile: written on the listener's looper, read from signing threads.
+    private volatile Location lastGpsFix;
     double latitude; // latitude
     double longitude; // longitude
 
@@ -232,6 +239,9 @@ public final class GPSTracker implements LocationListener {
     public void onLocationChanged(Location location) {
         if (location == null) return;
 
+        if (LocationManager.GPS_PROVIDER.equals(location.getProvider()))
+            lastGpsFix = newerFix(lastGpsFix, location);
+
         if (isBetterLocation(location, currentBestLocation)) {
             currentBestLocation = location;
             this.latitude = currentBestLocation.getLatitude();
@@ -250,6 +260,29 @@ public final class GPSTracker implements LocationListener {
 
     @Override
     public void onStatusChanged(String provider, int status, Bundle extras) {
+    }
+
+    /**
+     * The newest non-mock fix from GPS_PROVIDER, from listener callbacks or the
+     * provider's last-known fix, or null. Its getTime() is GNSS-derived UTC.
+     */
+    public Location getLatestGpsFix() {
+        Location fix = lastGpsFix;
+        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                && locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+            fix = newerFix(fix, locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER));
+        }
+        return fix;
+    }
+
+    private static Location newerFix(Location current, Location candidate) {
+        if (candidate == null || isMock(candidate)) return current;
+        if (current == null) return candidate;
+        return candidate.getElapsedRealtimeNanos() > current.getElapsedRealtimeNanos() ? candidate : current;
+    }
+
+    private static boolean isMock(Location location) {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ? location.isMock() : location.isFromMockProvider();
     }
 
     /** Determines whether one Location reading is better than the current Location fix

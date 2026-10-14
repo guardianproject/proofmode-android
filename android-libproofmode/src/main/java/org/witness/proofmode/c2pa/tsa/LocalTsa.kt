@@ -1,6 +1,7 @@
 package org.witness.proofmode.c2pa.tsa
 
 import android.content.Context
+import android.os.SystemClock
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import org.bouncycastle.asn1.x500.X500Name
@@ -16,6 +17,7 @@ import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
 import org.bouncycastle.util.io.pem.PemObject
 import org.bouncycastle.util.io.pem.PemReader
 import org.bouncycastle.util.io.pem.PemWriter
+import org.witness.proofmode.ProofMode
 import timber.log.Timber
 import java.io.ByteArrayInputStream
 import java.io.File
@@ -45,10 +47,12 @@ import javax.security.auth.x500.X500Principal
  * id-kp-timeStamping certificate, persisted so every token from this install
  * chains to the same certificate.
  *
- * The time asserted is the device clock, so these tokens prove nothing a remote
- * TSA would — they let signing work offline and give the manifest a
- * consistently-formed RFC 3161 countersignature. Validators will report the
- * TSA as untrusted unless its certificate is added to their TSA trust list.
+ * The time asserted is GNSS UTC when the location tracker has a recent GPS fix
+ * ([currentTime]), else the device clock; the token's policy OID says which
+ * ([TimeSource]). Either way it is the device vouching for itself, not a third
+ * party: it lets signing work offline and gives the manifest a consistently-formed
+ * RFC 3161 countersignature. Validators will report the TSA as untrusted unless
+ * its certificate is added to their TSA trust list.
  */
 object LocalTsa {
     private const val ANDROID_KEYSTORE = "AndroidKeyStore"
@@ -62,6 +66,32 @@ object LocalTsa {
     private val IPV4_LITERAL = Regex("""\d{1,3}(\.\d{1,3}){3}""")
 
     private var server: LocalTsaServer? = null
+
+    /**
+     * URL of this app's own TSA, starting it if needed — what local signing modes
+     * always use. Unlike [resolve] it never defers to another process: if
+     * [DEFAULT_PORT] is taken, it binds an ephemeral port instead. Null only if the
+     * server can't be started at all (e.g. the Keystore refuses to create the key).
+     */
+    @Synchronized
+    fun localUrl(context: Context): String? {
+        server?.takeIf { it.isRunning }?.let { return it.url }
+        return try {
+            val (key, cert) = loadOrCreateIdentity(context.applicationContext)
+            val responder = TimeStampResponder(key, cert, ::currentTime)
+            val started = try {
+                LocalTsaServer(responder, DEFAULT_PORT)
+            } catch (e: IOException) {
+                Timber.w(e, "LocalTsa: port %d taken, using an ephemeral port", DEFAULT_PORT)
+                LocalTsaServer(responder, 0)
+            }
+            server = started
+            started.url
+        } catch (e: Exception) {
+            Timber.e(e, "LocalTsa: could not start")
+            null
+        }
+    }
 
     /**
      * Returns the URL c2pa-rs should use for [configuredUrl]: unchanged for a
@@ -87,11 +117,29 @@ object LocalTsa {
 
         return try {
             val (key, cert) = loadOrCreateIdentity(context.applicationContext)
-            LocalTsaServer(TimeStampResponder(key, cert), port).also { server = it }.url
+            LocalTsaServer(TimeStampResponder(key, cert, ::currentTime), port).also { server = it }.url
         } catch (e: IOException) {
             Timber.w(e, "LocalTsa: could not bind port %d, using %s as configured", port, configuredUrl)
             configuredUrl
         }
+    }
+
+    /**
+     * GNSS time from [ProofMode.getLatestGpsFix] carried forward on the monotonic
+     * clock (see [GnssTime.extrapolate]); the device clock if there is no usable fix.
+     */
+    internal fun currentTime(): TimeReading {
+        val fix = try {
+            ProofMode.getLatestGpsFix()
+        } catch (e: SecurityException) {
+            null
+        }
+        val gnss = fix?.let { GnssTime.extrapolate(it.time, it.elapsedRealtimeNanos, SystemClock.elapsedRealtimeNanos()) }
+        if (gnss != null) {
+            Timber.d("LocalTsa: genTime from GNSS fix (device clock differs by %d ms)", System.currentTimeMillis() - gnss.time)
+            return TimeReading(gnss, TimeSource.GNSS)
+        }
+        return TimeReading(Date(), TimeSource.DEVICE_CLOCK)
     }
 
     /** PEM of the TSA certificate, for adding to a validator's TSA trust list; null until first use. */
@@ -163,7 +211,10 @@ object LocalTsa {
         val builder = JcaX509v3CertificateBuilder(
             subject,
             BigInteger.valueOf(now),
-            Date(now - 5 * 60_000L),
+            // Generous backdating: genTime may come from GNSS rather than the device
+            // clock this cert was minted with, and c2pa-rs rejects a TSA cert that
+            // isn't valid at genTime.
+            Date(now - 365L * 24 * 60 * 60 * 1000),
             Date(now + CERT_VALIDITY_DAYS * 24 * 60 * 60 * 1000),
             subject,
             publicKey,

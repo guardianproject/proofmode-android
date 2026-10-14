@@ -660,7 +660,19 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         return raw?.trim().orEmpty().trimEnd('/')
     }
 
+    /**
+     * [mode] is the mode the user chose, not the one a REMOTE request may fall back to:
+     * a remote user whose device can't do Play Integrity still gets their configured TSA.
+     */
     private fun resolveTsaUrl(mode: SigningMode): String {
+        // Local signing always timestamps on-device; the TSA URL setting is only
+        // offered (and only honoured) for remote signing.
+        if (mode != SigningMode.REMOTE) {
+            LocalTsa.localUrl(context)?.let { return it }
+            Timber.w("C2PA: local TSA unavailable - falling back to %s", BuildConfig.TSA_SERVER)
+            return BuildConfig.TSA_SERVER
+        }
+
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
         val configured = prefs.getString(
             ProofMode.PREF_OPTION_TSA_SERVER,
