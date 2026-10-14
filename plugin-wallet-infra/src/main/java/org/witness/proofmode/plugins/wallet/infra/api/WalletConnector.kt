@@ -24,4 +24,17 @@ interface WalletConnector {
      * Must NOT cancel the process-scoped auth state observation.
      */
     fun unbindActivity()
+
+    /**
+     * Retry wallet creation after a [org.witness.proofmode.plugins.wallet.infra.model.WalletUnavailable]
+     * state. Default is a no-op for connectors without a creatable wallet.
+     */
+    suspend fun retryWallet() {}
+
+    /**
+     * Ask the provider to verify a saved session that could not be verified yet
+     * ([org.witness.proofmode.plugins.wallet.infra.model.WalletAwaitingNetwork]). Safe to call in
+     * any state and while offline; never throws except for cancellation. Default is a no-op.
+     */
+    suspend fun refreshSession() {}
 }

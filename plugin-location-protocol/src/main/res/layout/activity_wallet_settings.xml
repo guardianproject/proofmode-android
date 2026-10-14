@@ -55,11 +55,10 @@
                     android:id="@+id/btn_info_web3_wallet"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
-                    android:background="@drawable/info_icon_background"
+                    android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="@string/info_web3_wallet_title"
-                    android:padding="10dp"
-                    android:src="@android:drawable/ic_dialog_info"
-                    app:tint="@color/colorPrimary" />
+                    android:scaleType="center"
+                    android:src="@drawable/ic_info" />
             </LinearLayout>
 
             <!-- Wallet Status Card -->
@@ -135,6 +134,19 @@
                         android:visibility="gone" />
 
                     <Button
+                        android:id="@+id/btn_retry_wallet"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:background="@drawable/rounded_button_dark_background"
+                        android:fontFamily="@font/inter"
+                        android:text="@string/wallet_retry"
+                        android:textAllCaps="false"
+                        android:textColor="@android:color/white"
+                        android:textSize="15sp"
+                        android:visibility="gone" />
+
+                    <Button
                         android:id="@+id/btn_show_onboarding_guide"
                         style="@style/Widget.MaterialComponents.Button.TextButton"
                         android:layout_width="match_parent"
@@ -182,14 +194,13 @@
                             android:textStyle="bold" />
 
                         <ImageButton
-                            android:id="@+id/btn_info_eas"
+                            android:id="@+id/btn_info_network"
                             android:layout_width="48dp"
                             android:layout_height="48dp"
-                            android:background="@drawable/info_icon_background"
-                            android:contentDescription="@string/info_eas_title"
-                            android:padding="10dp"
-                            android:src="@android:drawable/ic_dialog_info"
-                            app:tint="@color/colorPrimary" />
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:contentDescription="@string/info_network_title"
+                            android:scaleType="center"
+                            android:src="@drawable/ic_info" />
                     </LinearLayout>
 
                     <Spinner
@@ -208,6 +219,49 @@
                         android:textColor="#B00020"
                         android:textSize="12sp"
                         android:visibility="gone" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Explorer Links Card (visible when connected) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_explorer_links"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:visibility="gone"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp"
+                app:strokeColor="#E0E0E0"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <Button
+                        android:id="@+id/btn_view_transactions"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/rounded_button_background"
+                        android:fontFamily="@font/inter"
+                        android:text="@string/wallet_view_transactions"
+                        android:textAllCaps="false"
+                        android:textColor="@color/onboarding_gray"
+                        android:textSize="14sp" />
+
+                    <Button
+                        android:id="@+id/btn_view_attestations"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/rounded_button_background"
+                        android:fontFamily="@font/inter"
+                        android:text="@string/wallet_view_attestations"
+                        android:textAllCaps="false"
+                        android:textColor="@color/onboarding_gray"
+                        android:textSize="14sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -248,11 +302,10 @@
                             android:id="@+id/btn_info_sponsorship"
                             android:layout_width="48dp"
                             android:layout_height="48dp"
-                            android:background="@drawable/info_icon_background"
+                            android:background="?attr/selectableItemBackgroundBorderless"
                             android:contentDescription="@string/info_sponsorship_title"
-                            android:padding="10dp"
-                            android:src="@android:drawable/ic_dialog_info"
-                            app:tint="@color/colorPrimary" />
+                            android:scaleType="center"
+                            android:src="@drawable/ic_info" />
                     </LinearLayout>
 
                     <LinearLayout
@@ -311,49 +364,6 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Explorer Links Card (visible when connected) -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/card_explorer_links"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:visibility="gone"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp"
-                app:strokeColor="#E0E0E0"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <Button
-                        android:id="@+id/btn_view_transactions"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:background="@drawable/rounded_button_background"
-                        android:fontFamily="@font/inter"
-                        android:text="@string/wallet_view_transactions"
-                        android:textAllCaps="false"
-                        android:textColor="@color/onboarding_gray"
-                        android:textSize="14sp" />
-
-                    <Button
-                        android:id="@+id/btn_view_attestations"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:background="@drawable/rounded_button_background"
-                        android:fontFamily="@font/inter"
-                        android:text="@string/wallet_view_attestations"
-                        android:textAllCaps="false"
-                        android:textColor="@color/onboarding_gray"
-                        android:textSize="14sp" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
             <!-- Privy Info Card -->
             <LinearLayout
                 android:layout_width="match_parent"
@@ -376,9 +386,8 @@
                     android:layout_marginStart="4dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="@string/info_privy_title"
-                    android:padding="12dp"
-                    android:src="@android:drawable/ic_dialog_info"
-                    app:tint="#999999" />
+                    android:scaleType="center"
+                    android:src="@drawable/ic_info" />
             </LinearLayout>
         </LinearLayout>
     </ScrollView>

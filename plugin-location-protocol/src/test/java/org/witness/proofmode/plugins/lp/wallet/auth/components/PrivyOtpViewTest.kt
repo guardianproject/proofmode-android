@@ -5,23 +5,11 @@ import org.junit.Test
 
 class PrivyOtpViewTest {
 
-    @Test
-    fun `phoneNumberToE164 normalizes 10 digit us number`() {
-        assertEquals("+15551234567", PrivyOtpView.phoneNumberToE164("(555) 123-4567"))
-    }
-
-    @Test
-    fun `phoneNumberToE164 preserves country code for 11 digits`() {
-        assertEquals("+14155552671", PrivyOtpView.phoneNumberToE164("1 (415) 555-2671"))
-    }
-
-    @Test(expected = IllegalArgumentException::class)
-    fun `phoneNumberToE164 rejects short numbers`() {
-        PrivyOtpView.phoneNumberToE164("555123")
-    }
-
-    @Test(expected = IllegalArgumentException::class)
-    fun `phoneNumberToE164 rejects numbers longer than 15 digits`() {
-        PrivyOtpView.phoneNumberToE164("1234567890123456")
-    }
+    @Test fun `tenDigits_prefixesPlusOne`() = assertEquals("+15551234567", PrivyOtpView.phoneNumberToE164("(555) 123-4567"))
+    @Test fun `plusOnePrefix_isAccepted`() = assertEquals("+14155552671", PrivyOtpView.phoneNumberToE164("+1 (415) 555-2671"))
+    @Test fun `elevenDigitsLeadingOne_isAccepted`() = assertEquals("+14155552671", PrivyOtpView.phoneNumberToE164("1 (415) 555-2671"))
+    @Test(expected = IllegalArgumentException::class) fun `sixDigits_throws`() { PrivyOtpView.phoneNumberToE164("555123") }
+    @Test(expected = IllegalArgumentException::class) fun `otherCountryCode_throws`() { PrivyOtpView.phoneNumberToE164("+44 7700 900123") }
+    @Test(expected = IllegalArgumentException::class) fun `elevenDigitsNotLeadingOne_throws`() { PrivyOtpView.phoneNumberToE164("44155552671") }
+    @Test(expected = IllegalArgumentException::class) fun `fifteenDigits_throws`() { PrivyOtpView.phoneNumberToE164("123456789012345") }
 }

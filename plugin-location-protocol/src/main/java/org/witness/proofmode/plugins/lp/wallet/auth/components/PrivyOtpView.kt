@@ -3,6 +3,7 @@ package org.witness.proofmode.plugins.lp.wallet.auth.components
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.text.TextWatcher
 
 import android.util.AttributeSet
 import android.view.LayoutInflater
@@ -14,6 +15,7 @@ import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -34,7 +36,7 @@ class PrivyOtpView(context: Context, attrs: AttributeSet? = null) : FrameLayout(
     var code: String
         get() = segmentedOtpView.getCode()
         set(value) {
-            segmentedOtpView.clear()
+            segmentedOtpView.setCode(value)
         }
 
     var codeSent: Boolean = false
@@ -55,8 +57,27 @@ class PrivyOtpView(context: Context, attrs: AttributeSet? = null) : FrameLayout(
             codeLabelTextView.text = value
         }
 
+    var identifierInputType: Int
+        get() = identifierEditText.inputType
+        set(value) {
+            identifierEditText.inputType = value
+        }
+
+    var identifierHint: String?
+        get() = identifierEditText.hint?.toString()
+        set(value) {
+            identifierEditText.hint = value
+        }
+
+    /** Returns an error message to block sending, or null when the identifier is acceptable. */
+    var identifierValidator: ((String) -> String?)? = null
+
+    fun addIdentifierTextWatcher(watcher: TextWatcher) {
+        identifierEditText.addTextChangedListener(watcher)
+    }
+
     var onSendCode: (suspend (identifier: String) -> Boolean)? = null
-    var onVerifyCode: (suspend (code: String, identifier: String) -> Boolean)? = null
+    var onVerifyCode: (suspend (code: String, identifier: String) -> VerifyOutcome)? = null
     var onComplete: ((error: String?) -> Unit)? = null
 
     private var viewScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -185,6 +206,16 @@ class PrivyOtpView(context: Context, attrs: AttributeSet? = null) : FrameLayout(
             return
         }
 
+        identifierValidator?.invoke(currentIdentifier)?.let { message ->
+            if (codeSent) {
+                showStep2Error(message)
+            } else {
+                showStep1Error(message)
+            }
+            onComplete?.invoke(message)
+            return
+        }
+
         val sendCodeCallback = onSendCode
         if (sendCodeCallback == null) {
             val message = "Send code action is unavailable"
@@ -214,6 +245,8 @@ class PrivyOtpView(context: Context, attrs: AttributeSet? = null) : FrameLayout(
                 } else {
                     showSendCodeError(cause = null, onStep2 = loadingOnStep2)
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (t: Throwable) {
                 showSendCodeError(cause = t, onStep2 = loadingOnStep2)
             } finally {
@@ -228,7 +261,7 @@ class PrivyOtpView(context: Context, attrs: AttributeSet? = null) : FrameLayout(
         }
 
         val currentCode = code.trim()
-        if (currentCode.length != 6) {
+        if (currentCode.length != OtpDigits.LENGTH) {
             showStep2Error("Enter the 6-digit verification code")
             onComplete?.invoke("Enter the 6-digit verification code")
             return
@@ -247,16 +280,18 @@ class PrivyOtpView(context: Context, attrs: AttributeSet? = null) : FrameLayout(
         val currentIdentifier = identifier.trim()
         verifyingCodeJob = viewScope.launch {
             try {
-                val verified = verifyCodeCallback.invoke(currentCode, currentIdentifier)
-                if (verified) {
-                    onComplete?.invoke(null)
-                } else {
-                    val message = "Invalid verification code"
-                    showStep2Error(message)
-                    onComplete?.invoke(message)
+                when (val outcome = verifyCodeCallback.invoke(currentCode, currentIdentifier)) {
+                    VerifyOutcome.Verified,
+                    VerifyOutcome.SignedInWithoutWallet -> onComplete?.invoke(null)
+                    is VerifyOutcome.Failed -> {
+                        showStep2Error(outcome.message)
+                        onComplete?.invoke(outcome.message)
+                    }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (t: Throwable) {
-                val message = t.message ?: "Something went wrong while verifying code"
+                val message = context.getString(R.string.auth_otp_verify_failed)
                 showStep2Error(message)
                 onComplete?.invoke(message)
             } finally {
@@ -289,6 +324,7 @@ class PrivyOtpView(context: Context, attrs: AttributeSet? = null) : FrameLayout(
             cause = cause,
             fallback = context.getString(R.string.auth_otp_unable_to_send_code),
             tooManyRequests = context.getString(R.string.auth_otp_too_many_requests),
+            network = context.getString(R.string.auth_otp_network_unavailable),
         )
         if (onStep2) {
             showStep2Error(message)
@@ -351,18 +387,7 @@ class PrivyOtpView(context: Context, attrs: AttributeSet? = null) : FrameLayout(
     companion object {
         private const val ERROR_AUTO_DISMISS_MS = 3_000L
 
-        fun phoneNumberToE164(phone: String): String {
-            val digitsOnly = phone.replace(Regex("[^\\d]"), "")
-            if (digitsOnly.length < 10 || digitsOnly.length > 15) {
-                throw IllegalArgumentException("Invalid phone number")
-            }
-
-            return if (digitsOnly.length == 10) {
-                "+1$digitsOnly"
-            } else {
-                "+$digitsOnly"
-            }
-        }
+        fun phoneNumberToE164(phone: String): String = PhoneEntry.e164(phone) ?: throw IllegalArgumentException("Invalid phone number")
     }
 
     private fun CoroutineScope.isActive(): Boolean {

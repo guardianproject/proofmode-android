@@ -26,6 +26,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -44,9 +45,12 @@ import org.witness.proofmode.plugins.wallet.infra.BuildConfig
 import org.witness.proofmode.plugins.wallet.infra.config.WalletChainPolicy
 import org.witness.proofmode.plugins.wallet.infra.config.ZeroDevConfigResolver
 import org.witness.proofmode.plugins.wallet.infra.model.WalletAuthenticating
+import org.witness.proofmode.plugins.wallet.infra.model.WalletAwaitingNetwork
 import org.witness.proofmode.plugins.wallet.infra.model.WalletConnected
 import org.witness.proofmode.plugins.wallet.infra.api.WalletCapabilityProvider
 import org.witness.proofmode.plugins.wallet.infra.model.WalletConnecting
+import org.witness.proofmode.plugins.wallet.infra.model.WalletCreatingWallet
+import org.witness.proofmode.plugins.wallet.infra.model.WalletUnavailable
 import org.witness.proofmode.plugins.wallet.infra.api.WalletConnector
 import org.witness.proofmode.plugins.wallet.infra.model.WalletDisconnected
 import timber.log.Timber
@@ -97,9 +101,10 @@ class WalletSettingsActivity : AppCompatActivity() {
         val tvAddress = findViewById<TextView>(R.id.tv_wallet_address)
         val btnConnect = findViewById<Button>(R.id.btn_connect_wallet)
         val btnDisconnect = findViewById<Button>(R.id.btn_disconnect_wallet)
+        val btnRetryWallet = findViewById<Button>(R.id.btn_retry_wallet)
         val btnCopyAddress = findViewById<ImageButton>(R.id.btn_copy_address)
         val btnInfoWeb3 = findViewById<ImageButton>(R.id.btn_info_web3_wallet)
-        val btnInfoEas = findViewById<ImageButton>(R.id.btn_info_eas)
+        val btnInfoNetwork = findViewById<ImageButton>(R.id.btn_info_network)
         val btnInfoPrivy = findViewById<ImageButton>(R.id.btn_info_privy)
         val cardExplorerLinks = findViewById<MaterialCardView>(R.id.card_explorer_links)
         spinnerChain = findViewById(R.id.spinner_chain)
@@ -180,9 +185,10 @@ class WalletSettingsActivity : AppCompatActivity() {
                 activeWalletConnector.stateFlow.collect { state ->
                     when (state) {
                         is WalletConnected -> {
-                            tvAddress.text = abbreviateAddress(state.identity.address)
+                            tvAddress.text = connectedAddressText(state.identity.address)
                             btnConnect.visibility = View.GONE
                             btnDisconnect.visibility = View.VISIBLE
+                            btnRetryWallet.visibility = View.GONE
                             btnCopyAddress.visibility = View.VISIBLE
                             cardExplorerLinks.visibility = View.VISIBLE
                             btnConnect.isEnabled = true
@@ -207,6 +213,7 @@ class WalletSettingsActivity : AppCompatActivity() {
                             tvAddress.setText(R.string.wallet_not_connected)
                             btnConnect.visibility = View.VISIBLE
                             btnDisconnect.visibility = View.GONE
+                            btnRetryWallet.visibility = View.GONE
                             btnCopyAddress.visibility = View.GONE
                             cardExplorerLinks.visibility = View.GONE
                             btnConnect.isEnabled = true
@@ -215,14 +222,45 @@ class WalletSettingsActivity : AppCompatActivity() {
                             tvAddress.setText(R.string.wallet_connecting)
                             btnConnect.visibility = View.VISIBLE
                             btnDisconnect.visibility = View.GONE
+                            btnRetryWallet.visibility = View.GONE
                             btnCopyAddress.visibility = View.GONE
                             cardExplorerLinks.visibility = View.GONE
                             btnConnect.isEnabled = false
+                        }
+                        is WalletCreatingWallet -> {
+                            tvAddress.setText(R.string.wallet_creating)
+                            btnConnect.visibility = View.VISIBLE
+                            btnDisconnect.visibility = View.GONE
+                            btnRetryWallet.visibility = View.GONE
+                            btnCopyAddress.visibility = View.GONE
+                            cardExplorerLinks.visibility = View.GONE
+                            btnConnect.isEnabled = false
+                        }
+                        is WalletUnavailable -> {
+                            tvAddress.setText(R.string.wallet_unavailable)
+                            btnConnect.visibility = View.GONE
+                            btnDisconnect.visibility = View.VISIBLE
+                            btnRetryWallet.visibility = View.VISIBLE
+                            btnCopyAddress.visibility = View.GONE
+                            cardExplorerLinks.visibility = View.GONE
+                            btnConnect.isEnabled = true
+                        }
+                        is WalletAwaitingNetwork -> {
+                            // Saved session not yet verified. The connector asks Privy to verify it
+                            // (onNetworkRestored) when the network returns and on each onStart.
+                            tvAddress.setText(R.string.wallet_awaiting_network)
+                            btnConnect.visibility = View.GONE
+                            btnDisconnect.visibility = View.VISIBLE
+                            btnRetryWallet.visibility = View.GONE
+                            btnCopyAddress.visibility = View.GONE
+                            cardExplorerLinks.visibility = View.GONE
+                            btnConnect.isEnabled = true
                         }
                         is WalletAuthenticating -> {
                             tvAddress.setText(R.string.wallet_authenticating)
                             btnConnect.visibility = View.VISIBLE
                             btnDisconnect.visibility = View.GONE
+                            btnRetryWallet.visibility = View.GONE
                             btnCopyAddress.visibility = View.GONE
                             cardExplorerLinks.visibility = View.GONE
                             btnConnect.isEnabled = false
@@ -238,6 +276,26 @@ class WalletSettingsActivity : AppCompatActivity() {
 
         findViewById<Button>(R.id.btn_show_onboarding_guide).setOnClickListener {
             showOnboardingTour()
+        }
+
+        btnRetryWallet.setOnClickListener {
+            btnRetryWallet.isEnabled = false
+            lifecycleScope.launch {
+                try {
+                    activeWalletConnector.retryWallet()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (t: Throwable) {
+                    Timber.tag(TAG).w(t, "retryWallet failed")
+                    Toast.makeText(
+                        this@WalletSettingsActivity,
+                        t.message ?: getString(R.string.wallet_unavailable),
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                } finally {
+                    btnRetryWallet.isEnabled = true
+                }
+            }
         }
 
         btnDisconnect.setOnClickListener {
@@ -282,10 +340,10 @@ class WalletSettingsActivity : AppCompatActivity() {
                 .show()
         }
 
-        btnInfoEas.setOnClickListener {
+        btnInfoNetwork.setOnClickListener {
             MaterialAlertDialogBuilder(this)
-                .setTitle(R.string.info_eas_title)
-                .setMessage(R.string.info_eas_body)
+                .setTitle(R.string.info_network_title)
+                .setMessage(R.string.info_network_body)
                 .setPositiveButton(R.string.close, null)
                 .show()
         }
@@ -343,7 +401,18 @@ class WalletSettingsActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        activeWalletConnector.bindActivity(this)
+        val connector = activeWalletConnector
+        connector.bindActivity(this)
+        // Manual trigger for a session still awaiting verification; a no-op in any other state.
+        lifecycleScope.launch {
+            try {
+                connector.refreshSession()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (t: Throwable) {
+                Timber.tag(TAG).w(t, "refreshSession failed")
+            }
+        }
     }
 
     override fun onStop() {
@@ -371,6 +440,9 @@ class WalletSettingsActivity : AppCompatActivity() {
         if (address.length <= 12) return address
         return "${address.take(6)}…${address.takeLast(4)}"
     }
+
+    private fun connectedAddressText(address: String): String =
+        getString(R.string.wallet_address_connected, abbreviateAddress(address))
 
     private fun chainConfig(caip2: String?): ChainConfig? =
         caip2?.let { id -> SUPPORTED_CHAINS.firstOrNull { it.caip2Id == id } }
