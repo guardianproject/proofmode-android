@@ -253,6 +253,8 @@ class ShareProofActivity : AppCompatActivity() {
                     generateProof(mediaUri, proofHash, mimeType!!)
                 } catch (fe: FileNotFoundException) {
                     proofHash = null
+                } catch (se: SecurityException) {
+                    proofHash = null
                 }
             }
         }
@@ -930,6 +932,8 @@ class ShareProofActivity : AppCompatActivity() {
                       )
                     } catch (fe: FileNotFoundException) {
                         Timber.d("FileNotFound: %s", mediaUri)
+                    } catch (se: SecurityException) {
+                        Timber.d("no access to media URI: %s", mediaUri)
                     }
                 }
 
@@ -950,6 +954,13 @@ class ShareProofActivity : AppCompatActivity() {
                     proofExists(mediaUri)
                 } catch (e: FileNotFoundException) {
                     Timber.w(e)
+                    null
+                } catch (e: SecurityException) {
+                    // The URI's read grant can be gone by the time we get here (e.g. a
+                    // MediaStore URI shared from another app whose temporary permission
+                    // already expired). Treat it the same as "no proof yet" instead of
+                    // crashing the share screen.
+                    Timber.w(e, "no access to media URI: %s", mediaUri)
                     null
                 }
             }
