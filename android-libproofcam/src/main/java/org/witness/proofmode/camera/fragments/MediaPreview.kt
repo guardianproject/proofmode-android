@@ -49,6 +49,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
+import coil.decode.BitmapFactoryDecoder
+import coil.decode.ExifOrientationPolicy
 import coil.decode.VideoFrameDecoder
 import coil.load
 import coil.request.ImageRequest
@@ -203,6 +205,10 @@ fun ItemPreview(modifier: Modifier = Modifier, media: Media){
                 .data(media.uri).apply {
                     if (media.isVideo) {
                         decoderFactory { result, options, _ -> VideoFrameDecoder(result.source, options) }
+                    } else {
+                        // DNG orientation lives in the TIFF Orientation tag, which Coil's
+                        // default policy ignores for anything but JPEG/WebP/HEIF.
+                        decoderFactory(BitmapFactoryDecoder.Factory(exifOrientationPolicy = ExifOrientationPolicy.RESPECT_ALL))
                     }
                     size(Size.ORIGINAL)
                 }.build()

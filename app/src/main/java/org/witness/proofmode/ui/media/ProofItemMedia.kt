@@ -22,6 +22,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.decode.BitmapFactoryDecoder
+import coil.decode.ExifOrientationPolicy
 import coil.decode.VideoFrameDecoder
 import coil.request.ImageRequest
 import org.witness.proofmode.MediaType
@@ -71,6 +73,12 @@ internal fun BoxScope.ProofItemMedia(
                 .data(item.uri).apply {
                     if (isVideo) {
                         decoderFactory { result, options, _ -> VideoFrameDecoder(result.source, options) }
+                    } else {
+                        // Coil's default policy only honours EXIF orientation for
+                        // JPEG/WebP/HEIF. CameraX doesn't rotate RAW pixels; it records the
+                        // rotation in the DNG's TIFF Orientation tag (DngCreator.setOrientation),
+                        // so without RESPECT_ALL DNG captures render sideways.
+                        decoderFactory(BitmapFactoryDecoder.Factory(exifOrientationPolicy = ExifOrientationPolicy.RESPECT_ALL))
                     }
                 }.build(),
             contentDescription = "Asset view",
