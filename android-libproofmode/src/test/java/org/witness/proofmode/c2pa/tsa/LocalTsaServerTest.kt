@@ -187,6 +187,49 @@ class LocalTsaServerTest {
     }
 
     @Test
+    fun requiredPathIsEnforced() {
+        val req = request()
+        val guarded = LocalTsaServer(TimeStampResponder(keyPair.private, cert), requiredPath = "/s3cret")
+        try {
+            assertTrue(guarded.url.endsWith(":${guarded.port}/s3cret"))
+            val wrong = (URL("http://127.0.0.1:${guarded.port}/").openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"; doOutput = true
+                setRequestProperty("Content-Type", TimeStampResponder.CONTENT_TYPE_QUERY)
+                outputStream.use { it.write(req.encoded) }
+            }
+            assertEquals(404, wrong.responseCode)
+            val right = (URL(guarded.url).openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"; doOutput = true
+                setRequestProperty("Content-Type", TimeStampResponder.CONTENT_TYPE_QUERY)
+                outputStream.use { it.write(req.encoded) }
+            }
+            assertEquals(200, right.responseCode)
+        } finally {
+            guarded.close()
+        }
+    }
+
+    @Test
+    fun handlerFailureIsBadGateway() {
+        val failing = LocalTsaServer({ throw java.io.IOException("upstream down") })
+        try {
+            val conn = (URL(failing.url).openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"; doOutput = true
+                setRequestProperty("Content-Type", TimeStampResponder.CONTENT_TYPE_QUERY)
+                outputStream.use { it.write(request().encoded) }
+            }
+            assertEquals(502, conn.responseCode)
+        } finally {
+            failing.close()
+        }
+    }
+
+    @Test
+    fun proxyNeverSendsKeyOverPlainHttp() {
+        assertEquals(null, TsaProxy.urlFor("http://tsa.example.com/", "key"))
+    }
+
+    @Test
     fun certificateMeetsC2paProfile() {
         // c2pa-rs check_certificate_profile: AKI required even when self-signed,
         // otherwise the manifest is reported as signingCredential.invalid.

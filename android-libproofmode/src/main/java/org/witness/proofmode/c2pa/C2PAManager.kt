@@ -42,6 +42,7 @@ import org.contentauth.c2pa.manifest.CawgTrainingMiningEntry
 import org.contentauth.c2pa.manifest.ClaimGeneratorInfo
 import org.contentauth.c2pa.manifest.ManifestDefinition
 import org.contentauth.c2pa.manifest.ManifestValidator
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.json.JSONObject
 import org.witness.proofmode.LocationCapturePolicy
 import org.witness.proofmode.ProofMode
@@ -54,6 +55,7 @@ import org.witness.proofmode.c2pa.proofsign.UnauthorizedCaptureException
 import org.witness.proofmode.c2pa.selfsign.CAWGIdentityManager
 import org.witness.proofmode.c2pa.selfsign.CertificateSigningService
 import org.witness.proofmode.c2pa.tsa.LocalTsa
+import org.witness.proofmode.c2pa.tsa.TsaProxy
 import org.witness.proofmode.crypto.HashUtils
 import org.witness.proofmode.library.BuildConfig
 import timber.log.Timber
@@ -669,8 +671,8 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         // offered (and only honoured) for remote signing.
         if (mode != SigningMode.REMOTE) {
             LocalTsa.localUrl(context)?.let { return it }
-            Timber.w("C2PA: local TSA unavailable - falling back to %s", BuildConfig.TSA_SERVER)
-            return BuildConfig.TSA_SERVER
+            Timber.w("C2PA: local TSA unavailable - falling back to the default TSA")
+            return withApiKey(BuildConfig.TSA_SERVER)
         }
 
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
@@ -679,7 +681,22 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             BuildConfig.TSA_SERVER
         )?.trim().orEmpty()
         // A loopback URL (e.g. http://127.0.0.1:3161/) is served by the on-device TSA.
-        return LocalTsa.resolve(context, configured.ifEmpty { BuildConfig.TSA_SERVER })
+        return LocalTsa.resolve(context, withApiKey(configured.ifEmpty { BuildConfig.TSA_SERVER }))
+    }
+
+    /**
+     * The built-in TSA requires an X-API-Key header, which c2pa-rs can't send, so it
+     * is reached through a loopback proxy that adds one. Only that exact URL gets the
+     * key: a user-configured TSA is called directly and never sees it.
+     */
+    private fun withApiKey(tsaUrl: String): String {
+        val key = BuildConfig.TSA_API_KEY.trim()
+        if (key.isEmpty() || tsaUrl.toHttpUrlOrNull() != BuildConfig.TSA_SERVER.trim().toHttpUrlOrNull()) {
+            return tsaUrl
+        }
+        return TsaProxy.urlFor(tsaUrl, key) ?: tsaUrl.also {
+            Timber.w("C2PA: TSA key proxy unavailable - calling the TSA without its API key")
+        }
     }
 
     private fun createKeystoreKey(alias: String, useHardware: Boolean) {

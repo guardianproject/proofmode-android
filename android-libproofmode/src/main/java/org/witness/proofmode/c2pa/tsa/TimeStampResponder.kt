@@ -37,7 +37,7 @@ class TimeStampResponder(
     certificate: X509Certificate,
     private val clock: () -> TimeReading = { TimeReading(Date(), TimeSource.DEVICE_CLOCK) },
     private val random: SecureRandom = SecureRandom(),
-) {
+) : TsaHandler {
     companion object {
         /** Content-Type of a request and a reply, RFC 3161 §3.4. */
         const val CONTENT_TYPE_QUERY = "application/timestamp-query"
@@ -68,6 +68,8 @@ class TimeStampResponder(
      * Never throws for a malformed or unsupported request: RFC 3161 §2.4.2 wants a
      * `rejection` status with a failure reason, and that is what the client gets.
      */
+    override fun handle(query: ByteArray): ByteArray = respond(query)
+
     fun respond(requestDer: ByteArray): ByteArray {
         val reading = clock()
         val responseGenerator = TimeStampResponseGenerator(tokenGenerators.getValue(reading.source), TSPAlgorithms.ALLOWED)

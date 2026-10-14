@@ -16,7 +16,12 @@ import java.util.concurrent.Executors
 /**
  * RFC 3161 "Time-Stamp Protocol via HTTP" (§3.4) on the loopback interface: a POST
  * whose body is a DER `TimeStampReq` gets back a DER `TimeStampResp` as
- * `application/timestamp-reply`. Any request path is accepted, matching public TSAs.
+ * `application/timestamp-reply`, produced by [handler]: the on-device
+ * [TimeStampResponder], or a [TsaForwarder] relaying to a remote TSA.
+ *
+ * With [requiredPath] null any request path is accepted, matching public TSAs.
+ * Otherwise only that path is served (404 for anything else); an unguessable path
+ * keeps other apps on the device, which share loopback, from using the server.
  *
  * Deliberately a minimal HTTP/1.1 implementation — one request per connection,
  * `Content-Length` or chunked bodies — because the only client is c2pa-rs signing
@@ -24,11 +29,12 @@ import java.util.concurrent.Executors
  * server library into the app.
  *
  * Bound to 127.0.0.1 only, but note that loopback on Android is shared by every app
- * on the device: anything local can obtain tokens from this TSA while it runs.
+ * on the device: without [requiredPath], anything local can obtain tokens while it runs.
  */
 class LocalTsaServer(
-    private val responder: TimeStampResponder,
+    private val handler: TsaHandler,
     requestedPort: Int = 0,
+    private val requiredPath: String? = null,
 ) {
     companion object {
         private const val MAX_HEADER_BYTES = 8 * 1024
@@ -50,13 +56,14 @@ class LocalTsaServer(
     val port: Int get() = serverSocket.localPort
 
     /** Numeric, matching the bind: "localhost" may resolve to ::1 first, which we don't bind. */
-    val url: String get() = "http://127.0.0.1:$port/"
+    val url: String get() = "http://127.0.0.1:$port${requiredPath ?: "/"}"
 
     val isRunning: Boolean get() = !serverSocket.isClosed
 
     init {
         Thread(::acceptLoop, "LocalTsa-accept").apply { isDaemon = true }.start()
-        Timber.i("LocalTsa: listening on %s", url)
+        // Not the url: when requiredPath is a secret, it must not reach the log.
+        Timber.i("LocalTsa: listening on 127.0.0.1:%d (%s)", port, handler.javaClass.simpleName)
     }
 
     fun close() {
@@ -92,6 +99,7 @@ class LocalTsaServer(
             val requestLine = lines.first().split(' ')
             if (requestLine.size < 3) return writeStatus(output, 400, "Bad Request")
             if (requestLine[0] != "POST") return writeStatus(output, 405, "Method Not Allowed", "Allow: POST\r\n")
+            if (requiredPath != null && requestLine[1] != requiredPath) return writeStatus(output, 404, "Not Found")
 
             val headers = lines.drop(1)
                 .mapNotNull { line ->
@@ -110,7 +118,12 @@ class LocalTsaServer(
                 else -> headers["content-length"]?.toIntOrNull()?.let { readFixed(input, it) }
             } ?: return writeStatus(output, 400, "Bad Request")
 
-            val reply = responder.respond(body)
+            val reply = try {
+                handler.handle(body)
+            } catch (e: IOException) {
+                Timber.w(e, "LocalTsa: no reply from %s", handler.javaClass.simpleName)
+                return writeStatus(output, 502, "Bad Gateway")
+            }
             output.write(
                 ("HTTP/1.1 200 OK\r\n" +
                     "Content-Type: ${TimeStampResponder.CONTENT_TYPE_REPLY}\r\n" +
