@@ -53,6 +53,7 @@ import org.witness.proofmode.c2pa.proofsign.Result
 import org.witness.proofmode.c2pa.proofsign.UnauthorizedCaptureException
 import org.witness.proofmode.c2pa.selfsign.CAWGIdentityManager
 import org.witness.proofmode.c2pa.selfsign.CertificateSigningService
+import org.witness.proofmode.c2pa.tsa.LocalTsa
 import org.witness.proofmode.crypto.HashUtils
 import org.witness.proofmode.library.BuildConfig
 import timber.log.Timber
@@ -665,7 +666,8 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             ProofMode.PREF_OPTION_TSA_SERVER,
             BuildConfig.TSA_SERVER
         )?.trim().orEmpty()
-        return configured.ifEmpty { BuildConfig.TSA_SERVER }
+        // A loopback URL (e.g. http://127.0.0.1:3161/) is served by the on-device TSA.
+        return LocalTsa.resolve(context, configured.ifEmpty { BuildConfig.TSA_SERVER })
     }
 
     private fun createKeystoreKey(alias: String, useHardware: Boolean) {
