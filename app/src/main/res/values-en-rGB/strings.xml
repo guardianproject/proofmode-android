@@ -53,4 +53,15 @@
     <string name="video_settings">Video Settings</string>
     <string name="resolution">Resolution</string>
     <string name="action_generate_short">Generate</string>
+    <string name="notary_enable_title">Enable notarisation</string>
+    <string name="notary_enable_summary_off">Notarisation is turned off</string>
+    <string name="notary_nostr_summary">Publish a signed notarisation of your media hash to the Nostr network</string>
+    <string name="nostr_identity_summary">Manage the signing key used for Nostr notarisations</string>
+    <string name="nostr_identity_generate_confirm">This replaces your current Nostr identity. Past notarisations stay valid, but new ones will be signed by the new key. Continue?</string>
+    <string name="notarize_only">Share Notarisation</string>
+    <string name="independent_notary">Independent notarisation by Enigio TimeBeat at:</string>
+    <string name="settings_signing_cawg_rights">Copyright or Licence</string>
+    <string name="nostr_notarization">Nostr Notarisation</string>
+    <string name="lp_onchain_attest">Notarise On-Chain</string>
+    <string name="ultra_hdr_description">Shows more vibrant colours: %1$s</string>
 </resources>
