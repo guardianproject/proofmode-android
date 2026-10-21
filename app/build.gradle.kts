@@ -57,7 +57,7 @@ android {
 
     defaultConfig {
         applicationId = "org.witness.proofmode"
-        minSdk = 28
+        minSdk = 30
         targetSdk = 36
         versionCode = 35120200
         versionName = "3.5.1-BETA-2"

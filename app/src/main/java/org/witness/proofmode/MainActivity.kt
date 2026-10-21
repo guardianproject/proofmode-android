@@ -10,7 +10,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.provider.OpenableColumns
 import android.view.Menu
@@ -30,7 +29,6 @@ import org.witness.proofmode.filebase.FilebaseOnDemandUiEvents
 import org.witness.proofmode.share.FilebaseSettingsActivity
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.toMutableStateList
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
@@ -58,14 +56,16 @@ import org.witness.proofmode.ui.ActivityType
 import org.witness.proofmode.ui.DataLegendActivity
 import org.witness.proofmode.ui.DigitalSignaturesActivity
 import org.witness.proofmode.ui.ProofableItem
-import timber.log.Timber
 import java.io.File
-import java.io.IOException
 import java.util.Date
 import java.util.UUID
 import androidx.core.content.edit
 import androidx.core.net.toUri
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.octetproof.sdk.api.Octet
+import com.octetproof.sdk.api.OctetConfig
+import com.octetproof.sdk.api.OctetSdk
+import org.witness.proofmode.org.witness.proofmode.octet.OctetNotarizationProvider
 
 class MainActivity : AppCompatActivity(),
     ActivitiesViewDelegate {
@@ -74,6 +74,8 @@ class MainActivity : AppCompatActivity(),
     private lateinit var drawerToggle: ActionBarDrawerToggle
     private lateinit var mainBinding: ActivityMainBinding
     private lateinit var fabPhoto: FloatingActionButton
+
+    private var sdkOctet: OctetSdk? = null
 
     private val ACTION_OPEN_CAMERA = "org.witness.proofmode.OPEN_CAMERA"
 
@@ -113,9 +115,37 @@ class MainActivity : AppCompatActivity(),
 
         }
 
-
+        initOctet()
     }
 
+    private fun initOctet () {
+
+        lifecycleScope.launch {
+
+            var config : OctetConfig? = null;
+
+            if (BuildConfig.DEBUG) {
+                config = OctetConfig(licenseKey = "", sandboxBypassToken = "octet_sbx_v4.public.eyJhcHBfaWQiOiI3YWExN2Y4YS1jNTY0LTQ5NjUtYTcyMi05M2RkZDQ2NjdlMDEiLCJieXBhc3Nfa2luZCI6ImRldmVsb3BlciIsImVudiI6InNhbmRib3giLCJleHAiOjE3OTMyMDM0MjEsImlhdCI6MTc5MjU5ODYyMSwiaXNzIjoib2N0ZXQtbGljZW5zZSIsImp0aSI6ImViZDYzMWE2ODgyOTQzY2NiNTEzNWUwZTExZjc1YTMwIiwibmJmIjoxNzkyNTk4NjIxLCJ0eXAiOiJvY3RldC5zYW5kYm94IiwidiI6MX3hA1I1gVi9AA8yWTD6bfMGTUEgXoBqoYfyaSffsEeko6f6EEHaFMSEvuR52Q8dUVpSPrMWBX45u9CXjPRW-NgE.eyJraWQiOiJvY3RldC1zYngtMjAyNi0wOS0yNjZjIn0")
+            }
+            else
+            {
+                config = OctetConfig(licenseKey = "")   // required by the type, ignored by start
+            }
+
+            sdkOctet = Octet.start(context = applicationContext, config = config)
+            // sdk is ready
+
+            var nProvider = OctetNotarizationProvider(this@MainActivity, sdkOctet)
+            ProofMode.addNotarizationProvider(applicationContext, nProvider)
+
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+
+        sdkOctet?.close()
+    }
 
     private fun showDialog (title: String, message: String) {
 
@@ -701,6 +731,8 @@ class MainActivity : AppCompatActivity(),
             }
         }
     }
+
+
 }
 
 fun showFilebaseOnDemandDialog(activity: android.app.Activity, event: FilebaseOnDemandUiEvent) {
