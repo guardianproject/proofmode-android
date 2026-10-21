@@ -80,13 +80,6 @@ class MainActivity : AppCompatActivity(),
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            requiredPermissions = arrayOf(
-                Manifest.permission.CAMERA
-            )
-        }
-
-
         mPrefs = PreferenceManager.getDefaultSharedPreferences(this)
 
         val isOn = mPrefs.getBoolean("doProof", false)
@@ -639,8 +632,9 @@ class MainActivity : AppCompatActivity(),
          * The permissions needed for "base" ProofMode to work, without extra options.
          */
         private var requiredPermissions = arrayOf(
-            Manifest.permission.CAMERA
-        )
+            Manifest.permission.CAMERA,
+            Manifest.permission.ACTIVITY_RECOGNITION
+            )
         //
         /**
          * Manifest.permission.ACCESS_FINE_LOCATION

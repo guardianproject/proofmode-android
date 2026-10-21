@@ -403,5 +403,8 @@ dependencies {
     // durindoor for PLAY RELEASE ONLY
     implementation(libs.durindoor)
 
+    // octet sdk
+    implementation("com.octetproof:sdk:3.0.0")
+
 
 }

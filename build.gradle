@@ -45,7 +45,11 @@ allprojects {
         content {
             includeGroup "org.contentauth"
         }
-   }
+   	}
+
+        maven {
+            url = uri("https://raw.githubusercontent.com/octetproof/octet-sdk-android/mvn-repo")
+        }
 
     }
 
