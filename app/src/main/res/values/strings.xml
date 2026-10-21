@@ -236,7 +236,7 @@
         <item quantity="other">%d items have been deleted or are not accessible</item>
     </plurals>
     <string name="date_display_days_since_today">\'Today \'HH:mm</string>
-    <string name="date_display_days_since_yesterday">\'Yesterday \'HH:MM</string>
+    <string name="date_display_days_since_yesterday">\'Yesterday \'HH:mm</string>
     <string name="date_display_days_since_other">d MMM YYYY</string>
     <string name="date_display_single_item">d MMM YYYY</string>
     <plurals name="share_these_n_items">

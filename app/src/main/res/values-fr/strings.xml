@@ -119,7 +119,7 @@
     <string name="pub_key_gen_error">Erreur lors de la génération de la clé d’identité. Veuillez réinstaller l’appli.</string>
     <string name="proof_generated_success">Preuve générée !</string>
     <string name="date_display_days_since_today">\'Aujourd’hui \'HH:mm</string>
-    <string name="date_display_days_since_yesterday">\'Hier \'HH:MM</string>
+    <string name="date_display_days_since_yesterday">\'Hier \'HH:mm</string>
     <string name="date_display_days_since_other">d MMM YYYY</string>
     <string name="date_display_single_item">d MMM YYYY</string>
     <string name="you_shared_your_public_key">Vous avez partagé votre clé publique</string>
@@ -421,4 +421,18 @@
         <item quantity="many">Effacer ces %d éléments</item>
         <item quantity="other">Effacer ces %d éléments</item>
     </plurals>
+    <string name="settings_signing_tsa_local">Autorité d’horodatage sur l’appareil (utilisée pour la signature locale)</string>
+    <string name="proof_pending_message">Cet élément n’a pas encore été signé.</string>
+    <string name="proof_generating_message">Signature de cet élément…</string>
+    <string name="retry_action">Réessayer</string>
+    <string name="retry_in_progress">Nouvelle tentative…</string>
+    <string name="retry_started">Signature lancée.</string>
+    <string name="retry_offline">Impossible de joindre le serveur de signature. Vérifiez votre connexion Internet et réessayez.</string>
+    <string name="retry_failed">La nouvelle tentative a échoué. Veuillez réessayer.</string>
+    <string name="signing_server_unreachable_title">Impossible de joindre le serveur de signature</string>
+    <string name="signing_server_unreachable_message">La signature des Content Credentials (C2PA) est réglée sur « À distance » : les nouvelles photos et vidéos attendront d’être signées jusqu’à ce que le serveur soit joignable. Vérifiez votre connexion Internet ou passez à la signature locale dans les Paramètres.</string>
+    <string name="lp_attestation_in_progress">Attestation en cours…</string>
+    <string name="lp_attest_nothing_to_queue">La preuve n’est pas encore prête pour l’attestation de localisation.</string>
+    <string name="filebase_upload_oversize_batch_message">%d de ces éléments dépassent 25 Mo. Les envoyer sans le fichier média ?</string>
+    <string name="filebase_reconfigure">Reconfigurer</string>
 </resources>
