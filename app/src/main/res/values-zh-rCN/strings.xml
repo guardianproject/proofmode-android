@@ -74,7 +74,7 @@
     <string name="packaging_proof">正在打包证据以便分享…</string>
     <string name="include_mobile_network">包含移动网络信息</string>
     <string name="choose_my_settings">更改设置</string>
-    <string name="got_it">我知道了</string>
+    <string name="got_it">知道了</string>
     <string name="share_proof_action">分享证据</string>
     <string name="action_generate">生成证据</string>
     <string name="proof_error_message_final">无法生成此文件的证据。</string>
