@@ -419,4 +419,9 @@
     <string name="note_dialog_explanation">备注会以说明文字的形式附加到所拍摄媒体的内容凭据中</string>
     <string name="cawg_creator_notes_title">创作者备注</string>
     <string name="cawg_creator_notes_dialog">创作者备注：要包含在创作者元数据中的其他信息</string>
+    <string name="notary_ots_title">OpenTimestamps</string>
+    <string name="notary_nostr_title">Nostr</string>
+    <string name="settings_signing_cawg_edit_key_hint">-----BEGIN PRIVATE KEY-----</string>
+    <string name="settings_signing_cawg_edit_cert_hint">-----BEGIN CERTIFICATE-----</string>
+    <string name="ultra_hdr">Ultra HDR</string>
 </resources>
