@@ -123,4 +123,5 @@
     <string name="note_dialog_explanation">Notes are attached to content credentials for captured media as captions</string>
     <string name="cawg_creator_notes_title">Creator Notes</string>
     <string name="cawg_creator_notes_dialog">Creator Notes: Other information to include in the creator metadata</string>
+    <string name="settings_version_format">Version %1$s</string>
 </resources>
