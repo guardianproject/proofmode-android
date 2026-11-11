@@ -183,7 +183,7 @@ class CompositeStorageProvider(
 
     /**
      * Attempt upload of proof-set artifacts. Delayed until required cores (and injected media
-     * when INCLUDE_MEDIA) are present. PrefGated `.ots` / `.nostr` can trigger later uploads.
+     * when INCLUDE_MEDIA) are present. PrefGated `.ots` / `.nostr` / `.oct` can trigger later uploads.
      *
      * @return `true` iff [ProofSetUploader.enqueueProofSetUpload] returned `true`.
      *         `false` on every early exit: `!deferProofSetUpload`, missing config/ctx/Filebase

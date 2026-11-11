@@ -9,8 +9,8 @@ import androidx.preference.PreferenceFragmentCompat
 import org.witness.proofmode.databinding.ActivityNotarySettingsBinding
 
 /**
- * Configures media notarization: a master enable plus per-provider toggles (OpenTimestamps and
- * Nostr), and a link to the Nostr identity screen. Reached by tapping "Notary" in
+ * Configures media notarization: a master enable plus per-provider toggles (OpenTimestamps,
+ * Nostr and OctetProof), and a link to the Nostr identity screen. Reached by tapping "Notary" in
  * [SettingsActivity]. Mirrors [SigningSettingsActivity]'s toolbar + PreferenceFragment pattern.
  */
 class NotarySettingsActivity : AppCompatActivity() {
@@ -54,6 +54,11 @@ class NotarySettingsActivity : AppCompatActivity() {
             findPreference<Preference>("nostrIdentity")?.setOnPreferenceClickListener {
                 startActivity(Intent(requireContext(), NostrIdentityActivity::class.java))
                 true
+            }
+
+            // Octet only registers when a license key is built in; hide the toggle otherwise.
+            if (BuildConfig.OCTET_LICENSE_KEY.isEmpty()) {
+                findPreference<Preference>(ProofMode.PREF_OPTION_NOTARY_OCTET)?.isVisible = false
             }
         }
     }

@@ -16,6 +16,7 @@ object ProofSetCidMembershipPolicy {
     private const val LP_LEGACY = ".lp.json"
     private const val OTS_SUFFIX = ".ots"
     private const val NOSTR_SUFFIX = ".nostr"
+    private const val OCTET_SUFFIX = ".oct"
 
     fun isExcludedFromManifest(artifactBasename: String): Boolean {
         if (artifactBasename.endsWith(IpfsCidSidecar.SIDECAR_SUFFIX)) return true
@@ -36,6 +37,9 @@ object ProofSetCidMembershipPolicy {
         if (artifactBasename == proofSetHash + NOSTR_SUFFIX) {
             return prefs.getBoolean(ProofMode.PREF_OPTION_NOTARY_NOSTR, ProofMode.PREF_OPTION_NOTARY_NOSTR_DEFAULT)
         }
+        if (artifactBasename == proofSetHash + OCTET_SUFFIX) {
+            return prefs.getBoolean(ProofMode.PREF_OPTION_NOTARY_OCTET, ProofMode.PREF_OPTION_NOTARY_OCTET_DEFAULT)
+        }
         return false
     }
 
@@ -47,6 +51,9 @@ object ProofSetCidMembershipPolicy {
         }
         if (artifactBasename.endsWith(NOSTR_SUFFIX)) {
             return prefs.getBoolean(ProofMode.PREF_OPTION_NOTARY_NOSTR, ProofMode.PREF_OPTION_NOTARY_NOSTR_DEFAULT)
+        }
+        if (artifactBasename.endsWith(OCTET_SUFFIX)) {
+            return prefs.getBoolean(ProofMode.PREF_OPTION_NOTARY_OCTET, ProofMode.PREF_OPTION_NOTARY_OCTET_DEFAULT)
         }
         return false
     }

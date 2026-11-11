@@ -26,13 +26,20 @@
             app:title="@string/notary_nostr_title"
             app:summary="@string/notary_nostr_summary"
             app:dependency="autoNotarize"
-            app:defaultValue="true" />
+            app:defaultValue="false" />
 
         <Preference
             app:key="nostrIdentity"
             app:title="@string/nostr_identity_title"
             app:summary="@string/nostr_identity_summary"
             app:dependency="autoNotarizeNostr" />
+
+        <SwitchPreferenceCompat
+            app:key="autoNotarizeOctet"
+            app:title="@string/notary_octet_title"
+            app:summary="@string/notary_octet_summary"
+            app:dependency="autoNotarize"
+            app:defaultValue="false" />
 
     </PreferenceCategory>
 

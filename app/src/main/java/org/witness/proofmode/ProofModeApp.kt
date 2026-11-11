@@ -251,6 +251,8 @@ class ProofModeApp : Application(), Configuration.Provider {
         // storage init. Schema behavior covered by FilebaseConfigTest; call order by review.
         FilebaseConfig.ensurePrefsSchema(mPrefs)
 
+        pinNostrNotaryDefault()
+
         // Reconcile the keystore-wrapped passphrase with the on-disk keyring
         // *before* anything else can touch PassphraseKeystore. If init(this)
         // runs first it ends up calling MediaWatcher.getInstance() (when
@@ -628,6 +630,24 @@ class ProofModeApp : Application(), Configuration.Provider {
         ExperimentalFeatureActivator.bootstrapAtColdStart(this)
     }
 
+    /**
+     * Nostr notarization is off by default for new installs. Existing installs that never
+     * touched the toggle have no stored value and were relying on the old default (on), so
+     * write that value once, on the first launch after an upgrade, to keep their behaviour.
+     */
+    private fun pinNostrNotaryDefault() {
+        if (mPrefs.contains(ProofMode.PREF_OPTION_NOTARY_NOSTR)) return
+        val isUpgrade = try {
+            val info = packageManager.getPackageInfo(packageName, 0)
+            info.firstInstallTime != info.lastUpdateTime
+        } catch (e: Exception) {
+            false
+        }
+        mPrefs.edit()
+            .putBoolean(ProofMode.PREF_OPTION_NOTARY_NOSTR, isUpgrade || ProofMode.PREF_OPTION_NOTARY_NOSTR_DEFAULT)
+            .apply()
+    }
+
     private fun addDefaultNotarizationProviders() {
 
         try {
@@ -674,7 +694,7 @@ class ProofModeApp : Application(), Configuration.Provider {
                         sdkOctet = sdk
                         ProofMode.addNotarizationProvider(
                             applicationContext,
-                            OctetNotarizationProvider(sdk)
+                            OctetNotarizationProvider(applicationContext, sdk)
                         )
                         Timber.d("Octet notarization provider registered")
                     } catch (e: Exception) {

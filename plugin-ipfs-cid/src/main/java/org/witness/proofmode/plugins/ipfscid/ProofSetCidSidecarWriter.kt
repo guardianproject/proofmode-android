@@ -184,7 +184,7 @@ object ProofSetCidSidecarWriter {
             if (!name.startsWith("$proofSetHash.")) continue
             if (ProofSetCidMembershipPolicy.isExcludedFromManifest(name)) continue
             if (ProofSetCidMembershipPolicy.isCoreArtifactForTest(proofSetHash, name)) continue
-            if (name.endsWith(".ots") || name.endsWith(".nostr")) continue
+            if (name.endsWith(".ots") || name.endsWith(".nostr") || name.endsWith(".oct")) continue
             return when {
                 name.endsWith(".jpg") -> "image/jpeg"
                 name.endsWith(".png") -> "image/png"

@@ -23,6 +23,8 @@
     <string name="notary_ots_summary">Anchor a timestamp of your media hash to the Bitcoin blockchain</string>
     <string name="notary_nostr_title">Nostr</string>
     <string name="notary_nostr_summary">Publish a signed notarization of your media hash to the Nostr network</string>
+    <string name="notary_octet_title">OctetProof</string>
+    <string name="notary_octet_summary">Use the OctetProof service to verify and notarize claims made about location</string>
 
     <!-- Location settings screen -->
     <string name="location_settings_title">Location</string>
