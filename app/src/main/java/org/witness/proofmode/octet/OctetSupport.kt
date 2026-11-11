@@ -10,6 +10,7 @@ object OctetSupport {
      * (the license key is then empty).
      */
     val isConfigured: Boolean
-        get() = BuildConfig.OCTET_LICENSE_KEY.isNotEmpty() ||
-            (BuildConfig.DEBUG && BuildConfig.OCTET_SANDBOX_BYPASS_TOKEN.isNotEmpty())
+        get() = true
+      //  get() = BuildConfig.OCTET_LICENSE_KEY.isNotEmpty() ||
+        //    (BuildConfig.DEBUG && BuildConfig.OCTET_SANDBOX_BYPASS_TOKEN.isNotEmpty())
 }

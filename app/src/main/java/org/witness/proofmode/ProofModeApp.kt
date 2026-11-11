@@ -675,15 +675,8 @@ class ProofModeApp : Application(), Configuration.Provider {
         try {
             if (org.witness.proofmode.org.witness.proofmode.octet.OctetSupport.isConfigured) {
 
-                // Values come from secrets.properties via BuildConfig (see app/build.gradle.kts).
-                val config = if (org.witness.proofmode.BuildConfig.DEBUG) {
-                    OctetConfig(
-                        licenseKey = org.witness.proofmode.BuildConfig.OCTET_LICENSE_KEY,
-                        sandboxBypassToken = org.witness.proofmode.BuildConfig.OCTET_SANDBOX_BYPASS_TOKEN
-                    )
-                } else {
-                    OctetConfig(licenseKey = org.witness.proofmode.BuildConfig.OCTET_LICENSE_KEY)
-                }
+                //no license key required, all handled through app attestation
+                val config = OctetConfig(licenseKey = "")
 
                 // Octet.start is a suspend fun; run it on the app-wide scope (the Application
                 // equivalent of lifecycleScope). Catch here: an uncaught throw in a launch on this
