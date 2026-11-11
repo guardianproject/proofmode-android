@@ -62,6 +62,9 @@ import java.util.UUID
 import androidx.core.content.edit
 import androidx.core.net.toUri
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import android.widget.Toast
+import org.witness.proofmode.importing.ImportMediaValidator
+import org.witness.proofmode.util.MediaImport
 import com.octetproof.sdk.api.Octet
 import com.octetproof.sdk.api.OctetConfig
 import com.octetproof.sdk.api.OctetSdk
@@ -99,6 +102,11 @@ class MainActivity : AppCompatActivity(),
 
         ContextCompat.registerReceiver(this,
             eventReceiver, IntentFilter(INTENT_ACTIVITY_ITEMS_SHARED),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+
+        ContextCompat.registerReceiver(this,
+            importRejectedReceiver, IntentFilter(ProofMode.EVENT_PROOF_IMPORT_REJECTED),
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
 
@@ -296,7 +304,49 @@ class MainActivity : AppCompatActivity(),
         ActivityResultContracts.PickMultipleVisualMedia()
     ) { uris ->
         if (uris.isNotEmpty()) {
-            showShareProof(uris)
+            // Straight into the feed: no share screen, no "generate" tap.
+            MediaImport.importMedia(applicationContext, uris)
+            Toast.makeText(this, getString(R.string.import_started, uris.size), Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Imports MediaWatcher refused. Rejections arrive one per file, so they are collected
+    // into a single dialog that grows while it is open.
+    private val importRejectReasons = linkedSetOf<ImportMediaValidator.Reason>()
+    private var importRejectCount = 0
+    private var importRejectDialog: androidx.appcompat.app.AlertDialog? = null
+
+    private val importRejectedReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val reasons = MediaImport.parseReasons(
+                intent?.getStringArrayExtra(ProofMode.EVENT_PROOF_EXTRA_REJECT_REASONS)
+            )
+            runOnUiThread { showImportRejected(reasons) }
+        }
+    }
+
+    private fun showImportRejected(reasons: List<ImportMediaValidator.Reason>) {
+        if (importRejectDialog?.isShowing != true) {
+            importRejectReasons.clear()
+            importRejectCount = 0
+        }
+        importRejectReasons += reasons
+        importRejectCount++
+        // Count only, not a total: the picker doesn't tell us which other files will be refused.
+        val message = MediaImport.rejectionMessage(this, importRejectReasons, importRejectCount, 1)
+        val title = if (importRejectCount > 1)
+            getString(R.string.import_rejected_title_count, importRejectCount)
+        else getString(R.string.import_rejected_title)
+        val dialog = importRejectDialog
+        if (dialog?.isShowing == true) {
+            dialog.setTitle(title)
+            dialog.setMessage(message)
+        } else {
+            importRejectDialog = MaterialAlertDialogBuilder(this)
+                .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
         }
     }
 
@@ -420,10 +470,10 @@ class MainActivity : AppCompatActivity(),
         }
 
 
-        /**
         if (id == R.id.action_share_photos) {
-            showMediaPicker();
-        }**/
+            showMediaPicker()
+            return true
+        }
 
         if (id == R.id.menu_settings) {
             drawer.closeDrawer(GravityCompat.START)

@@ -260,6 +260,19 @@
     <string name="status_download_content_credentials">Downloading Images with Content Credentials...</string>
     <string name="menu_import_photos">Import Media...</string>
     <string name="menu_import_creds">Import Credentials...</string>
+    <string name="import_rejected_title">Can\'t import this file</string>
+    <string name="import_rejected_intro">ProofMode only imports unedited photos and videos straight from a camera.</string>
+    <string name="import_rejected_multi">%1$d of %2$d files were not imported:</string>
+    <string name="import_rejected_title_count">%1$d files weren\'t imported</string>
+    <string name="import_started">Importing %1$d item(s)… they\'ll appear in your feed shortly.</string>
+    <string name="import_reject_synthetic">It is marked as AI generated or synthetic.</string>
+    <string name="import_reject_invalid_c2pa">Its Content Credentials are broken or have been tampered with.</string>
+    <string name="import_reject_missing_exif">It is missing the camera details a photo normally has.</string>
+    <string name="import_reject_editing_software">It was saved by editing or AI software.</string>
+    <string name="import_reject_missing_video_metadata">It is missing the recording details a camera video normally has.</string>
+    <string name="import_reject_aspect_ratio">Its shape doesn\'t match any camera format.</string>
+    <string name="import_reject_unsupported">This file type can\'t be imported.</string>
+    <string name="import_reject_unreadable">The file couldn\'t be read.</string>
 
     <string name="title_activity">Proof Log</string>
 

@@ -109,12 +109,15 @@ public class ProofMode {
     public final static String EVENT_PROOF_START = "org.witness.proofmode.PROOF_START";
     public final static String EVENT_PROOF_GENERATED = "org.witness.proofmode.PROOF_GENERATED";
     public final static String EVENT_PROOF_GENERATED_IMPORT = "org.witness.proofmode.PROOF_GENERATED_IMPORT";
+    /** An import was refused by ImportMediaValidator; carries EXTRA_URI and EXTRA_REJECT_REASONS. */
+    public final static String EVENT_PROOF_IMPORT_REJECTED = "org.witness.proofmode.PROOF_IMPORT_REJECTED";
 
 
     public final static String EVENT_PROOF_EXISTS = "org.witness.proofmode.PROOF_EXISTS";
 
     public final static String EVENT_PROOF_FAILED = "org.witness.proofmode.PROOF_FAILED";
     public final static String EVENT_PROOF_EXTRA_HASH = "org.witness.proofmode.PROOF_HASH";
+    public final static String EVENT_PROOF_EXTRA_REJECT_REASONS = "org.witness.proofmode.REJECT_REASONS";
     public final static String EVENT_PROOF_EXTRA_URI = "org.witness.proofmode.PROOF_URI";
     public final static BouncyCastleProvider sProvider = new BouncyCastleProvider();
     // The File system to store proof on, it could be any storage system like encrypted storage

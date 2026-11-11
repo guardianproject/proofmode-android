@@ -26,6 +26,8 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
+import org.witness.proofmode.MainActivity
+import org.witness.proofmode.util.MediaImport
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import androidx.core.net.toFile
@@ -968,9 +970,28 @@ class ShareProofActivity : AppCompatActivity() {
             if (proofHash != null) {
                 displaySharePrompt()
             } else {
-                displayGeneratePrompt()
+                importToFeed()
             }
         }
+    }
+
+    /**
+     * Media with no proof yet is an import: hand it to MediaImport (which screens, signs and
+     * adds it to the feed) and go to the feed. Sharing then happens from the feed item, which
+     * points at the signed copy whose hash the proof is keyed to.
+     */
+    private fun importToFeed() {
+        val uris = if (Intent.ACTION_SEND_MULTIPLE == intent.action) {
+            intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM).orEmpty().map { cleanUri(it) }
+        } else {
+            listOfNotNull((intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM) ?: intent.data)?.let { cleanUri(it) })
+        }
+        MediaImport.importMedia(applicationContext, uris)
+        if (uris.isNotEmpty()) {
+            Toast.makeText(this, getString(R.string.import_started, uris.size), Toast.LENGTH_SHORT).show()
+        }
+        startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        finish()
     }
 
     private fun shareSocialAsync(hangWatchdog: Job) {
