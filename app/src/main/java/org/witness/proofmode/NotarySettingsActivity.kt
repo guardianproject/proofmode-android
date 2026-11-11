@@ -1,9 +1,14 @@
 package org.witness.proofmode
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.view.MenuItem
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import org.witness.proofmode.databinding.ActivityNotarySettingsBinding
@@ -48,6 +53,17 @@ class NotarySettingsActivity : AppCompatActivity() {
     }
 
     class NotaryPreferencesFragment : PreferenceFragmentCompat() {
+
+        // Turning Octet on also turns on ProofMode location sharing, since Octet checks the
+        // location recorded in each proof. Location + activity recognition (used by the Octet SDK)
+        // are requested together; the Octet switch stays on even if the user denies them.
+        private var pendingEnableLocation = false
+        private var requestAttempted = false
+
+        private val octetPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions(),
+        ) { grantMap -> handleOctetPermissionResult(grantMap) }
+
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.notary_preferences, rootKey)
 
@@ -56,9 +72,59 @@ class NotarySettingsActivity : AppCompatActivity() {
                 true
             }
 
-            // Octet only registers when a license key is built in; hide the toggle otherwise.
-            if (BuildConfig.OCTET_LICENSE_KEY.isEmpty()) {
+            // Octet only registers when configured in secrets.properties; hide the toggle otherwise.
+            if (!org.witness.proofmode.org.witness.proofmode.octet.OctetSupport.isConfigured) {
                 findPreference<Preference>(ProofMode.PREF_OPTION_NOTARY_OCTET)?.isVisible = false
+            }
+
+            findPreference<Preference>(ProofMode.PREF_OPTION_NOTARY_OCTET)
+                ?.setOnPreferenceChangeListener { _, newValue ->
+                    if (newValue == true) onOctetEnabled()
+                    true
+                }
+        }
+
+        private fun onOctetEnabled() {
+            val ctx = requireContext()
+            val missing = mutableListOf<String>()
+
+            // Turns location sharing on now if permission is already granted.
+            val plan = LocationSharingPermissionSync.beginEnable(ctx)
+            if (plan.needsPermissionRequest) {
+                pendingEnableLocation = true
+                missing += LocationSharingPermissionSync.LOCATION_PERMISSIONS
+            }
+
+            // Runtime permission only from Android 10; granted at install time before that.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+                ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACTIVITY_RECOGNITION) !=
+                PackageManager.PERMISSION_GRANTED
+            ) {
+                missing += Manifest.permission.ACTIVITY_RECOGNITION
+            }
+
+            if (missing.isNotEmpty()) {
+                requestAttempted = true
+                octetPermissionLauncher.launch(missing.toTypedArray())
+            }
+        }
+
+        private fun handleOctetPermissionResult(grantMap: Map<String, Boolean>) {
+            if (!pendingEnableLocation) return // only activity recognition was asked for
+            val result = LocationSharingPermissionSync.onPermissionLauncherResult(
+                activity = requireActivity(),
+                context = requireContext(),
+                pendingEnable = true,
+                requestAttempted = requestAttempted,
+                grantMap = grantMap,
+            )
+            pendingEnableLocation = result.pendingEnable
+            requestAttempted = false
+            // Location was denied permanently: send the user to app info, as the location screen does.
+            if (result.openAppInfo) {
+                startActivity(
+                    LocationSharingPermissionSync.applicationDetailsIntent(requireContext().packageName),
+                )
             }
         }
     }

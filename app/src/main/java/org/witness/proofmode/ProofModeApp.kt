@@ -673,7 +673,7 @@ class ProofModeApp : Application(), Configuration.Provider {
         }
 
         try {
-            if (org.witness.proofmode.BuildConfig.OCTET_LICENSE_KEY.isNotEmpty()) {
+            if (org.witness.proofmode.org.witness.proofmode.octet.OctetSupport.isConfigured) {
 
                 // Values come from secrets.properties via BuildConfig (see app/build.gradle.kts).
                 val config = if (org.witness.proofmode.BuildConfig.DEBUG) {

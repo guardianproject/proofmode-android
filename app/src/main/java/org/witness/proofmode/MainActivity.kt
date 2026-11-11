@@ -631,8 +631,7 @@ class MainActivity : AppCompatActivity(),
          * The permissions needed for "base" ProofMode to work, without extra options.
          */
         private var requiredPermissions = arrayOf(
-            Manifest.permission.CAMERA,
-            Manifest.permission.ACTIVITY_RECOGNITION
+            Manifest.permission.CAMERA
             )
         //
         /**
