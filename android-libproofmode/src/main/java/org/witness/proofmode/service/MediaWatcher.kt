@@ -79,7 +79,8 @@ class MediaWatcher : BroadcastReceiver(), ProofModeV1Constants {
     private val mExec: ExecutorService = Executors.newFixedThreadPool(1)
     private var mContext: Context? = null
     private var mPassphrase: String? = null
-    private val mProviders = ArrayList<NotarizationProvider>()
+    // Copy-on-write: providers can be registered asynchronously (e.g. Octet) while workers iterate.
+    private val mProviders = java.util.concurrent.CopyOnWriteArrayList<NotarizationProvider>()
 
     var storageProvider: StorageProvider? = null
     private var mC2paManager: C2PAManager? = null

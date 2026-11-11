@@ -31,6 +31,18 @@ val flutterReleaseAbis = mapOf(
     "x86_64" to "android-x64",
 )
 
+// Build-time secrets, later files win: secrets.defaults.properties (committed)
+// → secrets.properties (gitignored) → local.properties.
+val appSecrets = Properties().apply {
+    listOf("secrets.defaults.properties", "secrets.properties", "local.properties")
+        .map { rootProject.file(it) }
+        .filter { it.canRead() }
+        .forEach { f -> FileInputStream(f).use { load(it) } }
+}
+
+fun appSecretBuildConfigString(name: String): String =
+    "\"${appSecrets.getProperty(name).orEmpty().trim().replace("\\", "\\\\").replace("\"", "\\\"")}\""
+
 android {
     compileSdk = 36
     namespace = "org.witness.proofmode"
@@ -63,6 +75,9 @@ android {
         versionName = "3.5.1-BETA-2"
         multiDexEnabled = true
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "OCTET_LICENSE_KEY", appSecretBuildConfigString("OCTET_LICENSE_KEY"))
+        buildConfigField("String", "OCTET_SANDBOX_BYPASS_TOKEN", appSecretBuildConfigString("OCTET_SANDBOX_BYPASS_TOKEN"))
     }
 
     signingConfigs {

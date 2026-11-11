@@ -41,6 +41,9 @@ import org.witness.proofmode.notaries.NostrNotarizationProvider
 import org.witness.proofmode.notaries.OpenTimestampsNotarizationProvider
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import com.octetproof.sdk.api.Octet
+import com.octetproof.sdk.api.OctetConfig
+import com.octetproof.sdk.api.OctetSdk
 import org.witness.proofmode.notarization.NotarizationProvider
 import org.witness.proofmode.lp.AutoCaptureLocationAttestationOrchestrator
 import org.witness.proofmode.lp.AutoCaptureSkipReason
@@ -53,9 +56,13 @@ import java.io.IOException
 import java.util.concurrent.Executors
 import kotlin.system.exitProcess
 import info.guardianproject.durindoor.Native
+import org.witness.proofmode.org.witness.proofmode.octet.OctetNotarizationProvider
 
 private var mPgpUtils: PgpUtils? = null
 private lateinit var mPrefs: SharedPreferences
+
+
+private var sdkOctet: OctetSdk? = null
 
 internal fun registerExperimentalPluginsIfEnabled(
     lpEnabled: Boolean,
@@ -628,8 +635,10 @@ class ProofModeApp : Application(), Configuration.Provider {
             Class.forName("com.eternitywall.ots.OpenTimestamps")
             val nProvider: NotarizationProvider = OpenTimestampsNotarizationProvider(this)
             ProofMode.addNotarizationProvider(this, nProvider)
-        } catch (e: ClassNotFoundException) {
+        } catch (e: Exception) {
             //class not available
+            Timber.d("Opentimestamps not available")
+
         }
 
         try {
@@ -637,10 +646,45 @@ class ProofModeApp : Application(), Configuration.Provider {
             Class.forName("rust.nostr.sdk.Keys")
             val nProvider: NotarizationProvider = NostrNotarizationProvider(this)
             ProofMode.addNotarizationProvider(this, nProvider)
-            Timber.d("OpenTimestamps notarization provider registered")
-        } catch (e: ClassNotFoundException) {
+            Timber.d("Nostr notarization provider registered")
+        } catch (e: Exception) {
             //class not available
-            Timber.d("OpenTimestamps not available")
+            Timber.d("Nostr not available")
+        }
+
+        try {
+            if (org.witness.proofmode.BuildConfig.OCTET_LICENSE_KEY.isNotEmpty()) {
+
+                // Values come from secrets.properties via BuildConfig (see app/build.gradle.kts).
+                val config = if (org.witness.proofmode.BuildConfig.DEBUG) {
+                    OctetConfig(
+                        licenseKey = org.witness.proofmode.BuildConfig.OCTET_LICENSE_KEY,
+                        sandboxBypassToken = org.witness.proofmode.BuildConfig.OCTET_SANDBOX_BYPASS_TOKEN
+                    )
+                } else {
+                    OctetConfig(licenseKey = org.witness.proofmode.BuildConfig.OCTET_LICENSE_KEY)
+                }
+
+                // Octet.start is a suspend fun; run it on the app-wide scope (the Application
+                // equivalent of lifecycleScope). Catch here: an uncaught throw in a launch on this
+                // SupervisorJob scope would crash the process.
+                applicationScope.launch(Dispatchers.IO) {
+                    try {
+                        val sdk = Octet.start(applicationContext, config = config)
+                        sdkOctet = sdk
+                        ProofMode.addNotarizationProvider(
+                            applicationContext,
+                            OctetNotarizationProvider(sdk)
+                        )
+                        Timber.d("Octet notarization provider registered")
+                    } catch (e: Exception) {
+                        Timber.e(e, "Octet SDK failed to start")
+                    }
+                }
+            }
+        }
+        catch (e: Exception) {
+            Timber.d("Octet not available")
         }
 
     }

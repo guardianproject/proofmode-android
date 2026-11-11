@@ -11,7 +11,7 @@ import timber.log.Timber
 import java.io.InputStream
 import java.time.Instant
 
-class OctetNotarizationProvider (private val activity: Activity, private val sdk: OctetSdk?) : NotarizationProvider {
+class OctetNotarizationProvider (private val sdk: OctetSdk?) : NotarizationProvider {
 
     override fun notarize(
         hash: String?,

@@ -176,4 +176,6 @@ secrets {
     // "sdk.dir" is ignored by default.
     ignoreList.add("keyToIgnore")
     ignoreList.add("sdk.*")
+    // Octet keys are consumed by :app only (see app/build.gradle.kts).
+    ignoreList.add("OCTET_.*")
 }

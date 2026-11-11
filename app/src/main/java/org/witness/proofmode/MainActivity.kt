@@ -75,8 +75,6 @@ class MainActivity : AppCompatActivity(),
     private lateinit var mainBinding: ActivityMainBinding
     private lateinit var fabPhoto: FloatingActionButton
 
-    private var sdkOctet: OctetSdk? = null
-
     private val ACTION_OPEN_CAMERA = "org.witness.proofmode.OPEN_CAMERA"
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -115,37 +113,8 @@ class MainActivity : AppCompatActivity(),
 
         }
 
-        initOctet()
     }
 
-    private fun initOctet () {
-
-        lifecycleScope.launch {
-
-            var config : OctetConfig? = null;
-
-            if (BuildConfig.DEBUG) {
-                config = OctetConfig(licenseKey = "", sandboxBypassToken = "octet_sbx_v4.public.eyJhcHBfaWQiOiI3YWExN2Y4YS1jNTY0LTQ5NjUtYTcyMi05M2RkZDQ2NjdlMDEiLCJieXBhc3Nfa2luZCI6ImRldmVsb3BlciIsImVudiI6InNhbmRib3giLCJleHAiOjE3OTMyMDM0MjEsImlhdCI6MTc5MjU5ODYyMSwiaXNzIjoib2N0ZXQtbGljZW5zZSIsImp0aSI6ImViZDYzMWE2ODgyOTQzY2NiNTEzNWUwZTExZjc1YTMwIiwibmJmIjoxNzkyNTk4NjIxLCJ0eXAiOiJvY3RldC5zYW5kYm94IiwidiI6MX3hA1I1gVi9AA8yWTD6bfMGTUEgXoBqoYfyaSffsEeko6f6EEHaFMSEvuR52Q8dUVpSPrMWBX45u9CXjPRW-NgE.eyJraWQiOiJvY3RldC1zYngtMjAyNi0wOS0yNjZjIn0")
-            }
-            else
-            {
-                config = OctetConfig(licenseKey = "")   // required by the type, ignored by start
-            }
-
-            sdkOctet = Octet.start(context = applicationContext, config = config)
-            // sdk is ready
-
-            var nProvider = OctetNotarizationProvider(this@MainActivity, sdkOctet)
-            ProofMode.addNotarizationProvider(applicationContext, nProvider)
-
-        }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-
-        sdkOctet?.close()
-    }
 
     private fun showDialog (title: String, message: String) {
 
