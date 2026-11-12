@@ -46,14 +46,14 @@ class LocationProtocolAttestationCoordinator(
             val attestationResult = easManager.createOffchainLocationAttestation(payload)
                 .getOrElse { return@withContext Result.failure(it) }
 
-            val savedPath = try {
+            try {
                 artifactStore.saveOffchainAttestation(mediaHash, attestationResult.offchainPayloadJson)
             } catch (e: Exception) {
                 Timber.e(e, "LP coordinator: failed to persist offchain attestation artifact for %s", mediaHash)
                 return@withContext Result.failure(e)
             }
 
-            Result.success(attestationResult.copy(artifactPath = savedPath))
+            Result.success(attestationResult)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -68,6 +68,7 @@ class LocationProtocolAttestationCoordinator(
         context: Context,
         memo: String = "",
         onchainConfirmed: ((String) -> Unit)? = null,
+        onchainFailed: ((String) -> Unit)? = null,
     ): Result<LocationProtocolAttestationResult> = withContext(Dispatchers.IO) {
         try {
             val payload = cidPayloadEnricher.buildPayload(mediaHash, mediaUri, context, memo)
@@ -82,7 +83,7 @@ class LocationProtocolAttestationCoordinator(
 
             val pendingResult = easManager.buildPendingAttestationResult(submitResult)
 
-            val savedPath = withContext(NonCancellable) {
+            withContext(NonCancellable) {
                 try {
                     artifactStore.savePendingOnchainAttestation(
                         mediaHash,
@@ -100,9 +101,10 @@ class LocationProtocolAttestationCoordinator(
                 easManager = easManager,
                 artifactStore = artifactStore,
                 onConfirmed = onchainConfirmed,
+                onFailed = onchainFailed,
             )
 
-            Result.success(pendingResult.copy(artifactPath = savedPath))
+            Result.success(pendingResult)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -111,9 +113,28 @@ class LocationProtocolAttestationCoordinator(
         }
     }
 
-    fun readOffchainAttestation(mediaHash: String): String? =
-        artifactStore.readOffchainAttestation(mediaHash)
-
-    fun readOnchainAttestation(mediaHash: String): String? =
-        artifactStore.readOnchainAttestation(mediaHash)
+    /**
+     * Checks a pending record once instead of trusting it: writes the confirmed record when the
+     * receipt shows the attestation, and deletes the pending record when a fresh submit is safe.
+     */
+    suspend fun recheckPendingOnchain(mediaHash: String): PendingOnchainRecheckOutcome = withContext(Dispatchers.IO) {
+        val pendingJson = artifactStore.readPendingOnchainAttestation(mediaHash)
+            ?: return@withContext PendingOnchainRecheckOutcome.Resubmit
+        when (val recheck = easManager.recheckPendingOnchainAttestation(pendingJson)) {
+            is PendingOnchainRecheckOutcome.Confirmed -> withContext(NonCancellable) {
+                try {
+                    artifactStore.saveOnchainAttestation(mediaHash, recheck.result.offchainPayloadJson)
+                    recheck
+                } catch (e: Exception) {
+                    Timber.e(e, "LP coordinator: failed to persist re-checked onchain artifact for %s", mediaHash)
+                    PendingOnchainRecheckOutcome.StillPending
+                }
+            }
+            PendingOnchainRecheckOutcome.Resubmit -> {
+                artifactStore.deletePendingOnchainAttestation(mediaHash)
+                recheck
+            }
+            PendingOnchainRecheckOutcome.StillPending -> recheck
+        }
+    }
 }

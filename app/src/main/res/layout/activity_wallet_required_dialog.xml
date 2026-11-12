@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:id="@+id/wallet_required_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/wallet_required_dialog_title"
+        android:textAppearance="?attr/textAppearanceHeadline6" />
+
+    <TextView
+        android:id="@+id/wallet_required_message"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/wallet_required_dialog_message"
+        android:textAppearance="?attr/textAppearanceBody2" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:gravity="end"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/wallet_required_turn_off"
+            style="@style/AlertButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/wallet_required_dialog_turn_off" />
+
+        <Button
+            android:id="@+id/wallet_required_connect"
+            style="@style/AlertButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/wallet_required_dialog_connect" />
+    </LinearLayout>
+</LinearLayout>

@@ -255,7 +255,6 @@
     <string name="location_protocol_auto_capture_summary">Ejecutar automáticamente la certificación de ubicación tras una captura en la aplicación</string>
     <string name="location_protocol_auto_capture_summary_location_required">Activa compartir ubicación arriba para elegir un modo de certificación automática</string>
     <string name="location_protocol_auto_capture_summary_lp_required">Activa la certificación de Location Protocol para elegir un modo de certificación automática</string>
-    <string name="location_protocol_auto_capture_summary_wallet_required">Conecta una billetera en Ajustes de billetera para elegir un modo de certificación automática</string>
     <string name="location_wallet_row_summary">Gestionar la billetera que se usa para firmar certificaciones de ubicación</string>
     <string name="location_wallet_summary_location_required">Activa compartir ubicación arriba para configurar una billetera</string>
     <string name="location_wallet_summary_lp_required">Activa la certificación de Location Protocol para configurar una billetera</string>
@@ -331,12 +330,14 @@
     <string name="signing_server_unreachable_message">La firma de credenciales de contenido (C2PA) está configurada como remota, así que las nuevas fotos y vídeos esperarán a firmarse hasta que el servidor esté disponible. Comprueba tu conexión a Internet o cambia a la firma local en Ajustes.</string>
     <string name="nostr_notarization">Notarización Nostr</string>
     <string name="cid_manifest">Manifiesto CID</string>
+    <string name="root_cid_clip_label">CID raíz</string>
     <string name="offchain_location_attestation">Certificación de ubicación fuera de la cadena</string>
     <string name="onchain_location_attestation">Certificación de ubicación en la cadena</string>
     <string name="artifact_tap_to_view">Toca para ver</string>
     <string name="artifact_tap_to_view_manifest">Toca para ver el manifiesto completo</string>
     <string name="lp_attestation_in_progress">Certificación en curso…</string>
     <string name="view_on_eas_scan">Ver en EAS Scan</string>
+    <string name="view_transaction">Ver transacción</string>
     <string name="artifact_loading">Cargando…</string>
     <string name="filebase_ipfs_bearer_token">Token de portador IPFS</string>
     <string name="filebase_auto_upload">Subidas automáticas</string>
@@ -359,6 +360,11 @@
     <string name="filebase_social_not_configured_share">Compartir sin subir</string>
     <string name="filebase_proof_not_ready">La prueba aún no está lista para subirse a Filebase.</string>
     <string name="lp_attest_nothing_to_queue">La prueba aún no está lista para la certificación de ubicación.</string>
+    <string name="lp_toast_offchain_success">Ubicación certificada fuera de la cadena</string>
+    <string name="lp_toast_offchain_failed">La certificación fuera de la cadena no se completó</string>
+    <string name="lp_toast_onchain_success">Ubicación enviada a la cadena</string>
+    <string name="lp_toast_onchain_failed">La certificación en la cadena no se completó</string>
+    <string name="proofset_toast_mixed">%1$d de %2$d completados</string>
     <string name="filebase_upload_success">Subido a Filebase</string>
     <string name="filebase_upload_failed">Error al subir a Filebase</string>
     <string name="filebase_upload_oversize_title">Contenido demasiado grande para subir</string>
@@ -401,7 +407,6 @@
     <string name="lp_auto_capture_mode_both">Ambos (primero fuera de la cadena y luego en la cadena)</string>
     <string name="lp_auto_capture_skip_location_unavailable">Certificación de ubicación automática omitida: no hay datos de ubicación para esta captura.</string>
     <string name="lp_auto_capture_skip_no_activity">Certificación automática en la cadena omitida: abre la aplicación para enviarla a la cadena.</string>
-    <string name="lp_auto_capture_skip_wallet_unavailable">Certificación de ubicación automática omitida: billetera no conectada.</string>
     <string name="settings_note">Nota</string>
     <string name="settings_note_desc">Notas del autor</string>
     <string name="settings_version_placeholder">Versión</string>

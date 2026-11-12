@@ -5,61 +5,70 @@ import android.net.Uri
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import org.witness.proofmode.R
 import org.witness.proofmode.service.MediaWatcher
 import org.witness.proofmode.share.formatFilebaseFailureMessage
 import org.witness.proofmode.share.isFilebaseReconfigureFailure
 import org.witness.proofmode.storage.CompositeStorageProvider
 import org.witness.proofmode.storage.StorageListener
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Application-scoped on-demand Filebase issue helper.
- *
- * After bar preflight, [issueOnDemandFlush] marks remaining hashes and MIME
- * [bindMedia]s on the process Composite without waiting occupancy of hash n
- * before n+1. Not a dialog host, not a membership engine, not a tapped-set
- * sequencer. Production defaults [listenerFactory] to [failureListener], which
- * posts [FilebaseOnDemandUiEvent]s for a surviving UI host. Reuse the caller's
- * [scope] (production: [org.witness.proofmode.ProofModeApp.applicationCoroutineScope]).
- * Do not mint a Filebase SupervisorJob. Do not hop to [Dispatchers.IO] here.
+ * Issues one flush per item on the caller's scope; each item reports once.
  */
 object FilebaseOnDemandCoordinator {
 
+    /**
+     * [onItemDone] is called once per item with ok or failed. It runs on the uploader's IO
+     * thread inside its per-hash lock, so it must not block or suspend.
+     */
     fun issueOnDemandFlush(
         scope: CoroutineScope,
         appContext: Context,
         items: List<FilebaseOnDemandItem>,
-        listenerFactory: (hash: String) -> StorageListener? = { failureListener(appContext) },
+        onItemDone: (succeeded: Boolean) -> Unit,
         flushOne: (FilebaseOnDemandItem, StorageListener?) -> Unit =
             { item, listener -> defaultOnDemandFlush(appContext, item, listener) },
     ): Job = scope.launch {
         for (item in items) {
-            flushOne(item, listenerFactory(item.hash))
+            flushOne(item, failureListener(appContext, onItemDone))
         }
     }
 
+    /**
+     * Posts the failure dialog on every `saveFailed`, and tells [onDone] the first terminal
+     * outcome only. The uploader can call a listener twice, for example when a sidecar save
+     * re-enters a flush mid-upload, and the tap must count an item once.
+     */
     fun failureListener(
         format: (String?) -> String,
-        isReconfigure: (String?) -> Boolean = { isFilebaseReconfigureFailure(it) },
+        onDone: (succeeded: Boolean) -> Unit = {},
     ): StorageListener = object : StorageListener {
-        override fun saveSuccessful(hash: String?, uri: String?) {}
+        private val reported = AtomicBoolean(false)
+
+        override fun saveSuccessful(hash: String?, uri: String?) {
+            reportOnce(true)
+        }
+
         override fun saveFailed(exception: Exception?) {
             val raw = exception?.message
             val message = format(raw)
             FilebaseOnDemandUiEvents.tryEmit(
-                if (isReconfigure(raw)) FilebaseOnDemandUiEvent.Reconfigure(message)
+                if (isFilebaseReconfigureFailure(raw)) FilebaseOnDemandUiEvent.Reconfigure(message)
                 else FilebaseOnDemandUiEvent.DismissibleFailure(message),
             )
+            reportOnce(false)
+        }
+
+        private fun reportOnce(succeeded: Boolean) {
+            if (reported.compareAndSet(false, true)) onDone(succeeded)
         }
     }
 
-    fun failureListener(appContext: Context): StorageListener {
-        val samePolicy = appContext.resources.getString(R.string.filebase_failure_same_policy)
-        return failureListener(
-            format = { formatFilebaseFailureMessage(it, samePolicy, samePolicy) },
-            isReconfigure = { isFilebaseReconfigureFailure(it) },
+    fun failureListener(appContext: Context, onDone: (succeeded: Boolean) -> Unit): StorageListener =
+        failureListener(
+            format = { formatFilebaseFailureMessage(appContext, it) },
+            onDone = onDone,
         )
-    }
 }
 
 internal fun defaultOnDemandFlush(

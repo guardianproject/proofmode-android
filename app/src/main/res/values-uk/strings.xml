@@ -244,7 +244,6 @@
     <string name="location_protocol_auto_capture_summary">Автоматично засвідчувати місцезнаходження після зйомки в застосунку</string>
     <string name="location_protocol_auto_capture_summary_location_required">Увімкніть передавання місцезнаходження вище, щоб вибрати режим автозасвідчення</string>
     <string name="location_protocol_auto_capture_summary_lp_required">Увімкніть засвідчення Location Protocol, щоб вибрати режим автозасвідчення</string>
-    <string name="location_protocol_auto_capture_summary_wallet_required">Під’єднайте гаманець у налаштуваннях гаманця, щоб вибрати режим автозасвідчення</string>
     <string name="location_wallet_row_summary">Керування гаманцем для підписання засвідчень місцезнаходження</string>
     <string name="location_wallet_summary_location_required">Увімкніть передавання місцезнаходження вище, щоб налаштувати гаманець</string>
     <string name="location_wallet_summary_lp_required">Увімкніть засвідчення Location Protocol, щоб налаштувати гаманець</string>
@@ -333,12 +332,14 @@
     <string name="signing_server_unreachable_message">Для підпису облікових даних вмісту (C2PA) вибрано віддалений режим, тому нові фото й відео чекатимуть на підпис, доки сервер не стане доступним. Перевірте підключення до інтернету або перейдіть на локальний підпис у налаштуваннях.</string>
     <string name="nostr_notarization">Нотаріальне засвідчення Nostr</string>
     <string name="cid_manifest">Маніфест CID</string>
+    <string name="root_cid_clip_label">Кореневий CID</string>
     <string name="offchain_location_attestation">Офчейн-засвідчення місцезнаходження</string>
     <string name="onchain_location_attestation">Ончейн-засвідчення місцезнаходження</string>
     <string name="artifact_tap_to_view">Торкніться, щоб переглянути</string>
     <string name="artifact_tap_to_view_manifest">Торкніться, щоб переглянути повний маніфест</string>
     <string name="lp_attestation_in_progress">Засвідчення триває…</string>
     <string name="view_on_eas_scan">Переглянути в EAS Scan</string>
+    <string name="view_transaction">Переглянути транзакцію</string>
     <string name="artifact_loading">Завантаження…</string>
     <string name="filebase_ipfs_bearer_token">Токен IPFS Bearer</string>
     <string name="filebase_auto_upload">Автоматичне вивантаження</string>
@@ -361,6 +362,11 @@
     <string name="filebase_social_not_configured_share">Поділитися без вивантаження</string>
     <string name="filebase_proof_not_ready">Доказ ще не готовий до вивантаження у Filebase.</string>
     <string name="lp_attest_nothing_to_queue">Доказ ще не готовий до засвідчення місцезнаходження.</string>
+    <string name="lp_toast_offchain_success">Місцезнаходження засвідчено офчейн</string>
+    <string name="lp_toast_offchain_failed">Офчейн-засвідчення не завершено</string>
+    <string name="lp_toast_onchain_success">Місцезнаходження надіслано ончейн</string>
+    <string name="lp_toast_onchain_failed">Ончейн-засвідчення не завершено</string>
+    <string name="proofset_toast_mixed">Завершено %1$d із %2$d</string>
     <string name="filebase_upload_success">Вивантажено у Filebase</string>
     <string name="filebase_upload_failed">Помилка вивантаження у Filebase</string>
     <string name="filebase_upload_oversize_title">Медіафайл завеликий для вивантаження</string>
@@ -408,7 +414,6 @@
     <string name="lp_auto_capture_mode_both">Обидва (спочатку офчейн, потім ончейн)</string>
     <string name="lp_auto_capture_skip_location_unavailable">Автозасвідчення місцезнаходження пропущено: для цієї зйомки немає даних про місцезнаходження.</string>
     <string name="lp_auto_capture_skip_no_activity">Автозасвідчення в блокчейні пропущено: відкрийте застосунок, щоб надіслати в блокчейн.</string>
-    <string name="lp_auto_capture_skip_wallet_unavailable">Автозасвідчення місцезнаходження пропущено: гаманець не під’єднано.</string>
     <string name="settings_note">Нотатка</string>
     <string name="settings_note_desc">Нотатки автора</string>
     <string name="settings_version_placeholder">Версія</string>

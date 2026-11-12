@@ -302,7 +302,6 @@
     <string name="nostr_identity_amber_summary">Signer avec l’appli de signature distante Amber (bientôt disponible)</string>
     <string name="settings_credentials_disabled">Signature des Content Credentials désactivée</string>
     <string name="location_protocol_enable_summary_location_required">Activez le partage de localisation ci-dessus pour utiliser Location Protocol</string>
-    <string name="lp_auto_capture_skip_wallet_unavailable">Attestation de localisation automatique ignorée : portefeuille non connecté.</string>
     <string name="settings_signing_mode_remote">Signature à distance</string>
     <string name="location_protocol_enable_activating">Configuration…</string>
     <string name="settings_signing_mode_local">Signature locale</string>
@@ -312,7 +311,6 @@
     <string name="location_protocol_auto_capture_summary">Lancer automatiquement l’attestation de localisation après une capture dans l’appli</string>
     <string name="location_protocol_auto_capture_summary_location_required">Activez le partage de localisation ci-dessus pour choisir un mode d’attestation automatique</string>
     <string name="location_protocol_auto_capture_summary_lp_required">Activez l’attestation Location Protocol pour choisir un mode d’attestation automatique</string>
-    <string name="location_protocol_auto_capture_summary_wallet_required">Connectez un portefeuille dans les paramètres du portefeuille pour choisir un mode d’attestation automatique</string>
     <string name="location_wallet_row_summary">Gérer le portefeuille utilisé pour signer les attestations de localisation</string>
     <string name="settings_version_placeholder">Version</string>
     <string name="location_wallet_summary_location_required">Activez le partage de localisation ci-dessus pour configurer un portefeuille</string>
@@ -338,6 +336,7 @@
     <string name="settings_signing_cawg_edit_summary">Collez ou modifiez la clé privée et le certificat</string>
     <string name="settings_signing_cawg_edit_key_label">Clé privée (PEM)</string>
     <string name="cid_manifest">Manifeste CID</string>
+    <string name="root_cid_clip_label">CID racine</string>
     <string name="settings_signing_cawg_edit_cert_label">Certificat (PEM)</string>
     <string name="filebase_social_not_configured_message">Filebase n’est pas encore configuré. Configurez-le pour envoyer, ou partagez sans envoyer.</string>
     <string name="offchain_location_attestation">Attestation de localisation hors chaîne</string>
@@ -346,6 +345,7 @@
     <string name="artifact_tap_to_view">Appuyez pour voir</string>
     <string name="artifact_tap_to_view_manifest">Appuyez pour voir le manifeste complet</string>
     <string name="view_on_eas_scan">Voir sur EAS Scan</string>
+    <string name="view_transaction">Voir la transaction</string>
     <string name="artifact_loading">Chargement…</string>
     <string name="filebase_ipfs_bearer_token">Jeton d’accès (Bearer) IPFS</string>
     <string name="filebase_auto_upload">Envois automatiques</string>
@@ -433,6 +433,11 @@
     <string name="signing_server_unreachable_message">La signature des Content Credentials (C2PA) est réglée sur « À distance » : les nouvelles photos et vidéos attendront d’être signées jusqu’à ce que le serveur soit joignable. Vérifiez votre connexion Internet ou passez à la signature locale dans les Paramètres.</string>
     <string name="lp_attestation_in_progress">Attestation en cours…</string>
     <string name="lp_attest_nothing_to_queue">La preuve n’est pas encore prête pour l’attestation de localisation.</string>
+    <string name="lp_toast_offchain_success">Localisation attestée hors chaîne</string>
+    <string name="lp_toast_offchain_failed">L’attestation hors chaîne n’a pas abouti</string>
+    <string name="lp_toast_onchain_success">Localisation soumise sur la chaîne</string>
+    <string name="lp_toast_onchain_failed">L’attestation sur la chaîne n’a pas abouti</string>
+    <string name="proofset_toast_mixed">%1$d sur %2$d terminés</string>
     <string name="filebase_upload_oversize_batch_message">%d de ces éléments dépassent 25 Mo. Les envoyer sans le fichier média ?</string>
     <string name="filebase_reconfigure">Reconfigurer</string>
 </resources>

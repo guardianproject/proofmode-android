@@ -81,11 +81,11 @@ class LocationSettingsActivityTest {
     }
 
     @Test
-    fun locationOn_walletOff_disablesModeListOnly() {
+    fun locationOn_walletOff_keepsModeListEnabled() {
         defaultPrefs.edit().putBoolean(ProofMode.PREF_OPTION_LOCATION, true).commit()
         FeatureFlags.lpEnabled = true
         ActivityScenario.launch(LocationSettingsActivity::class.java).use {
-            onView(withText(R.string.location_protocol_auto_capture_summary_wallet_required))
+            onView(withText(R.string.location_protocol_auto_capture_summary))
                 .check(matches(isDisplayed()))
         }
     }

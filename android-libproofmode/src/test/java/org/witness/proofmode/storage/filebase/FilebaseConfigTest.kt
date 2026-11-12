@@ -252,11 +252,6 @@ class FilebaseConfigTest {
     private fun baselineConfigured(): FilebaseConfig =
         FilebaseConfig("a", "s", "b", enabled = true, ipfsBearerToken = "", autoUpload = true, autoIncludeMedia = true)
 
-    private fun draftFrom(cfg: FilebaseConfig) = FilebaseSettingsDraft(
-        cfg.accessKey, cfg.secretKey, cfg.bucketName, cfg.endpoint, cfg.region,
-        cfg.ipfsBearerToken, cfg.autoUpload, cfg.autoIncludeMedia,
-    )
-
     @Test
     fun commitDraft_unchanged_noWrites() {
         val prefs = prefsWith(
@@ -269,7 +264,7 @@ class FilebaseConfigTest {
             schema = 2,
         )
         val baseline = FilebaseConfig.fromPrefs(prefs)
-        assertEquals(CommitDraftResult.Unchanged, FilebaseConfig.commitDraft(prefs, draftFrom(baseline), baseline))
+        assertEquals(CommitDraftResult.Unchanged, FilebaseConfig.commitDraft(prefs, baseline.toDraft(), baseline))
     }
 
     @Test
@@ -316,7 +311,7 @@ class FilebaseConfigTest {
             schema = 2,
         )
         val baseline = FilebaseConfig.fromPrefs(prefs)
-        val draft = draftFrom(baseline).copy(accessKey = "only-ak", secretKey = "", bucketName = "")
+        val draft = baseline.toDraft().copy(accessKey = "only-ak", secretKey = "", bucketName = "")
         assertEquals(CommitDraftResult.DiscardedInvalid, FilebaseConfig.commitDraft(prefs, draft, baseline))
         val after = FilebaseConfig.fromPrefs(prefs)
         assertEquals("a", after.accessKey)

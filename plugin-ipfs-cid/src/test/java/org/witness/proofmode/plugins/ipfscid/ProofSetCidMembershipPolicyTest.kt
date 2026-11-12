@@ -36,7 +36,6 @@ class ProofSetCidMembershipPolicyTest {
         assertTrue(ProofSetCidMembershipPolicy.isExcludedFromManifest("$hash.lp.offchain.json"))
         assertTrue(ProofSetCidMembershipPolicy.isExcludedFromManifest("$hash.lp.onchain.json"))
         assertTrue(ProofSetCidMembershipPolicy.isExcludedFromManifest("$hash.lp.onchain.pending.json"))
-        assertTrue(ProofSetCidMembershipPolicy.isExcludedFromManifest("$hash.lp.json"))
     }
 
     @Test
@@ -110,7 +109,6 @@ class ProofSetCidMembershipPolicyTest {
             Row("$hash.proof.csv", expectMember = true, expectRefresh = false),
             Row("$hash.ots", expectMember = true, expectRefresh = true),
             Row("$hash.ipfs-cids.json", expectMember = false, expectRefresh = false),
-            Row("$hash.lp.json", expectMember = false, expectRefresh = false),
         )
         for (row in rows) {
             assertEquals(

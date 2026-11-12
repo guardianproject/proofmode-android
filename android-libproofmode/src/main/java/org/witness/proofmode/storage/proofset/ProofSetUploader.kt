@@ -256,7 +256,7 @@ object ProofSetUploader {
                         val outcome = when (mode) {
                             FilebaseConfig.UploadMode.IPFS_DIRECTORY ->
                                 IpfsDirectoryUploadStrategy.upload(
-                                    primary, filebase, hash, artifacts, mediaName, mediaInclusion,
+                                    primary, filebase, hash, artifacts, mediaName,
                                 )
                             FilebaseConfig.UploadMode.S3_MEMBERS ->
                                 S3MembersUploadStrategy.upload(

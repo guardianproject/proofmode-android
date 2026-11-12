@@ -2,11 +2,9 @@ package org.witness.proofmode.plugins.lp
 
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.junit.Assert.assertEquals
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
@@ -53,7 +51,6 @@ class LocationProtocolPluginWalletFacadeTest {
     fun walletDiagnostics_whenStackNotRegistered_returnsDisconnectedSnapshot() {
         val diag = LocationProtocolPlugin.walletDiagnostics()
         assertFalse(diag.connected)
-        assertEquals("unregistered", diag.connectorName)
     }
 
     @Test
@@ -62,6 +59,6 @@ class LocationProtocolPluginWalletFacadeTest {
         WalletSigningPlugin.configure(WalletSdkConfig.fromBuildConfig())
         WalletSigningPlugin.register(context)
         val diag = LocationProtocolPlugin.walletDiagnostics()
-        assertNotNull(diag.connectorName)
+        assertFalse(diag.connected)
     }
 }

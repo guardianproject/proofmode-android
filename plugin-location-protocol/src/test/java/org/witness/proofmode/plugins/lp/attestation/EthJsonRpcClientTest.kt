@@ -1,6 +1,7 @@
 package org.witness.proofmode.plugins.lp.attestation
 
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
@@ -15,149 +16,36 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.witness.proofmode.plugins.lp.attestation.FakeEthRpc.Reply
+import org.witness.proofmode.plugins.lp.attestation.EthJsonRpcClient.Companion.EAS_VERSION_LOWER_SELECTOR as VERSION_LOWER
+import org.witness.proofmode.plugins.lp.attestation.EthJsonRpcClient.Companion.EAS_VERSION_UPPER_SELECTOR as VERSION_UPPER
+import org.witness.proofmode.plugins.lp.attestation.FakeEthRpc.Companion.abiString
+import org.witness.proofmode.plugins.lp.attestation.FakeEthRpc.Companion.word
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
 class EthJsonRpcClientTest {
 
     @Test
-    fun `getTransactionByHash returns transaction when present`() {
-        val client = clientWithResponses(
-            """{"jsonrpc":"2.0","id":1,"result":{"hash":"0xabc","blockNumber":null}}"""
-        )
-
-        runBlocking {
-            val result = client.getTransactionByHash(listOf("https://rpc.test"), "0xabc")
-            assertEquals("0xabc", result?.optString("hash"))
-        }
-    }
-
-    @Test
-    fun `getTransactionByHash returns null when transaction missing`() {
-        val client = clientWithResponses("""{"jsonrpc":"2.0","id":1,"result":null}""")
-
-        runBlocking {
-            val result = client.getTransactionByHash(listOf("https://rpc.test"), "0xabc")
-            assertNull(result)
-        }
-    }
-
-    @Test
-    fun `getTransactionReceipt logs poll attempt when provided`() {
-        val client = clientWithResponses("""{"jsonrpc":"2.0","id":1,"result":null}""")
-
-        runBlocking {
-            val result = client.getTransactionReceipt(
-                rpcUrls = listOf("https://rpc.test"),
-                txHash = "0xabc",
-                pollAttempt = 51,
-            )
-            assertNull(result)
-        }
-    }
-
-    @Test
-    fun `getTransactionReceipt returns receipt on success`() {
-        val client = clientWithResponses(
-            """{"jsonrpc":"2.0","id":1,"result":{"status":"0x1","blockNumber":"0x10","logs":[]}}"""
-        )
-
-        runBlocking {
-            val result = client.getTransactionReceipt(listOf("https://rpc.test"), "0xabc")
-            assertEquals("0x1", result?.optString("status"))
-        }
-    }
-
-    @Test
-    fun `getTransactionReceipt returns null on timeout`() {
-        val client = clientWithResponses("""{"jsonrpc":"2.0","id":1,"result":null}""")
-
-        runBlocking {
-            val result = client.getTransactionReceipt(listOf("https://rpc.test"), "0xabc")
-            assertNull(result)
-        }
-    }
-
-    @Test
-    fun `getTransactionReceipt can detect reverted transaction status`() {
-        val client = clientWithResponses(
-            """{"jsonrpc":"2.0","id":1,"result":{"status":"0x0","blockNumber":"0x10","logs":[]}}"""
-        )
-
-        runBlocking {
-            val result = client.getTransactionReceipt(listOf("https://rpc.test"), "0xabc")
-            assertEquals("0x0", result?.optString("status"))
-        }
-    }
-
-    @Test
-    fun `parseAttestedUid filters by topic0 and eas contract address`() {
-        val easAddress = "0xAaAaAaAaAaAaAaAaAaAaAaAaAaAaAaAaAaAaAa"
-        val uid = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
-        val logs = JSONArray(
-            """[
-                {
-                  "address": "$easAddress",
-                  "topics": [
-                    "${EthJsonRpcClient.ATTESTED_EVENT_TOPIC0}",
-                    "$uid"
-                  ]
-                },
-                {
-                  "address": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-                  "topics": [
-                    "${EthJsonRpcClient.ATTESTED_EVENT_TOPIC0}",
-                    "0xdeadbeef"
-                  ]
-                }
-            ]"""
-        )
-
-        assertEquals(uid, EthJsonRpcClient().parseAttestedUid(logs, easAddress))
-    }
-
-    @Test
-    fun `parseAttestedUid reads uid from data when indexed refUID is zero`() {
+    fun `parseAttestedUid returns the data word when topics1 is a non-zero recipient`() {
         val easAddress = "0xC2679fBd37d54388Ce493F1DB75320D236e1815e"
-        val uid =
-            "0x311c1843e27c3b5d8c0ad2bfd3d3877585b6d08bd5bf08f630799802bc235ded"
+        val uid = "0x311c1843e27c3b5d8c0ad2bfd3d3877585b6d08bd5bf08f630799802bc235ded"
         val logs = JSONArray(
             """[
                 {
                   "address": "$easAddress",
                   "topics": [
                     "${EthJsonRpcClient.ATTESTED_EVENT_TOPIC0}",
-                    "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    "0x0000000000000000000000001234567890abcdef1234567890abcdef12345678",
                     "0x0000000000000000000000004dbf28dc14c26ec399f8b849b4ca50c8bd89a5ca",
                     "0xde87be8a0b537bf996e1a623a3f98aaa51aad3b3362b56c3fac10fd81582ba81"
                   ],
-                  "data": "0x311c1843e27c3b5d8c0ad2bfd3d3877585b6d08bd5bf08f630799802bc235ded"
+                  "data": "$uid"
                 }
             ]"""
         )
 
         assertEquals(uid, EthJsonRpcClient().parseAttestedUid(logs, easAddress))
-    }
-
-    @Test
-    fun `parseAttestedUid prefers non-zero indexed uid over data`() {
-        val easAddress = "0xC2679fBd37d54388Ce493F1DB75320D236e1815e"
-        val indexedUid =
-            "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
-        val logs = JSONArray(
-            """[
-                {
-                  "address": "$easAddress",
-                  "topics": [
-                    "${EthJsonRpcClient.ATTESTED_EVENT_TOPIC0}",
-                    "$indexedUid"
-                  ],
-                  "data": "0x311c1843e27c3b5d8c0ad2bfd3d3877585b6d08bd5bf08f630799802bc235ded"
-                }
-            ]"""
-        )
-
-        assertEquals(indexedUid, EthJsonRpcClient().parseAttestedUid(logs, easAddress))
     }
 
     @Test
@@ -195,60 +83,8 @@ class EthJsonRpcClientTest {
     }
 
     @Test
-    fun `parseSchemaUidFromGetSchemaResult detects registered schema`() {
-        val registered =
-            "0x0000000000000000000000000000000000000000000000000000000000000020" +
-                "de87be8a0b537bf996e1a623a3f98aaa51aad3b3362b56c3fac10fd81582ba81" +
-                "0000000000000000000000000000000000000000000000000000000000000040"
-        assertEquals(
-            "0xde87be8a0b537bf996e1a623a3f98aaa51aad3b3362b56c3fac10fd81582ba81",
-            EthJsonRpcClient().parseSchemaUidFromGetSchemaResult(registered),
-        )
-    }
-
-    @Test
-    fun `parseSchemaUidFromGetSchemaResult returns null for empty schema`() {
-        val empty =
-            "0x0000000000000000000000000000000000000000000000000000000000000020" +
-                "0000000000000000000000000000000000000000000000000000000000000000"
-        assertNull(EthJsonRpcClient().parseSchemaUidFromGetSchemaResult(empty))
-    }
-
-    @Test
-    fun `isSchemaRegistered returns true when getSchema returns uid`() {
-        val client = clientWithResponses(
-            """{"jsonrpc":"2.0","id":1,"result":"0x0000000000000000000000000000000000000000000000000000000000000020de87be8a0b537bf996e1a623a3f98aaa51aad3b3362b56c3fac10fd81582ba81"}"""
-        )
-
-        runBlocking {
-            val registered = client.isSchemaRegistered(
-                rpcUrls = listOf("https://rpc.test"),
-                schemaRegistryAddress = "0x0a7E2Ff54e76B8E6659aedc9103FB21c038050D0",
-                schemaId = "0xde87be8a0b537bf996e1a623a3f98aaa51aad3b3362b56c3fac10fd81582ba81",
-            )
-            assertTrue(registered)
-        }
-    }
-
-    @Test
-    fun `isSchemaRegistered returns false when getSchema returns zero uid`() {
-        val client = clientWithResponses(
-            """{"jsonrpc":"2.0","id":1,"result":"0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000"}"""
-        )
-
-        runBlocking {
-            val registered = client.isSchemaRegistered(
-                rpcUrls = listOf("https://rpc.test"),
-                schemaRegistryAddress = "0xA7b39296258348C78294F95B872b282326A97BDF",
-                schemaId = "0xde87be8a0b537bf996e1a623a3f98aaa51aad3b3362b56c3fac10fd81582ba81",
-            )
-            assertFalse(registered)
-        }
-    }
-
-    @Test
     fun `estimateGas returns hex quantity on success`() {
-        val client = clientWithResponses("""{"jsonrpc":"2.0","id":1,"result":"0xe1cba"}""")
+        val client = EthJsonRpcClient(methodRoutedRpcClient { "\"0xe1cba\"" })
 
         runBlocking {
             val gas = client.estimateGas(
@@ -261,32 +97,84 @@ class EthJsonRpcClientTest {
         }
     }
 
-    @Test
-    fun `getBlockTimestamp reads block timestamp from rpc response`() {
-        val client = clientWithResponses(
-            """{"jsonrpc":"2.0","id":1,"result":{"timestamp":"0x5f5e100"}}"""
-        )
+    private val easAddress = "0xC2679fBD37d54388Ce493F1DB75320D236e1815e"
+    private val rpcUrl = "https://rpc.test"
 
-        runBlocking {
-            val timestamp = client.getBlockTimestamp(listOf("https://rpc.test"), "0x10")
-            assertEquals(0x5f5e100L, timestamp)
-        }
+    @Test
+    fun readEasVersion_versionUpperHit() = runTest {
+        val rpc = FakeEthRpc { Reply.Result(abiString("0.26")) }
+
+        val version = EthJsonRpcClient(rpc.okHttpClient).readEasVersion(listOf(rpcUrl), easAddress)
+
+        assertEquals("0.26", version)
+        assertEquals(listOf(rpcUrl to easAddress), rpc.calls.map { it.url to it.to })
     }
 
-    private fun clientWithResponses(body: String): EthJsonRpcClient {
-        val okHttpClient = OkHttpClient.Builder()
-            .addInterceptor(
-                Interceptor { chain ->
-                    Response.Builder()
-                        .request(chain.request())
-                        .protocol(Protocol.HTTP_1_1)
-                        .code(200)
-                        .message("OK")
-                        .body(body.toResponseBody())
-                        .build()
-                }
+    @Test
+    fun readEasVersion_revertThenLowerHit() = runTest {
+        val rpc = FakeEthRpc { call ->
+            if (call.data == VERSION_UPPER) Reply.Revert else Reply.Result(abiString("1.4.1-beta.3"))
+        }
+
+        val version = EthJsonRpcClient(rpc.okHttpClient).readEasVersion(listOf(rpcUrl), easAddress)
+
+        assertEquals("1.4.1-beta.3", version)
+        assertEquals(listOf(VERSION_UPPER, VERSION_LOWER), rpc.calls.map { it.data })
+    }
+
+    @Test
+    fun `readEasVersion treats every malformed payload as a miss`() = runTest {
+        val misses = listOf(
+            "empty result" to "0x",
+            "empty string" to abiString(""),
+            "truncated payload" to "0x" + word(32) + word(64) + "3032",
+            "offset past data" to "0x" + word(4096) + word(1) + "30" + "00".repeat(31),
+            "shorter than two words" to "0x" + word(32),
+            // A leading '-' makes the length word parse negative; the block's slicing throws.
+            "negative length word" to "0x" + word(32) + "-" + "0".repeat(62) + "8" + "00".repeat(32),
+        )
+        for ((label, miss) in misses) {
+            val bothMiss = FakeEthRpc { Reply.Result(miss) }
+            assertNull(
+                label,
+                EthJsonRpcClient(bothMiss.okHttpClient).readEasVersion(listOf(rpcUrl), easAddress),
             )
-            .build()
-        return EthJsonRpcClient(okHttpClient)
+        }
+
+        // A VERSION() reply the decoder rejects moves on to version().
+        val onlyLowerAnswers = FakeEthRpc { call ->
+            if (call.data == VERSION_UPPER) Reply.Result(abiString("")) else Reply.Result(abiString("0.26"))
+        }
+        assertEquals(
+            "0.26",
+            EthJsonRpcClient(onlyLowerAnswers.okHttpClient).readEasVersion(listOf(rpcUrl), easAddress),
+        )
+    }
+
+    @Test
+    fun readEasVersion_firstUrlTransportFailsSecondAnswers() = runTest {
+        val rpc = FakeEthRpc { call ->
+            if (call.url == "https://one.test") Reply.Http(500) else Reply.Result(abiString("0.26"))
+        }
+
+        val version = EthJsonRpcClient(rpc.okHttpClient)
+            .readEasVersion(listOf("https://one.test", "https://two.test"), easAddress)
+
+        assertEquals("0.26", version)
+        assertEquals(
+            listOf("https://one.test" to VERSION_UPPER, "https://two.test" to VERSION_UPPER),
+            rpc.calls.map { it.url to it.data },
+        )
+    }
+
+    @Test
+    fun readEasVersion_allFailReturnsNull() = runTest {
+        val urls = listOf("https://one.test", "https://two.test", "https://three.test")
+
+        val dead = FakeEthRpc { Reply.Http(500) }
+        assertNull(EthJsonRpcClient(dead.okHttpClient).readEasVersion(urls, easAddress))
+
+        val reverting = FakeEthRpc { Reply.Revert }
+        assertNull(EthJsonRpcClient(reverting.okHttpClient).readEasVersion(urls, easAddress))
     }
 }

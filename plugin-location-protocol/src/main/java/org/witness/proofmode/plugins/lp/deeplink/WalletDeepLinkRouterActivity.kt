@@ -46,9 +46,8 @@ class WalletDeepLinkRouterActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val result = LocationProtocolPlugin.applyWalletDeepLink(this@WalletDeepLinkRouterActivity, uri)
             Timber.tag(TAG).d(
-                "Deep link apply complete: rejected=%s chain=%s",
+                "Deep link apply complete: rejected=%s",
                 result.rejected,
-                result.appliedChain,
             )
             val settingsIntent = Intent(this@WalletDeepLinkRouterActivity, WalletSettingsActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)

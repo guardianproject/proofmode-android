@@ -32,8 +32,24 @@ import 'package:location_protocol/src/schema/schema_uid.dart';
 /// EAS SchemaRegistry.getSchema(bytes32) selector — matches EthJsonRpcClient.kt.
 const _getSchemaSelector = '0xa2ea7c6e';
 
-/// Chains aligned with plugin-location-protocol/.../wallet/ChainConfig.kt SUPPORTED_CHAINS.
-const _supportedChainIds = [1, 42161, 8453, 11155111, 421614];
+/// Chains aligned with plugin-location-protocol/.../config/ChainConfig.kt SUPPORTED_CHAINS.
+/// Scroll Sepolia (534351) is deliberately absent: the network was shut down after 2026-07-30.
+const _supportedChainIds = [
+  1, 42161, 8453, 10, 534352, 57073, 42220, // mainnets
+  11155111, 421614, 11155420, 84532, 763373, 11142220, // testnets
+];
+
+/// EAS addresses for chains location_protocol 0.1.0 does not list. Celo
+/// Sepolia ships EAS as the OP Stack predeploys: EAS.getSchemaRegistry() on
+/// 0x…21 returns 0x…20, and EAS.version() is 1.4.1-beta.3.
+const _easAddressOverrides = {
+  11142220: ChainAddresses(
+    eas: '0x4200000000000000000000000000000000000021',
+    schemaRegistry: '0x4200000000000000000000000000000000000020',
+    chainName: 'Celo Sepolia',
+    easVersion: '1.4.1-beta.3',
+  ),
+};
 
 class _ChainTarget {
   const _ChainTarget({
@@ -72,6 +88,33 @@ const _chainTargets = [
     rpcEnvKey: 'BASE_RPC_URL',
   ),
   _ChainTarget(
+    chainId: 10,
+    displayName: 'Optimism',
+    defaultRpcUrls: [
+      'https://op.api.pocket.network',
+      'https://optimism-rpc.publicnode.com',
+    ],
+    rpcEnvKey: 'OPTIMISM_RPC_URL',
+  ),
+  _ChainTarget(
+    chainId: 534352,
+    displayName: 'Scroll',
+    defaultRpcUrls: [
+      'https://scroll.api.pocket.network',
+      'https://scroll-rpc.publicnode.com',
+    ],
+    rpcEnvKey: 'SCROLL_RPC_URL',
+  ),
+  _ChainTarget(
+    chainId: 57073,
+    displayName: 'Ink',
+    defaultRpcUrls: [
+      'https://ink.api.pocket.network',
+      'https://rpc-gel.inkonchain.com',
+    ],
+    rpcEnvKey: 'INK_RPC_URL',
+  ),
+  _ChainTarget(
     chainId: 11155111,
     displayName: 'Sepolia Testnet',
     defaultRpcUrls: [
@@ -88,6 +131,51 @@ const _chainTargets = [
       'https://arbitrum-sepolia-rpc.publicnode.com',
     ],
     rpcEnvKey: 'ARBITRUM_SEPOLIA_RPC_URL',
+  ),
+  _ChainTarget(
+    chainId: 11155420,
+    displayName: 'Optimism Sepolia',
+    defaultRpcUrls: [
+      'https://op-sepolia-testnet.api.pocket.network',
+      'https://optimism-sepolia-rpc.publicnode.com',
+    ],
+    rpcEnvKey: 'OPTIMISM_SEPOLIA_RPC_URL',
+  ),
+  _ChainTarget(
+    chainId: 84532,
+    displayName: 'Base Sepolia',
+    defaultRpcUrls: [
+      'https://base-sepolia-testnet.api.pocket.network',
+      'https://base-sepolia-rpc.publicnode.com',
+    ],
+    rpcEnvKey: 'BASE_SEPOLIA_RPC_URL',
+  ),
+  _ChainTarget(
+    chainId: 763373,
+    displayName: 'Ink Sepolia',
+    defaultRpcUrls: [
+      'https://rpc-gel-sepolia.inkonchain.com',
+      'https://rpc-qnd-sepolia.inkonchain.com',
+    ],
+    rpcEnvKey: 'INK_SEPOLIA_RPC_URL',
+  ),
+  _ChainTarget(
+    chainId: 42220,
+    displayName: 'Celo',
+    defaultRpcUrls: [
+      'https://rpc.ankr.com/celo',
+      'https://celo-json-rpc.stakely.io',
+    ],
+    rpcEnvKey: 'Celo_RPC_URL',
+  ),
+  _ChainTarget(
+    chainId: 11142220,
+    displayName: 'Celo Sepolia',
+    defaultRpcUrls: [
+      'https://rpc.ankr.com/celo_sepolia',
+      'https://celo-sepolia.drpc.org',
+    ],
+    rpcEnvKey: 'Celo_SEPOLIA_RPC_URL',
   ),
 ];
 
@@ -140,7 +228,8 @@ Future<void> main(List<String> args) async {
   var hadError = false;
 
   for (final target in targets) {
-    final chainAddresses = ChainConfig.forChainId(target.chainId);
+    final chainAddresses =
+        _easAddressOverrides[target.chainId] ?? ChainConfig.forChainId(target.chainId);
     if (chainAddresses == null) {
       stderr.writeln('❌ ${target.displayName}: no EAS config for chain ${target.chainId}');
       hadError = true;
@@ -191,7 +280,10 @@ Future<void> main(List<String> args) async {
         privateKeyHex: _normalizePrivateKeyHex(privateKey!),
         chainId: target.chainId,
       );
-      final registry = SchemaRegistryClient(provider: provider);
+      final registry = SchemaRegistryClient(
+        provider: provider,
+        schemaRegistryAddress: chainAddresses.schemaRegistry,
+      );
 
       stdout.writeln('   Status:           registering...');
       final callData = SchemaRegistryClient.buildRegisterCallData(schema);
@@ -231,8 +323,16 @@ Supported chains (match SUPPORTED_CHAINS in ChainConfig.kt):
   1        Ethereum Mainnet
   42161    Arbitrum One
   8453     Base
+  10       Optimism
+  534352   Scroll
+  57073    Ink
+  42220    Celo
   11155111 Sepolia Testnet
   421614   Arbitrum Sepolia
+  11155420 Optimism Sepolia
+  84532    Base Sepolia
+  763373   Ink Sepolia
+  11142220 Celo Sepolia
 
 Options:
   --help, -h       Show this help
@@ -241,11 +341,8 @@ Options:
 
 Environment (scripts/.env or process env):
   DEPLOYER_PRIVATE_KEY   Required unless --dry-run (0x + 64 hex chars)
-  ETHEREUM_RPC_URL       Optional RPC override
-  ARBITRUM_RPC_URL       Optional RPC override
-  BASE_RPC_URL           Optional RPC override
-  SEPOLIA_RPC_URL        Optional RPC override
-  ARBITRUM_SEPOLIA_RPC_URL  Optional RPC override
+  <CHAIN>_RPC_URL        Optional RPC override per chain, e.g. BASE_RPC_URL,
+                         Celo_RPC_URL (rpcEnvKey in _chainTargets)
 
 Schema UID derivation:
   keccak256(abi.encodePacked(schemaString, resolverAddress, revocable))

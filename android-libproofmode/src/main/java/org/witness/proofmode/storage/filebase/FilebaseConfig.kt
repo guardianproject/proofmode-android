@@ -144,16 +144,7 @@ data class FilebaseConfig(
             draft: FilebaseSettingsDraft,
             baseline: FilebaseConfig,
         ): CommitDraftResult {
-            val baselineDraft = FilebaseSettingsDraft(
-                baseline.accessKey,
-                baseline.secretKey,
-                baseline.bucketName,
-                baseline.endpoint,
-                baseline.region,
-                baseline.ipfsBearerToken,
-                baseline.autoUpload,
-                baseline.autoIncludeMedia,
-            )
+            val baselineDraft = baseline.toDraft()
             if (draft == baselineDraft) {
                 return CommitDraftResult.Unchanged
             }
@@ -254,3 +245,15 @@ data class FilebaseSettingsDraft(
 /** True when S3 and/or bearer credentials are present (ignores [FilebaseConfig.enabled]). */
 fun FilebaseConfig.hasUsableCredentials(): Boolean =
     hasS3Access() || ipfsBearerToken.isNotBlank()
+
+fun FilebaseConfig.toDraft(): FilebaseSettingsDraft =
+    FilebaseSettingsDraft(
+        accessKey = accessKey,
+        secretKey = secretKey,
+        bucketName = bucketName,
+        endpoint = endpoint,
+        region = region,
+        ipfsBearerToken = ipfsBearerToken,
+        autoUpload = autoUpload,
+        autoIncludeMedia = autoIncludeMedia,
+    )

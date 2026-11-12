@@ -1,11 +1,8 @@
 package org.witness.proofmode.plugins.wallet.infra
 
-import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -23,51 +20,27 @@ class WalletSessionStoreTest {
     }
 
     @Test
-    fun saveAndLoadChainId_roundTrips() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        val store = WalletSessionStore(context)
-        store.saveChainId("eip155:11155111")
-        assertEquals("eip155:11155111", store.loadChainId())
+    fun sponsoredChains_neverSaved_isNotYetKnown_butSavedEmptyIsKnownEmpty() {
+        val store = WalletSessionStore(ApplicationProvider.getApplicationContext())
+        assertNull(store.loadSponsoredChains(PROJECT_A))
+        store.saveSponsoredChains(PROJECT_A, emptyList())
+        assertEquals(emptyList<String>(), store.loadSponsoredChains(PROJECT_A))
     }
 
     @Test
-    fun sponsorTransactionsEnabled_defaultsTrue() {
+    fun sponsoredChains_otherProjectId_isNotYetKnown_andOverrideChangeReplacesEntry() {
         val store = WalletSessionStore(ApplicationProvider.getApplicationContext())
-        assertTrue(store.isSponsorTransactionsEnabled())
+        store.saveSponsoredChains(PROJECT_A, listOf("eip155:1", "eip155:11155111"))
+        assertNull(store.loadSponsoredChains(PROJECT_B))
+        assertEquals(listOf("eip155:1", "eip155:11155111"), store.loadSponsoredChains(PROJECT_A))
+
+        store.saveSponsoredChains(PROJECT_B, listOf("eip155:8453"))
+        assertEquals(listOf("eip155:8453"), store.loadSponsoredChains(PROJECT_B))
+        assertNull(store.loadSponsoredChains(PROJECT_A))
     }
 
-    @Test
-    fun sponsorTransactionsEnabled_roundTrips() {
-        val store = WalletSessionStore(ApplicationProvider.getApplicationContext())
-        store.saveSponsorTransactionsEnabled(false)
-        assertFalse(store.isSponsorTransactionsEnabled())
-        store.saveSponsorTransactionsEnabled(true)
-        assertTrue(store.isSponsorTransactionsEnabled())
-    }
-
-    @Test
-    fun zeroDevProjectIdOverride_defaultsNull() {
-        val store = WalletSessionStore(ApplicationProvider.getApplicationContext())
-        assertNull(store.loadZeroDevProjectIdOverride())
-    }
-
-    @Test
-    fun zeroDevProjectIdOverride_roundTrips() {
-        val store = WalletSessionStore(ApplicationProvider.getApplicationContext())
-        val uuid = "550e8400-e29b-41d4-a716-446655440000"
-        store.saveZeroDevProjectIdOverride(uuid)
-        assertEquals(uuid, store.loadZeroDevProjectIdOverride())
-    }
-
-    @Test
-    fun clear_removesSponsorshipKeys() {
-        val store = WalletSessionStore(ApplicationProvider.getApplicationContext())
-        store.saveChainId("eip155:1")
-        store.saveSponsorTransactionsEnabled(false)
-        store.saveZeroDevProjectIdOverride("550e8400-e29b-41d4-a716-446655440000")
-        store.clear()
-        assertNull(store.loadChainId())
-        assertTrue(store.isSponsorTransactionsEnabled())
-        assertNull(store.loadZeroDevProjectIdOverride())
+    private companion object {
+        const val PROJECT_A = "550e8400-e29b-41d4-a716-446655440000"
+        const val PROJECT_B = "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
     }
 }

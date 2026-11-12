@@ -1,116 +1,141 @@
 package org.witness.proofmode.plugins.wallet.infra.config
 
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNull
+import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.witness.proofmode.plugins.wallet.infra.FakeAndroidKeyStoreProvider
+import org.witness.proofmode.plugins.wallet.infra.factory.WalletSessionStore
 import org.witness.proofmode.plugins.wallet.infra.model.WalletSdkConfig
-import org.witness.proofmode.plugins.wallet.infra.model.ZeroDevConfig
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28])
 class ZeroDevConfigResolverTest {
+
+    private lateinit var store: WalletSessionStore
+
+    @Before
+    fun setUp() {
+        FakeAndroidKeyStoreProvider.setup()
+        store = WalletSessionStore(ApplicationProvider.getApplicationContext<Context>())
+    }
 
     private val buildProjectId = "build-proj-uuid-0000-0000-000000000001"
     private val overrideUuid = "550e8400-e29b-41d4-a716-446655440000"
     private val chainId = "eip155:11155111"
 
-    private fun baseSdkConfig(): WalletSdkConfig = WalletSdkConfig(
+    private fun sdkConfig(projectId: String = buildProjectId): WalletSdkConfig = WalletSdkConfig(
         privyAppId = "app",
         privyAppClientId = "client",
-        zeroDevConfigs = mapOf(
-            chainId to ZeroDevConfigResolver.resolveBuildTimeConfig(
-                caip2ChainId = chainId,
-                projectId = buildProjectId,
-            ),
-        ),
+        zeroDevProjectId = projectId,
     )
 
     @Test
-    fun effectiveProjectId_usesBuildDefaultWhenOverrideNull() {
+    fun urls_matchTemplates() {
         assertEquals(
-            buildProjectId,
-            ZeroDevConfigResolver.effectiveProjectId(
-                sessionOverride = null,
-                buildProjectId = buildProjectId,
-            ),
+            "https://public-api.zerodev.app/v2/projects/$overrideUuid",
+            ZeroDevConfigResolver.zeroDevProjectUrl(overrideUuid),
         )
-    }
-
-    @Test
-    fun effectiveProjectId_usesValidOverride() {
-        assertEquals(
-            overrideUuid,
-            ZeroDevConfigResolver.effectiveProjectId(
-                sessionOverride = overrideUuid,
-                buildProjectId = buildProjectId,
-            ),
-        )
-    }
-
-    @Test
-    fun effectiveProjectId_ignoresInvalidOverride() {
-        assertEquals(
-            buildProjectId,
-            ZeroDevConfigResolver.effectiveProjectId(
-                sessionOverride = "not-a-uuid",
-                buildProjectId = buildProjectId,
-            ),
-        )
-    }
-
-    @Test
-    fun zeroDevRpcUrl_matchesTemplate() {
-        val url = ZeroDevConfigResolver.zeroDevRpcUrl(buildProjectId, chainId)
         assertEquals(
             "https://rpc.zerodev.app/api/v3/$buildProjectId/chain/11155111",
-            url,
+            ZeroDevConfigResolver.zeroDevRpcUrl(buildProjectId, chainId),
         )
     }
 
     @Test
-    fun resolveEffectiveConfig_appliesRuntimeOverrideUrls() {
-        val config = ZeroDevConfigResolver.resolveEffectiveConfig(
-            chainId = chainId,
-            walletSdkConfig = baseSdkConfig(),
-            sessionOverride = overrideUuid,
-            sponsorTransactionsEnabled = true,
-        )
+    fun effectiveProjectId_precedence() {
+        listOf(
+            Triple("null override uses build id", null, buildProjectId),
+            Triple("valid override wins", overrideUuid, overrideUuid),
+            Triple("invalid override uses build id", "not-a-uuid", buildProjectId),
+        ).forEach { (label, sessionOverride, expected) ->
+            assertEquals(
+                label,
+                expected,
+                ZeroDevConfigResolver.effectiveProjectId(
+                    sessionOverride = sessionOverride,
+                    buildProjectId = buildProjectId,
+                ),
+            )
+        }
+    }
+
+    @Test
+    fun resolveEffectiveConfig_buildProject_templateUrls() {
+        listOf("eip155:8453", chainId).forEach { chain ->
+            val config = ZeroDevConfigResolver.resolveEffectiveConfig(chain, sdkConfig(), store)
+
+            val templateUrl = ZeroDevConfigResolver.zeroDevRpcUrl(buildProjectId, chain)
+            assertEquals(buildProjectId, config.projectId)
+            assertEquals(chain, templateUrl, config.bundlerUrl)
+            assertEquals(templateUrl, config.paymasterUrl)
+        }
+    }
+
+    @Test
+    fun resolveEffectiveConfig_sessionOverride_templateUrls() {
+        store.saveZeroDevProjectIdOverride(overrideUuid)
+
+        val config = ZeroDevConfigResolver.resolveEffectiveConfig("eip155:8453", sdkConfig(), store)
+
+        val templateUrl = ZeroDevConfigResolver.zeroDevRpcUrl(overrideUuid, "eip155:8453")
         assertEquals(overrideUuid, config.projectId)
-        assertTrue(config.bundlerUrl.contains(overrideUuid))
-        assertEquals(config.bundlerUrl, config.paymasterUrl)
+        assertEquals(templateUrl, config.bundlerUrl)
+        assertEquals(templateUrl, config.paymasterUrl)
         assertTrue(config.isSponsorshipEnabled)
     }
 
     @Test
-    fun resolveEffectiveConfig_userToggleOff_sponsorshipInactive() {
-        val config = ZeroDevConfigResolver.resolveEffectiveConfig(
-            chainId = chainId,
-            walletSdkConfig = baseSdkConfig(),
-            sessionOverride = null,
-            sponsorTransactionsEnabled = false,
-        )
-        assertFalse(config.isSponsorshipEnabled)
+    fun resolveEffectiveConfig_noBuildProjectId_noOverride_blank() {
+        listOf("", "replace-me-project").forEach { unconfigured ->
+            val config = ZeroDevConfigResolver.resolveEffectiveConfig(
+                chainId,
+                sdkConfig(projectId = unconfigured),
+                store,
+            )
+
+            assertEquals("id '$unconfigured'", "", config.projectId)
+        }
     }
 
     @Test
-    fun effectiveSponsorshipAllowed_matchesAddendumFormula() {
-        val credentialed = ZeroDevConfig(
-            projectId = buildProjectId,
-            bundlerUrl = "https://bundler",
-            paymasterUrl = "https://paymaster",
-            isSponsorshipEnabled = true,
+    fun resolveEffectiveConfig_userToggleOff_sponsorshipInactive() {
+        store.saveSponsorTransactionsEnabled(false)
+
+        val config = ZeroDevConfigResolver.resolveEffectiveConfig(chainId, sdkConfig(), store)
+
+        assertFalse(config.isSponsorshipEnabled)
+    }
+
+    private val sponsored = listOf("eip155:11155111", "eip155:1")
+
+    @Test
+    fun cachedSponsoredChains_overrideEntryWinsOverBuildId() {
+        store.saveZeroDevProjectIdOverride(overrideUuid)
+        store.saveSponsoredChains(overrideUuid, sponsored)
+
+        assertEquals(sponsored, ZeroDevConfigResolver.cachedSponsoredChains(store, buildProjectId))
+
+        // The store holds one entry, so this replaces the override's.
+        store.saveSponsoredChains(buildProjectId, sponsored)
+
+        assertNull(
+            "entry for build id while override set",
+            ZeroDevConfigResolver.cachedSponsoredChains(store, buildProjectId),
         )
-        assertTrue(
-            ZeroDevConfigResolver.effectiveSponsorshipAllowed(credentialed),
-        )
-        assertFalse(
-            ZeroDevConfigResolver.effectiveSponsorshipAllowed(
-                credentialed.copy(isSponsorshipEnabled = false),
-            ),
-        )
-        assertFalse(
-            ZeroDevConfigResolver.effectiveSponsorshipAllowed(
-                credentialed.copy(projectId = ""),
-            ),
-        )
+    }
+
+    @Test
+    fun cachedSponsoredChains_noOverride_readsBuildIdEntry() {
+        store.saveSponsoredChains(buildProjectId, sponsored)
+
+        assertEquals(sponsored, ZeroDevConfigResolver.cachedSponsoredChains(store, buildProjectId))
     }
 }

@@ -27,7 +27,8 @@ Kotlin (host app)  ──── MethodChannel ────▶  Dart isolate
 | Method                        | Request keys                                | Response                       |
 | ----------------------------- | ------------------------------------------- | ------------------------------ |
 | `ping`                        | —                                           | `"pong"`                       |
-| `build-eas-typed-data`        | `payload` (map)                             | EIP-712 typed-data JSON string |
+| `get-eas-chain-params`        | `chainId` (CAIP-2)                          | `{easAddress, easVersion}` map |
+| `build-eas-typed-data`        | `payload` (map), `chainId` (CAIP-2), `easVersion` | EIP-712 typed-data JSON string |
 | `create-offchain-attestation` | `typedData`, `signature`, `attesterAddress` | attestation result map         |
 | `bridge/shutdown`             | —                                           | `null` (completes keepalive)   |
 
@@ -37,9 +38,33 @@ Kotlin (host app)  ──── MethodChannel ────▶  Dart isolate
 | -------------- | ------- | ----------------------- |
 | `bridge/ready` | none    | Startup liveness signal |
 
+### `get-eas-chain-params` — request
+
+```
+chainId   string   selected chain as CAIP-2, e.g. "eip155:11155111"
+```
+
+Returns the chain's EAS address and the package table's EAS version. Kotlin
+calls the address to read the live version and keeps the table version as the
+fallback. A missing or malformed `chainId` is `LP_INVALID_PAYLOAD`; a chain
+outside the table is `LP_UNSUPPORTED_CHAIN`.
+
 ### `build-eas-typed-data` — request
 
-`payload` map (or JSON string) with required fields:
+Request keys:
+
+```
+chainId     string   selected chain as CAIP-2, e.g. "eip155:11155111"
+easVersion  string   EAS contract version to sign, as read live by Kotlin
+payload     map      LP fields (below), or a JSON string of them
+```
+
+The domain's `chainId` and `verifyingContract` come from `chainId`; its
+`version` is `easVersion` exactly, never the table's. A missing or malformed
+`chainId`, or a missing, non-string or blank `easVersion`, is
+`LP_INVALID_PAYLOAD`; a chain outside the table is `LP_UNSUPPORTED_CHAIN`.
+
+`payload` required fields:
 
 ```
 eventTimestamp   int       Unix ms

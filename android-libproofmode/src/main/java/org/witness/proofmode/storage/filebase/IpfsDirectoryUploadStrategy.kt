@@ -1,6 +1,7 @@
 package org.witness.proofmode.storage.filebase
 
 import android.util.Log
+import org.witness.proofmode.storage.StorageListener
 import org.witness.proofmode.storage.StorageProvider
 import org.witness.proofmode.storage.proofset.DeferredArtifact
 import org.witness.proofmode.storage.proofset.MediaInclusion
@@ -15,35 +16,37 @@ import org.witness.proofmode.storage.proofset.ProofSetUploadOutcome
 internal object IpfsDirectoryUploadStrategy {
     private const val TAG = "IpfsDirectoryUploadStrategy"
 
+    /**
+     * [mediaBasename] is null exactly when the upload is [MediaInclusion.SIDECARS_ONLY]. It stands
+     * in for the inclusion flag so the image-sidecar fallback always has a basename to use.
+     */
     fun upload(
         primary: StorageProvider,
         filebase: FilebaseStorageProvider,
         hash: String,
         artifacts: List<DeferredArtifact>,
         mediaBasename: String?,
-        mediaInclusion: MediaInclusion,
     ): ProofSetUploadOutcome {
         unpinPriorDirectoryIfPresent(filebase, primary, hash)
 
-        val result = filebase.uploadDirectory(hash, artifacts, mediaBasename, listener = null)
-            ?: return ProofSetUploadOutcome.Failed(
-                IllegalStateException("IPFS directory upload transfer failed"),
-            )
-        val persisted = persistIpfsDirectorySuccess(
-            primary,
+        // The provider reports its exception only through the listener, then returns null. Capture
+        // it here rather than forwarding the caller's listener: the provider also fires success
+        // before persist, and the facade must be the only notifier.
+        var providerFailure: Exception? = null
+        val result = filebase.uploadDirectory(
             hash,
-            result.directoryUri,
+            artifacts,
             mediaBasename,
-            result.mediaLeafCid,
-            mediaInclusion,
-        )
-        return if (persisted) {
-            ProofSetUploadOutcome.Success(result.directoryUri)
-        } else {
-            ProofSetUploadOutcome.Failed(
-                IllegalStateException("IPFS directory upload failed or sidecar persist skipped"),
-            )
-        }
+            listener = object : StorageListener {
+                override fun saveSuccessful(resultHash: String?, uri: String?) = Unit
+
+                override fun saveFailed(exception: Exception?) {
+                    providerFailure = exception
+                }
+            },
+        ) ?: return ProofSetUploadOutcome.Failed(providerFailure)
+        persistIpfsDirectorySuccess(primary, hash, result.directoryUri, mediaBasename, result.mediaLeafCid)
+        return ProofSetUploadOutcome.Success(result.directoryUri)
     }
 
     private fun unpinPriorDirectoryIfPresent(
@@ -57,9 +60,8 @@ internal object IpfsDirectoryUploadStrategy {
     }
 
     /**
-     * Always writes proofset URI on directory success.
-     * [MediaInclusion.INCLUDE_MEDIA]: author image URI (leaf prefer / path fallback) or return false.
-     * [MediaInclusion.SIDECARS_ONLY]: must not write image URI; leave any prior image untouched.
+     * Always writes proofset URI on directory success. Sidecars-only (null [mediaBasename]) must not
+     * write image URI; any prior image sidecar stays untouched.
      */
     private fun persistIpfsDirectorySuccess(
         primary: StorageProvider,
@@ -67,25 +69,19 @@ internal object IpfsDirectoryUploadStrategy {
         directoryGatewayUri: String,
         mediaBasename: String?,
         mediaLeafCid: String?,
-        mediaInclusion: MediaInclusion,
-    ): Boolean {
-        val directoryCid = FilebaseGatewayUris.parseGatewayRootCid(directoryGatewayUri) ?: return false
+    ) {
         primary.replaceText(
             hash,
             hash + FilebaseSidecarContract.FILEBASE_IPFS_URI_SUFFIX,
-            FilebaseGatewayUris.buildProofsetUri(directoryCid),
+            directoryGatewayUri,
             null,
         )
-        if (mediaInclusion == MediaInclusion.SIDECARS_ONLY) {
-            return true
-        }
-        val imageUri = when {
-            !mediaLeafCid.isNullOrBlank() -> FilebaseGatewayUris.buildLeafImageUri(mediaLeafCid)
-            !mediaBasename.isNullOrBlank() ->
-                FilebaseGatewayUris.buildImageUriUnderDirectory(directoryCid, mediaBasename)
-            else -> return false
+        if (mediaBasename == null) return
+        val imageUri = if (!mediaLeafCid.isNullOrBlank()) {
+            FilebaseGatewayUris.buildLeafImageUri(mediaLeafCid)
+        } else {
+            "$directoryGatewayUri/$mediaBasename"
         }
         primary.replaceText(hash, hash + FilebaseSidecarContract.FILEBASE_IMAGE_URI_SUFFIX, imageUri, null)
-        return true
     }
 }

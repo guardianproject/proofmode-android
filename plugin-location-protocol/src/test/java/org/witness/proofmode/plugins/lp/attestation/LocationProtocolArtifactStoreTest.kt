@@ -1,10 +1,17 @@
 package org.witness.proofmode.plugins.lp.attestation
 
 import android.net.Uri
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import org.witness.proofmode.storage.StorageListener
 import org.witness.proofmode.storage.StorageProvider
 import java.io.IOException
@@ -17,72 +24,61 @@ import java.util.ArrayList
  * Uses [FakeStorageProvider] — an in-memory StorageProvider that records call counts
  * so the idempotency contract can be verified.
  */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28])
 class LocationProtocolArtifactStoreTest {
 
     private lateinit var fakeStorage: FakeStorageProvider
     private lateinit var store: LocationProtocolArtifactStore
+    private lateinit var fileStorage: TempDirStorageProvider
 
     @Before
     fun setUp() {
         fakeStorage = FakeStorageProvider()
         store = LocationProtocolArtifactStore(fakeStorage)
+        fileStorage = TempDirStorageProvider.inNewTempDir()
+    }
+
+    @After
+    fun tearDown() {
+        fileStorage.deleteRoot()
     }
 
     @Test
-    fun `saveOffchainAttestation is idempotent — second call does not write again`() {
-        val hash = "hash1"
-        val json = """{"type":"test"}"""
+    fun `save is idempotent — second call does not write again, per save function`() {
+        val rows: List<Pair<suspend (String, String) -> Unit, String>> = listOf(
+            store::saveOffchainAttestation to LocationProtocolArtifactStore.OFFCHAIN_SUFFIX,
+            store::saveOnchainAttestation to LocationProtocolArtifactStore.ONCHAIN_SUFFIX,
+            store::savePendingOnchainAttestation to LocationProtocolArtifactStore.ONCHAIN_PENDING_SUFFIX,
+        )
+        for ((save, suffix) in rows) {
+            fakeStorage.saveTextCallCount = 0
+            val hash = "hash$suffix"
 
-        val first = kotlinx.coroutines.runBlocking {
-            store.saveOffchainAttestation(hash, json)
-        }
-        val second = kotlinx.coroutines.runBlocking {
-            store.saveOffchainAttestation(hash, json)
-        }
+            kotlinx.coroutines.runBlocking {
+                save(hash, "{}")
+                save(hash, "{}")
+            }
 
-        assertEquals("saveText should be called exactly once (idempotency)", 1, fakeStorage.saveTextCallCount)
-        assertEquals("hash1.lp.offchain.json", first)
-        assertEquals("hash1.lp.offchain.json", second)
+            assertEquals(suffix, 1, fakeStorage.saveTextCallCount)
+            assertTrue(suffix, fakeStorage.proofIdentifierExists(hash, "$hash$suffix"))
+        }
     }
 
-    @Test(expected = LPArtifactStoreException::class)
-    fun `saveOffchainAttestation failure propagates LPArtifactStoreException`() {
+    @Test
+    fun `saveOffchainAttestation failure propagates the storage exception`() {
         fakeStorage.saveError = IOException("disk full")
 
-        try {
+        val thrown = try {
             kotlinx.coroutines.runBlocking {
                 store.saveOffchainAttestation("hash2", "{}")
             }
-        } catch (e: LPArtifactStoreException) {
-            assertEquals("disk full", e.cause?.message)
-            throw e
-        }
-    }
-
-    @Test
-    fun `saveOffchainAttestation returns resolved path from storage listener`() {
-        val hash = "hash1"
-        val json = """{"type":"test"}"""
-        fakeStorage.savedPath = "/data/user/0/org.witness.proofmode/files/proofmode/hash1/hash1.lp.offchain.json"
-
-        val savedPath = kotlinx.coroutines.runBlocking {
-            store.saveOffchainAttestation(hash, json)
+            null
+        } catch (e: IOException) {
+            e
         }
 
-        assertEquals(fakeStorage.savedPath, savedPath)
-    }
-
-    @Test
-    fun `saveOffchainAttestation falls back to identifier when listener path is blank`() {
-        val hash = "hash1"
-        val json = """{"type":"test"}"""
-        fakeStorage.savedPath = ""
-
-        val savedPath = kotlinx.coroutines.runBlocking {
-            store.saveOffchainAttestation(hash, json)
-        }
-
-        assertEquals("hash1.lp.offchain.json", savedPath)
+        assertEquals("disk full", thrown?.message)
     }
 
     @Test
@@ -99,70 +95,47 @@ class LocationProtocolArtifactStoreTest {
     }
 
     @Test
-    fun `readOffchainAttestation returns null when nothing has been saved`() {
-        val result = store.readOffchainAttestation("no-such-hash")
-        assertNull(result)
-    }
-
-    @Test
-    fun `saveOnchainAttestation is idempotent — second call does not write again`() {
-        val hash = "hash1"
-        val json = """{"txHash":"0xabc"}"""
-
-        val first = kotlinx.coroutines.runBlocking {
-            store.saveOnchainAttestation(hash, json)
-        }
-        val second = kotlinx.coroutines.runBlocking {
-            store.saveOnchainAttestation(hash, json)
-        }
-
-        assertEquals(1, fakeStorage.saveTextCallCount)
-        assertEquals("hash1.lp.onchain.json", first)
-        assertEquals("hash1.lp.onchain.json", second)
-    }
-
-    @Test
     fun `savePendingOnchainAttestation persists pending suffix artifact`() {
         val hash = "hash1"
         val json = """{"status":"pending_broadcast","txHash":"0xabc"}"""
 
-        val savedPath = kotlinx.coroutines.runBlocking {
+        kotlinx.coroutines.runBlocking {
             store.savePendingOnchainAttestation(hash, json)
         }
 
-        assertEquals("hash1.lp.onchain.pending.json", savedPath)
         assertEquals(json, store.readPendingOnchainAttestation(hash))
         assertNull(store.readOnchainAttestation(hash))
     }
 
     @Test
-    fun `readOffchainAttestation falls back to legacy lp json suffix`() {
-        val hash = "hash1"
-        val json = """{"type":"legacy"}"""
-        fakeStorage.storeDirect(hash, "$hash.lp.json", json)
+    fun saveOnchainAttestation_deletesPendingRecord_evenWhenConfirmedAlreadySaved() = runTest {
+        val fileStore = LocationProtocolArtifactStore(fileStorage)
+        fileStorage.seed(HASH, PENDING_ID, "{}")
 
-        val read = store.readOffchainAttestation(hash)
-        assertEquals(json, read)
+        fileStore.saveOnchainAttestation(HASH, """{"status":"confirmed"}""")
+
+        assertEquals("""{"status":"confirmed"}""", fileStorage.read(HASH, CONFIRMED_ID))
+        assertFalse(fileStorage.exists(HASH, PENDING_ID))
+
+        // A second confirmed save (re-check racing the live confirmation) still clears a pending record.
+        fileStorage.seed(HASH, PENDING_ID, "{}")
+        fileStore.saveOnchainAttestation(HASH, """{"status":"confirmed"}""")
+        assertFalse(fileStorage.exists(HASH, PENDING_ID))
+    }
+
+    private companion object {
+        const val HASH = "hash1"
+        const val PENDING_ID = HASH + LocationProtocolArtifactStore.ONCHAIN_PENDING_SUFFIX
+        const val CONFIRMED_ID = HASH + LocationProtocolArtifactStore.ONCHAIN_SUFFIX
     }
 
     @Test
     fun `readOnchainAttestation reads onchain suffix only`() {
         val hash = "hash1"
-        val legacyJson = """{"type":"legacy"}"""
         val onchainJson = """{"txHash":"0xabc"}"""
-        fakeStorage.storeDirect(hash, "$hash.lp.json", legacyJson)
         fakeStorage.storeDirect(hash, "$hash.lp.onchain.json", onchainJson)
 
         assertEquals(onchainJson, store.readOnchainAttestation(hash))
-    }
-
-    @Test
-    fun `readOnchainAttestation does not fall back to legacy suffix`() {
-        val hash = "hash1"
-        val legacyJson = """{"type":"legacy"}"""
-        fakeStorage.storeDirect(hash, "$hash.lp.json", legacyJson)
-
-        assertNull(store.readOnchainAttestation(hash))
     }
 }
 
@@ -173,7 +146,6 @@ class LocationProtocolArtifactStoreTest {
 class FakeStorageProvider : StorageProvider {
 
     var saveTextCallCount = 0
-    var savedPath: String? = null
     var saveError: Exception? = null
     private val store = HashMap<String, ByteArray>()
 
@@ -189,7 +161,7 @@ class FakeStorageProvider : StorageProvider {
         }
 
         store[key(hash, identifier)] = data.toByteArray(Charsets.UTF_8)
-        listener.saveSuccessful(hash, savedPath ?: identifier)
+        listener.saveSuccessful(hash, identifier)
     }
 
     override fun replaceText(hash: String, identifier: String, data: String, listener: StorageListener) {
@@ -198,7 +170,7 @@ class FakeStorageProvider : StorageProvider {
             return
         }
         store[key(hash, identifier)] = data.toByteArray(Charsets.UTF_8)
-        listener.saveSuccessful(hash, savedPath ?: identifier)
+        listener.saveSuccessful(hash, identifier)
     }
 
     override fun saveStream(hash: String, identifier: String, stream: InputStream, listener: StorageListener) {

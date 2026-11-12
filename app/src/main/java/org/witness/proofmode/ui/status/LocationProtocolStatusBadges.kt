@@ -30,7 +30,6 @@ import org.witness.proofmode.lp.AutoCaptureLpMarkerResolver
 import org.witness.proofmode.lp.LpBadgeUiState
 import org.witness.proofmode.lp.LpOffchainBadge
 import org.witness.proofmode.lp.LpOnchainBadge
-import org.witness.proofmode.plugins.lp.attestation.LocationProtocolArtifactStore
 import org.witness.proofmode.plugins.lp.autocapture.AutoCaptureLpStateRegistry
 import org.witness.proofmode.storage.DefaultStorageProvider
 import org.witness.proofmode.ui.ProofStatus
@@ -62,7 +61,6 @@ internal fun BoxScope.LocationProtocolStatusBadges(
             AutoCaptureLpMarkerResolver.resolve(
                 mediaHash = item.id,
                 registryState = snapshot.state,
-                artifactStore = LocationProtocolArtifactStore(storage),
                 storageProvider = storage,
             )
         }

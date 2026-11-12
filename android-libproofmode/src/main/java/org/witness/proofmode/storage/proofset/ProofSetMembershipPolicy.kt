@@ -73,7 +73,6 @@ object ProofSetMembershipPolicy {
         ArtifactRule.AlwaysExclude { it.endsWith(".lp.offchain.json") },
         ArtifactRule.AlwaysExclude { it.endsWith(".lp.onchain.json") },
         ArtifactRule.AlwaysExclude { it.endsWith(".lp.onchain.pending.json") },
-        ArtifactRule.AlwaysExclude { it.endsWith(".lp.json") },
     )
 
     private val requiredCoreRules: List<ArtifactRule.RequiredCore> =

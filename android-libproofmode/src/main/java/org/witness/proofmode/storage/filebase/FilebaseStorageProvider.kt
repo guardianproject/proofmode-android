@@ -132,6 +132,17 @@ open class FilebaseStorageProvider(
             region = config.region,
             ipfsBearerToken = config.ipfsBearerToken,
         )
+
+        /**
+         * The one test choice for a Filebase config: IPFS when a bearer token is present, else S3
+         * when its fields are complete, else null because nothing can be tested.
+         */
+        fun connectionTest(config: FilebaseConfig): ((TestConnectionCallback) -> Unit)? = when {
+            config.ipfsBearerToken.isNotBlank() ->
+                from(config)::testIpfsConnection
+            config.hasS3Access() -> from(config)::testConnection
+            else -> null
+        }
     }
 
     private val client = OkHttpClient.Builder()
@@ -689,10 +700,11 @@ open class FilebaseStorageProvider(
     }
 
     /**
-     * Test IPFS RPC connectivity with the configured bearer token (`POST /api/v0/version`).
+     * Test IPFS RPC connectivity with the configured bearer token (`POST /api/v0/files/flush`).
      *
-     * Filebase documents `/version` as the auth check for RPC tokens. Bucket MFS probes
-     * like `/files/stat` return 400 for valid tokens on this gateway, so they are not used.
+     * Filebase serves `/version` without checking the token, so it passes for any bearer.
+     * `/files/flush` takes no arguments, changes no files, enforces the bucket-scoped token
+     * (401 when missing or invalid), and returns the bucket root `{"Cid": ...}`.
      */
     fun testIpfsConnection(callback: TestConnectionCallback) {
         Thread {
@@ -703,7 +715,7 @@ open class FilebaseStorageProvider(
                 }
 
                 val request = Request.Builder()
-                    .url("$IPFS_RPC_BASE_URL/api/v0/version")
+                    .url("$IPFS_RPC_BASE_URL/api/v0/files/flush")
                     .post(ByteArray(0).toRequestBody(null))
                     .addHeader("Authorization", "Bearer $ipfsBearerToken")
                     .build()
@@ -713,15 +725,15 @@ open class FilebaseStorageProvider(
                 client.newCall(request).execute().use { response ->
                     val responseBody = response.body?.string().orEmpty()
                     if (response.isSuccessful) {
-                        // Require a real version payload — reject empty/error JSON that some
+                        // Require a real bucket CID — reject empty/error JSON that some
                         // gateways still return as HTTP 200 for bad credentials.
-                        val version =
+                        val cid =
                             try {
-                                JSONObject(responseBody).optString("Version").trim()
+                                JSONObject(responseBody).optString("Cid").trim()
                             } catch (_: Exception) {
                                 ""
                             }
-                        if (version.isEmpty()) {
+                        if (cid.isEmpty()) {
                             val errorMsg =
                                 "IPFS connection failed: Invalid bearer token or unexpected response"
                             Log.e(TAG, "$errorMsg body=$responseBody")

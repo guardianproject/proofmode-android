@@ -24,7 +24,7 @@ class ProofSetCidSidecarWriterFirstComputeTest {
     fun composeByteBackedManifest_injectsMediaLinkNamedHashDotExt() {
         val hash = "mediahash001"
         val mediaBytes = "raw-media-bytes".toByteArray()
-        val diskIds = listOf("$hash.proof.csv", "$hash.ipfs-cids.json", "$hash.lp.json")
+        val diskIds = listOf("$hash.proof.csv", "$hash.ipfs-cids.json")
         val manifestMembers = ProofSetCidMembershipPolicy.manifestMemberBasenames(
             context, hash, diskIds,
         )

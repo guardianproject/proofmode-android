@@ -12,8 +12,19 @@ import org.witness.proofmode.util.TestWalletStackHelper
 
 internal object LocationSettingsActivityTestSupport {
 
-    fun reflectiveProofModeApp(context: Context): ProofModeApp =
-        ProofModeApp::class.java.getDeclaredConstructor().newInstance().also { instance ->
+    // The handler can legitimately be null, so a separate flag marks "already saved".
+    private var savedDefaultHandler: Thread.UncaughtExceptionHandler? = null
+    private var defaultHandlerSaved = false
+
+    fun reflectiveProofModeApp(context: Context): ProofModeApp {
+        // attachBaseContext installs ACRA as the JVM-wide default handler. Saved once, before the first
+        // install: a later call would capture ACRA itself, and a leftover ACRA ends the worker JVM when
+        // an unrelated class's background thread throws.
+        if (!defaultHandlerSaved) {
+            savedDefaultHandler = Thread.getDefaultUncaughtExceptionHandler()
+            defaultHandlerSaved = true
+        }
+        return ProofModeApp::class.java.getDeclaredConstructor().newInstance().also { instance ->
             val attach = android.content.ContextWrapper::class.java.getDeclaredMethod(
                 "attachBaseContext",
                 Context::class.java,
@@ -21,6 +32,15 @@ internal object LocationSettingsActivityTestSupport {
             attach.isAccessible = true
             attach.invoke(instance, context)
         }
+    }
+
+    fun tearDown() {
+        if (defaultHandlerSaved) {
+            Thread.setDefaultUncaughtExceptionHandler(savedDefaultHandler)
+            savedDefaultHandler = null
+            defaultHandlerSaved = false
+        }
+    }
 
     fun launchLocationSettingsActivity(): LocationSettingsActivity {
         val context: Context = ApplicationProvider.getApplicationContext()
@@ -42,4 +62,9 @@ internal object LocationSettingsActivityTestSupport {
         field.isAccessible = true
         field.set(activity, app)
     }
+
+    fun fragment(activity: LocationSettingsActivity): LocationSettingsActivity.LocationPreferencesFragment =
+        activity.supportFragmentManager
+            .findFragmentById(R.id.location_settings_container)
+            as LocationSettingsActivity.LocationPreferencesFragment
 }

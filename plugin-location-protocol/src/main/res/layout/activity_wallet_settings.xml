@@ -23,6 +23,7 @@
     </com.google.android.material.appbar.AppBarLayout>
 
     <ScrollView
+        android:id="@+id/scroll_wallet_settings"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:fillViewport="true">
@@ -210,6 +211,17 @@
                         android:layout_marginTop="8dp" />
 
                     <TextView
+                        android:id="@+id/tv_checking_sponsored_networks"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:fontFamily="@font/verdana"
+                        android:text="@string/wallet_checking_sponsored_networks"
+                        android:textColor="@color/onboarding_gray"
+                        android:textSize="12sp"
+                        android:visibility="gone" />
+
+                    <TextView
                         android:id="@+id/tv_empty_sponsored_networks"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -218,6 +230,30 @@
                         android:text="@string/wallet_empty_sponsored_networks"
                         android:textColor="#B00020"
                         android:textSize="12sp"
+                        android:visibility="gone" />
+
+                    <TextView
+                        android:id="@+id/tv_could_not_check_sponsored_networks"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:fontFamily="@font/verdana"
+                        android:text="@string/wallet_could_not_check_sponsored_networks"
+                        android:textColor="@color/onboarding_gray"
+                        android:textSize="12sp"
+                        android:visibility="gone" />
+
+                    <Button
+                        android:id="@+id/btn_retry_sponsored_networks"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/rounded_button_dark_background"
+                        android:fontFamily="@font/inter"
+                        android:text="@string/wallet_retry"
+                        android:textAllCaps="false"
+                        android:textColor="@android:color/white"
+                        android:textSize="15sp"
                         android:visibility="gone" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

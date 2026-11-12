@@ -243,7 +243,6 @@
     <string name="location_protocol_auto_capture_summary">ஆப்ஸில் படம்பிடித்த பிறகு இருப்பிடச் சான்றளிப்பைத் தானாக இயக்கு</string>
     <string name="location_protocol_auto_capture_summary_location_required">தானியங்குச் சான்றளிப்புப் பயன்முறையைத் தேர்வுசெய்ய மேலே உள்ள இருப்பிடப் பகிர்வை இயக்கவும்</string>
     <string name="location_protocol_auto_capture_summary_lp_required">தானியங்குச் சான்றளிப்புப் பயன்முறையைத் தேர்வுசெய்ய Location Protocol சான்றளிப்பை இயக்கவும்</string>
-    <string name="location_protocol_auto_capture_summary_wallet_required">தானியங்குச் சான்றளிப்புப் பயன்முறையைத் தேர்வுசெய்ய வாலட் அமைப்புகளில் ஒரு வாலட்டை இணைக்கவும்</string>
     <string name="location_wallet_row_summary">இருப்பிடச் சான்றுகளைக் கையொப்பமிடப் பயன்படும் வாலட்டை நிர்வகிக்கவும்</string>
     <string name="location_wallet_summary_location_required">வாலட்டை அமைக்க மேலே உள்ள இருப்பிடப் பகிர்வை இயக்கவும்</string>
     <string name="location_wallet_summary_lp_required">வாலட்டை அமைக்க Location Protocol சான்றளிப்பை இயக்கவும்</string>
@@ -319,12 +318,14 @@
     <string name="signing_server_unreachable_message">உள்ளடக்க நற்சான்றிதழ் (C2PA) கையொப்பமிடல் தொலைநிலைக்கு அமைக்கப்பட்டுள்ளது, எனவே சர்வரை அணுக முடியும் வரை புதிய படங்களும் வீடியோக்களும் கையொப்பத்துக்காகக் காத்திருக்கும். உங்கள் இணைய இணைப்பைச் சரிபார்க்கவும், அல்லது அமைப்புகளில் உள்ளகக் கையொப்பமிடலுக்கு மாறவும்.</string>
     <string name="nostr_notarization">Nostr நோட்டரி சான்று</string>
     <string name="cid_manifest">CID மேனிஃபெஸ்ட்</string>
+    <string name="root_cid_clip_label">வேர் CID</string>
     <string name="offchain_location_attestation">செயினுக்கு வெளியே இருப்பிடச் சான்றளிப்பு</string>
     <string name="onchain_location_attestation">செயினில் இருப்பிடச் சான்றளிப்பு</string>
     <string name="artifact_tap_to_view">பார்க்கத் தட்டவும்</string>
     <string name="artifact_tap_to_view_manifest">முழு மேனிஃபெஸ்ட்டைப் பார்க்கத் தட்டவும்</string>
     <string name="lp_attestation_in_progress">சான்றளிப்பு நடைபெறுகிறது…</string>
     <string name="view_on_eas_scan">EAS Scan இல் பார்</string>
+    <string name="view_transaction">பரிவர்த்தனையைப் பார்</string>
     <string name="artifact_loading">ஏற்றுகிறது…</string>
     <string name="filebase_ipfs_bearer_token">IPFS பேரர் டோக்கன்</string>
     <string name="filebase_auto_upload">தானியங்குப் பதிவேற்றங்கள்</string>
@@ -347,6 +348,11 @@
     <string name="filebase_social_not_configured_share">பதிவேற்றாமல் பகிர்</string>
     <string name="filebase_proof_not_ready">Filebase பதிவேற்றத்துக்கு ஆதாரம் இன்னும் தயாராகவில்லை.</string>
     <string name="lp_attest_nothing_to_queue">இருப்பிடச் சான்றளிப்புக்கு ஆதாரம் இன்னும் தயாராகவில்லை.</string>
+    <string name="lp_toast_offchain_success">இருப்பிடம் செயினுக்கு வெளியே சான்றளிக்கப்பட்டது</string>
+    <string name="lp_toast_offchain_failed">செயினுக்கு வெளியே சான்றளிப்பு முடியவில்லை</string>
+    <string name="lp_toast_onchain_success">இருப்பிடம் செயினில் சமர்ப்பிக்கப்பட்டது</string>
+    <string name="lp_toast_onchain_failed">செயினில் சான்றளிப்பு முடியவில்லை</string>
+    <string name="proofset_toast_mixed">%2$d இல் %1$d முடிந்தது</string>
     <string name="filebase_upload_success">Filebase இல் பதிவேற்றப்பட்டது</string>
     <string name="filebase_upload_failed">Filebase பதிவேற்றம் தோல்வியடைந்தது</string>
     <string name="filebase_upload_oversize_title">பதிவேற்ற மீடியா மிகப் பெரியது</string>
@@ -389,7 +395,6 @@
     <string name="lp_auto_capture_mode_both">இரண்டும் (முதலில் செயினுக்கு வெளியே, பிறகு செயினில்)</string>
     <string name="lp_auto_capture_skip_location_unavailable">தானியங்கு இருப்பிடச் சான்றளிப்பு தவிர்க்கப்பட்டது: இந்தப் படம்பிடிப்புக்கு இருப்பிடத் தரவு கிடைக்கவில்லை.</string>
     <string name="lp_auto_capture_skip_no_activity">தானியங்கு செயின் சான்றளிப்பு தவிர்க்கப்பட்டது: செயினில் சமர்ப்பிக்க ஆப்ஸைத் திறக்கவும்.</string>
-    <string name="lp_auto_capture_skip_wallet_unavailable">தானியங்கு இருப்பிடச் சான்றளிப்பு தவிர்க்கப்பட்டது: வாலட் இணைக்கப்படவில்லை.</string>
     <string name="settings_note">குறிப்பு</string>
     <string name="settings_note_desc">ஆசிரியர் குறிப்புகள்</string>
     <string name="settings_version_placeholder">பதிப்பு</string>

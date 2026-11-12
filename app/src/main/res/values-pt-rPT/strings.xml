@@ -209,7 +209,6 @@
     <string name="location_protocol_auto_capture_summary">Executar automaticamente a atestação de localização após uma captura na aplicação</string>
     <string name="location_protocol_auto_capture_summary_location_required">Ative a partilha de localização acima para escolher um modo de atestação automática</string>
     <string name="location_protocol_auto_capture_summary_lp_required">Ative a atestação Location Protocol para escolher um modo de atestação automática</string>
-    <string name="location_protocol_auto_capture_summary_wallet_required">Ligue uma carteira nas Definições da carteira para escolher um modo de atestação automática</string>
     <string name="location_wallet_row_summary">Gerir a carteira usada para assinar atestações de localização</string>
     <string name="location_wallet_summary_location_required">Ative a partilha de localização acima para configurar uma carteira</string>
     <string name="location_wallet_summary_lp_required">Ative a atestação Location Protocol para configurar uma carteira</string>
@@ -299,12 +298,14 @@
     <string name="signing_server_unreachable_message">A assinatura de credenciais de conteúdo (C2PA) está definida como Remota, pelo que as novas fotos e vídeos aguardarão assinatura até o servidor estar acessível. Verifique a sua ligação à Internet ou mude para a assinatura local nas Definições.</string>
     <string name="nostr_notarization">Notarização Nostr</string>
     <string name="cid_manifest">Manifesto CID</string>
+    <string name="root_cid_clip_label">CID raiz</string>
     <string name="offchain_location_attestation">Atestação de localização off-chain</string>
     <string name="onchain_location_attestation">Atestação de localização on-chain</string>
     <string name="artifact_tap_to_view">Toque para ver</string>
     <string name="artifact_tap_to_view_manifest">Toque para ver o manifesto completo</string>
     <string name="lp_attestation_in_progress">Atestação em curso…</string>
     <string name="view_on_eas_scan">Ver no EAS Scan</string>
+    <string name="view_transaction">Ver transação</string>
     <string name="artifact_loading">A carregar…</string>
     <string name="filebase_ipfs_storage">Filebase IPFS AutoSync (BETA)</string>
     <string name="filebase_ipfs_storage_description">Introduza credenciais S3 (chave de acesso, segredo, bucket e endpoint) ou um token portador IPFS para ativar o carregamento da média capturada e dos respetivos metadados de prova para o Filebase.</string>
@@ -347,6 +348,11 @@
     <string name="filebase_social_not_configured_share">Partilhar sem carregar</string>
     <string name="filebase_proof_not_ready">A prova ainda não está pronta para carregar para o Filebase.</string>
     <string name="lp_attest_nothing_to_queue">A prova ainda não está pronta para a atestação de localização.</string>
+    <string name="lp_toast_offchain_success">Localização atestada off-chain</string>
+    <string name="lp_toast_offchain_failed">A atestação off-chain não foi concluída</string>
+    <string name="lp_toast_onchain_success">Localização submetida on-chain</string>
+    <string name="lp_toast_onchain_failed">A atestação on-chain não foi concluída</string>
+    <string name="proofset_toast_mixed">%1$d de %2$d concluídos</string>
     <string name="filebase_upload_success">Carregado para o Filebase</string>
     <string name="filebase_upload_failed">Falha no carregamento para o Filebase</string>
     <string name="filebase_upload_oversize_title">Média demasiado grande para carregar</string>
@@ -396,7 +402,6 @@
     <string name="lp_auto_capture_mode_both">Ambos (off-chain e depois on-chain)</string>
     <string name="lp_auto_capture_skip_location_unavailable">Atestação de localização automática ignorada: dados de localização indisponíveis para esta captura.</string>
     <string name="lp_auto_capture_skip_no_activity">Atestação on-chain automática ignorada: abra a aplicação para submeter on-chain.</string>
-    <string name="lp_auto_capture_skip_wallet_unavailable">Atestação de localização automática ignorada: carteira não ligada.</string>
     <string name="settings_note">Nota</string>
     <string name="settings_note_desc">Notas do autor</string>
     <string name="settings_version_placeholder">Versão</string>

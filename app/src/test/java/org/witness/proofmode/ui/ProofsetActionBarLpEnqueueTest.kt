@@ -8,38 +8,38 @@ import org.junit.Test
 
 class ProofsetActionBarLpEnqueueTest {
     @Test
-    fun lpUrisForManualEnqueue_dropsNonGeneratedStatuses() {
+    fun lpGeneratedItemsForManualEnqueue_dropsNonGeneratedStatuses() {
         val generatedUri = FakeUri()
         val items = listOf(
             ProofableItem("pending", FakeUri(), ProofStatus.PENDING),
             ProofableItem("generating", FakeUri(), ProofStatus.GENERATING),
             ProofableItem("generated", generatedUri, ProofStatus.GENERATED),
         )
-        val result = lpUrisForManualEnqueue(items)
+        val result = lpGeneratedItemsForManualEnqueue(items)
         assertEquals(1, result.size)
-        assertSame(generatedUri, result.single())
+        assertSame(generatedUri, result.single().uri)
     }
 
     @Test
-    fun lpUrisForManualEnqueue_returnsEmptyWhenNoGeneratedItems() {
+    fun lpGeneratedItemsForManualEnqueue_returnsEmptyWhenNoGeneratedItems() {
         val items = listOf(
             ProofableItem("pending", FakeUri(), ProofStatus.PENDING),
             ProofableItem("generating", FakeUri(), ProofStatus.GENERATING),
         )
-        assertTrue(lpUrisForManualEnqueue(items).isEmpty())
+        assertTrue(lpGeneratedItemsForManualEnqueue(items).isEmpty())
     }
 
     @Test
-    fun lpUrisForManualEnqueue_returnsAllGeneratedUrisWithoutHashFiltering() {
+    fun lpGeneratedItemsForManualEnqueue_returnsAllGeneratedItemsWithoutHashFiltering() {
         val uriA = FakeUri()
         val uriB = FakeUri()
         val items = listOf(
             ProofableItem("a", uriA, ProofStatus.GENERATED),
             ProofableItem("b", uriB, ProofStatus.GENERATED),
         )
-        val result = lpUrisForManualEnqueue(items)
+        val result = lpGeneratedItemsForManualEnqueue(items)
         assertEquals(2, result.size)
-        assertSame(uriA, result[0])
-        assertSame(uriB, result[1])
+        assertSame(uriA, result[0].uri)
+        assertSame(uriB, result[1].uri)
     }
 }

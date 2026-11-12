@@ -8,7 +8,6 @@ import android.net.Uri
 import org.witness.proofmode.plugins.lp.attestation.EASAttestationManager
 import org.witness.proofmode.plugins.lp.attestation.LocationProtocolAttestationCoordinator
 import org.witness.proofmode.plugins.lp.deeplink.WalletDeepLinkApplier
-import org.witness.proofmode.plugins.lp.deeplink.WalletDeepLinkParseResult
 import org.witness.proofmode.plugins.lp.deeplink.WalletDeepLinkParser
 import org.witness.proofmode.plugins.lp.deeplink.WalletDeepLinkResult
 import kotlinx.coroutines.CoroutineScope
@@ -17,7 +16,6 @@ import org.witness.proofmode.plugins.lp.bridge.FlutterEngineProvider
 import org.witness.proofmode.plugins.lp.bridge.LPBridgeMessenger
 import org.witness.proofmode.storage.StorageProvider
 import org.witness.proofmode.plugins.wallet.infra.model.WalletSdkConfig
-import org.witness.proofmode.plugins.wallet.infra.api.WalletCapabilityProvider
 import org.witness.proofmode.plugins.wallet.infra.privy.PrivyWalletConnector
 import org.witness.proofmode.plugins.wallet.infra.zerodev.ZeroDevSmartAccountConnector
 import org.witness.proofmode.plugins.lp.wallet.WalletDiagnostics
@@ -129,10 +127,6 @@ object LocationProtocolPlugin : ProofmodePlugin {
     /** Whether [WalletSigningPlugin.register] has run (lpEnabled path). Router uses this before apply. */
     fun isWalletStackRegistered(): Boolean = WalletSigningPlugin.isRegistered()
 
-    /** Pure parse/validate — no side effects. Wallet-infra-free return type. */
-    fun parseWalletDeepLink(uri: Uri): WalletDeepLinkParseResult =
-        WalletDeepLinkParser().parse(uri)
-
     /**
      * Parse, persist valid params to [WalletSessionStore], and sync chain on IO when applicable.
      * Caller must guard with [isWalletStackRegistered] before invoking (Phase 3 router).
@@ -157,21 +151,14 @@ object LocationProtocolPlugin : ProofmodePlugin {
     fun walletDiagnostics(): WalletDiagnostics {
         if (!isWalletStackRegistered()) {
             return WalletDiagnostics(
-                chainId = null,
                 address = null,
-                connectorName = "unregistered",
-                sponsorshipActive = null,
                 connected = false,
             )
         }
         val connector = WalletSigningPlugin.providerSelection.activeConnector
         val identity = connector.getIdentity()
-        val sponsorshipActive = (connector as? WalletCapabilityProvider)?.isSponsorshipActive
         return WalletDiagnostics(
-            chainId = identity?.chainId,
             address = identity?.address,
-            connectorName = connector.javaClass.simpleName,
-            sponsorshipActive = sponsorshipActive,
             connected = identity != null,
         )
     }

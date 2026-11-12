@@ -17,7 +17,6 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.witness.proofmode.TestProofModeApplication
 import org.witness.proofmode.plugins.lp.LocationProtocolPlugin
-import org.witness.proofmode.plugins.lp.wallet.WalletSigningPlugin
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28], application = TestProofModeApplication::class)
@@ -54,7 +53,7 @@ class ForegroundWalletActivityBinderTest {
     @Test
     fun lifecycle_startAThenB_stopAStillBound_stopBUnbinds() {
         TestWalletStackHelper.setupFakeKeyStore()
-        WalletSigningPlugin.register(ApplicationProvider.getApplicationContext())
+        LocationProtocolPlugin.registerWalletStack(ApplicationProvider.getApplicationContext())
 
         val activityA = Robolectric.buildActivity(Activity::class.java).setup().get()
         val activityB = Robolectric.buildActivity(Activity::class.java).setup().get()
@@ -79,7 +78,7 @@ class ForegroundWalletActivityBinderTest {
     @Test
     fun awaitWalletActivityBound_returnsTrueWhenActivityAlreadyStarted() = runTest {
         TestWalletStackHelper.setupFakeKeyStore()
-        WalletSigningPlugin.register(ApplicationProvider.getApplicationContext())
+        LocationProtocolPlugin.registerWalletStack(ApplicationProvider.getApplicationContext())
         val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
         binder.onActivityStarted(activity)
 
@@ -92,7 +91,7 @@ class ForegroundWalletActivityBinderTest {
     @Test
     fun awaitWalletActivityBound_returnsTrueAfterDelayedStart() = runTest {
         TestWalletStackHelper.setupFakeKeyStore()
-        WalletSigningPlugin.register(ApplicationProvider.getApplicationContext())
+        LocationProtocolPlugin.registerWalletStack(ApplicationProvider.getApplicationContext())
         val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
 
         val deferred = async {
@@ -107,7 +106,7 @@ class ForegroundWalletActivityBinderTest {
     @Test
     fun awaitWalletActivityBound_returnsFalseOnTimeout() = runTest {
         TestWalletStackHelper.setupFakeKeyStore()
-        WalletSigningPlugin.register(ApplicationProvider.getApplicationContext())
+        LocationProtocolPlugin.registerWalletStack(ApplicationProvider.getApplicationContext())
 
         val result = ForegroundWalletActivityBinder.awaitWalletActivityBound(timeoutMs = 200L)
         assertFalse(result)

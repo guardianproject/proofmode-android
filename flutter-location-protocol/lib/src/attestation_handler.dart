@@ -84,6 +84,11 @@ Future<dynamic> _dispatch(MethodCall call) async {
           (call.arguments as Map?)?.cast<Object?, Object?>() ?? const {};
       return _buildEasTypedData(_coerceStringMap(args));
 
+    case 'get-eas-chain-params':
+      final args =
+          (call.arguments as Map?)?.cast<Object?, Object?>() ?? const {};
+      return _getEasChainParams(_coerceStringMap(args));
+
     case 'create-offchain-attestation':
       final args =
           (call.arguments as Map?)?.cast<Object?, Object?>() ?? const {};
@@ -109,19 +114,68 @@ Future<dynamic> _dispatch(MethodCall call) async {
 }
 
 // ---------------------------------------------------------------------------
+// Selected-chain resolution (shared by typed-data and onchain builders)
+// ---------------------------------------------------------------------------
+
+final _caip2Eip155 = RegExp(r'^eip155:(\d+)$');
+
+/// Resolves a raw CAIP-2 `chainId` argument to its `ChainAddresses` row.
+///
+/// A non-String or non-`eip155:<digits>` value is `LP_INVALID_PAYLOAD`; a
+/// well-formed id absent from the table is `LP_UNSUPPORTED_CHAIN`.
+({int numericChainId, ChainAddresses addresses}) _resolveChain(
+  Object? rawChainId,
+) {
+  final match =
+      rawChainId is String ? _caip2Eip155.firstMatch(rawChainId) : null;
+  final numericChainId = match == null ? null : int.tryParse(match.group(1)!);
+  if (numericChainId == null) {
+    throw PlatformException(
+      code: 'LP_INVALID_PAYLOAD',
+      message: 'chainId must be a CAIP-2 string like eip155:<id>',
+    );
+  }
+  final addresses = ChainConfig.forChainId(numericChainId);
+  if (addresses == null) {
+    throw PlatformException(
+      code: 'LP_UNSUPPORTED_CHAIN',
+      message: 'Unsupported chain ID: $numericChainId',
+    );
+  }
+  return (numericChainId: numericChainId, addresses: addresses);
+}
+
+// ---------------------------------------------------------------------------
+// get-eas-chain-params
+// ---------------------------------------------------------------------------
+
+/// Returns the EAS address and the table's EAS version for a CAIP-2 `chainId`.
+///
+/// Kotlin reads the live version from the returned address and signs the table
+/// version only when every RPC fails, so the table stays the one place the
+/// chain rows live.
+Map<String, String> _getEasChainParams(Map<String, dynamic> root) {
+  final addresses = _resolveChain(root['chainId']).addresses;
+  return {'easAddress': addresses.eas, 'easVersion': addresses.easVersion};
+}
+
+// ---------------------------------------------------------------------------
 // build-eas-typed-data
 // ---------------------------------------------------------------------------
 
 /// Builds EAS EIP-712 typed-data JSON from an LP payload map.
 ///
-/// Input: root map with key `payload` containing the LP fields.
+/// Input: root map with key `payload` containing the LP fields, `chainId`
+///        (the selected chain as a CAIP-2 string; the domain follows it) and
+///        `easVersion` (the chain's EAS version as read live by Kotlin; the
+///        table version is never substituted here).
 /// Output: JSON string representing the full EIP-712 typed-data structure,
 ///         including `salt` and `schemaUID` as passthrough fields in the
 ///         `message` so `create-offchain-attestation` can use them for
 ///         UID computation without re-deriving.
 ///
 /// The EIP-712 JSON structure mirrors the canonical Attest typed-data layout
-/// defined by EAS v1.3.0 (Sepolia):
+/// defined by EAS v1.3.0:
 ///   - `chainId` in domain is a decimal string
 ///   - `time`, `expirationTime`, `version` in message are decimal strings
 Future<String> _buildEasTypedData(Map<String, dynamic> root) async {
@@ -135,26 +189,22 @@ Future<String> _buildEasTypedData(Map<String, dynamic> root) async {
   }
 
   final Map<String, dynamic> payload;
-  if (raw is String) {
-    // Kotlin may serialize the payload as a JSON string
-    try {
-      final decoded = jsonDecode(raw);
-      if (decoded is! Map) {
-        throw const FormatException('payload JSON is not an object');
-      }
-      payload = decoded.cast<String, dynamic>();
-    } catch (e) {
-      throw PlatformException(
-        code: 'LP_INVALID_PAYLOAD',
-        message: 'payload is not valid JSON: $e',
-      );
-    }
-  } else if (raw is Map) {
+  if (raw is Map) {
     payload = raw.map((k, v) => MapEntry(k.toString(), v));
   } else {
     throw PlatformException(
       code: 'LP_INVALID_PAYLOAD',
-      message: 'payload must be a map or JSON string',
+      message: 'payload must be a map',
+    );
+  }
+
+  // ── 1b. Resolve the selected chain (before any ABI work) ───────────────
+  final chain = _resolveChain(root['chainId']);
+  final easVersion = root['easVersion'];
+  if (easVersion is! String || easVersion.trim().isEmpty) {
+    throw PlatformException(
+      code: 'LP_INVALID_PAYLOAD',
+      message: 'easVersion must be a non-blank string',
     );
   }
 
@@ -231,13 +281,13 @@ Future<String> _buildEasTypedData(Map<String, dynamic> root) async {
   final schemaUID = SchemaUID.compute(schema);
 
   // ── 5. Build canonical domain + types + message ───────────────────────
-  const chainId = 11155111; // Sepolia
-  final chainAddresses = ChainConfig.forChainId(chainId)!;
+  final chainId = chain.numericChainId;
+  final chainAddresses = chain.addresses;
 
   // Domain (canonical — chainId stored as int for attestation object)
   final domain = <String, dynamic>{
     'name': EASConstants.eip712DomainName,
-    'version': chainAddresses.easVersion,
+    'version': easVersion,
     'chainId': chainId,
     'verifyingContract': chainAddresses.eas,
   };
@@ -505,8 +555,7 @@ Future<Map<String, dynamic>> _createOffchainAttestation(
 
 Future<Map<String, dynamic>> _buildEasOnchainData(Map<String, dynamic> args) async {
   // ── 1. Extract required fields ─────────────────────────────────────────
-  final chainIdStr = args['chainId'] as String?;
-  if (chainIdStr == null) {
+  if (args['chainId'] == null) {
     throw PlatformException(
       code: 'LP_MISSING_FIELD',
       message: 'Missing required field: chainId',
@@ -521,37 +570,18 @@ Future<Map<String, dynamic>> _buildEasOnchainData(Map<String, dynamic> args) asy
   }
 
   final Map<String, dynamic> payload;
-  if (raw is String) {
-    try {
-      final decoded = jsonDecode(raw);
-      if (decoded is! Map) {
-        throw const FormatException('payload JSON is not an object');
-      }
-      payload = decoded.cast<String, dynamic>();
-    } catch (e) {
-      throw PlatformException(
-        code: 'LP_INVALID_PAYLOAD',
-        message: 'payload is not valid JSON: $e',
-      );
-    }
-  } else if (raw is Map) {
+  if (raw is Map) {
     payload = raw.map((k, v) => MapEntry(k.toString(), v));
   } else {
     throw PlatformException(
       code: 'LP_INVALID_PAYLOAD',
-      message: 'payload must be a map or JSON string',
+      message: 'payload must be a map',
     );
   }
 
   // ── 2. Parse ChainID ───────────────────────────────────────────────────
-  final numericChainId = int.parse(chainIdStr.replaceAll('eip155:', ''));
-  final chainAddresses = ChainConfig.forChainId(numericChainId);
-  if (chainAddresses == null) {
-    throw PlatformException(
-      code: 'LP_UNSUPPORTED_CHAIN',
-      message: 'Unsupported chain ID: $numericChainId',
-    );
-  }
+  final chain = _resolveChain(args['chainId']);
+  final chainAddresses = chain.addresses;
 
   // ── 3. Build LP primitives ─────────────────────────────────────────────
   final LPPayload lpPayload;
@@ -601,7 +631,7 @@ Future<Map<String, dynamic>> _buildEasOnchainData(Map<String, dynamic> args) asy
     'schemaId': schemaUID,
     'easAddress': chainAddresses.eas,
     'schemaRegistryAddress': chainAddresses.schemaRegistry,
-    'chainId': chainIdStr,
+    'chainId': args['chainId'],
   };
 }
 
@@ -650,9 +680,6 @@ Map<String, dynamic> _coerceStringMap(Map<Object?, Object?> input) {
 String _normalizeSrs(dynamic value) {
   final srs = value?.toString() ?? '';
   if (srs.contains(':')) return srs;
-  if (srs.toLowerCase() == 'wgs84') {
-    return 'urn:ogc:def:crs:EPSG::4326';
-  }
   return 'urn:ogc:def:crs:EPSG::4326';
 }
 

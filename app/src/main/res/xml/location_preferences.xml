@@ -23,6 +23,8 @@
             app:summary="@string/location_protocol_auto_capture_summary"
             app:entries="@array/lp_auto_capture_mode_entries"
             app:entryValues="@array/lp_auto_capture_mode_values"
+            app:dialogLayout="@layout/dialog_auto_attest_mode_note"
+            app:dialogMessage="@string/location_protocol_auto_capture_note_wallet_required"
             app:defaultValue="off" />
         <SwitchPreferenceCompat
             app:key="pref_experimental_local_ipfs_cid_enabled"

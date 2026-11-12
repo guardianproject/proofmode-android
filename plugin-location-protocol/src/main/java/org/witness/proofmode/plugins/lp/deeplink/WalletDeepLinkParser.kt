@@ -5,12 +5,10 @@ import org.witness.proofmode.plugins.lp.deeplink.ParamOutcome
 import org.witness.proofmode.plugins.lp.deeplink.ParsedParam
 import org.witness.proofmode.plugins.lp.config.SUPPORTED_CHAINS
 import org.witness.proofmode.plugins.lp.deeplink.WalletDeepLinkParseResult
-import org.witness.proofmode.plugins.wallet.infra.BuildConfig
 import org.witness.proofmode.plugins.wallet.infra.config.UuidFormat
 import java.net.URLDecoder
 
 class WalletDeepLinkParser(
-    private val sponsorshipEnabled: Boolean = BuildConfig.FEATURE_SPONSORSHIP_ENABLED,
     private val supportedChainIds: Set<String> = SUPPORTED_CHAINS.map { it.caip2Id }.toSet(),
 ) {
     fun parse(uri: Uri): WalletDeepLinkParseResult {
@@ -52,7 +50,6 @@ class WalletDeepLinkParser(
     }
 
     private fun parseSponsor(uri: Uri): ParsedParam<Boolean> {
-        if (!sponsorshipEnabled) return gatedBooleanParam()
         if (!uri.queryParameterNames.contains("sponsor")) {
             return ParsedParam(ParamOutcome.ABSENT)
         }
@@ -65,7 +62,6 @@ class WalletDeepLinkParser(
     }
 
     private fun parseProjectId(uri: Uri): ParsedParam<String> {
-        if (!sponsorshipEnabled) return gatedStringParam()
         if (!uri.queryParameterNames.contains("projectId")) {
             return ParsedParam(ParamOutcome.ABSENT)
         }
@@ -77,9 +73,4 @@ class WalletDeepLinkParser(
             ParsedParam(ParamOutcome.INVALID)
         }
     }
-
-    /** Sponsorship compile gate: keys are ignored when disabled (always ABSENT). */
-    private fun gatedBooleanParam(): ParsedParam<Boolean> = ParsedParam(ParamOutcome.ABSENT)
-
-    private fun gatedStringParam(): ParsedParam<String> = ParsedParam(ParamOutcome.ABSENT)
 }

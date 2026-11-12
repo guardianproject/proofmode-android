@@ -7,7 +7,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.witness.proofmode.share.formatFilebaseFailureMessage
-import org.witness.proofmode.share.isFilebaseReconfigureFailure
 
 class FilebaseOnDemandUiEventsTest {
 
@@ -19,8 +18,7 @@ class FilebaseOnDemandUiEventsTest {
         testScheduler.runCurrent()
         val samePolicy = "ACCOUNT_FALLBACK_SAME_POLICY"
         val listener = FilebaseOnDemandCoordinator.failureListener(
-            format = { formatFilebaseFailureMessage(it, samePolicy, samePolicy) },
-            isReconfigure = { isFilebaseReconfigureFailure(it) },
+            format = { formatFilebaseFailureMessage(it, samePolicy, samePolicy, samePolicy) },
         )
         listener.saveFailed(
             Exception(
@@ -37,28 +35,10 @@ class FilebaseOnDemandUiEventsTest {
     }
 
     @Test
-    fun listener_mapsOtherFailureToDismissible_noRetry() = runTest {
-        FilebaseOnDemandUiEvents.resetForTests()
-        val collected = mutableListOf<FilebaseOnDemandUiEvent>()
-        val job = launch { FilebaseOnDemandUiEvents.events.collect { collected.add(it) } }
-        testScheduler.runCurrent()
-        val listener = FilebaseOnDemandCoordinator.failureListener(
-            format = { raw -> raw ?: "fallback" },
-            isReconfigure = { false },
-        )
-        listener.saveFailed(Exception("socket timeout"))
-        testScheduler.advanceUntilIdle()
-        job.cancel()
-        val event = collected.single() as FilebaseOnDemandUiEvent.DismissibleFailure
-        assertTrue(!event.message.contains("Retry", ignoreCase = true))
-    }
-
-    @Test
     fun failureWithNoHostListening_isDeliveredToTheNextCollector() = runTest {
         FilebaseOnDemandUiEvents.resetForTests()
         val listener = FilebaseOnDemandCoordinator.failureListener(
             format = { raw -> raw ?: "" },
-            isReconfigure = { false },
         )
 
         // No collector yet: MainActivity is not STARTED.
@@ -78,7 +58,6 @@ class FilebaseOnDemandUiEventsTest {
         FilebaseOnDemandUiEvents.resetForTests()
         val listener = FilebaseOnDemandCoordinator.failureListener(
             format = { raw -> raw ?: "" },
-            isReconfigure = { false },
         )
         listener.saveFailed(Exception("socket timeout"))
 

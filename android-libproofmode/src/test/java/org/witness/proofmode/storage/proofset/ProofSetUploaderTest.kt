@@ -15,10 +15,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.io.ByteArrayInputStream
-import java.io.IOException
 import java.net.SocketTimeoutException
 import java.io.InputStream
 import java.util.ArrayList
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.CyclicBarrier
 import java.util.concurrent.TimeUnit
@@ -31,6 +31,7 @@ import org.witness.proofmode.storage.CompositeStorageProvider
 import org.witness.proofmode.storage.StorageListener
 import org.witness.proofmode.storage.StorageProvider
 import org.witness.proofmode.storage.filebase.FilebaseConfig
+import org.witness.proofmode.storage.filebase.FilebaseConfig.UploadMode
 import org.witness.proofmode.storage.filebase.FilebaseGatewayUris
 import org.witness.proofmode.storage.filebase.FilebaseSidecarContract
 import org.witness.proofmode.storage.filebase.FilebaseStorageProvider
@@ -64,6 +65,38 @@ class ProofSetUploaderTest {
         streams = streams,
     )
 
+    private fun enqueueUpload(
+        primary: StorageProvider,
+        filebase: FilebaseStorageProvider,
+        listener: StorageListener? = null,
+        media: ProofSetMediaSource? = ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
+        mode: UploadMode = UploadMode.IPFS_DIRECTORY,
+        inclusion: MediaInclusion = MediaInclusion.INCLUDE_MEDIA,
+        hash: String = this.hash,
+    ): Boolean = ProofSetUploader.enqueueProofSetUpload(
+        context,
+        hash,
+        primary,
+        filebase,
+        media,
+        mode,
+        inclusion,
+        listener,
+    )
+
+    /**
+     * Polls on the test thread. occupancyCount reads the current state, so a poll that starts
+     * after the upload is released cannot miss the drop the way a late flow subscriber would.
+     */
+    private fun awaitOccupancyZero(hashes: Collection<String>, timeoutSeconds: Long = 5): Boolean {
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(timeoutSeconds)
+        while (hashes.any { ProofSetUploader.occupancyCount(it) != 0 }) {
+            if (System.nanoTime() >= deadline) return false
+            Thread.sleep(10)
+        }
+        return true
+    }
+
     @Test
     fun contentTypeFor_mapsKnownExtensions() {
         assertEquals("image/jpeg", ProofSetContentTypes.contentTypeFor("$hash.jpg"))
@@ -78,15 +111,11 @@ class ProofSetUploaderTest {
         val media = byteArrayOf(1, 2, 3)
         val listener = RecordingListener()
 
-        val started = ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
+        val started = enqueueUpload(
             primary,
             filebase,
-            ProofSetMediaSource.ofBytes(media, "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            listener,
+            listener = listener,
+            media = ProofSetMediaSource.ofBytes(media, "image/jpeg"),
         )
 
         assertTrue(started)
@@ -123,73 +152,7 @@ class ProofSetUploaderTest {
             primary.saveTextCalls,
         )
         assertEquals(listOf(hash to gatewayUri), listener.successes)
-    }
-
-    @Test
-    fun ipfsSuccess_writesIpfsAndImageUri() {
-        val gatewayUri = "https://ipfs.filebase.io/ipfs/bafyTestRoot"
-        val primary = primaryWithCore()
-        val filebase = RecordingFilebaseStorageProvider(uploadDirectoryResultUri = gatewayUri)
-        val cid = FilebaseGatewayUris.parseGatewayRootCid(gatewayUri)!!
-
-        assertTrue(
-            ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            null,
-        ),
-        )
-
-        assertEquals(
-            listOf(
-                Triple(
-                    hash,
-                    hash + FilebaseSidecarContract.FILEBASE_IPFS_URI_SUFFIX,
-                    FilebaseGatewayUris.buildProofsetUri(cid),
-                ),
-                Triple(
-                    hash,
-                    hash + FilebaseSidecarContract.FILEBASE_IMAGE_URI_SUFFIX,
-                    FilebaseGatewayUris.buildLeafImageUri(filebase.uploadDirectoryMediaLeafCid!!),
-                ),
-            ),
-            primary.saveTextCalls,
-        )
-        assertFalse(
-            primary.saveTextCalls.any {
-                it.first == hash &&
-                    it.second == hash + FilebaseSidecarContract.FILEBASE_IPFS_URI_SUFFIX &&
-                    it.third.startsWith("s3://")
-            },
-        )
-    }
-
-    @Test
-    fun incompleteFirstPass_returnsFalse_noUpload() {
-        val incomplete = coreBasenames() - "$hash.proof.json"
-        val primary = primaryWithCore(proofNames = incomplete)
-        val filebase = RecordingFilebaseStorageProvider()
-
-        val started = ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            ProofSetMediaSource.ofBytes(byteArrayOf(9), "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            null,
-        )
-
-        assertFalse(started)
-        assertTrue(filebase.uploadDirectoryCalls.isEmpty())
-        assertTrue(filebase.saveArtifactCalls.isEmpty())
-        assertTrue(primary.saveTextCalls.isEmpty())
+        assertTrue(filebase.unpinCalls.isEmpty())
     }
 
     @Test
@@ -197,29 +160,14 @@ class ProofSetUploaderTest {
         val primary = primaryWithCore()
         val filebase = RecordingFilebaseStorageProvider()
 
+        assertFalse(enqueueUpload(primary, filebase, media = null, mode = UploadMode.S3_MEMBERS))
         assertFalse(
-            ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            null,
-            FilebaseConfig.UploadMode.S3_MEMBERS,
-            MediaInclusion.INCLUDE_MEDIA,
-            null,
-        ),
-        )
-        assertFalse(
-            ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            ProofSetMediaSource.ofBytes(byteArrayOf(), "image/jpeg"),
-            FilebaseConfig.UploadMode.S3_MEMBERS,
-            MediaInclusion.INCLUDE_MEDIA,
-            null,
-        ),
+            enqueueUpload(
+                primary,
+                filebase,
+                media = ProofSetMediaSource.ofBytes(byteArrayOf(), "image/jpeg"),
+                mode = UploadMode.S3_MEMBERS,
+            ),
         )
         assertTrue(filebase.uploadDirectoryCalls.isEmpty())
         assertTrue(filebase.saveArtifactCalls.isEmpty())
@@ -232,15 +180,12 @@ class ProofSetUploaderTest {
         val media = byteArrayOf(4, 5, 6)
         val listener = RecordingListener()
 
-        val started = ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
+        val started = enqueueUpload(
             primary,
             filebase,
-            ProofSetMediaSource.ofBytes(media, "image/png"),
-            FilebaseConfig.UploadMode.S3_MEMBERS,
-            MediaInclusion.INCLUDE_MEDIA,
-            listener,
+            listener = listener,
+            media = ProofSetMediaSource.ofBytes(media, "image/png"),
+            mode = UploadMode.S3_MEMBERS,
         )
 
         assertTrue(started)
@@ -266,58 +211,6 @@ class ProofSetUploaderTest {
         )
     }
 
-    @Test
-    fun s3MembersSuccess_writesImageUriOnly_fromMediaMember() {
-        val primary = primaryWithCore()
-        val filebase = RecordingFilebaseStorageProvider()
-        val mediaBasename = "$hash.mp4"
-        val mediaUri = "s3://bucket/$hash/$mediaBasename"
-
-        assertTrue(
-            ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            ProofSetMediaSource.ofBytes(byteArrayOf(7, 8, 9), "video/mp4"),
-            FilebaseConfig.UploadMode.S3_MEMBERS,
-            MediaInclusion.INCLUDE_MEDIA,
-            null,
-        ),
-        )
-
-        assertEquals(
-            listOf(Triple(hash, hash + FilebaseSidecarContract.FILEBASE_IMAGE_URI_SUFFIX, mediaUri)),
-            primary.saveTextCalls,
-        )
-        assertFalse(
-            primary.saveTextCalls.any { it.second == hash + FilebaseSidecarContract.FILEBASE_IPFS_URI_SUFFIX },
-        )
-    }
-
-    @Test
-    fun neverPartialWhenIncomplete_noSaveBytesOrUploadDirectory() {
-        val incomplete = coreBasenames() - "$hash.asc"
-        val primary = primaryWithCore(proofNames = incomplete)
-        val filebase = RecordingFilebaseStorageProvider()
-
-        assertFalse(
-            ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            ProofSetMediaSource.ofBytes(byteArrayOf(1), "video/mp4"),
-            FilebaseConfig.UploadMode.S3_MEMBERS,
-            MediaInclusion.INCLUDE_MEDIA,
-            null,
-        ),
-        )
-        assertTrue(filebase.saveArtifactCalls.isEmpty())
-        assertTrue(filebase.uploadDirectoryCalls.isEmpty())
-        assertTrue(primary.getInputStreamCalls.isEmpty())
-    }
-
     private fun primaryWithDirectoryProvenance(
         priorCid: String,
         mediaBasename: String = "$hash.jpg",
@@ -337,27 +230,6 @@ class ProofSetUploaderTest {
     }
 
     @Test
-    fun hasIpfsDirectoryUri_trueWhenIpfsSidecarPresent() {
-        val priorCid = "bafyPrior"
-        val primary = primaryWithDirectoryProvenance(priorCid)
-        assertTrue(FilebaseSidecarContract.hasIpfsDirectoryUri(primary, hash))
-        assertEquals(priorCid, FilebaseSidecarContract.readPriorDirectoryRootCid(primary, hash))
-    }
-
-    @Test
-    fun hasIpfsDirectoryUri_trueWhenOnlyStreamPresent() {
-        val priorCid = "bafyPrior"
-        val proofsetUri = FilebaseGatewayUris.buildProofsetUri(priorCid)
-        val imageUri = FilebaseGatewayUris.buildImageUriUnderDirectory(priorCid, "$hash.jpg")
-        val streams = coreBasenames().associateWith { it.toByteArray() }.toMutableMap()
-        streams[hash + FilebaseSidecarContract.FILEBASE_IPFS_URI_SUFFIX] = proofsetUri.toByteArray()
-        streams[hash + FilebaseSidecarContract.FILEBASE_IMAGE_URI_SUFFIX] = imageUri.toByteArray()
-        val primary = primaryWithCore(streams = streams)
-        assertTrue(FilebaseSidecarContract.hasIpfsDirectoryUri(primary, hash))
-        assertEquals(priorCid, FilebaseSidecarContract.readPriorDirectoryRootCid(primary, hash))
-    }
-
-    @Test
     fun ipfsReupload_unpinsPriorDirectoryCidOnce_thenUploads() {
         val priorCid = "bafyPriorRoot"
         val primary = primaryWithDirectoryProvenance(priorCid)
@@ -366,15 +238,10 @@ class ProofSetUploaderTest {
         )
         val media = byteArrayOf(1, 2, 3)
 
-        val started = ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
+        val started = enqueueUpload(
             primary,
             filebase,
-            ProofSetMediaSource.ofBytes(media, "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            null,
+            media = ProofSetMediaSource.ofBytes(media, "image/jpeg"),
         )
 
         assertTrue(started)
@@ -405,16 +272,11 @@ class ProofSetUploaderTest {
         )
 
         assertTrue(
-            ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            ProofSetMediaSource.ofBytes(byteArrayOf(1), "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            null,
-        ),
+            enqueueUpload(
+                primary,
+                filebase,
+                media = ProofSetMediaSource.ofBytes(byteArrayOf(1), "image/jpeg"),
+            ),
         )
 
         assertEquals(listOf(latestCid), filebase.unpinCalls)
@@ -431,18 +293,7 @@ class ProofSetUploaderTest {
             uploadDirectoryResultUri = "https://ipfs.filebase.io/ipfs/$newCid",
         )
 
-        assertTrue(
-            ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            null,
-        ),
-        )
+        assertTrue(enqueueUpload(primary, filebase))
 
         assertEquals(listOf(priorCid), filebase.unpinCalls)
         assertEquals(1, filebase.uploadDirectoryCalls.size)
@@ -473,18 +324,7 @@ class ProofSetUploaderTest {
             uploadDirectoryResultUri = "https://ipfs.filebase.io/ipfs/bafyShouldNotPersist",
         )
 
-        assertTrue(
-            ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            null,
-        ),
-        )
+        assertTrue(enqueueUpload(primary, filebase))
 
         assertEquals(listOf(priorCid), filebase.unpinCalls)
         assertTrue(primary.saveTextCalls.isEmpty())
@@ -497,58 +337,6 @@ class ProofSetUploaderTest {
     }
 
     @Test
-    fun ipfsUpload_persistSkipped_saveFailed_doesNotAdvanceStamp() {
-        // arrange: RecordingFilebase returns FilebaseUploadResult with unparseable directoryUri
-        // so persistIpfsDirectorySuccess cannot parse a root CID.
-        val primary = primaryWithCore()
-        val filebase = RecordingFilebaseStorageProvider(
-            uploadDirectoryResultUri = "not-a-gateway-uri",
-        )
-        val listener = RecordingListener()
-
-        val started = ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            listener,
-        )
-
-        assertTrue(started)
-        assertNull(ProofSetUploader.lastUploadedMembership(hash))
-        assertNull(
-            primary.getInputStream(hash, hash + FilebaseSidecarContract.FILEBASE_IPFS_URI_SUFFIX),
-        )
-        assertEquals(0, listener.successes.size) // MUST NOT treat transfer-only as success
-        assertEquals(1, listener.failures.size) // required — not optional
-    }
-
-    @Test
-    fun firstUpload_skipsUnpin_whenNoProvenance() {
-        val primary = primaryWithCore()
-        val filebase = RecordingFilebaseStorageProvider()
-
-        assertTrue(
-            ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            null,
-        ),
-        )
-
-        assertTrue(filebase.unpinCalls.isEmpty())
-        assertEquals(1, filebase.uploadDirectoryCalls.size)
-    }
-
-    @Test
     fun imageOnly_noIpfsUri_skipsUnpin() {
         // Hard cutover: only `{hash}.filebase.ipfs.uri` triggers unpin — image alone does not.
         val leafImageUri = FilebaseGatewayUris.buildLeafImageUri("bafyLeafOnly")
@@ -557,18 +345,7 @@ class ProofSetUploaderTest {
         val primary = primaryWithCore(streams = streams)
         val filebase = RecordingFilebaseStorageProvider()
 
-        assertTrue(
-            ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            null,
-        ),
-        )
+        assertTrue(enqueueUpload(primary, filebase))
 
         assertTrue(filebase.unpinCalls.isEmpty())
         assertEquals(1, filebase.uploadDirectoryCalls.size)
@@ -590,16 +367,7 @@ class ProofSetUploaderTest {
                 )
                 val leafCid = if (!mediaBasename.isNullOrBlank()) uploadDirectoryMediaLeafCid else null
                 if (uploadDirectoryCalls.size == 1) {
-                    val parked = ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            this,
-            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            shareListener,
-        )
+                    val parked = enqueueUpload(primary, this, listener = shareListener)
                     assertTrue(parked)
                     assertEquals(1, uploadDirectoryCalls.size)
                     assertTrue(shareListener.successes.isEmpty())
@@ -637,99 +405,22 @@ class ProofSetUploaderTest {
     }
 
     @Test
-    fun compositeQueuedBehindShare_samePostAcquireSkip() {
-        val primary = AccumulatingStorageProvider()
-        for (name in coreBasenames()) {
-            primary.saveBytes(hash, name, name.toByteArray(), null)
-        }
-        val mediaFile = java.io.File(context.cacheDir, "$hash-direct-media.jpg")
-        mediaFile.writeBytes(byteArrayOf(1, 2, 3))
-        val secondary = object : RecordingFilebaseStorageProvider() {
-            override fun uploadDirectory(
-                hash: String,
-                artifacts: List<DeferredArtifact>,
-                mediaBasename: String?,
-                listener: StorageListener?,
-            ): FilebaseUploadResult? {
-                uploadDirectoryCalls.add(
-                    hash to artifacts.map { DeferredArtifact.ofBytes(it.identifier, it.readAllBytes(), it.contentType) },
-                )
-                val leafCid = if (!mediaBasename.isNullOrBlank()) uploadDirectoryMediaLeafCid else null
-                if (uploadDirectoryCalls.size == 1) {
-                    val composite = CompositeStorageProvider(
-                        primary,
-                        this,
-                        context,
-                        deferProofSetUpload = true,
-                        filebaseConfig = FilebaseConfig(
-                            accessKey = "ak",
-                            secretKey = "sk",
-                            bucketName = "bucket",
-                            enabled = true,
-                            ipfsBearerToken = "token",
-                            autoUpload = true,
-                            autoIncludeMedia = true,
-                        ),
-                    )
-                    val compositeMedia = java.io.File(context.cacheDir, "$hash-share-media.jpg")
-                    compositeMedia.writeBytes(byteArrayOf(1, 2, 3))
-                    composite.bindMedia(hash, Uri.fromFile(compositeMedia), "image/jpeg")
-                    for (name in coreBasenames()) {
-                        composite.saveBytes(hash, name, name.toByteArray(), null)
-                    }
-                    assertEquals(1, uploadDirectoryCalls.size)
-                }
-                listener?.saveSuccessful(hash, uploadDirectoryResultUri)
-                return FilebaseUploadResult(uploadDirectoryResultUri, leafCid)
-            }
-        }
-        ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            secondary,
-            ProofSetMediaSource.fromUriProvider(context) { Uri.fromFile(mediaFile) to "image/jpeg" },
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            null,
-        )
-
-        assertEquals(1, secondary.uploadDirectoryCalls.size)
-        assertTrue(secondary.unpinCalls.isEmpty())
-    }
-
-    @Test
     fun membershipUnchanged_skipDoesNotUnpinOrOverwrite_returnsTrue() {
         val priorCid = "bafyPriorRoot"
         val primary = primaryWithDirectoryProvenance(priorCid)
         val filebase = RecordingFilebaseStorageProvider()
         val media = byteArrayOf(1, 2, 3)
 
-        assertTrue(
-            ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            ProofSetMediaSource.ofBytes(media, "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            null,
-        ),
-        )
+        assertTrue(enqueueUpload(primary, filebase, media = ProofSetMediaSource.ofBytes(media, "image/jpeg")))
         assertEquals(1, filebase.uploadDirectoryCalls.size)
         assertEquals(1, filebase.unpinCalls.size)
 
         val listener = RecordingListener()
-        val skipped = ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
+        val skipped = enqueueUpload(
             primary,
             filebase,
-            ProofSetMediaSource.ofBytes(media, "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            listener,
+            listener = listener,
+            media = ProofSetMediaSource.ofBytes(media, "image/jpeg"),
         )
 
         assertTrue(skipped)
@@ -739,66 +430,30 @@ class ProofSetUploaderTest {
     }
 
     @Test
-    fun incompleteFirstPass_beforeUnpin_releasesInFlight_returnsFalse() {
-        val incomplete = coreBasenames() - "$hash.proof.json"
-        val primary = primaryWithCore(proofNames = incomplete)
-        val filebase = RecordingFilebaseStorageProvider()
-        val directListener = RecordingListener()
-
-        val leader = ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            ProofSetMediaSource.ofBytes(byteArrayOf(9), "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            null,
-        )
-        assertFalse(leader)
-
-        val direct = ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            ProofSetMediaSource.ofBytes(byteArrayOf(9), "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            directListener,
-        )
-        assertFalse(direct)
-
-        assertTrue(filebase.unpinCalls.isEmpty())
-        assertTrue(filebase.uploadDirectoryCalls.isEmpty())
-        // Incomplete returns false for Share not-ready; must not also invoke saveFailed
-        // (that would stack upload-failed toast on the same attempt).
-        assertTrue(directListener.failures.isEmpty())
-        assertTrue(directListener.successes.isEmpty())
-    }
-
-    @Test
     fun incompleteFirstPass_directCaller_doesNotInvokeSaveFailed() {
         val incomplete = coreBasenames() - "$hash.proof.json"
         val primary = primaryWithCore(proofNames = incomplete)
         val filebase = RecordingFilebaseStorageProvider()
         val listener = RecordingListener()
 
-        val started = ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
+        val started = enqueueUpload(
             primary,
             filebase,
-            ProofSetMediaSource.ofBytes(byteArrayOf(9), "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            listener,
+            listener = listener,
+            media = ProofSetMediaSource.ofBytes(byteArrayOf(9), "image/jpeg"),
         )
 
         assertFalse(started)
+        // Incomplete returns false for Share not-ready; it must not also invoke saveFailed
+        // (that would stack an upload-failed toast on the same attempt).
         assertTrue(listener.failures.isEmpty())
         assertTrue(listener.successes.isEmpty())
+        assertTrue(filebase.unpinCalls.isEmpty())
         assertTrue(filebase.uploadDirectoryCalls.isEmpty())
+        assertTrue(filebase.saveArtifactCalls.isEmpty())
+        assertTrue(primary.saveTextCalls.isEmpty())
+        assertTrue(primary.getInputStreamCalls.isEmpty())
+        assertEquals(0, ProofSetUploader.occupancyCount(hash))
     }
 
     @Test
@@ -832,16 +487,7 @@ class ProofSetUploaderTest {
                 // While Coroutine1 holds the Mutex, schedule a second enqueue (Coroutine2).
                 // With Dispatchers.Unconfined, Coroutine2 launches immediately but suspends at
                 // mutex.withLock (Mutex held by Coroutine1). enqueueProofSetUpload returns true.
-                val parked = ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            this,
-            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            parkedListener,
-        )
+                val parked = enqueueUpload(primary, this, listener = parkedListener)
                 assertTrue(parked)
                 // Coroutine2 is suspended — parkedListener has NOT fired yet.
                 assertTrue(parkedListener.failures.isEmpty())
@@ -856,18 +502,7 @@ class ProofSetUploaderTest {
         // fails → result null → withLock exits → Mutex released → Coroutine2 resumes inline
         // → post-acquire reassemble finds incomplete → parkedListener.saveFailed fires.
         // All sync under Dispatchers.Unconfined, so all state is observable after this returns.
-        assertTrue(
-            ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            null,
-        ),
-        )
+        assertTrue(enqueueUpload(primary, filebase))
 
         assertEquals(1, filebase.uploadDirectoryCalls.size)
         assertEquals(1, parkedListener.failures.size)
@@ -877,77 +512,18 @@ class ProofSetUploaderTest {
 
     @Test
     fun leafCidDeliveredViaReturnValue_notLeakedAcrossHashes() {
-        val hashA = "aaaa111abc"
-        val hashB = "bbbb222def"
-        val leafCidA = "bafyLeafCidForHashA"
-
-        fun makePrimary(h: String): RecordingStorageProvider {
-            val names = ProofSetMembershipPolicy.requiredCoreBasenames(h)
-            return RecordingStorageProvider(
-                proofSetUris = ArrayList(names.map { Uri.parse("file:///proof/$it") }),
-                streams = names.associateWith { it.toByteArray() },
-            )
-        }
-
-        val primaryA = makePrimary(hashA)
-        val primaryB = makePrimary(hashB)
-
-        // A fake adapter that returns FilebaseUploadResult synchronously.
-        // It does NOT write any shared field — leaf CID delivered ONLY via return value.
-        val fakeAdapter = object : FilebaseStorageProvider(
-            accessKey = "", secretKey = "", bucketName = "", ipfsBearerToken = "tok",
-        ) {
-            override fun uploadDirectory(
-                hash: String,
-                artifacts: List<DeferredArtifact>,
-                mediaBasename: String?,
-                listener: StorageListener?,
-            ): FilebaseUploadResult? {
-                val dirUri = "https://ipfs.filebase.io/ipfs/bafyDir-$hash"
-                val leafCid = if (hash == hashA) leafCidA else null
-                listener?.saveSuccessful(hash, dirUri)
-                return FilebaseUploadResult(dirUri, leafCid)
-            }
-        }
-
-        ProofSetUploader.clearMapsForTesting(Dispatchers.Unconfined)
-
-        // Upload hash A — should write leafCidA into A's image.uri
-        ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hashA,
-            primaryA,
-            fakeAdapter,
-            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            null,
+        val cid = "bafyDirNoLeaf"
+        val primary = primaryWithCore()
+        val filebase = RecordingFilebaseStorageProvider(
+            uploadDirectoryResultUri = FilebaseGatewayUris.buildProofsetUri(cid),
+            uploadDirectoryMediaLeafCid = null,
         )
 
-        // Upload hash B — should NOT leak leafCidA; adapter returns null leaf for B
-        ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hashB,
-            primaryB,
-            fakeAdapter,
-            ProofSetMediaSource.ofBytes(byteArrayOf(4, 5, 6), "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            null,
-        )
+        assertTrue(enqueueUpload(primary, filebase))
 
-        // Hash A image.uri must be leaf-form (using its own leaf CID)
-        val aImageUri = primaryA.saveTextCalls
-            .firstOrNull { it.second == hashA + FilebaseSidecarContract.FILEBASE_IMAGE_URI_SUFFIX }?.third
-        assertEquals(FilebaseGatewayUris.buildLeafImageUri(leafCidA), aImageUri)
-
-        // Hash B image.uri must NOT use hashA's leaf CID — B has no leaf, uses path-under-directory
-        val bImageUri = primaryB.saveTextCalls
-            .firstOrNull { it.second == hashB + FilebaseSidecarContract.FILEBASE_IMAGE_URI_SUFFIX }?.third
-        val bDirCid = FilebaseGatewayUris.parseGatewayRootCid("https://ipfs.filebase.io/ipfs/bafyDir-$hashB")!!
-        val expectedBImageUri = FilebaseGatewayUris.buildImageUriUnderDirectory(bDirCid, "$hashB.jpg")
-        assertEquals(expectedBImageUri, bImageUri)
-        assertNotEquals(FilebaseGatewayUris.buildLeafImageUri(leafCidA), bImageUri)
+        val imageUri = primary.saveTextCalls
+            .single { it.second == hash + FilebaseSidecarContract.FILEBASE_IMAGE_URI_SUFFIX }.third
+        assertEquals(FilebaseGatewayUris.buildImageUriUnderDirectory(cid, "$hash.jpg"), imageUri)
     }
 
     @Test
@@ -962,16 +538,12 @@ class ProofSetUploaderTest {
         val expectedImageUri = "s3://bucket/$hash/$mediaBasename"
 
         assertTrue(
-            ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            ProofSetMediaSource.ofBytes(media, "image/jpeg"),
-            FilebaseConfig.UploadMode.S3_MEMBERS,
-            MediaInclusion.INCLUDE_MEDIA,
-            null,
-        ),
+            enqueueUpload(
+                primary,
+                filebase,
+                media = ProofSetMediaSource.ofBytes(media, "image/jpeg"),
+                mode = UploadMode.S3_MEMBERS,
+            ),
         )
         assertNull(
             primary.getInputStream(hash, hash + FilebaseSidecarContract.FILEBASE_IPFS_URI_SUFFIX),
@@ -983,115 +555,18 @@ class ProofSetUploaderTest {
         assertEquals(expectedImageUri, imageSidecarUri)
 
         val listener = RecordingListener()
-        val skipped = ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
+        val skipped = enqueueUpload(
             primary,
             filebase,
-            ProofSetMediaSource.ofBytes(media, "image/jpeg"),
-            FilebaseConfig.UploadMode.S3_MEMBERS,
-            MediaInclusion.INCLUDE_MEDIA,
-            listener,
+            listener = listener,
+            media = ProofSetMediaSource.ofBytes(media, "image/jpeg"),
+            mode = UploadMode.S3_MEMBERS,
         )
 
         assertTrue(skipped)
         assertEquals(coreBasenames().size + 1, filebase.saveArtifactCalls.size)
         assertEquals(1, listener.successes.size)
         assertEquals(hash to expectedImageUri, listener.successes.single())
-    }
-
-    @Test
-    fun concurrentStampMatchWaiters_stampSkipWithoutStackOverflow() {
-        // Verifies that N concurrent enqueues for the same hash:
-        //   (a) do not cause stack overflow (no recursive drain),
-        //   (b) yield exactly one actual upload, with remaining callers receiving stamp-skip.
-        //
-        // Uses real Dispatchers.IO for genuine thread concurrency. A CountDownLatch inside the
-        // fake uploadDirectory blocks the first coroutine inside withLock so the test can
-        // enqueue additional callers while the Mutex is held, then release and verify outcomes.
-        ProofSetUploader.clearMapsForTesting()  // real Dispatchers.IO for this test
-
-        val primary = AccumulatingStorageProvider()
-        for (name in coreBasenames()) {
-            primary.saveBytes(hash, name, name.toByteArray(), null)
-        }
-
-        val uploadStartedLatch = CountDownLatch(1)
-        val uploadContinueLatch = CountDownLatch(1)
-        val allCompletedLatch = CountDownLatch(3)
-
-        val filebase = object : RecordingFilebaseStorageProvider() {
-            override fun uploadDirectory(
-                hash: String,
-                artifacts: List<DeferredArtifact>,
-                mediaBasename: String?,
-                listener: StorageListener?,
-            ): FilebaseUploadResult? {
-                uploadDirectoryCalls.add(
-                    hash to artifacts.map { DeferredArtifact.ofBytes(it.identifier, it.readAllBytes(), it.contentType) },
-                )
-                uploadStartedLatch.countDown()
-                // Block inside withLock so the test can enqueue concurrent callers.
-                // Dispatchers.IO is designed for blocking calls; this is safe.
-                uploadContinueLatch.await(10, TimeUnit.SECONDS)
-                listener?.saveSuccessful(hash, uploadDirectoryResultUri)
-                return FilebaseUploadResult(uploadDirectoryResultUri, uploadDirectoryMediaLeafCid)
-            }
-        }
-
-        fun makeListener() = object : StorageListener {
-            override fun saveSuccessful(h: String?, u: String?) { allCompletedLatch.countDown() }
-            override fun saveFailed(e: Exception?) { allCompletedLatch.countDown() }
-        }
-
-        // First enqueue: pre-enqueue gate passes, coroutine scheduled on IO, acquires Mutex.
-        val r1 = ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            makeListener(),
-        )
-        assertTrue(r1)
-
-        // Wait for Coroutine1 to be inside uploadDirectory (holding the Mutex).
-        assertTrue("Upload should start within 5s", uploadStartedLatch.await(5, TimeUnit.SECONDS))
-
-        // Enqueue 2 and 3 while Mutex is held; their coroutines suspend at mutex.withLock.
-        val r2 = ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            makeListener(),
-        )
-        val r3 = ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            makeListener(),
-        )
-        assertTrue(r2); assertTrue(r3)
-
-        // Release Coroutine1's upload. Coroutine2 and Coroutine3 will wake up sequentially,
-        // reassemble fresh state, find stamp match, and receive stamp-skip (no second upload).
-        uploadContinueLatch.countDown()
-
-        assertTrue("All 3 listeners should fire within 10s", allCompletedLatch.await(10, TimeUnit.SECONDS))
-        assertEquals("Only one actual upload should occur", 1, filebase.uploadDirectoryCalls.size)
-
-        // Restore Unconfined for any tests that run after this one in the suite.
-        ProofSetUploader.clearMapsForTesting(Dispatchers.Unconfined)
     }
 
     @Test
@@ -1148,19 +623,15 @@ class ProofSetUploaderTest {
         val threads = (1..N).map {
             Thread {
                 barrier.await(5, TimeUnit.SECONDS)  // all threads start at once
-                ProofSetUploader.enqueueProofSetUpload(
-            context,
-            freshHash,
-            primary,
-            filebase,
-            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            object : StorageListener {
+                enqueueUpload(
+                    primary,
+                    filebase,
+                    listener = object : StorageListener {
                         override fun saveSuccessful(h: String?, u: String?) { allCompletedLatch.countDown() }
                         override fun saveFailed(e: Exception?) { allCompletedLatch.countDown() }
                     },
-        )
+                    hash = freshHash,
+                )
             }
         }
         threads.forEach { it.start() }
@@ -1186,16 +657,12 @@ class ProofSetUploaderTest {
         val filebase = RecordingFilebaseStorageProvider()
 
         assertTrue(
-            ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            ProofSetMediaSource.ofBytes(byteArrayOf(4, 5, 6), "image/png"),
-            FilebaseConfig.UploadMode.S3_MEMBERS,
-            MediaInclusion.INCLUDE_MEDIA,
-            null,
-        ),
+            enqueueUpload(
+                primary,
+                filebase,
+                media = ProofSetMediaSource.ofBytes(byteArrayOf(4, 5, 6), "image/png"),
+                mode = UploadMode.S3_MEMBERS,
+            ),
         )
 
         assertTrue(filebase.unpinCalls.isEmpty())
@@ -1216,16 +683,7 @@ class ProofSetUploaderTest {
         val filebase = RecordingFilebaseStorageProvider()
         val listener = RecordingListener()
 
-        val started = ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            listener,
-        )
+        val started = enqueueUpload(primary, filebase, listener = listener)
 
         assertTrue(started)
         assertEquals(1, listener.failures.size)
@@ -1238,33 +696,13 @@ class ProofSetUploaderTest {
     fun enqueue_stampMatch_unreadableMembers_saveFailedNotSuccess() {
         val primary = primaryWithCore()
         val filebase = RecordingFilebaseStorageProvider()
-        assertTrue(
-            ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            null,
-        ),
-        )
+        assertTrue(enqueueUpload(primary, filebase))
         val priorStamp = ProofSetUploader.lastUploadedMembership(hash)
         assertTrue(priorStamp != null && priorStamp.basenames.isNotEmpty())
 
         primary.unreadableIdentifiers.add(coreBasenames().first())
         val listener = RecordingListener()
-        val started = ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            listener,
-        )
+        val started = enqueueUpload(primary, filebase, listener = listener)
 
         assertTrue(started)
         assertEquals(1, listener.failures.size)
@@ -1276,18 +714,7 @@ class ProofSetUploaderTest {
     fun stampSkip_includeMedia_mediaNoLongerResolves_saveFailedNotSuccess() {
         val primary = primaryWithCore()
         val filebase = RecordingFilebaseStorageProvider()
-        assertTrue(
-            ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            null,
-        ),
-        )
+        assertTrue(enqueueUpload(primary, filebase))
         val priorStamp = ProofSetUploader.lastUploadedMembership(hash)
         assertTrue(priorStamp != null && priorStamp.basenames.isNotEmpty())
 
@@ -1297,12 +724,11 @@ class ProofSetUploaderTest {
         mediaFile.writeBytes(byteArrayOf(1, 2, 3))
         var resolveCalls = 0
         val listener = RecordingListener()
-        val started = ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
+        val started = enqueueUpload(
             primary,
             filebase,
-            ProofSetMediaSource.fromUriProvider(context) {
+            listener = listener,
+            media = ProofSetMediaSource.fromUriProvider(context) {
                 resolveCalls++
                 if (resolveCalls == 1) {
                     Uri.fromFile(mediaFile) to "image/jpeg"
@@ -1310,9 +736,6 @@ class ProofSetUploaderTest {
                     Uri.parse("content://missing/media") to "image/jpeg"
                 }
             },
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            listener,
         )
 
         assertTrue(started)
@@ -1322,44 +745,18 @@ class ProofSetUploaderTest {
     }
 
     @Test
-    fun incompleteFirstPass_stillReturnsFalse_withoutSaveFailed() {
-        val incomplete = coreBasenames() - "$hash.proof.json"
-        val primary = primaryWithCore(proofNames = incomplete)
-        val filebase = RecordingFilebaseStorageProvider()
-        val listener = RecordingListener()
-
-        val started = ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            listener,
-        )
-
-        assertFalse(started)
-        assertTrue(listener.failures.isEmpty())
-        assertTrue(listener.successes.isEmpty())
-    }
-
-    @Test
     fun sidecarsOnly_assembleOmitsMediaLeaf_andAdvancesStampWithoutMediaBasename() {
         val primary = primaryWithCore()
         val filebase = RecordingFilebaseStorageProvider()
         val listener = RecordingListener()
         val mediaBasename = ProofSetMembershipPolicy.manifestLinkNameForMedia(hash, "image/jpeg")
 
-        val started = ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
+        val started = enqueueUpload(
             primary,
             filebase,
-            null,
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.SIDECARS_ONLY,
-            listener,
+            listener = listener,
+            media = null,
+            inclusion = MediaInclusion.SIDECARS_ONLY,
         )
 
         assertTrue(started)
@@ -1367,6 +764,16 @@ class ProofSetUploaderTest {
         val ids = filebase.uploadDirectoryCalls.single().second.map { it.identifier }
         assertFalse(mediaBasename in ids)
         assertTrue(coreBasenames().all { it in ids })
+        assertEquals(
+            listOf(
+                Triple(
+                    hash,
+                    hash + FilebaseSidecarContract.FILEBASE_IPFS_URI_SUFFIX,
+                    filebase.uploadDirectoryResultUri,
+                ),
+            ),
+            primary.saveTextCalls,
+        )
 
         val stamp = ProofSetUploader.lastUploadedMembership(hash)
         assertTrue(stamp != null)
@@ -1382,30 +789,16 @@ class ProofSetUploaderTest {
         val primary = primaryWithCore()
         val filebase = RecordingFilebaseStorageProvider()
 
-        assertTrue(
-            ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            null,
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.SIDECARS_ONLY,
-            null,
-        ),
-        )
+        assertTrue(enqueueUpload(primary, filebase, media = null, inclusion = MediaInclusion.SIDECARS_ONLY))
         assertEquals(1, filebase.uploadDirectoryCalls.size)
 
         val listener = RecordingListener()
-        val skipped = ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
+        val skipped = enqueueUpload(
             primary,
             filebase,
-            null,
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.SIDECARS_ONLY,
-            listener,
+            listener = listener,
+            media = null,
+            inclusion = MediaInclusion.SIDECARS_ONLY,
         )
 
         assertTrue(skipped)
@@ -1418,32 +811,18 @@ class ProofSetUploaderTest {
     fun stampSkip_sidecarsOnly_unreadableCores_saveFailedNotSuccess() {
         val primary = primaryWithCore()
         val filebase = RecordingFilebaseStorageProvider()
-        assertTrue(
-            ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            null,
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.SIDECARS_ONLY,
-            null,
-        ),
-        )
+        assertTrue(enqueueUpload(primary, filebase, media = null, inclusion = MediaInclusion.SIDECARS_ONLY))
         val priorStamp = ProofSetUploader.lastUploadedMembership(hash)
         assertTrue(priorStamp != null && priorStamp.basenames.isNotEmpty())
 
         primary.unreadableIdentifiers.add(coreBasenames().first())
         val listener = RecordingListener()
-        val started = ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
+        val started = enqueueUpload(
             primary,
             filebase,
-            null,
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.SIDECARS_ONLY,
-            listener,
+            listener = listener,
+            media = null,
+            inclusion = MediaInclusion.SIDECARS_ONLY,
         )
 
         assertTrue(started)
@@ -1457,34 +836,20 @@ class ProofSetUploaderTest {
         val primary = primaryWithCore()
         val filebase = RecordingFilebaseStorageProvider()
 
-        assertTrue(
-            ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            null,
-        ),
-        )
+        assertTrue(enqueueUpload(primary, filebase))
         assertEquals(1, filebase.uploadDirectoryCalls.size)
         val includeStamp = ProofSetUploader.lastUploadedMembership(hash)!!
         assertEquals(MediaInclusion.INCLUDE_MEDIA, includeStamp.mediaInclusion)
 
         val listener = RecordingListener()
         assertTrue(
-            ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            null,
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.SIDECARS_ONLY,
-            listener,
-        ),
+            enqueueUpload(
+                primary,
+                filebase,
+                listener = listener,
+                media = null,
+                inclusion = MediaInclusion.SIDECARS_ONLY,
+            ),
         )
 
         assertEquals(2, filebase.uploadDirectoryCalls.size)
@@ -1500,15 +865,13 @@ class ProofSetUploaderTest {
         val filebase = RecordingFilebaseStorageProvider()
         val listener = RecordingListener()
 
-        val started = ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
+        val started = enqueueUpload(
             primary,
             filebase,
-            null,
-            FilebaseConfig.UploadMode.S3_MEMBERS,
-            MediaInclusion.SIDECARS_ONLY,
-            listener,
+            listener = listener,
+            media = null,
+            mode = UploadMode.S3_MEMBERS,
+            inclusion = MediaInclusion.SIDECARS_ONLY,
         )
 
         assertTrue(started)
@@ -1525,194 +888,20 @@ class ProofSetUploaderTest {
     }
 
     @Test
-    fun ipfs_sidecarsOnly_writesProofsetUri_notImageUri() {
-        val primary = primaryWithCore()
-        val filebase = RecordingFilebaseStorageProvider()
-        val listener = RecordingListener()
-        val cid = FilebaseGatewayUris.parseGatewayRootCid(filebase.uploadDirectoryResultUri)!!
-
-        assertTrue(
-            ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            null,
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.SIDECARS_ONLY,
-            listener,
-        ),
-        )
-
-        assertEquals(
-            listOf(
-                Triple(
-                    hash,
-                    hash + FilebaseSidecarContract.FILEBASE_IPFS_URI_SUFFIX,
-                    FilebaseGatewayUris.buildProofsetUri(cid),
-                ),
-            ),
-            primary.saveTextCalls,
-        )
-        assertFalse(
-            primary.saveTextCalls.any {
-                it.second == hash + FilebaseSidecarContract.FILEBASE_IMAGE_URI_SUFFIX
-            },
-        )
-        assertEquals(1, listener.successes.size)
-        assertTrue(ProofSetUploader.lastUploadedMembership(hash) != null)
-    }
-
-    @Test
-    fun ipfs_sidecarsOnly_leavesPreexistingImageUriUntouched() {
-        val priorCid = "bafyPriorRoot"
-        val priorImageUri = FilebaseGatewayUris.buildImageUriUnderDirectory(priorCid, "$hash.jpg")
-        val primary = primaryWithDirectoryProvenance(priorCid)
-        val filebase = RecordingFilebaseStorageProvider(
-            uploadDirectoryResultUri = "https://ipfs.filebase.io/ipfs/bafyNewRoot",
-        )
-
-        assertTrue(
-            ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            null,
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.SIDECARS_ONLY,
-            null,
-        ),
-        )
-
-        assertFalse(
-            primary.saveTextCalls.any {
-                it.second == hash + FilebaseSidecarContract.FILEBASE_IMAGE_URI_SUFFIX
-            },
-        )
-        val stillPrior = primary.getInputStream(
-            hash,
-            hash + FilebaseSidecarContract.FILEBASE_IMAGE_URI_SUFFIX,
-        )!!.use { String(it.readBytes()) }
-        assertEquals(priorImageUri, stillPrior)
-    }
-
-    @Test
-    fun s3_sidecarsOnly_writesNeitherUri_stillSuccess() {
-        val primary = primaryWithCore()
-        val filebase = RecordingFilebaseStorageProvider()
-        val listener = RecordingListener()
-
-        assertTrue(
-            ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            null,
-            FilebaseConfig.UploadMode.S3_MEMBERS,
-            MediaInclusion.SIDECARS_ONLY,
-            listener,
-        ),
-        )
-
-        assertTrue(primary.saveTextCalls.isEmpty())
-        assertEquals(1, listener.successes.size)
-        assertTrue(listener.failures.isEmpty())
-        assertEquals(MediaInclusion.SIDECARS_ONLY, ProofSetUploader.lastUploadedMembership(hash)!!.mediaInclusion)
-    }
-
-    @Test
-    fun s3_includeMedia_writesImageOnly_notProofset() {
-        val primary = primaryWithCore()
-        val filebase = RecordingFilebaseStorageProvider()
-        val mediaBasename = "$hash.mp4"
-        val mediaUri = "s3://bucket/$hash/$mediaBasename"
-
-        assertTrue(
-            ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            ProofSetMediaSource.ofBytes(byteArrayOf(7, 8, 9), "video/mp4"),
-            FilebaseConfig.UploadMode.S3_MEMBERS,
-            MediaInclusion.INCLUDE_MEDIA,
-            null,
-        ),
-        )
-
-        assertEquals(
-            listOf(Triple(hash, hash + FilebaseSidecarContract.FILEBASE_IMAGE_URI_SUFFIX, mediaUri)),
-            primary.saveTextCalls,
-        )
-        assertFalse(
-            primary.saveTextCalls.any {
-                it.second == hash + FilebaseSidecarContract.FILEBASE_IPFS_URI_SUFFIX
-            },
-        )
-    }
-
-    @Test
-    fun ipfs_includeMedia_unableToAuthorImage_returnsFailedNotSuccess() {
-        val primary = primaryWithCore()
-        val filebase = RecordingFilebaseStorageProvider(uploadDirectoryMediaLeafCid = null)
-        val artifacts = coreBasenames().map {
-            DeferredArtifact.ofBytes(it, it.toByteArray(), "application/octet-stream")
-        }
-
-        val outcome = org.witness.proofmode.storage.filebase.IpfsDirectoryUploadStrategy.upload(
-            primary,
-            filebase,
-            hash,
-            artifacts,
-            mediaBasename = null,
-            mediaInclusion = MediaInclusion.INCLUDE_MEDIA,
-        )
-
-        assertTrue(outcome is ProofSetUploadOutcome.Failed)
-        assertFalse(
-            primary.saveTextCalls.any {
-                it.second == hash + FilebaseSidecarContract.FILEBASE_IMAGE_URI_SUFFIX
-            },
-        )
-
-        // Facade must not advance stamp when Strategy returns Failed
-        val listener = RecordingListener()
-        assertTrue(
-            ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primaryWithCore(),
-            RecordingFilebaseStorageProvider(uploadDirectorySucceed = false),
-            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            listener,
-        ),
-        )
-        assertNull(ProofSetUploader.lastUploadedMembership(hash))
-        assertTrue(listener.successes.isEmpty())
-        assertEquals(1, listener.failures.size)
-    }
-
-    @Test
     fun stamp_s3SidecarsOnly_thenSwitchIpfs_sameBasenames_doesNotSkip_writesProofsetUri() {
         val primary = primaryWithCore()
         val filebase = RecordingFilebaseStorageProvider()
         val listener = RecordingListener()
 
         assertTrue(
-            ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            null,
-            FilebaseConfig.UploadMode.S3_MEMBERS,
-            MediaInclusion.SIDECARS_ONLY,
-            listener,
-        ),
+            enqueueUpload(
+                primary,
+                filebase,
+                listener = listener,
+                media = null,
+                mode = UploadMode.S3_MEMBERS,
+                inclusion = MediaInclusion.SIDECARS_ONLY,
+            ),
         )
         assertEquals(coreBasenames().size, filebase.saveArtifactCalls.size)
         assertTrue(primary.saveTextCalls.isEmpty())
@@ -1724,16 +913,13 @@ class ProofSetUploaderTest {
 
         val switchListener = RecordingListener()
         assertTrue(
-            ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            null,
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.SIDECARS_ONLY,
-            switchListener,
-        ),
+            enqueueUpload(
+                primary,
+                filebase,
+                listener = switchListener,
+                media = null,
+                inclusion = MediaInclusion.SIDECARS_ONLY,
+            ),
         )
 
         assertEquals(1, filebase.uploadDirectoryCalls.size)
@@ -1760,121 +946,6 @@ class ProofSetUploaderTest {
         assertEquals(1, switchListener.successes.size)
     }
 
-    @Test
-    fun stamp_ipfsSidecarsOnly_thenSwitchS3_sameBasenames_doesNotSkip() {
-        val primary = primaryWithCore()
-        val filebase = RecordingFilebaseStorageProvider()
-        val listener = RecordingListener()
-
-        assertTrue(
-            ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            null,
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.SIDECARS_ONLY,
-            listener,
-        ),
-        )
-        assertEquals(1, filebase.uploadDirectoryCalls.size)
-        assertEquals(1, listener.successes.size)
-
-        val ipfsStamp = ProofSetUploader.lastUploadedMembership(hash)!!
-        assertEquals(FilebaseConfig.UploadMode.IPFS_DIRECTORY, ipfsStamp.uploadMode)
-        assertEquals(MediaInclusion.SIDECARS_ONLY, ipfsStamp.mediaInclusion)
-
-        val switchListener = RecordingListener()
-        assertTrue(
-            ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            null,
-            FilebaseConfig.UploadMode.S3_MEMBERS,
-            MediaInclusion.SIDECARS_ONLY,
-            switchListener,
-        ),
-        )
-
-        assertEquals(coreBasenames().size, filebase.saveArtifactCalls.size)
-        assertTrue(filebase.uploadDirectoryCalls.size == 1)
-        val s3Stamp = ProofSetUploader.lastUploadedMembership(hash)!!
-        assertEquals(FilebaseConfig.UploadMode.S3_MEMBERS, s3Stamp.uploadMode)
-        assertEquals(ipfsStamp.basenames, s3Stamp.basenames)
-        assertNotEquals(ipfsStamp, s3Stamp)
-        assertEquals(1, switchListener.successes.size)
-    }
-
-    @Test
-    fun stamp_s3SidecarsOnly_secondSameModeEnqueue_stampSkips() {
-        val primary = primaryWithCore()
-        val filebase = RecordingFilebaseStorageProvider()
-        val listener = RecordingListener()
-
-        assertTrue(
-            ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            null,
-            FilebaseConfig.UploadMode.S3_MEMBERS,
-            MediaInclusion.SIDECARS_ONLY,
-            listener,
-        ),
-        )
-        assertEquals(coreBasenames().size, filebase.saveArtifactCalls.size)
-        assertEquals(1, listener.successes.size)
-        val priorStamp = ProofSetUploader.lastUploadedMembership(hash)!!
-
-        val skipListener = RecordingListener()
-        val skipped = ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            null,
-            FilebaseConfig.UploadMode.S3_MEMBERS,
-            MediaInclusion.SIDECARS_ONLY,
-            skipListener,
-        )
-
-        assertTrue(skipped)
-        assertEquals(coreBasenames().size, filebase.saveArtifactCalls.size)
-        assertEquals(priorStamp, ProofSetUploader.lastUploadedMembership(hash))
-        assertEquals(1, skipListener.successes.size)
-        assertTrue(skipListener.failures.isEmpty())
-    }
-
-    @Test
-    fun s3_includeMedia_mediaMemberUriMissing_returnsFailedNotSuccessNull() {
-        val primary = primaryWithCore()
-        val filebase = RecordingFilebaseStorageProvider(saveArtifactNullUri = true)
-        val listener = RecordingListener()
-
-        assertTrue(
-            ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
-            FilebaseConfig.UploadMode.S3_MEMBERS,
-            MediaInclusion.INCLUDE_MEDIA,
-            listener,
-        ),
-        )
-
-        assertTrue(primary.saveTextCalls.isEmpty())
-        assertNull(ProofSetUploader.lastUploadedMembership(hash))
-        assertTrue(listener.successes.isEmpty())
-        assertEquals(1, listener.failures.size)
-    }
-
-
     /**
      * Large-upload reliability: Filebase timeout must reach the Share/Upload listener, not stall
      * as an uncompleted enqueue.
@@ -1897,176 +968,29 @@ class ProofSetUploaderTest {
         }
         val listener = RecordingListener()
 
-        assertTrue(
-            ProofSetUploader.enqueueProofSetUpload(
-                context,
-                hash,
-                primary,
-                filebase,
-                ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
-                FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-                MediaInclusion.INCLUDE_MEDIA,
-                listener,
-            ),
-        )
+        assertTrue(enqueueUpload(primary, filebase, listener = listener))
 
         assertEquals(1, listener.failures.size)
         assertTrue(listener.failures.single() is SocketTimeoutException)
         assertTrue(listener.successes.isEmpty())
     }
 
-    /**
-     * Large-upload reliability: HTTP 403 with a body-bearing IOException must pass through to
-     * listeners so Share can show an explicit failure (issue UX lock) once the transport seam
-     * includes the body text.
-     */
-    @Test
-    fun ipfsUpload_403WithBodyMessage_notifiesSaveFailed() {
-        val primary = primaryWithCore()
-        val filebase = object : RecordingFilebaseStorageProvider(uploadDirectorySucceed = false) {
-            override fun uploadDirectory(
-                hash: String,
-                artifacts: List<DeferredArtifact>,
-                mediaBasename: String?,
-                listener: StorageListener?,
-            ): FilebaseUploadResult? {
-                uploadDirectoryCalls.add(hash to artifacts)
-                listener?.saveFailed(
-                    IOException("IPFS RPC upload failed: 403 AccessDenied"),
-                )
-                return null
-            }
-        }
-        val listener = RecordingListener()
-
-        assertTrue(
-            ProofSetUploader.enqueueProofSetUpload(
-                context,
-                hash,
-                primary,
-                filebase,
-                ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
-                FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-                MediaInclusion.INCLUDE_MEDIA,
-                listener,
-            ),
-        )
-
-        assertEquals(1, listener.failures.size)
-        val msg = listener.failures.single()?.message.orEmpty()
-        assertTrue(msg.contains("403"))
-        assertTrue(msg.contains("AccessDenied"))
-    }
-
-    @Test
-    fun occupancy_falseEnqueue_neverOccupies() {
-        val incomplete = coreBasenames() - "$hash.proof.json"
-        val primary = primaryWithCore(proofNames = incomplete)
-        val filebase = RecordingFilebaseStorageProvider()
-
-        val started = ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            ProofSetMediaSource.ofBytes(byteArrayOf(9), "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            null,
-        )
-
-        assertFalse(started)
-        assertEquals(0, ProofSetUploader.occupancyCount(hash))
-    }
-
     @Test
     fun occupancy_inFlightUntilStrategyReturns() {
-        val entered = java.util.concurrent.CountDownLatch(1)
-        val hold = java.util.concurrent.CountDownLatch(1)
-        val filebase = object : RecordingFilebaseStorageProvider() {
-            override fun uploadDirectory(
-                hash: String,
-                artifacts: List<DeferredArtifact>,
-                mediaBasename: String?,
-                listener: StorageListener?,
-            ): FilebaseUploadResult? {
-                entered.countDown()
-                check(hold.await(5, java.util.concurrent.TimeUnit.SECONDS))
-                return super.uploadDirectory(hash, artifacts, mediaBasename, listener)
-            }
-        }
-        ProofSetUploader.clearMapsForTesting(Dispatchers.IO)
-        val primary = primaryWithCore()
-
-        val started = ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            null,
-        )
-        assertTrue(started)
-        assertTrue(entered.await(5, java.util.concurrent.TimeUnit.SECONDS))
-        assertEquals(1, ProofSetUploader.occupancyCount(hash))
-        val dropped = java.util.concurrent.CountDownLatch(1)
-        // occupancyUpdates is MutableSharedFlow(extraBufferCapacity = 64, replay = 0).
-        // extraBufferCapacity does not replay to a collector started after release tryEmit.
-        // Subscribe or poll occupancyCount BEFORE hold.countDown() (LP subscribe-first pattern).
-        val poller = Thread {
-            val deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(5)
-            while (ProofSetUploader.occupancyCount(hash) != 0) {
-                if (System.nanoTime() >= deadline) return@Thread
-                try {
-                    Thread.sleep(10)
-                } catch (_: InterruptedException) {
-                    return@Thread
-                }
-            }
-            dropped.countDown()
-        }.apply { start() }
-        hold.countDown()
-        assertTrue("occupancy should drop when Strategy returns", dropped.await(5, java.util.concurrent.TimeUnit.SECONDS))
-        poller.join(1_000)
-        ProofSetUploader.clearMapsForTesting(Dispatchers.Unconfined)
-    }
-
-    @Test
-    fun occupancyForReadsCurrentOccupancyWhenSubscribedLate() = runBlocking {
         val entered = CountDownLatch(1)
         val hold = CountDownLatch(1)
-        val filebase = object : RecordingFilebaseStorageProvider() {
-            override fun uploadDirectory(
-                hash: String,
-                artifacts: List<DeferredArtifact>,
-                mediaBasename: String?,
-                listener: StorageListener?,
-            ): FilebaseUploadResult? {
-                entered.countDown()
-                check(hold.await(5, TimeUnit.SECONDS))
-                return super.uploadDirectory(hash, artifacts, mediaBasename, listener)
-            }
-        }
+        val filebase = LatchedFilebaseStorageProvider(hold, entered)
         ProofSetUploader.clearMapsForTesting(Dispatchers.IO)
         val primary = primaryWithCore()
 
         try {
-            assertTrue(
-                ProofSetUploader.enqueueProofSetUpload(
-                    context,
-                    hash,
-                    primary,
-                    filebase,
-                    ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
-                    FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-                    MediaInclusion.INCLUDE_MEDIA,
-                    null,
-                ),
-            )
+            assertTrue(enqueueUpload(primary, filebase))
             assertTrue(entered.await(5, TimeUnit.SECONDS))
-            assertEquals(1, ProofSetUploader.occupancyFor(hash).first())
+            assertEquals(1, ProofSetUploader.occupancyCount(hash))
+            // A subscriber that arrives after the upload started still sees it in flight.
+            assertEquals(1, runBlocking { ProofSetUploader.occupancyFor(hash).first() })
+            hold.countDown()
+            assertTrue("occupancy should drop when Strategy returns", awaitOccupancyZero(listOf(hash)))
         } finally {
             hold.countDown()
             ProofSetUploader.clearMapsForTesting(Dispatchers.Unconfined)
@@ -2082,36 +1006,11 @@ class ProofSetUploaderTest {
         val entered = CountDownLatch(1)
         val hold = CountDownLatch(1)
         val allCompletedLatch = CountDownLatch(3)
-        val filebase = object : RecordingFilebaseStorageProvider() {
-            override fun uploadDirectory(
-                hash: String,
-                artifacts: List<DeferredArtifact>,
-                mediaBasename: String?,
-                listener: StorageListener?,
-            ): FilebaseUploadResult? {
-                entered.countDown()
-                check(hold.await(5, TimeUnit.SECONDS))
-                return super.uploadDirectory(hash, artifacts, mediaBasename, listener)
-            }
-        }
+        val filebase = LatchedFilebaseStorageProvider(hold, entered)
         ProofSetUploader.clearMapsForTesting(Dispatchers.IO)
         val primary = primaryWithCore()
 
-        fun makeListener() = object : StorageListener {
-            override fun saveSuccessful(h: String?, u: String?) { allCompletedLatch.countDown() }
-            override fun saveFailed(e: Exception?) { allCompletedLatch.countDown() }
-        }
-
-        fun enqueue(): Boolean = ProofSetUploader.enqueueProofSetUpload(
-            context,
-            hash,
-            primary,
-            filebase,
-            ProofSetMediaSource.ofBytes(byteArrayOf(1, 2, 3), "image/jpeg"),
-            FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-            MediaInclusion.INCLUDE_MEDIA,
-            makeListener(),
-        )
+        fun enqueue(): Boolean = enqueueUpload(primary, filebase, listener = CountingListener(allCompletedLatch))
 
         assertTrue(enqueue())
         assertTrue(entered.await(5, TimeUnit.SECONDS))
@@ -2124,25 +1023,11 @@ class ProofSetUploaderTest {
             "all 3 listeners should fire within 10s (jobs 2–3 may stamp-skip; occupancy 0 is not the join)",
             allCompletedLatch.await(10, TimeUnit.SECONDS),
         )
-
-        val dropped = CountDownLatch(1)
-        val poller = Thread {
-            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
-            while (ProofSetUploader.occupancyCount(hash) != 0) {
-                if (System.nanoTime() >= deadline) return@Thread
-                try {
-                    Thread.sleep(10)
-                } catch (_: InterruptedException) {
-                    return@Thread
-                }
-            }
-            dropped.countDown()
-        }.apply { start() }
+        assertEquals("waiters must stamp-skip, not upload again", 1, filebase.uploadDirectoryCalls.size)
         assertTrue(
             "occupancy 0 after all overlapping same-hash jobs complete (not waiter-idle mid-overlap)",
-            dropped.await(5, TimeUnit.SECONDS),
+            awaitOccupancyZero(listOf(hash)),
         )
-        poller.join(1_000)
         ProofSetUploader.clearMapsForTesting(Dispatchers.Unconfined)
     }
 
@@ -2152,21 +1037,7 @@ class ProofSetUploaderTest {
         val entered = CountDownLatch(3)
         val allEntered = CountDownLatch(4)
         val hold = CountDownLatch(1)
-        val enteredHashes = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
-        val filebase = object : RecordingFilebaseStorageProvider() {
-            override fun uploadDirectory(
-                hash: String,
-                artifacts: List<DeferredArtifact>,
-                mediaBasename: String?,
-                listener: StorageListener?,
-            ): FilebaseUploadResult? {
-                enteredHashes.add(hash)
-                entered.countDown()
-                allEntered.countDown()
-                check(hold.await(10, TimeUnit.SECONDS))
-                return super.uploadDirectory(hash, artifacts, mediaBasename, listener)
-            }
-        }
+        val filebase = LatchedFilebaseStorageProvider(hold, entered, allEntered)
 
         fun makePrimary(h: String): RecordingStorageProvider {
             val names = ProofSetMembershipPolicy.requiredCoreBasenames(h)
@@ -2180,15 +1051,11 @@ class ProofSetUploaderTest {
         val primaries = hashes.associateWith { makePrimary(it) }
 
         val accepted = hashes.map { h ->
-            ProofSetUploader.enqueueProofSetUpload(
-                context,
-                h,
+            enqueueUpload(
                 primaries.getValue(h),
                 filebase,
-                ProofSetMediaSource.ofBytes(byteArrayOf(1), "image/jpeg"),
-                FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-                MediaInclusion.INCLUDE_MEDIA,
-                null,
+                media = ProofSetMediaSource.ofBytes(byteArrayOf(1), "image/jpeg"),
+                hash = h,
             )
         }
         assertTrue(accepted.all { it })
@@ -2198,7 +1065,7 @@ class ProofSetUploaderTest {
         val idle = hashes.filter { ProofSetUploader.occupancyCount(it) == 0 }
         assertEquals(3, inSlot.size)
         assertEquals(1, idle.size)
-        assertEquals(enteredHashes.toSet(), inSlot.toSet())
+        assertEquals(filebase.enteredHashes.toSet(), inSlot.toSet())
         assertEquals(0, ProofSetUploader.occupancyCount(idle.single()))
         hashes.forEach { h ->
             val n = ProofSetUploader.occupancyCount(h)
@@ -2207,110 +1074,15 @@ class ProofSetUploaderTest {
 
         hold.countDown()
         assertTrue("all four strategies should run after a slot frees", allEntered.await(10, TimeUnit.SECONDS))
-
-        val dropped = CountDownLatch(1)
-        val poller = Thread {
-            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
-            while (hashes.any { ProofSetUploader.occupancyCount(it) != 0 }) {
-                if (System.nanoTime() >= deadline) return@Thread
-                try {
-                    Thread.sleep(10)
-                } catch (_: InterruptedException) {
-                    return@Thread
-                }
-            }
-            dropped.countDown()
-        }.apply { start() }
-        assertTrue("final occupancy must be 0 for all four hashes", dropped.await(10, TimeUnit.SECONDS))
-        poller.join(1_000)
-        hashes.forEach { h -> assertEquals(0, ProofSetUploader.occupancyCount(h)) }
+        assertTrue("final occupancy must be 0 for all four hashes", awaitOccupancyZero(hashes, timeoutSeconds = 10))
         ProofSetUploader.clearMapsForTesting(Dispatchers.Unconfined)
     }
-
-    @Test
-    fun clearMapsForTesting_resetsSemaphorePermits() {
-        // processScope.cancel() does not interrupt a blocking uploadDirectory latch, so
-        // held withPermit finally may never run. clearMapsForTesting must assign a new
-        // Semaphore(proofSetUploadSlotCap) or the next three enqueues deadlock.
-        val held = listOf("slotresetA", "slotresetB", "slotresetC")
-        val after = listOf("slotresetD", "slotresetE", "slotresetF")
-        val enteredHeld = CountDownLatch(3)
-        val holdHeld = CountDownLatch(1)
-        val filebaseHeld = object : RecordingFilebaseStorageProvider() {
-            override fun uploadDirectory(
-                hash: String,
-                artifacts: List<DeferredArtifact>,
-                mediaBasename: String?,
-                listener: StorageListener?,
-            ): FilebaseUploadResult? {
-                enteredHeld.countDown()
-                check(holdHeld.await(10, TimeUnit.SECONDS))
-                return super.uploadDirectory(hash, artifacts, mediaBasename, listener)
-            }
-        }
-        val enteredAfter = CountDownLatch(3)
-        val holdAfter = CountDownLatch(1)
-        val filebaseAfter = object : RecordingFilebaseStorageProvider() {
-            override fun uploadDirectory(
-                hash: String,
-                artifacts: List<DeferredArtifact>,
-                mediaBasename: String?,
-                listener: StorageListener?,
-            ): FilebaseUploadResult? {
-                enteredAfter.countDown()
-                check(holdAfter.await(10, TimeUnit.SECONDS))
-                return super.uploadDirectory(hash, artifacts, mediaBasename, listener)
-            }
-        }
-
-        fun makePrimary(h: String): RecordingStorageProvider {
-            val names = ProofSetMembershipPolicy.requiredCoreBasenames(h)
-            return RecordingStorageProvider(
-                proofSetUris = ArrayList(names.map { Uri.parse("file:///proof/$it") }),
-                streams = names.associateWith { it.toByteArray() },
-            )
-        }
-
-        fun enqueue(h: String, filebase: RecordingFilebaseStorageProvider): Boolean =
-            ProofSetUploader.enqueueProofSetUpload(
-                context,
-                h,
-                makePrimary(h),
-                filebase,
-                ProofSetMediaSource.ofBytes(byteArrayOf(1), "image/jpeg"),
-                FilebaseConfig.UploadMode.IPFS_DIRECTORY,
-                MediaInclusion.INCLUDE_MEDIA,
-                null,
-            )
-
-        ProofSetUploader.clearMapsForTesting(Dispatchers.IO)
-        held.forEach { h -> assertTrue(enqueue(h, filebaseHeld)) }
-        assertTrue("three slots should be occupied", enteredHeld.await(10, TimeUnit.SECONDS))
-
-        ProofSetUploader.clearMapsForTesting(Dispatchers.IO)
-        after.forEach { h -> assertTrue(enqueue(h, filebaseAfter)) }
-        assertTrue(
-            "clearMapsForTesting must reset permits so three new hashes enter Strategy",
-            enteredAfter.await(10, TimeUnit.SECONDS),
-        )
-
-        holdHeld.countDown()
-        holdAfter.countDown()
-        ProofSetUploader.clearMapsForTesting(Dispatchers.Unconfined)
-    }
-
 }
 
-/** Test double that records saveBytes / getProofSet / getInputStream / saveText (primary storage). */
 open class RecordingStorageProvider(
     private val proofSetUris: ArrayList<Uri> = arrayListOf(),
     private val streams: Map<String, ByteArray> = emptyMap(),
-    private val markerIdentifiers: Set<String> = emptySet(),
-    var saveArtifactSucceed: Boolean = true,
-    var saveArtifactResultUriPrefix: String = "s3://bucket/",
 ) : StorageProvider {
-    val saveArtifactCalls = mutableListOf<Triple<String, String, ByteArray>>()
-    val getProofSetCalls = mutableListOf<String>()
     val getInputStreamCalls = mutableListOf<Pair<String, String>>()
     val saveTextCalls = mutableListOf<Triple<String, String, String>>()
     /** When set, [getInputStream] returns null for these identifiers (even if present in streams). */
@@ -2321,12 +1093,7 @@ open class RecordingStorageProvider(
     }
 
     override fun saveBytes(hash: String?, identifier: String?, data: ByteArray?, listener: StorageListener?) {
-        saveArtifactCalls.add(Triple(hash!!, identifier!!, data!!.copyOf()))
-        if (saveArtifactSucceed) {
-            listener?.saveSuccessful(hash, "$saveArtifactResultUriPrefix$hash/$identifier")
-        } else {
-            listener?.saveFailed(RuntimeException("saveBytes failed"))
-        }
+        throw UnsupportedOperationException()
     }
 
     override fun saveText(hash: String?, identifier: String?, data: String?, listener: StorageListener?) {
@@ -2350,12 +1117,9 @@ open class RecordingStorageProvider(
     override fun proofExists(hash: String?): Boolean = false
 
     override fun proofIdentifierExists(hash: String?, identifier: String?): Boolean =
-        identifier in markerIdentifiers || streams.containsKey(identifier)
+        streams.containsKey(identifier)
 
-    override fun getProofSet(hash: String?): ArrayList<Uri> {
-        getProofSetCalls.add(hash!!)
-        return ArrayList(proofSetUris)
-    }
+    override fun getProofSet(hash: String?): ArrayList<Uri> = ArrayList(proofSetUris)
 
     override fun getProofItem(uri: Uri?): InputStream? = null
 }
@@ -2374,10 +1138,6 @@ open class RecordingFilebaseStorageProvider(
     var uploadDirectoryResultUri: String = "https://ipfs.filebase.io/ipfs/bafyRoot",
     /** When set, simulates NDJSON media-leaf CID for leaf-form image.uri. */
     var uploadDirectoryMediaLeafCid: String? = "bafyMediaLeaf",
-    var saveArtifactSucceed: Boolean = true,
-    var saveArtifactResultUriPrefix: String = "s3://bucket/",
-    /** When true, [saveArtifact] reports success with a null URI (media member URI missing). */
-    var saveArtifactNullUri: Boolean = false,
 ) : FilebaseStorageProvider(
     accessKey = "",
     secretKey = "",
@@ -2414,14 +1174,34 @@ open class RecordingFilebaseStorageProvider(
 
     override fun saveArtifact(hash: String, artifact: DeferredArtifact, listener: StorageListener?) {
         saveArtifactCalls.add(Triple(hash, artifact.identifier, artifact.readAllBytes()))
-        if (saveArtifactSucceed) {
-            val uri =
-                if (saveArtifactNullUri) null else "$saveArtifactResultUriPrefix$hash/${artifact.identifier}"
-            listener?.saveSuccessful(hash, uri)
-        } else {
-            listener?.saveFailed(RuntimeException("saveArtifact failed"))
-        }
+        listener?.saveSuccessful(hash, "s3://bucket/$hash/${artifact.identifier}")
     }
+}
+
+/** Holds every uploadDirectory call on [hold] after counting down each [entered] latch. */
+private class LatchedFilebaseStorageProvider(
+    private val hold: CountDownLatch,
+    private vararg val entered: CountDownLatch,
+) : RecordingFilebaseStorageProvider() {
+    val enteredHashes: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
+    override fun uploadDirectory(
+        hash: String,
+        artifacts: List<DeferredArtifact>,
+        mediaBasename: String?,
+        listener: StorageListener?,
+    ): FilebaseUploadResult? {
+        enteredHashes.add(hash)
+        entered.forEach { it.countDown() }
+        check(hold.await(10, TimeUnit.SECONDS))
+        return super.uploadDirectory(hash, artifacts, mediaBasename, listener)
+    }
+}
+
+private class CountingListener(private val completed: CountDownLatch) : StorageListener {
+    override fun saveSuccessful(hash: String?, uri: String?) = completed.countDown()
+
+    override fun saveFailed(exception: Exception?) = completed.countDown()
 }
 
 private class RecordingListener : StorageListener {

@@ -41,7 +41,12 @@
     <string name="location_protocol_auto_capture_summary">Automatically run location attestation after in-app capture</string>
     <string name="location_protocol_auto_capture_summary_location_required">Turn on location sharing above to choose an auto-attest mode</string>
     <string name="location_protocol_auto_capture_summary_lp_required">Turn on Location Protocol attestation to choose an auto-attest mode</string>
-    <string name="location_protocol_auto_capture_summary_wallet_required">Connect a wallet in Wallet Settings to choose an auto-attest mode</string>
+    <string name="location_protocol_auto_capture_note_wallet_required">Enabling auto-attest requires a connected wallet.</string>
+    <string name="wallet_required_dialog_title">Wallet not connected</string>
+    <string name="wallet_required_dialog_message">Auto-attest needs a connected wallet to sign location attestations, so this capture wasn\'t attested. Connect a wallet, or turn auto-attest off.</string>
+    <string name="wallet_required_dialog_message_manual">Attesting a location needs a connected wallet to sign. Connect a wallet to continue.</string>
+    <string name="wallet_required_dialog_connect">Connect wallet</string>
+    <string name="wallet_required_dialog_turn_off">Turn off auto-attest</string>
     <string name="location_wallet_row_summary">Manage the wallet used to sign location attestations</string>
     <string name="location_wallet_summary_location_required">Turn on location sharing above to set up a wallet</string>
     <string name="location_wallet_summary_lp_required">Turn on Location Protocol attestation to set up a wallet</string>
@@ -343,13 +348,21 @@
     <string name="signing_server_unreachable_message">Content Credentials (C2PA) signing is set to Remote, so new photos and videos will wait to be signed until the server can be reached. Check your internet connection, or switch to local signing in Settings.</string>
     <string name="nostr_notarization">Nostr Notarization</string>
     <string name="cid_manifest">CID Manifest</string>
+    <string name="root_cid_clip_label">Root CID</string>
     <string name="offchain_location_attestation">Off-chain Location Attestation</string>
     <string name="onchain_location_attestation">On-chain Location Attestation</string>
     <string name="artifact_tap_to_view">Tap to view</string>
     <string name="artifact_tap_to_view_manifest">Tap to view full manifest</string>
     <string name="lp_attestation_in_progress">Attestation in progress…</string>
     <string name="view_on_eas_scan">View on EAS Scan</string>
+    <string name="view_transaction">View transaction</string>
     <string name="artifact_loading">Loading…</string>
+    <string name="artifact_copy_action">Copy</string>
+    <string name="artifact_copied">Copied</string>
+    <string name="artifact_download_action">Download</string>
+    <string name="artifact_save_failed">Couldn\'t save</string>
+    <string name="artifact_share_action">Share</string>
+    <string name="artifact_share_failed">Couldn\'t share</string>
     <string name="share_content_credentials_info">Shares image or video directly with proof metadata directly embedded in the file itself, verified and signed by Proofmode.org</string>
     <string name="optional_filename">Optional Filename</string>
     <string name="set_a_custom_name_for_the_proof_zip">Set a custom name for the proof zip</string>
@@ -395,6 +408,11 @@
     <string name="filebase_social_not_configured_share">Share without uploading</string>
     <string name="filebase_proof_not_ready">Proof is not ready for Filebase upload yet.</string>
     <string name="lp_attest_nothing_to_queue">Proof is not ready for location attestation yet.</string>
+    <string name="lp_toast_offchain_success">Location attested off-chain</string>
+    <string name="lp_toast_offchain_failed">Off-chain attestation did not complete</string>
+    <string name="lp_toast_onchain_success">Location submitted on-chain</string>
+    <string name="lp_toast_onchain_failed">On-chain attestation did not complete</string>
+    <string name="proofset_toast_mixed">%1$d of %2$d completed</string>
     <string name="filebase_upload_success">Uploaded to Filebase</string>
     <string name="filebase_upload_failed">Filebase upload failed</string>
     <string name="filebase_upload_oversize_title">Media too large to upload</string>
@@ -415,7 +433,9 @@
 
     <!-- Friendly copy when Filebase returns a mute IPFS 403 or AccountProblem without Message text. -->
     <string name="filebase_failure_same_policy">Upload failed. Media may be too large. Try a smaller file, or share without Filebase.</string>
-    <string name="filebase_reconfigure">Reconfigure</string>
+    <string name="filebase_failure_credentials">Invalid Filebase configuration. Check the access key, secret, and bucket name.</string>
+    <string name="filebase_failure_ipfs_credentials">Filebase IPFS API token is invalid. Check it in Auto sync settings.</string>
+    <string name="filebase_reconfigure">Open settings</string>
 
     <!-- Hang watchdog / older failure-offer IDs kept for compile safety; Social CTA uses filebase_share_just_the_file. -->
     <string name="filebase_upload_timed_out">Filebase upload timed out. You can try again later.</string>
@@ -453,7 +473,6 @@
     <string name="lp_auto_capture_mode_both">Both (off-chain then on-chain)</string>
     <string name="lp_auto_capture_skip_location_unavailable">Auto location attestation skipped: location data unavailable for this capture.</string>
     <string name="lp_auto_capture_skip_no_activity">Auto on-chain attestation skipped: open the app to submit on-chain.</string>
-    <string name="lp_auto_capture_skip_wallet_unavailable">Auto location attestation skipped: wallet not connected.</string>
     <string name="settings_note">Note</string>
     <string name="settings_note_desc">Author notes</string>
     <string name="settings_version_placeholder">Version</string>

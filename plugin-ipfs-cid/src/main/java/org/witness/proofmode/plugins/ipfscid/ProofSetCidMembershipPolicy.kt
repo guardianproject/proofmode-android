@@ -13,7 +13,6 @@ object ProofSetCidMembershipPolicy {
     private const val LP_OFFCHAIN = ".lp.offchain.json"
     private const val LP_ONCHAIN = ".lp.onchain.json"
     private const val LP_ONCHAIN_PENDING = ".lp.onchain.pending.json"
-    private const val LP_LEGACY = ".lp.json"
     private const val OTS_SUFFIX = ".ots"
     private const val NOSTR_SUFFIX = ".nostr"
 
@@ -23,7 +22,6 @@ object ProofSetCidMembershipPolicy {
         return artifactBasename.endsWith(LP_OFFCHAIN)
             || artifactBasename.endsWith(LP_ONCHAIN)
             || artifactBasename.endsWith(LP_ONCHAIN_PENDING)
-            || artifactBasename.endsWith(LP_LEGACY)
     }
 
     fun isManifestMember(context: Context, proofSetHash: String, artifactBasename: String): Boolean {

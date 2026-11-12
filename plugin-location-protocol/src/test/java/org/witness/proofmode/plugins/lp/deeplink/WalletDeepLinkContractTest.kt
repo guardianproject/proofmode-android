@@ -30,16 +30,11 @@ class WalletDeepLinkContractTest {
             "org.witness.proofmode.plugins.lp.EXTRA_DEEP_LINK_MESSAGE",
             WalletDeepLinkContract.EXTRA_DEEP_LINK_MESSAGE,
         )
-        assertEquals(
-            "org.witness.proofmode.plugins.lp.EXTRA_DEEP_LINK_APPLIED_CHAIN",
-            WalletDeepLinkContract.EXTRA_DEEP_LINK_APPLIED_CHAIN,
-        )
     }
 
     @Test
     fun putWalletDeepLinkResult_mapsAllExtras() {
         val result = WalletDeepLinkResult(
-            appliedChain = "eip155:42161",
             userMessage = "Applied",
             rejected = false,
         )
@@ -47,7 +42,6 @@ class WalletDeepLinkContractTest {
 
         assertFalse(intent.getBooleanExtra(WalletDeepLinkContract.EXTRA_DEEP_LINK_REJECTED, true))
         assertEquals("Applied", intent.getStringExtra(WalletDeepLinkContract.EXTRA_DEEP_LINK_MESSAGE))
-        assertEquals("eip155:42161", intent.getStringExtra(WalletDeepLinkContract.EXTRA_DEEP_LINK_APPLIED_CHAIN))
     }
 
     @Test

@@ -241,7 +241,6 @@
     <string name="location_protocol_auto_capture_summary">在应用内拍摄后自动执行位置证明</string>
     <string name="location_protocol_auto_capture_summary_location_required">请先开启上方的位置共享，才能选择自动证明模式</string>
     <string name="location_protocol_auto_capture_summary_lp_required">请先开启 Location Protocol 证明，才能选择自动证明模式</string>
-    <string name="location_protocol_auto_capture_summary_wallet_required">请在钱包设置中连接钱包，才能选择自动证明模式</string>
     <string name="location_wallet_row_summary">管理用于签署位置证明的钱包</string>
     <string name="location_wallet_summary_location_required">请先开启上方的位置共享，才能设置钱包</string>
     <string name="location_wallet_summary_lp_required">请先开启 Location Protocol 证明，才能设置钱包</string>
@@ -317,12 +316,14 @@
     <string name="signing_server_unreachable_message">内容凭据（C2PA）签名设置为远程，因此新的照片和视频将等待服务器可连接后再签名。请检查您的网络连接，或在设置中切换为本地签名。</string>
     <string name="nostr_notarization">Nostr 公证</string>
     <string name="cid_manifest">CID 清单</string>
+    <string name="root_cid_clip_label">根 CID</string>
     <string name="offchain_location_attestation">链下位置证明</string>
     <string name="onchain_location_attestation">链上位置证明</string>
     <string name="artifact_tap_to_view">点按查看</string>
     <string name="artifact_tap_to_view_manifest">点按查看完整清单</string>
     <string name="lp_attestation_in_progress">正在证明…</string>
     <string name="view_on_eas_scan">在 EAS Scan 上查看</string>
+    <string name="view_transaction">查看交易</string>
     <string name="artifact_loading">正在加载…</string>
     <string name="filebase_ipfs_bearer_token">IPFS 持有者令牌</string>
     <string name="filebase_auto_upload">自动上传</string>
@@ -345,6 +346,11 @@
     <string name="filebase_social_not_configured_share">分享但不上传</string>
     <string name="filebase_proof_not_ready">证据尚未准备好上传到 Filebase。</string>
     <string name="lp_attest_nothing_to_queue">证据尚未准备好进行位置证明。</string>
+    <string name="lp_toast_offchain_success">位置已完成链下证明</string>
+    <string name="lp_toast_offchain_failed">链下证明未完成</string>
+    <string name="lp_toast_onchain_success">位置已提交至链上</string>
+    <string name="lp_toast_onchain_failed">链上证明未完成</string>
+    <string name="proofset_toast_mixed">已完成 %1$d/%2$d</string>
     <string name="filebase_upload_success">已上传到 Filebase</string>
     <string name="filebase_upload_failed">Filebase 上传失败</string>
     <string name="filebase_upload_oversize_title">媒体过大，无法上传</string>
@@ -387,7 +393,6 @@
     <string name="lp_auto_capture_mode_both">两者（先链下后链上）</string>
     <string name="lp_auto_capture_skip_location_unavailable">已跳过自动位置证明：此次拍摄没有可用的位置数据。</string>
     <string name="lp_auto_capture_skip_no_activity">已跳过自动链上证明：请打开应用以提交到链上。</string>
-    <string name="lp_auto_capture_skip_wallet_unavailable">已跳过自动位置证明：未连接钱包。</string>
     <string name="settings_note">备注</string>
     <string name="settings_note_desc">作者备注</string>
     <string name="settings_version_placeholder">版本</string>

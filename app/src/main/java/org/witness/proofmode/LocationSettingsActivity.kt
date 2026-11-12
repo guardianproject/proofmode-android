@@ -17,6 +17,7 @@ import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceManager
 import androidx.preference.SwitchPreferenceCompat
 import org.witness.proofmode.databinding.ActivityLocationSettingsBinding
+import org.witness.proofmode.plugins.ipfscid.IpfsCidPlugin
 import org.witness.proofmode.plugins.lp.LocationProtocolPlugin
 import org.witness.proofmode.plugins.lp.autocapture.AutoCaptureLpMode
 import org.witness.proofmode.plugins.lp.wallet.WalletSettingsActivity
@@ -85,6 +86,9 @@ class LocationSettingsActivity : AppCompatActivity() {
             )
             pendingEnableLocation = snap.pendingEnable
             reconcileMasterFromPrefs()
+            // The wallet-required dialog can turn auto-attest off while this screen is paused.
+            findPreference<ListPreference>(FeatureFlags.KEY_LP_AUTO_CAPTURE_MODE)?.value =
+                AutoCaptureLpMode.toPreference(FeatureFlags.autoCaptureLpMode)
             if (FeatureFlags.lpEnabled &&
                 (!LocationProtocolPlugin.isWalletStackRegistered() ||
                     !LocationProtocolPlugin.isFlutterEngineReady())
@@ -208,7 +212,7 @@ class LocationSettingsActivity : AppCompatActivity() {
                     FeatureFlags.localIpfsCidEnabled = enabled
                     FeatureFlags.localIpfsCidUserSet = true // manual only — never from CR3
                     if (enabled) {
-                        ExperimentalFeatureActivator.activateLocalIpfsCid(requireContext().applicationContext)
+                        IpfsCidPlugin.register(requireContext().applicationContext)
                     }
                     refreshEnabledState()
                     true
@@ -255,7 +259,7 @@ class LocationSettingsActivity : AppCompatActivity() {
                 return
             }
             FeatureFlags.applyLpCidAutoEnable()
-            ExperimentalFeatureActivator.activateLocalIpfsCid(requireContext().applicationContext)
+            IpfsCidPlugin.register(requireContext().applicationContext)
             findPreference<SwitchPreferenceCompat>(FeatureFlags.KEY_LOCAL_IPFS_CID_ENABLED)?.isChecked =
                 FeatureFlags.localIpfsCidEnabled
         }
@@ -264,7 +268,6 @@ class LocationSettingsActivity : AppCompatActivity() {
             val locationSharingEnabled = FeatureFlags.locationSharingEnabled
             val walletStackRegistered = LocationProtocolPlugin.isWalletStackRegistered()
             val walletDiagnostics = LocationProtocolPlugin.walletDiagnostics()
-            val walletConnected = if (walletStackRegistered) walletDiagnostics.connected else false
 
             val lpSwitch = findPreference<SwitchPreferenceCompat>(FeatureFlags.KEY_LP_ENABLED)!!
             val modeList = findPreference<ListPreference>(FeatureFlags.KEY_LP_AUTO_CAPTURE_MODE)!!
@@ -274,7 +277,6 @@ class LocationSettingsActivity : AppCompatActivity() {
             val inputs = LocationSettingsCascade.Inputs(
                 locationSharingEnabled = locationSharingEnabled,
                 lpEnabled = FeatureFlags.lpEnabled,
-                walletConnected = walletConnected,
                 walletDiagnosticsConnected = walletDiagnostics.connected,
                 walletStackRegistered = walletStackRegistered,
                 activationState = ExperimentalFeatureActivator.activationState.value,

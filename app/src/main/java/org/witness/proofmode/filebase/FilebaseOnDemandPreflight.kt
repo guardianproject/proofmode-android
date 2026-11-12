@@ -19,13 +19,18 @@ data class FilebaseOnDemandItem(
 
 sealed class FilebasePreflightOutcome {
     data object EmptyAfterFilters : FilebasePreflightOutcome()
-    data object AlreadyPinned : FilebasePreflightOutcome()
     data class Ready(val queue: List<FilebaseOnDemandItem>) : FilebasePreflightOutcome()
     data class NeedsOversizeConsent(
         val remaining: List<FilebaseOnDemandCandidate>,
         val oversizeCount: Int,
     ) : FilebasePreflightOutcome()
 }
+
+/** Generated tapped items split by whether their Filebase success sidecar already exists. */
+data class FilebasePinPartition(
+    val unpinned: List<ProofableItem>,
+    val pinnedHashes: List<String>,
+)
 
 object FilebaseOnDemandPreflight {
     fun isUnresolvedLength(mediaLength: Long?): Boolean =
@@ -53,30 +58,33 @@ object FilebaseOnDemandPreflight {
         return FilebasePreflightOutcome.NeedsOversizeConsent(measurable, oversizeCount)
     }
 
-    fun filterGeneratedUnpinned(
+    /**
+     * Splits the generated, non-blank tapped items by pin state in one pass. [isPinned] is a
+     * sidecar read, so it runs once per item.
+     */
+    fun partitionByPin(
         items: List<ProofableItem>,
         isPinned: (String) -> Boolean,
-    ): List<ProofableItem> = items.filter { item ->
-        item.id.isNotBlank() &&
-            item.proofStatus == ProofStatus.GENERATED &&
-            !isPinned(item.id)
+    ): FilebasePinPartition {
+        val unpinned = mutableListOf<ProofableItem>()
+        val pinnedHashes = mutableListOf<String>()
+        for (item in items) {
+            if (item.id.isBlank() || item.proofStatus != ProofStatus.GENERATED) continue
+            if (isPinned(item.id)) pinnedHashes += item.id else unpinned += item
+        }
+        return FilebasePinPartition(unpinned, pinnedHashes)
     }
 
     fun emptyQueueOutcome(
         items: List<ProofableItem>,
-        isPinned: (String) -> Boolean,
-    ): FilebasePreflightOutcome {
-        val allAlreadyPinned = items.all { item ->
-            item.id.isNotBlank() &&
-                item.proofStatus == ProofStatus.GENERATED &&
-                isPinned(item.id)
-        }
-        return if (allAlreadyPinned) {
-            FilebasePreflightOutcome.AlreadyPinned
+        pinnedHashes: List<String>,
+    ): FilebasePreflightOutcome =
+        if (pinnedHashes.size == items.size) {
+            // Empty queue on purpose: the tap still registers so it can toast that all are uploaded.
+            FilebasePreflightOutcome.Ready(emptyList())
         } else {
             FilebasePreflightOutcome.EmptyAfterFilters
         }
-    }
 
     fun queueAfterOversizeConfirm(
         remaining: List<FilebaseOnDemandCandidate>,

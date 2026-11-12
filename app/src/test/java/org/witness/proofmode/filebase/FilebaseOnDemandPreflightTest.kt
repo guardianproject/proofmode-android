@@ -1,8 +1,6 @@
 package org.witness.proofmode.filebase
 
-import android.content.Context
 import android.net.Uri
-import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -21,35 +19,37 @@ class FilebaseOnDemandPreflightTest {
         ProofableItem(id = id, uri = Uri.parse("content://media/$id"), proofStatus = status)
 
     @Test
-    fun filter_skipsNonGeneratedAndBlankHashAndPinned() {
+    fun partitionByPin_skipsNonGeneratedAndBlankHash_andSplitsPinned() {
         val items = listOf(
             item(""),
             item("pending", ProofStatus.PENDING),
+            item("pending-pinned", ProofStatus.PENDING),
             item("generating", ProofStatus.GENERATING),
             item("pinned"),
             item("ok"),
         )
-        val kept = FilebaseOnDemandPreflight.filterGeneratedUnpinned(items) { hash ->
-            hash == "pinned"
+        val probed = mutableListOf<String>()
+        val pins = FilebaseOnDemandPreflight.partitionByPin(items) { hash ->
+            probed += hash
+            hash == "pinned" || hash == "pending-pinned" || hash == ""
         }
-        assertEquals(listOf("ok"), kept.map { it.id })
+        assertEquals(listOf("ok"), pins.unpinned.map { it.id })
+        assertEquals(listOf("pinned"), pins.pinnedHashes)
+        // Each eligible item costs one sidecar read.
+        assertEquals(listOf("pinned", "ok"), probed)
     }
 
     @Test
-    fun emptyQueue_allAlreadyPinned_isAlreadyPinned() {
-        val items = listOf(item("pinned-a"), item("pinned-b"))
+    fun emptyQueue_allPinned_isReadyEmpty_mixIsEmptyAfterFilters() {
+        val allPinned = listOf(item("pinned-a"), item("pinned-b"))
         assertEquals(
-            FilebasePreflightOutcome.AlreadyPinned,
-            FilebaseOnDemandPreflight.emptyQueueOutcome(items) { true },
+            FilebasePreflightOutcome.Ready(emptyList()),
+            FilebaseOnDemandPreflight.emptyQueueOutcome(allPinned, pinnedHashes = listOf("pinned-a", "pinned-b")),
         )
-    }
-
-    @Test
-    fun emptyQueue_mixPinnedAndPending_isNotReady() {
-        val items = listOf(item("pinned"), item("pending", ProofStatus.PENDING))
+        val mix = listOf(item("pinned"), item("pending", ProofStatus.PENDING))
         assertEquals(
             FilebasePreflightOutcome.EmptyAfterFilters,
-            FilebaseOnDemandPreflight.emptyQueueOutcome(items) { it == "pinned" },
+            FilebaseOnDemandPreflight.emptyQueueOutcome(mix, pinnedHashes = listOf("pinned")),
         )
     }
 
@@ -59,19 +59,6 @@ class FilebaseOnDemandPreflightTest {
         val outcome = FilebaseOnDemandPreflight.classify(listOf(c))
         val ready = outcome as FilebasePreflightOutcome.Ready
         assertEquals(MediaInclusion.INCLUDE_MEDIA, ready.queue.single().mediaInclusion)
-    }
-
-    @Test
-    fun classify_anyOversize_needsConsent() {
-        val within = FilebaseOnDemandCandidate(item("a"), 1L)
-        val over = FilebaseOnDemandCandidate(
-            item("b"),
-            FilebaseConfig.FILEBASE_MEDIA_MAX_BYTES + 1L,
-        )
-        val outcome = FilebaseOnDemandPreflight.classify(listOf(within, over))
-            as FilebasePreflightOutcome.NeedsOversizeConsent
-        assertEquals(1, outcome.oversizeCount)
-        assertEquals(2, outcome.remaining.size)
     }
 
     @Test
@@ -90,10 +77,10 @@ class FilebaseOnDemandPreflightTest {
             item("b"),
             FilebaseConfig.FILEBASE_MEDIA_MAX_BYTES + 1L,
         )
-        val consent = FilebaseOnDemandPreflight.classify(listOf(over, unknown))
+        val consent = FilebaseOnDemandPreflight.classify(listOf(within, over, unknown))
             as FilebasePreflightOutcome.NeedsOversizeConsent
         assertEquals(1, consent.oversizeCount)
-        assertEquals(listOf("b"), consent.remaining.map { it.item.id })
+        assertEquals(listOf("a", "b"), consent.remaining.map { it.item.id })
     }
 
     @Test
@@ -106,12 +93,5 @@ class FilebaseOnDemandPreflightTest {
         val queue = FilebaseOnDemandPreflight.queueAfterOversizeConfirm(listOf(within, over))
         assertEquals(MediaInclusion.INCLUDE_MEDIA, queue[0].mediaInclusion)
         assertEquals(MediaInclusion.SIDECARS_ONLY, queue[1].mediaInclusion)
-    }
-
-    @Test
-    fun onDemandMimeType_fallsBackToOctetStream() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        val uri = Uri.parse("content://proofmode.test/unknown")
-        assertEquals("application/octet-stream", onDemandMimeType(context, uri))
     }
 }

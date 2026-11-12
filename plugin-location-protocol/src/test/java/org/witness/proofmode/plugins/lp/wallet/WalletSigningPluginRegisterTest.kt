@@ -11,6 +11,7 @@ import org.mockito.Mockito
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.witness.proofmode.plugins.lp.TestWalletStackReset
+import org.witness.proofmode.plugins.wallet.infra.model.WalletSdkConfig
 import org.witness.proofmode.plugins.wallet.infra.privy.PrivyWalletConnector
 
 @RunWith(RobolectricTestRunner::class)
@@ -26,6 +27,7 @@ class WalletSigningPluginRegisterTest {
     @Test
     fun register_leavesIsRegisteredFalse_whenCreateDefaultThrows() {
         val context = ApplicationProvider.getApplicationContext<Context>()
+        WalletSigningPlugin.configure(WalletSdkConfig.fromBuildConfig())
 
         Mockito.mockConstruction(PrivyWalletConnector::class.java) { _, _ ->
             throw IllegalStateException("simulated createDefault failure")

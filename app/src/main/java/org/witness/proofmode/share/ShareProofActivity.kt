@@ -1181,21 +1181,13 @@ class ShareProofActivity : AppCompatActivity() {
         }
     }
 
-    private fun formatFilebaseFailureForUi(raw: String?): String {
-        val samePolicy = getString(R.string.filebase_failure_same_policy)
-        return formatFilebaseFailureMessage(
-            rawMessage = raw,
-            accountProblemFallback = samePolicy,
-            muteIpfs403Fallback = samePolicy,
-        )
-    }
-
     private fun showFilebaseUploadFailedDialog(
         detail: String?,
         offerHashOnly: (() -> Unit)?,
     ) {
         if (isDestroyed) return
-        val formattedDetail = formatFilebaseFailureForUi(detail)
+        val reconfigure = isFilebaseReconfigureFailure(detail)
+        val formattedDetail = formatFilebaseFailureMessage(this, detail)
         val message = if (offerHashOnly != null) {
             buildString {
                 append(getString(R.string.filebase_upload_failed_offer_share_file))
@@ -1215,11 +1207,19 @@ class ShareProofActivity : AppCompatActivity() {
             builder.setPositiveButton(R.string.filebase_share_just_the_file) { _, _ ->
                 offerHashOnly()
             }.setNegativeButton(android.R.string.cancel, null)
+            if (reconfigure) builder.setNeutralButton(R.string.filebase_reconfigure) { _, _ -> openFilebaseSettings() }
+        } else if (reconfigure) {
+            builder.setPositiveButton(R.string.filebase_reconfigure) { _, _ -> openFilebaseSettings() }
+                .setNegativeButton(android.R.string.cancel, null)
         } else {
             builder.setPositiveButton(android.R.string.ok, null)
         }
-        // Positive: "Share just the file" (when offered) or OK — never a Retry button.
+        // Positive: "Share just the file" (when offered), Open settings, or OK — never a Retry button.
         builder.show()
+    }
+
+    private fun openFilebaseSettings() {
+        startActivity(Intent(this, FilebaseSettingsActivity::class.java))
     }
 
     private fun showProofError() {
@@ -1353,7 +1353,7 @@ class ShareProofActivity : AppCompatActivity() {
         )
         if (hash != null && mStorageProvider?.proofExists(hash) == true) {
 
-            // LP attestation (.lp.json) artifacts are included automatically — see LocationProtocolArtifactStore Phase 4 notes
+            // LP attestation artifacts are included automatically — see LocationProtocolArtifactStore Phase 4 notes
             mStorageProvider?.getProofSet(hash)?.let { shareUris.addAll(it) }
 
             val sdf = SimpleDateFormat.getDateTimeInstance()

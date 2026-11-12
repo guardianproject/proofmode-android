@@ -10,7 +10,6 @@ internal object LocationSettingsCascade {
     data class Inputs(
         val locationSharingEnabled: Boolean,
         val lpEnabled: Boolean,
-        val walletConnected: Boolean,
         val walletDiagnosticsConnected: Boolean,
         val walletStackRegistered: Boolean,
         val activationState: LpActivationState,
@@ -34,7 +33,6 @@ internal object LocationSettingsCascade {
     fun autoCaptureEnabled(inputs: Inputs): Boolean =
         inputs.locationSharingEnabled &&
             inputs.lpEnabled &&
-            inputs.walletConnected &&
             activationReady(inputs.activationState)
 
     fun cidEnabled(inputs: Inputs): Boolean =
@@ -72,8 +70,6 @@ internal object LocationSettingsCascade {
                 R.string.location_protocol_auto_capture_summary_location_required
             !inputs.lpEnabled ->
                 R.string.location_protocol_auto_capture_summary_lp_required
-            !inputs.walletConnected ->
-                R.string.location_protocol_auto_capture_summary_wallet_required
             else -> R.string.location_protocol_auto_capture_summary
         },
     )

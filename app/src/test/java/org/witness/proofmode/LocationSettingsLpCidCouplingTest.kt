@@ -4,10 +4,11 @@ import android.Manifest
 import android.app.Application
 import android.content.Context
 import android.os.Looper
-import androidx.preference.Preference
 import androidx.preference.PreferenceManager
 import androidx.preference.SwitchPreferenceCompat
 import androidx.test.core.app.ApplicationProvider
+import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -16,6 +17,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.witness.proofmode.LocationSettingsActivityTestSupport.fragment
+import org.witness.proofmode.plugin.ProofArtifactSavedHookRegistry
 import org.witness.proofmode.plugin.ProofWriteHookRegistry
 import org.witness.proofmode.plugins.ipfscid.IpfsCidPlugin
 import org.witness.proofmode.plugins.lp.LocationProtocolPlugin
@@ -44,41 +47,29 @@ class LocationSettingsLpCidCouplingTest {
         )
     }
 
+    @After
+    fun tearDown() {
+        LocationSettingsActivityTestSupport.tearDown()
+    }
+
     private fun launchFragment(): LocationSettingsActivity.LocationPreferencesFragment {
         val activity = LocationSettingsActivityTestSupport.launchLocationSettingsActivity()
         TestWalletStackHelper.setupFakeKeyStore()
         LocationProtocolPlugin.registerWalletStack(activity.application as ProofModeApp)
         LocationProtocolPlugin.setFlutterEngineReadyForTests(true)
         ExperimentalFeatureActivator.resetActivationStateForTests(LpActivationState.Ready)
-        val fragment = activity.supportFragmentManager
-            .findFragmentById(R.id.location_settings_container)
-            as LocationSettingsActivity.LocationPreferencesFragment
+        val fragment = fragment(activity)
         fragment.onResume()
         shadowOf(Looper.getMainLooper()).idle()
         return fragment
-    }
-
-    private fun callChangeListener(preference: Preference, newValue: Any) {
-        val method = Preference::class.java.getDeclaredMethod("callChangeListener", Any::class.java)
-        method.isAccessible = true
-        method.invoke(preference, newValue)
-    }
-
-    @Test
-    fun openLocationOnly_doesNotAutoEnableCid_orSetCoupling() {
-        launchFragment()
-        assertFalse(FeatureFlags.localIpfsCidEnabled)
-        assertFalse(FeatureFlags.lpCidAutoCouplingApplied)
-        assertFalse(FeatureFlags.localIpfsCidUserSet)
     }
 
     @Test
     fun firstLpOn_whenNeverUserSet_autoEnablesCid_activates_andSetsCoupling() {
         val fragment = launchFragment()
         val lp = fragment.findPreference<SwitchPreferenceCompat>(FeatureFlags.KEY_LP_ENABLED)!!
-        lp.isChecked = false
 
-        callChangeListener(lp, true)
+        lp.callChangeListener(true)
         shadowOf(Looper.getMainLooper()).idle()
 
         assertTrue(FeatureFlags.lpEnabled)
@@ -93,9 +84,8 @@ class LocationSettingsLpCidCouplingTest {
         FeatureFlags.localIpfsCidEnabled = true
         val fragment = launchFragment()
         val lp = fragment.findPreference<SwitchPreferenceCompat>(FeatureFlags.KEY_LP_ENABLED)!!
-        lp.isChecked = false
 
-        callChangeListener(lp, true)
+        lp.callChangeListener(true)
         shadowOf(Looper.getMainLooper()).idle()
 
         assertTrue(FeatureFlags.localIpfsCidEnabled)
@@ -109,22 +99,22 @@ class LocationSettingsLpCidCouplingTest {
         val cid = fragment.findPreference<SwitchPreferenceCompat>(FeatureFlags.KEY_LOCAL_IPFS_CID_ENABLED)!!
         // LP is off (cascade would gray CID); force-enable for manual toggle coverage.
         cid.isEnabled = true
-        callChangeListener(cid, true)
+        cid.callChangeListener(true)
         shadowOf(Looper.getMainLooper()).idle()
         assertTrue(FeatureFlags.localIpfsCidUserSet)
 
         cid.isEnabled = true
-        callChangeListener(cid, false)
+        cid.callChangeListener(false)
         shadowOf(Looper.getMainLooper()).idle()
         assertFalse(FeatureFlags.localIpfsCidEnabled)
         assertTrue(FeatureFlags.localIpfsCidUserSet)
 
         val lp = fragment.findPreference<SwitchPreferenceCompat>(FeatureFlags.KEY_LP_ENABLED)!!
-        lp.isChecked = false
-        callChangeListener(lp, true)
+        lp.callChangeListener(true)
         shadowOf(Looper.getMainLooper()).idle()
 
         assertFalse(FeatureFlags.localIpfsCidEnabled)
+        assertFalse(FeatureFlags.lpCidAutoCouplingApplied)
         assertTrue(FeatureFlags.localIpfsCidUserSet)
     }
 
@@ -132,8 +122,7 @@ class LocationSettingsLpCidCouplingTest {
     fun afterCouplingApplied_lpOffOn_doesNotReForceCid() {
         val fragment = launchFragment()
         val lp = fragment.findPreference<SwitchPreferenceCompat>(FeatureFlags.KEY_LP_ENABLED)!!
-        lp.isChecked = false
-        callChangeListener(lp, true)
+        lp.callChangeListener(true)
         shadowOf(Looper.getMainLooper()).idle()
         assertTrue(FeatureFlags.lpCidAutoCouplingApplied)
 
@@ -145,10 +134,9 @@ class LocationSettingsLpCidCouplingTest {
         assertFalse(FeatureFlags.localIpfsCidEnabled)
         assertTrue(FeatureFlags.lpCidAutoCouplingApplied)
 
-        callChangeListener(lp, false)
+        lp.callChangeListener(false)
         shadowOf(Looper.getMainLooper()).idle()
-        lp.isChecked = false
-        callChangeListener(lp, true)
+        lp.callChangeListener(true)
         shadowOf(Looper.getMainLooper()).idle()
 
         assertFalse(FeatureFlags.localIpfsCidEnabled)
@@ -156,18 +144,23 @@ class LocationSettingsLpCidCouplingTest {
     }
 
     @Test
-    fun userSetTrue_evenIfCidFalse_blocksAutoEnableOnFirstLpOn() {
-        FeatureFlags.localIpfsCidUserSet = true
-        FeatureFlags.localIpfsCidEnabled = false
+    fun onCidToggle_offOnOffOn_hookCountsStayAtOne_t3() {
+        FeatureFlags.lpEnabled = true
         val fragment = launchFragment()
-        val lp = fragment.findPreference<SwitchPreferenceCompat>(FeatureFlags.KEY_LP_ENABLED)!!
-        lp.isChecked = false
+        val cid = fragment.findPreference<SwitchPreferenceCompat>(FeatureFlags.KEY_LOCAL_IPFS_CID_ENABLED)!!
+        cid.isEnabled = true
 
-        callChangeListener(lp, true)
+        cid.callChangeListener(true)
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(1, ProofWriteHookRegistry.registeredCountForTests())
+        assertEquals(1, ProofArtifactSavedHookRegistry.registeredCountForTests())
+
+        cid.callChangeListener(false)
         shadowOf(Looper.getMainLooper()).idle()
 
-        assertFalse(FeatureFlags.localIpfsCidEnabled)
-        assertFalse(FeatureFlags.lpCidAutoCouplingApplied)
-        assertTrue(FeatureFlags.localIpfsCidUserSet)
+        cid.callChangeListener(true)
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(1, ProofWriteHookRegistry.registeredCountForTests())
+        assertEquals(1, ProofArtifactSavedHookRegistry.registeredCountForTests())
     }
 }

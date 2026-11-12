@@ -104,7 +104,6 @@
     <string name="location_protocol_auto_capture_summary">Nach einer Aufnahme in der App automatisch eine Standort-Attestierung ausführen</string>
     <string name="location_protocol_auto_capture_summary_location_required">Schalte oben die Standortfreigabe ein, um einen Auto-Attestierungsmodus zu wählen</string>
     <string name="location_protocol_auto_capture_summary_lp_required">Schalte die Location-Protocol-Attestierung ein, um einen Auto-Attestierungsmodus zu wählen</string>
-    <string name="location_protocol_auto_capture_summary_wallet_required">Verbinde in den Wallet-Einstellungen ein Wallet, um einen Auto-Attestierungsmodus zu wählen</string>
     <string name="location_wallet_row_summary">Das Wallet verwalten, mit dem Standort-Attestierungen signiert werden</string>
     <string name="location_wallet_summary_location_required">Schalte oben die Standortfreigabe ein, um ein Wallet einzurichten</string>
     <string name="location_wallet_summary_lp_required">Schalte die Location-Protocol-Attestierung ein, um ein Wallet einzurichten</string>
@@ -285,12 +284,14 @@
     <string name="signing_server_unreachable_message">Die Signatur der Content Credentials (C2PA) ist auf „Extern“ eingestellt. Neue Fotos und Videos werden daher erst signiert, wenn der Server erreichbar ist. Prüfe deine Internetverbindung oder wechsle in den Einstellungen zur lokalen Signatur.</string>
     <string name="nostr_notarization">Nostr-Notarisierung</string>
     <string name="cid_manifest">CID-Manifest</string>
+    <string name="root_cid_clip_label">Root-CID</string>
     <string name="offchain_location_attestation">Off-Chain-Standort-Attestierung</string>
     <string name="onchain_location_attestation">On-Chain-Standort-Attestierung</string>
     <string name="artifact_tap_to_view">Zum Anzeigen tippen</string>
     <string name="artifact_tap_to_view_manifest">Tippen, um das vollständige Manifest anzuzeigen</string>
     <string name="lp_attestation_in_progress">Attestierung läuft…</string>
     <string name="view_on_eas_scan">Auf EAS Scan ansehen</string>
+    <string name="view_transaction">Transaktion ansehen</string>
     <string name="artifact_loading">Wird geladen…</string>
     <string name="share_content_credentials_info">Teilt das Bild oder Video direkt, mit direkt in die Datei eingebetteten Nachweis-Metadaten, überprüft und signiert von Proofmode.org</string>
     <string name="optional_filename">Optionaler Dateiname</string>
@@ -336,6 +337,11 @@
     <string name="filebase_social_not_configured_share">Ohne Hochladen teilen</string>
     <string name="filebase_proof_not_ready">Der Nachweis ist noch nicht bereit für den Filebase-Upload.</string>
     <string name="lp_attest_nothing_to_queue">Der Nachweis ist noch nicht bereit für die Standort-Attestierung.</string>
+    <string name="lp_toast_offchain_success">Standort Off-Chain attestiert</string>
+    <string name="lp_toast_offchain_failed">Off-Chain-Attestierung wurde nicht abgeschlossen</string>
+    <string name="lp_toast_onchain_success">Standort On-Chain übermittelt</string>
+    <string name="lp_toast_onchain_failed">On-Chain-Attestierung wurde nicht abgeschlossen</string>
+    <string name="proofset_toast_mixed">%1$d von %2$d abgeschlossen</string>
     <string name="filebase_upload_success">Zu Filebase hochgeladen</string>
     <string name="filebase_upload_failed">Filebase-Upload fehlgeschlagen</string>
     <string name="filebase_upload_oversize_title">Medien zu groß zum Hochladen</string>
@@ -384,7 +390,6 @@
     <string name="lp_auto_capture_mode_both">Beides (erst Off-Chain, dann On-Chain)</string>
     <string name="lp_auto_capture_skip_location_unavailable">Automatische Standort-Attestierung übersprungen: Für diese Aufnahme sind keine Standortdaten verfügbar.</string>
     <string name="lp_auto_capture_skip_no_activity">Automatische On-Chain-Attestierung übersprungen: Öffne die App, um On-Chain einzureichen.</string>
-    <string name="lp_auto_capture_skip_wallet_unavailable">Automatische Standort-Attestierung übersprungen: Kein Wallet verbunden.</string>
     <string name="settings_note">Notiz</string>
     <string name="settings_note_desc">Notizen des Autors</string>
     <string name="settings_version_placeholder">Version</string>

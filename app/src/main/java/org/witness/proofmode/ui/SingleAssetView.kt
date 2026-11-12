@@ -7,10 +7,13 @@ import android.content.Intent
 import android.graphics.RectF
 import android.location.Location
 import android.net.Uri
+import android.os.Build
 import android.preference.PreferenceManager
 import android.widget.MediaController
 import android.widget.Toast
 import android.widget.VideoView
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -27,6 +30,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -45,8 +50,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -65,6 +72,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -78,13 +86,16 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.FileProvider
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -105,6 +116,7 @@ import org.witness.proofmode.service.MediaWatcher
 import org.witness.proofmode.service.ProofModeV1Constants
 import org.witness.proofmode.share.FilebaseSocialShareHelper
 import org.witness.proofmode.storage.DefaultStorageProvider
+import org.witness.proofmode.storage.StorageProvider
 import org.witness.proofmode.storage.proofset.ProofSetUploader
 import org.witness.proofmode.ui.ProofOverviewArtifactSummaries
 import org.witness.proofmode.storage.filebase.FilebaseSidecarContract
@@ -112,6 +124,7 @@ import org.witness.proofmode.util.ProofModeUtil
 import timber.log.Timber
 import java.io.File
 import java.io.FileNotFoundException
+import java.io.OutputStream
 import java.lang.Float.max
 import java.lang.Float.min
 import java.text.DateFormat
@@ -1002,7 +1015,14 @@ fun CidManifestRow(
         mediaHash = mediaHash,
         identifier = identifier,
         storageProvider = storageProvider,
-        collapsedSummary = { json -> ProofOverviewArtifactSummaries.cidCollapsedSummary(json) },
+        trailingAction = { rawJson ->
+            ProofOverviewArtifactSummaries.rootCidForArtifact(rawJson)?.let { rootCid ->
+                CopyIconButton(
+                    clipLabel = stringResource(R.string.root_cid_clip_label),
+                    textToCopy = { rootCid },
+                )
+            }
+        },
     )
 }
 
@@ -1014,20 +1034,113 @@ fun OffchainLpAttestationRow(
     identifier: String,
     storageProvider: DefaultStorageProvider,
 ) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val createDocument = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        coroutineScope.launch {
+            // NonCancellable covers the copy and the failure toast: leaving the screen mid-save must
+            // neither strand a truncated file at the picked location nor swallow the failure.
+            withContext(NonCancellable) {
+                val saved = withContext(Dispatchers.IO) {
+                    copyStoredArtifact(storageProvider, mediaHash, identifier) {
+                        context.contentResolver.openOutputStream(uri, "wt")
+                    }
+                }
+                if (!saved) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, R.string.artifact_save_failed, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+    }
     ExpandableArtifactJsonRow(
         label = label,
         collapsedHint = tapHint,
         mediaHash = mediaHash,
         identifier = identifier,
         storageProvider = storageProvider,
-        collapsedSummary = { json ->
-            val s = ProofOverviewArtifactSummaries.offchainCollapsedSummary(json)
-            listOfNotNull(s.uidShort, s.chainDisplayName, s.attesterShort).joinToString(" — ")
-                .takeIf { it.isNotBlank() }
+        trailingAction = {
+            IconButton(onClick = { createDocument.launch(identifier) }) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_download),
+                    contentDescription = stringResource(R.string.artifact_download_action),
+                )
+            }
+            IconButton(
+                onClick = {
+                    shareArtifact(context, identifier) {
+                        artifactShareUri(context, storageProvider, mediaHash, identifier)
+                    }
+                }
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Share,
+                    contentDescription = stringResource(R.string.artifact_share_action),
+                )
+            }
         },
     )
 }
 
+// Hands the stored sidecar to the chooser by FileProvider URI so the recipient reads the bytes on
+// disk, not the formatted display String. getUriForFile throws for a path outside the provider
+// roots; shareArtifact's catch turns that into the failure toast.
+internal fun artifactShareUri(
+    context: Context,
+    storageProvider: DefaultStorageProvider,
+    hash: String,
+    identifier: String,
+): Uri {
+    val file = File(checkNotNull(storageProvider.getHashStorageDir(hash)), identifier)
+    return FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
+}
+
+private fun shareArtifact(context: Context, identifier: String, uriProvider: () -> Uri) {
+    try {
+        val uri = uriProvider()
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "application/json"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            // The chooser's targets get the read grant only through ClipData, not the extra alone.
+            clipData = ClipData.newRawUri(identifier, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(send, null))
+    } catch (e: Exception) {
+        Timber.e(e, "Error sharing artifact $identifier")
+        Toast.makeText(context, R.string.artifact_share_failed, Toast.LENGTH_SHORT).show()
+    }
+}
+
+// Streams the stored sidecar bytes as-is. The row's display String is formatted and decoded, so
+// saving from it would change bytes a verifier outside the app expects unchanged. The output is
+// opened only after the input exists, so a missing sidecar never truncates the picked file.
+internal fun copyStoredArtifact(
+    storageProvider: StorageProvider,
+    hash: String,
+    identifier: String,
+    openOutput: () -> OutputStream?,
+): Boolean {
+    try {
+        val input = storageProvider.getInputStream(hash, identifier) ?: return false
+        input.use {
+            val output = openOutput() ?: return false
+            output.use { input.copyTo(it) }
+        }
+        return true
+    } catch (e: Exception) {
+        Timber.e(e, "Error saving artifact $identifier")
+        return false
+    }
+}
+
+private const val COPIED_CHECK_MILLIS = 2_000L
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun OnchainLpAttestationRow(
     label: String,
@@ -1043,24 +1156,87 @@ fun OnchainLpAttestationRow(
         mediaHash = mediaHash,
         identifier = identifier,
         storageProvider = storageProvider,
-        collapsedSummary = { json ->
-            val s = ProofOverviewArtifactSummaries.onchainCollapsedSummary(json)
-            listOfNotNull(s.uidShort, s.chainDisplayName).joinToString(" — ")
-                .takeIf { it.isNotBlank() }
-        },
         expandedFooter = { rawJson ->
-            ProofOverviewArtifactSummaries.easScanUrlForArtifact(rawJson)?.let { url ->
-                TextButton(
-                    onClick = {
-                        context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ProofOverviewArtifactSummaries.easScanUrlForArtifact(rawJson)?.let { url ->
+                    TextButton(
+                        onClick = {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)))
+                        }
+                    ) {
+                        Text(text = stringResource(R.string.view_on_eas_scan))
                     }
-                ) {
-                    Text(text = stringResource(R.string.view_on_eas_scan))
+                }
+                ProofOverviewArtifactSummaries.transactionUrlForArtifact(rawJson)?.let { url ->
+                    TextButton(
+                        onClick = {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)))
+                        }
+                    ) {
+                        Text(text = stringResource(R.string.view_transaction))
+                    }
                 }
             }
         },
+        trailingAction = { rawJson ->
+            // Copies the formatted text the row displays, not the stored string, so a paste matches the screen.
+            CopyIconButton(
+                clipLabel = stringResource(R.string.onchain_location_attestation),
+                textToCopy = { ProofOverviewArtifactSummaries.formatArtifactJson(rawJson) },
+            )
+        },
     )
 }
+
+// The row composes its trailing action only while expanded, so collapsing within the check
+// interval resets the icon to copy. That loss is harmless: the checkmark is only tap feedback,
+// and the clipboard write has already happened.
+@Composable
+internal fun CopyIconButton(clipLabel: String, textToCopy: () -> String) {
+    val context = LocalContext.current
+    var copyTick by remember { mutableIntStateOf(0) }
+    var copied by remember { mutableStateOf(false) }
+    // A new tap changes the key, which cancels the pending reset and restarts the interval.
+    LaunchedEffect(copyTick) {
+        if (copyTick == 0) return@LaunchedEffect
+        copied = true
+        delay(COPIED_CHECK_MILLIS)
+        copied = false
+    }
+    IconButton(onClick = {
+        copyTextToClipboard(context, clipLabel, textToCopy())
+        copyTick++
+    }) {
+        if (copied) {
+            Icon(
+                imageVector = Icons.Filled.Check,
+                contentDescription = stringResource(R.string.artifact_copied),
+            )
+        } else {
+            Icon(
+                painter = painterResource(R.drawable.ic_content_copy),
+                contentDescription = stringResource(R.string.artifact_copy_action),
+            )
+        }
+    }
+}
+
+// From API 33 the system shows its own clipboard notice, and a second toast would double it.
+internal fun copyTextToClipboard(
+    context: Context,
+    clipLabel: String,
+    text: String,
+    sdkInt: Int = Build.VERSION.SDK_INT,
+) {
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    clipboard.setPrimaryClip(ClipData.newPlainText(clipLabel, text))
+    if (sdkInt <= Build.VERSION_CODES.S_V2) {
+        Toast.makeText(context, R.string.artifact_copied, Toast.LENGTH_SHORT).show()
+    }
+}
+
+internal fun artifactSummaryLine(chainName: String?, hint: String): String =
+    if (chainName != null) "$chainName — $hint" else hint
 
 @Composable
 private fun ExpandableArtifactJsonRow(
@@ -1069,8 +1245,8 @@ private fun ExpandableArtifactJsonRow(
     mediaHash: String,
     identifier: String,
     storageProvider: DefaultStorageProvider,
-    collapsedSummary: (String) -> String?,
     expandedFooter: @Composable ((String) -> Unit)? = null,
+    trailingAction: @Composable ((String) -> Unit)? = null,
 ) {
     var expanded by remember { mutableStateOf(false) }
     var rawJson by remember { mutableStateOf<String?>(null) }
@@ -1110,16 +1286,17 @@ private fun ExpandableArtifactJsonRow(
                 fontWeight = FontWeight.Bold,
             )
         }
-        Row {
-            val summary = rawJson?.let(collapsedSummary)
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                modifier = Modifier.padding(3.dp, 3.dp),
-                text = when {
-                    summary != null -> "$summary — $collapsedHint"
-                    else -> collapsedHint
-                },
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(3.dp, 3.dp),
+                text = artifactSummaryLine(rawJson?.let(ProofOverviewArtifactSummaries::chainDisplayName), collapsedHint),
                 color = Color.Gray,
             )
+            rawJson?.let { json ->
+                if (expanded) trailingAction?.invoke(json)
+            }
         }
         if (loading) {
             Row {

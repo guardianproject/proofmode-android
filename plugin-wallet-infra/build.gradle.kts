@@ -43,13 +43,10 @@ android {
         // only apply if this library itself were minified, which it is not.
         consumerProguardFiles("proguard-rules.pro")
 
-        buildConfigField("Boolean", "FEATURE_SPONSORSHIP_ENABLED", "true")
         buildConfigField("String", "PRIVY_APP_ID", buildConfigString(walletSecret("PRIVY_APP_ID")))
         buildConfigField("String", "PRIVY_APP_CLIENT_ID", buildConfigString(walletSecret("PRIVY_APP_CLIENT_ID")))
         buildConfigField("String", "ZERODEV_PROJECT_ID", buildConfigString(walletSecret("ZERODEV_PROJECT_ID")))
         buildConfigField("String", "ZERODEV_PROJECT_ID_BASE", buildConfigString(walletSecret("ZERODEV_PROJECT_ID_BASE")))
-        buildConfigField("String", "ZERODEV_BUNDLER_URL_BASE", buildConfigString(walletSecret("ZERODEV_BUNDLER_URL_BASE")))
-        buildConfigField("String", "ZERODEV_PAYMASTER_URL_BASE", buildConfigString(walletSecret("ZERODEV_PAYMASTER_URL_BASE")))
     }
 
     compileOptions {
@@ -75,8 +72,6 @@ android {
             // Not minified here; proguard-rules.pro travels to the app via
             // defaultConfig.consumerProguardFiles above.
             isMinifyEnabled = false
-            // Uncomment to produce a self-funded release variant:
-            // buildConfigField("Boolean", "FEATURE_SPONSORSHIP_ENABLED", "false")
         }
     }
 
@@ -101,12 +96,17 @@ dependencies {
     implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.security.crypto)
     implementation(libs.timber)
+    implementation(libs.okhttp)
 
     testImplementation(libs.androidx.test.core)
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
     testImplementation("org.robolectric:robolectric:4.13")
     testImplementation(libs.junit)
+    // c2pa (via :android-libproofmode) lifts OkHttp to 5.1.0 at runtime, and mockwebserver
+    // 4.x fails against it (okhttp3/internal/Util is gone), so this pin follows the resolved
+    // OkHttp version, not libs.versions.okhttp.
+    testImplementation("com.squareup.okhttp3:mockwebserver:5.1.0")
 }
 
 val coverageClassDirectories = fileTree(layout.buildDirectory.dir("tmp/kotlin-classes/debug")) {

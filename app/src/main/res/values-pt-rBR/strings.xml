@@ -256,7 +256,6 @@
     <string name="location_wallet_summary_lp_required">Ative o Protocolo de Localização de atestação para configurar uma carteira</string>
     <string name="compute_cids_enable_summary_location_required">Ative o compartilhamento de localização acima para calcular IDs de conteúdo</string>
     <string name="compute_cids_enable_summary_lp_required">Ative o Protocolo de Localização de atestação para gerar IDs de conteúdo</string>
-    <string name="location_protocol_auto_capture_summary_wallet_required">Conecte uma carteira em Configurações de Carteira para escolher um modo de atestação automático</string>
     <string name="location_wallet_row_summary">Gerenciar a carteira usada para assinar atestações de localização</string>
     <string name="location_wallet_summary_connected">Conectado: %1$s</string>
     <string name="compute_cids_enable_title">CID IPFS local</string>
@@ -322,12 +321,14 @@
     <string name="resign_started">Reassinatura iniciada - um novo item irá aparecer nas Atividades.</string>
     <string name="nostr_notarization">Registro notarial via Nostr</string>
     <string name="cid_manifest">Manifesto CID</string>
+    <string name="root_cid_clip_label">CID raiz</string>
     <string name="offchain_location_attestation">Atestado de localização fora de cadeia</string>
     <string name="onchain_location_attestation">Atestado de localização em cadeia</string>
     <string name="artifact_tap_to_view">Toque para ver</string>
     <string name="artifact_tap_to_view_manifest">Toque para ver o manifesto completo</string>
     <string name="lp_attestation_in_progress">Atestado em andamento…</string>
     <string name="view_on_eas_scan">Ver no EAS Scan</string>
+    <string name="view_transaction">Ver transação</string>
     <string name="artifact_loading">Carregando…</string>
     <string name="filebase_ipfs_storage">Sincronização Automática com IPFS da Filebase (BETA)</string>
     <string name="enable_filebase_upload">Ativar Filebase</string>
@@ -380,7 +381,6 @@
     <string name="lp_auto_capture_mode_onchain">Apenas em cadeia</string>
     <string name="lp_auto_capture_mode_both">Ambos (fora de cadeia e em cadeia)</string>
     <string name="lp_auto_capture_skip_no_activity">Atestado em cadeia automático ignorado: abra o aplicativo para enviar em cadeia.</string>
-    <string name="lp_auto_capture_skip_wallet_unavailable">Atestado de localização automática ignorado: carteira não conectada.</string>
     <string name="settings_version_placeholder">Versão</string>
     <string name="settings_version_format">Versão %1$s</string>
     <string name="toggle_location_description">Alternar o rastreamento de localização</string>
@@ -418,6 +418,11 @@
     <string name="filebase_social_not_configured_message">O Filebase ainda não está configurado. Configure-o para enviar ou compartilhe sem enviar.</string>
     <string name="filebase_social_not_configured_share">Compartilhar sem enviar</string>
     <string name="lp_attest_nothing_to_queue">A prova ainda não está pronta para o atestado de localização.</string>
+    <string name="lp_toast_offchain_success">Localização atestada fora da cadeia</string>
+    <string name="lp_toast_offchain_failed">O atestado fora da cadeia não foi concluído</string>
+    <string name="lp_toast_onchain_success">Localização enviada para a cadeia</string>
+    <string name="lp_toast_onchain_failed">O atestado em cadeia não foi concluído</string>
+    <string name="proofset_toast_mixed">%1$d de %2$d concluídos</string>
     <string name="filebase_upload_oversize_title">Mídia grande demais para enviar</string>
     <string name="filebase_upload_oversize_message">Esta mídia tem mais de 25 MB, então não será enviada. Enviar o conjunto de provas sem o arquivo de mídia?</string>
     <string name="filebase_upload_oversize_batch_message">%d destes têm mais de 25 MB. Enviá-los sem o arquivo de mídia?</string>

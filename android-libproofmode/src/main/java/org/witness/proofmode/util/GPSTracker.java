@@ -115,12 +115,18 @@ public final class GPSTracker implements LocationListener {
             Location locationNew = currentBestLocation;
 
             if (isNetworkEnabled) {
-                //locationNew = pickBetter(best, locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER));
-                locationNew = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+                Location networkFix = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+                if (networkFix != null && isBetterLocation(networkFix, locationNew)) {
+                    locationNew = networkFix;
+                }
             }
+
             // GPS_PROVIDER requires ACCESS_FINE_LOCATION.
-            else if (hasFine && isGPSEnabled) {
-                locationNew = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+            if (hasFine && isGPSEnabled) {
+                Location gpsFix = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                if (gpsFix != null && isBetterLocation(gpsFix, locationNew)) {
+                    locationNew = gpsFix;
+                }
             }
 
             currentBestLocation = locationNew;

@@ -218,7 +218,6 @@
     <string name="location_protocol_auto_capture_summary">ດຳເນີນການຢັ້ງຢືນສະຖານທີ່ອັດຕະໂນມັດຫຼັງຈາກຖ່າຍໃນແອັບ</string>
     <string name="location_protocol_auto_capture_summary_location_required">ເປີດການແບ່ງປັນສະຖານທີ່ດ້ານເທິງເພື່ອເລືອກໂໝດຢັ້ງຢືນອັດຕະໂນມັດ</string>
     <string name="location_protocol_auto_capture_summary_lp_required">ເປີດການຢັ້ງຢືນ Location Protocol ເພື່ອເລືອກໂໝດຢັ້ງຢືນອັດຕະໂນມັດ</string>
-    <string name="location_protocol_auto_capture_summary_wallet_required">ເຊື່ອມຕໍ່ກະເປົາເງິນໃນການຕັ້ງຄ່າກະເປົາເງິນເພື່ອເລືອກໂໝດຢັ້ງຢືນອັດຕະໂນມັດ</string>
     <string name="location_wallet_row_summary">ຈັດການກະເປົາເງິນທີ່ໃຊ້ລົງລາຍເຊັນການຢັ້ງຢືນສະຖານທີ່</string>
     <string name="location_wallet_summary_location_required">ເປີດການແບ່ງປັນສະຖານທີ່ດ້ານເທິງເພື່ອຕັ້ງຄ່າກະເປົາເງິນ</string>
     <string name="location_wallet_summary_lp_required">ເປີດການຢັ້ງຢືນ Location Protocol ເພື່ອຕັ້ງຄ່າກະເປົາເງິນ</string>
@@ -307,12 +306,14 @@
     <string name="signing_server_unreachable_message">ການລົງລາຍເຊັນຂໍ້ມູນປະຈຳຕົວເນື້ອຫາ (C2PA) ຖືກຕັ້ງເປັນທາງໄກ, ສະນັ້ນຮູບພາບ ແລະ ວິດີໂອໃໝ່ຈະລໍຖ້າການລົງລາຍເຊັນຈົນກວ່າຈະເຊື່ອມຕໍ່ເຊີບເວີໄດ້. ກວດສອບການເຊື່ອມຕໍ່ອິນເຕີເນັດຂອງທ່ານ, ຫຼື ປ່ຽນໄປໃຊ້ການລົງລາຍເຊັນໃນເຄື່ອງໃນການຕັ້ງຄ່າ.</string>
     <string name="nostr_notarization">ການຮັບຮອງ Nostr</string>
     <string name="cid_manifest">ແມນິເຟສ CID</string>
+    <string name="root_cid_clip_label">CID ຮາກ</string>
     <string name="offchain_location_attestation">ການຢັ້ງຢືນສະຖານທີ່ນອກເຊນ</string>
     <string name="onchain_location_attestation">ການຢັ້ງຢືນສະຖານທີ່ເທິງເຊນ</string>
     <string name="artifact_tap_to_view">ແຕະເພື່ອເບິ່ງ</string>
     <string name="artifact_tap_to_view_manifest">ແຕະເພື່ອເບິ່ງແມນິເຟສທັງໝົດ</string>
     <string name="lp_attestation_in_progress">ກຳລັງຢັ້ງຢືນ…</string>
     <string name="view_on_eas_scan">ເບິ່ງໃນ EAS Scan</string>
+    <string name="view_transaction">ເບິ່ງທຸລະກຳ</string>
     <string name="artifact_loading">ກຳລັງໂຫຼດ…</string>
     <string name="filebase_ipfs_bearer_token">ໂທເຄັນ IPFS Bearer</string>
     <string name="filebase_auto_upload">ອັບໂຫຼດອັດຕະໂນມັດ</string>
@@ -335,6 +336,11 @@
     <string name="filebase_social_not_configured_share">ແບ່ງປັນໂດຍບໍ່ອັບໂຫຼດ</string>
     <string name="filebase_proof_not_ready">ຫຼັກຖານຍັງບໍ່ພ້ອມສຳລັບການອັບໂຫຼດໄປ Filebase.</string>
     <string name="lp_attest_nothing_to_queue">ຫຼັກຖານຍັງບໍ່ພ້ອມສຳລັບການຢັ້ງຢືນສະຖານທີ່.</string>
+    <string name="lp_toast_offchain_success">ຢັ້ງຢືນສະຖານທີ່ນອກເຊນແລ້ວ</string>
+    <string name="lp_toast_offchain_failed">ການຢັ້ງຢືນນອກເຊນບໍ່ສຳເລັດ</string>
+    <string name="lp_toast_onchain_success">ສົ່ງສະຖານທີ່ເທິງເຊນແລ້ວ</string>
+    <string name="lp_toast_onchain_failed">ການຢັ້ງຢືນເທິງເຊນບໍ່ສຳເລັດ</string>
+    <string name="proofset_toast_mixed">ສຳເລັດ %1$d ຈາກ %2$d</string>
     <string name="filebase_upload_success">ອັບໂຫຼດໄປ Filebase ແລ້ວ</string>
     <string name="filebase_upload_failed">ການອັບໂຫຼດໄປ Filebase ລົ້ມເຫຼວ</string>
     <string name="filebase_upload_oversize_title">ສື່ໃຫຍ່ເກີນໄປທີ່ຈະອັບໂຫຼດ</string>
@@ -382,7 +388,6 @@
     <string name="lp_auto_capture_mode_both">ທັງສອງ (ນອກເຊນກ່ອນ ແລ້ວເທິງເຊນ)</string>
     <string name="lp_auto_capture_skip_location_unavailable">ຂ້າມການຢັ້ງຢືນສະຖານທີ່ອັດຕະໂນມັດ: ບໍ່ມີຂໍ້ມູນສະຖານທີ່ສຳລັບການຖ່າຍນີ້.</string>
     <string name="lp_auto_capture_skip_no_activity">ຂ້າມການຢັ້ງຢືນເທິງເຊນອັດຕະໂນມັດ: ເປີດແອັບເພື່ອສົ່ງຂຶ້ນເຊນ.</string>
-    <string name="lp_auto_capture_skip_wallet_unavailable">ຂ້າມການຢັ້ງຢືນສະຖານທີ່ອັດຕະໂນມັດ: ບໍ່ໄດ້ເຊື່ອມຕໍ່ກະເປົາເງິນ.</string>
     <string name="settings_note">ບັນທຶກ</string>
     <string name="settings_note_desc">ບັນທຶກຂອງຜູ້ຂຽນ</string>
     <string name="settings_version_placeholder">ເວີຊັນ</string>

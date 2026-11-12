@@ -19,26 +19,19 @@ object AutoCaptureLpMarkerResolver {
     fun resolve(
         mediaHash: String,
         registryState: AutoCaptureLpItemState,
-        artifactStore: LocationProtocolArtifactStore,
         storageProvider: StorageProvider,
     ): LpBadgeUiState {
-        val offchain = resolveOffchain(mediaHash, registryState, artifactStore, storageProvider)
-        val onchain = resolveOnchain(mediaHash, registryState, artifactStore, storageProvider)
+        val offchain = resolveOffchain(mediaHash, registryState, storageProvider)
+        val onchain = resolveOnchain(mediaHash, registryState, storageProvider)
         return LpBadgeUiState(offchain = offchain, onchain = onchain)
     }
 
     private fun resolveOffchain(
         mediaHash: String,
         registryState: AutoCaptureLpItemState,
-        artifactStore: LocationProtocolArtifactStore,
         storageProvider: StorageProvider,
     ): LpOffchainBadge {
-        val offchainId = "$mediaHash${LocationProtocolArtifactStore.OFFCHAIN_SUFFIX}"
-        val legacyId = "$mediaHash${LocationProtocolArtifactStore.LEGACY_SUFFIX}"
-        if (storageProvider.proofIdentifierExists(mediaHash, offchainId) ||
-            storageProvider.proofIdentifierExists(mediaHash, legacyId) ||
-            artifactStore.readOffchainAttestation(mediaHash) != null
-        ) {
+        if (hasArtifactForManualLeg(storageProvider, mediaHash, LpManualLeg.OFFCHAIN)) {
             return LpOffchainBadge.FINAL
         }
         if (registryState.offchain == LpRunState.RUNNING) {
@@ -50,19 +43,14 @@ object AutoCaptureLpMarkerResolver {
     private fun resolveOnchain(
         mediaHash: String,
         registryState: AutoCaptureLpItemState,
-        artifactStore: LocationProtocolArtifactStore,
         storageProvider: StorageProvider,
     ): LpOnchainBadge {
         val onchainId = "$mediaHash${LocationProtocolArtifactStore.ONCHAIN_SUFFIX}"
         val pendingId = "$mediaHash${LocationProtocolArtifactStore.ONCHAIN_PENDING_SUFFIX}"
-        if (storageProvider.proofIdentifierExists(mediaHash, onchainId) ||
-            artifactStore.readOnchainAttestation(mediaHash) != null
-        ) {
+        if (storageProvider.proofIdentifierExists(mediaHash, onchainId)) {
             return LpOnchainBadge.CONFIRMED
         }
-        if (storageProvider.proofIdentifierExists(mediaHash, pendingId) ||
-            artifactStore.readPendingOnchainAttestation(mediaHash) != null
-        ) {
+        if (storageProvider.proofIdentifierExists(mediaHash, pendingId)) {
             return LpOnchainBadge.PENDING
         }
         if (registryState.onchain == LpRunState.RUNNING) {

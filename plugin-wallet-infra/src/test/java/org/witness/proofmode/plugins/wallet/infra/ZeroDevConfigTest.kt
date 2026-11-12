@@ -18,7 +18,7 @@ class ZeroDevConfigTest {
         assertEquals("proj_123", config.projectId)
         assertEquals("https://bundler.com", config.bundlerUrl)
         assertEquals("https://paymaster.com", config.paymasterUrl)
-        // Defaults to BuildConfig.FEATURE_SPONSORSHIP_ENABLED which is true in debug build
+        // Sponsorship defaults on; the runtime user toggle turns it off.
         assertTrue(config.isSponsorshipEnabled)
     }
 

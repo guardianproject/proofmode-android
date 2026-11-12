@@ -11,6 +11,8 @@ import io.privy.auth.PrivyUser
 import io.privy.network.isConfirmedConnected
 import io.privy.sdk.Privy
 import io.privy.wallet.ethereum.EthereumRpcRequest
+import org.witness.proofmode.plugins.wallet.infra.abbreviateAddress
+import org.witness.proofmode.plugins.wallet.infra.truncateHex
 import java.lang.ref.WeakReference
 import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.CancellationException
@@ -46,7 +48,6 @@ import org.witness.proofmode.plugins.wallet.infra.factory.WalletSessionStore
 import org.witness.proofmode.plugins.wallet.infra.internal.SendTransactionErrorMapper
 import org.witness.proofmode.plugins.wallet.infra.model.WalletAuthenticating
 import org.witness.proofmode.plugins.wallet.infra.model.WalletAwaitingNetwork
-import org.witness.proofmode.plugins.wallet.infra.model.WalletCapabilities
 import org.witness.proofmode.plugins.wallet.infra.model.WalletConnected
 import org.witness.proofmode.plugins.wallet.infra.model.WalletConnecting
 import org.witness.proofmode.plugins.wallet.infra.model.WalletDisconnected
@@ -304,8 +305,6 @@ class PrivyWalletConnector(
             Timber.tag(TAG).d("setChain: %s → %s (not connected)", previousChainId, chainId)
         }
     }
-
-    override fun getCapabilities(): WalletCapabilities = WalletCapabilities(supportsSendTransaction = true)
 
     override val isSponsorshipActive: Boolean = false
 
@@ -598,15 +597,5 @@ class PrivyWalletConnector(
 
     private fun requireActivity(): Activity {
         return activityRef?.get() ?: throw WalletNotInitializedException("Activity not bound")
-    }
-
-    private fun abbreviateAddress(address: String): String {
-        if (address.length <= 12) return address
-        return "${address.take(6)}…${address.takeLast(4)}"
-    }
-
-    private fun truncateHex(value: String, maxChars: Int = 18): String {
-        if (value.length <= maxChars) return value
-        return "${value.take(maxChars)}…(${value.length} chars)"
     }
 }

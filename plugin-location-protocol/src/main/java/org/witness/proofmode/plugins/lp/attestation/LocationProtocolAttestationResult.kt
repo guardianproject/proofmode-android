@@ -9,11 +9,9 @@ import kotlinx.serialization.Serializable
  * ```
  * Legacy field           -> This field
  * attestationUID         -> uid
- * (no direct equivalent) -> schemaId
  * (no direct equivalent) -> attesterAddress
  * timestamp              -> timestamp
  * (no direct equivalent) -> offchainPayloadJson  (the full EAS typed-data JSON)
- * (no direct equivalent) -> artifactPath         (resolved file path / URI of the persisted .lp.json)
  * success / error        -> encoded in the Result<> wrapper, not this data class
  * transactionHash        -> not included (Phase 2 is offchain-only; no tx hash)
  * gasUsed                -> not included (offchain-only)
@@ -27,12 +25,6 @@ data class LocationProtocolAttestationResult(
     val uid: String,
 
     /**
-     * EAS schema ID (EIP-712 schema UID).
-     * Populated from [EASAttestationManager.EAS_SCHEMA_ID]; may be empty in Phase 2.
-     */
-    val schemaId: String,
-
-    /**
      * Ethereum address of the attester. Empty string until Phase 3 wires the bridge.
      */
     val attesterAddress: String,
@@ -42,14 +34,7 @@ data class LocationProtocolAttestationResult(
 
     /**
      * The full EAS typed-data JSON payload (EIP-712 `domain + types + message`).
-     * This is what gets persisted as the `.lp.json` artifact.
+     * This is what gets persisted as the `.lp.offchain.json` artifact.
      */
     val offchainPayloadJson: String,
-
-    /**
-     * The resolved file path / URI string where the `.lp.json` was persisted
-     * by [LocationProtocolArtifactStore]. This is the storage location reported by
-     * the backend, not the logical `<hash>.lp.json` identifier.
-     */
-    val artifactPath: String
 )

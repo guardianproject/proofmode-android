@@ -36,22 +36,6 @@ class OrchestratorTestStorage : StorageProvider {
         store["$hash/$identifier"] = content.toByteArray(Charsets.UTF_8)
     }
 
-    /** Seeds [hash] on the first [proofExists] poll — simulates delayed sidecar availability. */
-    fun deferSeedOnFirstPoll(
-        hash: String,
-        latitude: Double = 37.77,
-        longitude: Double = -122.42,
-    ) {
-        deferredSeeds[hash] = Pair(latitude, longitude)
-    }
-
-    private val deferredSeeds = ConcurrentHashMap<String, Pair<Double, Double>>()
-
-    private fun maybeDeferSeed(hash: String) {
-        val coords = deferredSeeds.remove(hash) ?: return
-        seedProof(hash, coords.first, coords.second)
-    }
-
     override fun saveStream(
         hash: String,
         identifier: String,
@@ -97,7 +81,6 @@ class OrchestratorTestStorage : StorageProvider {
     }
 
     override fun proofExists(hash: String): Boolean {
-        maybeDeferSeed(hash)
         return proofHashes.contains(hash)
     }
 

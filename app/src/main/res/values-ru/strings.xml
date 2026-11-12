@@ -244,7 +244,6 @@
     <string name="location_protocol_auto_capture_summary">Автоматически удостоверять местоположение после съёмки в приложении</string>
     <string name="location_protocol_auto_capture_summary_location_required">Включите передачу местоположения выше, чтобы выбрать режим автоудостоверения</string>
     <string name="location_protocol_auto_capture_summary_lp_required">Включите удостоверение Location Protocol, чтобы выбрать режим автоудостоверения</string>
-    <string name="location_protocol_auto_capture_summary_wallet_required">Подключите кошелёк в настройках кошелька, чтобы выбрать режим автоудостоверения</string>
     <string name="location_wallet_row_summary">Управление кошельком для подписи удостоверений местоположения</string>
     <string name="location_wallet_summary_location_required">Включите передачу местоположения выше, чтобы настроить кошелёк</string>
     <string name="location_wallet_summary_lp_required">Включите удостоверение Location Protocol, чтобы настроить кошелёк</string>
@@ -333,12 +332,14 @@
     <string name="signing_server_unreachable_message">Для подписи Content Credentials (C2PA) выбран удалённый режим, поэтому новые фото и видео будут ждать подписи, пока сервер не станет доступен. Проверьте подключение к интернету или переключитесь на локальную подпись в настройках.</string>
     <string name="nostr_notarization">Нотариальное заверение Nostr</string>
     <string name="cid_manifest">Манифест CID</string>
+    <string name="root_cid_clip_label">Корневой CID</string>
     <string name="offchain_location_attestation">Офчейн-удостоверение местоположения</string>
     <string name="onchain_location_attestation">Ончейн-удостоверение местоположения</string>
     <string name="artifact_tap_to_view">Нажмите, чтобы просмотреть</string>
     <string name="artifact_tap_to_view_manifest">Нажмите, чтобы просмотреть полный манифест</string>
     <string name="lp_attestation_in_progress">Удостоверение выполняется…</string>
     <string name="view_on_eas_scan">Открыть в EAS Scan</string>
+    <string name="view_transaction">Открыть транзакцию</string>
     <string name="artifact_loading">Загрузка…</string>
     <string name="filebase_ipfs_bearer_token">Токен IPFS Bearer</string>
     <string name="filebase_auto_upload">Автоматическая загрузка</string>
@@ -361,6 +362,11 @@
     <string name="filebase_social_not_configured_share">Поделиться без загрузки</string>
     <string name="filebase_proof_not_ready">Доказательство ещё не готово к загрузке в Filebase.</string>
     <string name="lp_attest_nothing_to_queue">Доказательство ещё не готово к удостоверению местоположения.</string>
+    <string name="lp_toast_offchain_success">Местоположение удостоверено офчейн</string>
+    <string name="lp_toast_offchain_failed">Офчейн-удостоверение не завершено</string>
+    <string name="lp_toast_onchain_success">Местоположение отправлено ончейн</string>
+    <string name="lp_toast_onchain_failed">Ончейн-удостоверение не завершено</string>
+    <string name="proofset_toast_mixed">Завершено: %1$d из %2$d</string>
     <string name="filebase_upload_success">Загружено в Filebase</string>
     <string name="filebase_upload_failed">Ошибка загрузки в Filebase</string>
     <string name="filebase_upload_oversize_title">Медиафайл слишком большой для загрузки</string>
@@ -408,7 +414,6 @@
     <string name="lp_auto_capture_mode_both">Оба (сначала офчейн, затем ончейн)</string>
     <string name="lp_auto_capture_skip_location_unavailable">Автоудостоверение местоположения пропущено: для этой съёмки нет данных о местоположении.</string>
     <string name="lp_auto_capture_skip_no_activity">Автоудостоверение в блокчейне пропущено: откройте приложение, чтобы отправить в блокчейн.</string>
-    <string name="lp_auto_capture_skip_wallet_unavailable">Автоудостоверение местоположения пропущено: кошелёк не подключён.</string>
     <string name="settings_note">Заметка</string>
     <string name="settings_note_desc">Заметки автора</string>
     <string name="settings_version_placeholder">Версия</string>

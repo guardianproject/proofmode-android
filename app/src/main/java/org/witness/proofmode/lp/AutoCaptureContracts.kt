@@ -1,12 +1,10 @@
 package org.witness.proofmode.lp
 
-import android.content.Context
 import android.net.Uri
-import org.witness.proofmode.plugins.lp.attestation.LocationProtocolAttestationCoordinator
 
 enum class AutoCaptureSkipReason {
     LOCATION_UNAVAILABLE,
-    WALLET_UNAVAILABLE,
+    AUTO_CAPTURE_WALLET_UNAVAILABLE,
     NO_FOREGROUND_ACTIVITY,
 }
 
@@ -20,4 +18,7 @@ internal data class AutoCaptureJob(
     val mediaHash: String,
     val mediaUri: Uri,
     val manualLeg: LpManualLeg? = null,
+    // Honored only for manual jobs: processJob checks manualLeg before calling it, so a callback
+    // on an auto-capture job is ignored rather than raising a tap toast.
+    val onComplete: ((Boolean) -> Unit)? = null,
 )

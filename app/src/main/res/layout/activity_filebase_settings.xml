@@ -29,6 +29,7 @@
     </com.google.android.material.appbar.AppBarLayout>
 
     <ScrollView
+        android:id="@+id/scroll_filebase_settings"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 

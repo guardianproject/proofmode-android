@@ -1,17 +1,17 @@
 package org.witness.proofmode.plugins.lp.wallet
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import org.witness.proofmode.plugin.ProofmodePlugin
 import org.witness.proofmode.plugins.wallet.infra.api.WalletAuthClient
-import org.witness.proofmode.plugins.wallet.infra.config.WalletChainPolicy
+import org.witness.proofmode.plugins.wallet.infra.config.ZeroDevSponsorshipProbe
 import org.witness.proofmode.plugins.wallet.infra.factory.WalletProviderFactory
 import org.witness.proofmode.plugins.wallet.infra.factory.WalletSessionStore
 import org.witness.proofmode.plugins.wallet.infra.model.WalletProviderSelection
 import org.witness.proofmode.plugins.wallet.infra.model.WalletSdkConfig
-import org.witness.proofmode.plugins.wallet.infra.zerodev.ZeroDevSmartAccountConnector
 
 object WalletSigningPlugin : ProofmodePlugin {
 
@@ -19,6 +19,15 @@ object WalletSigningPlugin : ProofmodePlugin {
     private var sessionStore: WalletSessionStore? = null
     lateinit var providerSelection: WalletProviderSelection
         private set
+
+    // Lazy so configure() in Application.onCreate builds no HTTP client.
+    private val defaultSponsorshipProbe by lazy { ZeroDevSponsorshipProbe() }
+
+    /** Replaced in tests so no request leaves the JVM. */
+    @VisibleForTesting
+    internal var sponsorshipProbe:
+        suspend (projectId: String, chainIds: List<String>) -> List<String>? =
+        { projectId, chainIds -> defaultSponsorshipProbe.probe(projectId, chainIds) }
 
     /**
      * Supply SDK credentials before calling [register]. Must be called from
@@ -29,17 +38,18 @@ object WalletSigningPlugin : ProofmodePlugin {
     }
 
     override fun register(context: Context) {
-        val config = sdkConfig ?: WalletSdkConfig(
-            privyAppId = "",
-            privyAppClientId = "",
-            defaultChainId = WalletChainPolicy.DEFAULT_CHAIN_ID,
-        )
+        val config = checkNotNull(sdkConfig) { "WalletSigningPlugin.configure must run before register" }
 
         val store = WalletSessionStore(context.applicationContext)
         providerSelection = WalletProviderFactory.createDefault(config, store)
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-        WalletProviderFactory.wireSponsorshipPrefRefresh(store, providerSelection, scope)
         sessionStore = store
+        WalletProviderFactory.wireSponsorshipPrefRefresh(
+            store,
+            providerSelection,
+            scope,
+            buildProjectId = buildDefaultZeroDevProjectId(),
+        )
     }
 
     fun authClient(): WalletAuthClient =
@@ -54,21 +64,10 @@ object WalletSigningPlugin : ProofmodePlugin {
     fun isRegistered(): Boolean = sessionStore != null
 
     /**
-     * Build-time ZeroDev project ID for the active chain (no runtime override).
+     * Build-time ZeroDev project ID (no runtime override). The id is shared by every chain.
      * Used by Wallet Settings UI for configureServerDefault-style focus prefill
      * (value is masked in settings UI).
      */
-    fun buildDefaultZeroDevProjectId(): String {
-        val config = sdkConfig ?: return ""
-        val chainId = when {
-            ::providerSelection.isInitialized -> {
-                (providerSelection.activeConnector as? ZeroDevSmartAccountConnector)
-                    ?.privyConnector?.getIdentity()?.chainId
-            }
-            else -> null
-        } ?: sessionStore?.loadChainId()
-            ?: config.zeroDevConfigs.keys.firstOrNull()
-            ?: return ""
-        return config.zeroDevConfigs[chainId]?.projectId.orEmpty()
-    }
+    fun buildDefaultZeroDevProjectId(): String =
+        sdkConfig?.zeroDevProjectId.orEmpty()
 }

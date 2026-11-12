@@ -23,6 +23,8 @@ import org.witness.proofmode.storage.filebase.FilebaseSettingsDraft
 import org.witness.proofmode.storage.filebase.FilebaseStorageProvider
 import org.witness.proofmode.storage.filebase.TestConnectionCallback
 import org.witness.proofmode.storage.filebase.hasUsableCredentials
+import org.witness.proofmode.storage.filebase.toDraft
+import org.witness.proofmode.util.ImeScrollPadding
 
 class FilebaseSettingsActivity : AppCompatActivity() {
 
@@ -49,6 +51,7 @@ class FilebaseSettingsActivity : AppCompatActivity() {
 
         binding = ActivityFilebaseSettingsBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        ImeScrollPadding.bind(binding.scrollFilebaseSettings)
 
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
@@ -108,18 +111,6 @@ class FilebaseSettingsActivity : AppCompatActivity() {
         switchAutoIncludeMedia.isChecked = config.autoIncludeMedia
     }
 
-    private fun draftFromConfig(config: FilebaseConfig): FilebaseSettingsDraft =
-        FilebaseSettingsDraft(
-            accessKey = config.accessKey,
-            secretKey = config.secretKey,
-            bucketName = config.bucketName,
-            endpoint = config.endpoint,
-            region = config.region,
-            ipfsBearerToken = config.ipfsBearerToken,
-            autoUpload = config.autoUpload,
-            autoIncludeMedia = config.autoIncludeMedia,
-        )
-
     private fun currentDraft(): FilebaseSettingsDraft =
         FilebaseSettingsDraft(
             accessKey = editAccessKey.text.toString().trim(),
@@ -148,7 +139,7 @@ class FilebaseSettingsActivity : AppCompatActivity() {
         // Unchanged saved configured credentials remain trusted until a failed test.
         return !distrustBaselineCredentials &&
             baseline.isConfigured() &&
-            key == credentialKey(draftFromConfig(baseline))
+            key == credentialKey(baseline.toDraft())
     }
 
     private fun exitWithCommit() {
@@ -199,15 +190,12 @@ class FilebaseSettingsActivity : AppCompatActivity() {
         buttonTest.isEnabled = usable
 
         if (!validated) {
-            switchAutoUpload.setOnCheckedChangeListener(null)
-            switchAutoIncludeMedia.setOnCheckedChangeListener(null)
             switchAutoUpload.isChecked = false
             switchAutoIncludeMedia.isChecked = false
             switchAutoUpload.isEnabled = false
             switchAutoIncludeMedia.isEnabled = false
             switchAutoUpload.alpha = 0.5f
             switchAutoIncludeMedia.alpha = 0.5f
-            switchAutoUpload.setOnCheckedChangeListener { _, _ -> applyToggleEnablement() }
         } else {
             switchAutoUpload.isEnabled = true
             switchAutoIncludeMedia.isEnabled = switchAutoUpload.isChecked
@@ -218,39 +206,12 @@ class FilebaseSettingsActivity : AppCompatActivity() {
 
     private fun testConnection() {
         val draft = currentDraft()
-        if (!draft.hasUsableCredentials()) {
-            Toast.makeText(this, getString(R.string.please_fill_in_all_required_fields), Toast.LENGTH_SHORT)
-                .show()
-            return
-        }
-
-        val config =
-            FilebaseConfig(
-                accessKey = draft.accessKey,
-                secretKey = draft.secretKey,
-                bucketName = draft.bucketName,
-                endpoint = draft.endpoint,
-                region = draft.region,
-                enabled = true,
-                ipfsBearerToken = draft.ipfsBearerToken,
-            )
-
-        val tokenPresent = config.ipfsBearerToken.isNotBlank()
+        val tokenPresent = draft.ipfsBearerToken.isNotBlank()
 
         buttonTest.isEnabled = false
         buttonTest.text = "Testing..."
 
         try {
-            val filebaseProvider =
-                FilebaseStorageProvider(
-                    accessKey = if (tokenPresent) "" else config.accessKey,
-                    secretKey = if (tokenPresent) "" else config.secretKey,
-                    bucketName = if (tokenPresent) "" else config.bucketName,
-                    endpoint = config.endpoint,
-                    region = config.region,
-                    ipfsBearerToken = config.ipfsBearerToken,
-                )
-
             val callback =
                 object : TestConnectionCallback {
                     override fun onTestSuccess() {
@@ -261,12 +222,8 @@ class FilebaseSettingsActivity : AppCompatActivity() {
                             validatedCredentialKey = credentialKey(currentDraft())
                             distrustBaselineCredentials = false
                             if (!alreadyValidated) {
-                                switchAutoUpload.setOnCheckedChangeListener(null)
                                 switchAutoUpload.isChecked = true
                                 switchAutoIncludeMedia.isChecked = true
-                                switchAutoUpload.setOnCheckedChangeListener { _, _ ->
-                                    applyToggleEnablement()
-                                }
                             }
                             applyToggleEnablement()
                             val message =
@@ -305,18 +262,26 @@ class FilebaseSettingsActivity : AppCompatActivity() {
                     }
                 }
 
-            when {
-                tokenPresent -> filebaseProvider.testIpfsConnection(callback)
-                config.hasS3Access() -> filebaseProvider.testConnection(callback)
-                else -> {
-                    buttonTest.isEnabled = true
-                    buttonTest.text = getString(R.string.filebase_test_connection)
-                    Toast.makeText(
-                        this,
-                        getString(R.string.please_fill_in_all_required_fields),
-                        Toast.LENGTH_SHORT,
-                    ).show()
-                }
+            val test = FilebaseStorageProvider.connectionTest(
+                FilebaseConfig(
+                    accessKey = draft.accessKey,
+                    secretKey = draft.secretKey,
+                    bucketName = draft.bucketName,
+                    endpoint = draft.endpoint,
+                    region = draft.region,
+                    ipfsBearerToken = draft.ipfsBearerToken,
+                ),
+            )
+            if (test != null) {
+                test(callback)
+            } else {
+                buttonTest.isEnabled = true
+                buttonTest.text = getString(R.string.filebase_test_connection)
+                Toast.makeText(
+                    this,
+                    getString(R.string.please_fill_in_all_required_fields),
+                    Toast.LENGTH_SHORT,
+                ).show()
             }
         } catch (e: Exception) {
             e.printStackTrace()

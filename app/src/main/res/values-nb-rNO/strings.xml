@@ -32,7 +32,6 @@
     <string name="location_protocol_auto_capture_summary">Kjør posisjonsattestering automatisk etter opptak i appen</string>
     <string name="location_protocol_auto_capture_summary_location_required">Slå på posisjonsdeling ovenfor for å velge en autoattesteringsmodus</string>
     <string name="location_protocol_auto_capture_summary_lp_required">Slå på Location Protocol-attestering for å velge en autoattesteringsmodus</string>
-    <string name="location_protocol_auto_capture_summary_wallet_required">Koble til en lommebok i lommebokinnstillingene for å velge en autoattesteringsmodus</string>
     <string name="location_wallet_row_summary">Administrer lommeboken som brukes til å signere posisjonsattesteringer</string>
     <string name="location_wallet_summary_location_required">Slå på posisjonsdeling ovenfor for å sette opp en lommebok</string>
     <string name="location_wallet_summary_lp_required">Slå på Location Protocol-attestering for å sette opp en lommebok</string>
@@ -283,12 +282,14 @@
     <string name="signing_server_unreachable_message">Signering av Content Credentials (C2PA) er satt til Ekstern, så nye bilder og videoer venter på signering til serveren kan nås. Sjekk internettforbindelsen, eller bytt til lokal signering i Innstillinger.</string>
     <string name="nostr_notarization">Nostr-notarisering</string>
     <string name="cid_manifest">CID-manifest</string>
+    <string name="root_cid_clip_label">Rot-CID</string>
     <string name="offchain_location_attestation">Posisjonsattestering utenfor kjeden</string>
     <string name="onchain_location_attestation">Posisjonsattestering i kjeden</string>
     <string name="artifact_tap_to_view">Trykk for å vise</string>
     <string name="artifact_tap_to_view_manifest">Trykk for å vise hele manifestet</string>
     <string name="lp_attestation_in_progress">Attestering pågår…</string>
     <string name="view_on_eas_scan">Vis på EAS Scan</string>
+    <string name="view_transaction">Vis transaksjon</string>
     <string name="artifact_loading">Laster inn…</string>
     <string name="share_content_credentials_info">Deler bildet eller videoen direkte, med bevismetadata innebygd i selve filen, verifisert og signert av Proofmode.org</string>
     <string name="optional_filename">Valgfritt filnavn</string>
@@ -334,6 +335,11 @@
     <string name="filebase_social_not_configured_share">Del uten å laste opp</string>
     <string name="filebase_proof_not_ready">Beviset er ikke klart for opplasting til Filebase ennå.</string>
     <string name="lp_attest_nothing_to_queue">Beviset er ikke klart for posisjonsattestering ennå.</string>
+    <string name="lp_toast_offchain_success">Posisjon attestert utenfor kjeden</string>
+    <string name="lp_toast_offchain_failed">Attesteringen utenfor kjeden ble ikke fullført</string>
+    <string name="lp_toast_onchain_success">Posisjon sendt til kjeden</string>
+    <string name="lp_toast_onchain_failed">Attesteringen i kjeden ble ikke fullført</string>
+    <string name="proofset_toast_mixed">%1$d av %2$d fullført</string>
     <string name="filebase_upload_success">Lastet opp til Filebase</string>
     <string name="filebase_upload_failed">Opplasting til Filebase mislyktes</string>
     <string name="filebase_upload_oversize_title">Mediet er for stort til å lastes opp</string>
@@ -383,7 +389,6 @@
     <string name="lp_auto_capture_mode_both">Begge (først utenfor kjeden, så i kjeden)</string>
     <string name="lp_auto_capture_skip_location_unavailable">Automatisk posisjonsattestering hoppet over: posisjonsdata er ikke tilgjengelig for dette opptaket.</string>
     <string name="lp_auto_capture_skip_no_activity">Automatisk attestering i kjeden hoppet over: åpne appen for å sende inn i kjeden.</string>
-    <string name="lp_auto_capture_skip_wallet_unavailable">Automatisk posisjonsattestering hoppet over: lommebok ikke tilkoblet.</string>
     <string name="settings_note">Notat</string>
     <string name="settings_note_desc">Forfatterens notater</string>
     <string name="settings_version_placeholder">Versjon</string>

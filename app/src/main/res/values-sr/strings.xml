@@ -200,7 +200,6 @@
     <string name="location_protocol_auto_capture_summary">Аутоматски покрени потврду локације након снимања у апликацији</string>
     <string name="location_protocol_auto_capture_summary_location_required">Укључите дељење локације изнад да бисте изабрали режим аутоматске потврде</string>
     <string name="location_protocol_auto_capture_summary_lp_required">Укључите Location Protocol потврду да бисте изабрали режим аутоматске потврде</string>
-    <string name="location_protocol_auto_capture_summary_wallet_required">Повежите новчаник у подешавањима новчаника да бисте изабрали режим аутоматске потврде</string>
     <string name="location_wallet_row_summary">Управљајте новчаником који се користи за потписивање потврда локације</string>
     <string name="location_wallet_summary_location_required">Укључите дељење локације изнад да бисте подесили новчаник</string>
     <string name="location_wallet_summary_lp_required">Укључите Location Protocol потврду да бисте подесили новчаник</string>
@@ -293,12 +292,14 @@
     <string name="signing_server_unreachable_message">Потписивање садржајних акредитација (C2PA) подешено је на удаљено, па ће нове фотографије и видео записи чекати на потписивање док сервер не постане доступан. Проверите интернет везу или пређите на локално потписивање у Подешавањима.</string>
     <string name="nostr_notarization">Nostr нотарска овера</string>
     <string name="cid_manifest">CID манифест</string>
+    <string name="root_cid_clip_label">Коренски CID</string>
     <string name="offchain_location_attestation">Потврда локације ван ланца</string>
     <string name="onchain_location_attestation">Потврда локације у ланцу</string>
     <string name="artifact_tap_to_view">Додирните за приказ</string>
     <string name="artifact_tap_to_view_manifest">Додирните за приказ целог манифеста</string>
     <string name="lp_attestation_in_progress">Потврда је у току…</string>
     <string name="view_on_eas_scan">Погледај на EAS Scan-у</string>
+    <string name="view_transaction">Погледај трансакцију</string>
     <string name="artifact_loading">Учитавање…</string>
     <string name="share_content_credentials_info">Дели слику или видео директно, са метаподацима доказа уграђеним у сам фајл, провереним и потписаним од стране Proofmode.org</string>
     <string name="optional_filename">Опционо име фајла</string>
@@ -344,6 +345,11 @@
     <string name="filebase_social_not_configured_share">Дели без отпремања</string>
     <string name="filebase_proof_not_ready">Доказ још није спреман за отпремање на Filebase.</string>
     <string name="lp_attest_nothing_to_queue">Доказ још није спреман за потврду локације.</string>
+    <string name="lp_toast_offchain_success">Локација потврђена ван ланца</string>
+    <string name="lp_toast_offchain_failed">Потврда ван ланца није завршена</string>
+    <string name="lp_toast_onchain_success">Локација послата у ланац</string>
+    <string name="lp_toast_onchain_failed">Потврда у ланцу није завршена</string>
+    <string name="proofset_toast_mixed">Завршено %1$d од %2$d</string>
     <string name="filebase_upload_success">Отпремљено на Filebase</string>
     <string name="filebase_upload_failed">Отпремање на Filebase није успело</string>
     <string name="filebase_upload_oversize_title">Медиј је превелик за отпремање</string>
@@ -393,7 +399,6 @@
     <string name="lp_auto_capture_mode_both">Оба (прво ван ланца, затим у ланцу)</string>
     <string name="lp_auto_capture_skip_location_unavailable">Аутоматска потврда локације је прескочена: подаци о локацији нису доступни за ово снимање.</string>
     <string name="lp_auto_capture_skip_no_activity">Аутоматска потврда у ланцу је прескочена: отворите апликацију да бисте послали у ланац.</string>
-    <string name="lp_auto_capture_skip_wallet_unavailable">Аутоматска потврда локације је прескочена: новчаник није повезан.</string>
     <string name="settings_note">Белешка</string>
     <string name="settings_note_desc">Белешке аутора</string>
     <string name="settings_version_placeholder">Верзија</string>

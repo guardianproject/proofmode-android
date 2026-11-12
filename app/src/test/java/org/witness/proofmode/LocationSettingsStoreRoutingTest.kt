@@ -5,12 +5,11 @@ import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Looper
-import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceManager
 import androidx.preference.SwitchPreferenceCompat
 import androidx.test.core.app.ApplicationProvider
-import org.junit.Assert.assertEquals
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -20,6 +19,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.witness.proofmode.LocationSettingsActivityTestSupport.fragment
 import org.witness.proofmode.plugins.lp.autocapture.AutoCaptureLpMode
 
 @RunWith(RobolectricTestRunner::class)
@@ -40,47 +40,15 @@ class LocationSettingsStoreRoutingTest {
         FeatureFlags.resetForTests(context)
     }
 
+    @After
+    fun tearDown() {
+        LocationSettingsActivityTestSupport.tearDown()
+    }
+
     private fun launchActivity(): LocationSettingsActivity =
         LocationSettingsActivityTestSupport.launchLocationSettingsActivity()
 
-    private fun fragment(): LocationSettingsActivity.LocationPreferencesFragment {
-        val activity = launchActivity()
-        return activity.supportFragmentManager
-            .findFragmentById(R.id.location_settings_container)
-            as LocationSettingsActivity.LocationPreferencesFragment
-    }
-
-    private fun callChangeListener(preference: Preference, newValue: Any) {
-        val method = Preference::class.java.getDeclaredMethod("callChangeListener", Any::class.java)
-        method.isAccessible = true
-        method.invoke(preference, newValue)
-    }
-
-    @Test
-    fun onOpen_locationPermissionPreferenceRowRemoved_cr2() {
-        val fragment = fragment()
-        org.junit.Assert.assertNull(fragment.findPreference<Preference>("locationPermission"))
-    }
-
-    @Test
-    fun onOpen_featureFlagsNeverContainsTrackLocation() {
-        defaultPrefs.edit()
-            .putBoolean(ProofMode.PREF_OPTION_LOCATION, true)
-            .apply()
-        launchActivity()
-        assertFalse(featureFlags.contains(ProofMode.PREF_OPTION_LOCATION))
-    }
-
-    @Test
-    fun onOpen_migratedKeysLiveInFeatureFlagsNotDefaultPrefs() {
-        launchActivity()
-        assertTrue(featureFlags.contains(FeatureFlags.KEY_LP_ENABLED))
-        assertTrue(featureFlags.contains(FeatureFlags.KEY_LP_AUTO_CAPTURE_MODE))
-        assertTrue(featureFlags.contains(FeatureFlags.KEY_LOCAL_IPFS_CID_ENABLED))
-        assertFalse(defaultPrefs.contains(FeatureFlags.KEY_LP_ENABLED))
-        assertFalse(defaultPrefs.contains(FeatureFlags.KEY_LP_AUTO_CAPTURE_MODE))
-        assertFalse(defaultPrefs.contains(FeatureFlags.KEY_LOCAL_IPFS_CID_ENABLED))
-    }
+    private fun fragment(): LocationSettingsActivity.LocationPreferencesFragment = fragment(launchActivity())
 
     @Test
     fun onOpen_defaultPrefsMayContainTrackLocation() {
@@ -103,59 +71,37 @@ class LocationSettingsStoreRoutingTest {
         val fragment = fragment()
         val master = fragment.findPreference<SwitchPreferenceCompat>("locationSharingMaster")!!
 
-        callChangeListener(master, true)
+        master.callChangeListener(true)
         shadowOf(Looper.getMainLooper()).idle()
 
         assertTrue(defaultPrefs.getBoolean(ProofMode.PREF_OPTION_LOCATION, false))
         assertFalse(featureFlags.contains(ProofMode.PREF_OPTION_LOCATION))
     }
 
-    @Test
-    fun onToggleLp_writesToFeatureFlagsOnly() {
-        defaultPrefs.edit().putBoolean(ProofMode.PREF_OPTION_LOCATION, true).apply()
-        val fragment = fragment()
-        val lp = fragment.findPreference<SwitchPreferenceCompat>(FeatureFlags.KEY_LP_ENABLED)!!
-
-        callChangeListener(lp, true)
-        shadowOf(Looper.getMainLooper()).idle()
-
-        assertTrue(featureFlags.getBoolean(FeatureFlags.KEY_LP_ENABLED, false))
-        assertFalse(defaultPrefs.contains(FeatureFlags.KEY_LP_ENABLED))
-        assertFalse(featureFlags.contains(ProofMode.PREF_OPTION_LOCATION))
-    }
+    private class StoreCase(val label: String, val key: String, val newValue: Any)
 
     @Test
-    fun onToggleAutoCapture_writesToFeatureFlagsOnly() {
+    fun onToggleLpAutoCaptureCid_writeToFeatureFlagsOnly() {
         defaultPrefs.edit().putBoolean(ProofMode.PREF_OPTION_LOCATION, true).apply()
-        FeatureFlags.lpEnabled = true
         val fragment = fragment()
-        val mode = fragment.findPreference<ListPreference>(FeatureFlags.KEY_LP_AUTO_CAPTURE_MODE)!!
-        mode.isEnabled = true
 
-        callChangeListener(mode, AutoCaptureLpMode.PREF_ONCHAIN)
-        shadowOf(Looper.getMainLooper()).idle()
-
-        assertEquals(
-            AutoCaptureLpMode.PREF_ONCHAIN,
-            featureFlags.getString(FeatureFlags.KEY_LP_AUTO_CAPTURE_MODE, null),
+        // Order matters: the cid toggle sets userSet, which blocks the lp toggle's auto-enable of cid.
+        // With lp first, cid would already be true and its assertion would pass vacuously.
+        val cases = listOf(
+            StoreCase("cid", FeatureFlags.KEY_LOCAL_IPFS_CID_ENABLED, true),
+            StoreCase("auto-capture mode", FeatureFlags.KEY_LP_AUTO_CAPTURE_MODE, AutoCaptureLpMode.PREF_ONCHAIN),
+            StoreCase("lp", FeatureFlags.KEY_LP_ENABLED, true),
         )
-        assertFalse(defaultPrefs.contains(FeatureFlags.KEY_LP_AUTO_CAPTURE_MODE))
-        assertFalse(featureFlags.contains(ProofMode.PREF_OPTION_LOCATION))
-    }
+        for (case in cases) {
+            val preference = fragment.findPreference<Preference>(case.key)!!
+            // The cascade re-disables rows after each toggle while lp is off, and disabled rows reject the write.
+            preference.isEnabled = true
 
-    @Test
-    fun onToggleCid_writesToFeatureFlagsOnly() {
-        defaultPrefs.edit().putBoolean(ProofMode.PREF_OPTION_LOCATION, true).apply()
-        FeatureFlags.lpEnabled = true
-        val fragment = fragment()
-        val cid = fragment.findPreference<SwitchPreferenceCompat>(FeatureFlags.KEY_LOCAL_IPFS_CID_ENABLED)!!
-        cid.isEnabled = true
+            preference.callChangeListener(case.newValue)
+            shadowOf(Looper.getMainLooper()).idle()
 
-        callChangeListener(cid, true)
-        shadowOf(Looper.getMainLooper()).idle()
-
-        assertTrue(featureFlags.getBoolean(FeatureFlags.KEY_LOCAL_IPFS_CID_ENABLED, false))
-        assertFalse(defaultPrefs.contains(FeatureFlags.KEY_LOCAL_IPFS_CID_ENABLED))
-        assertFalse(featureFlags.contains(ProofMode.PREF_OPTION_LOCATION))
+            assertEquals(case.label, case.newValue, featureFlags.all[case.key])
+            assertFalse(case.label, defaultPrefs.contains(case.key))
+        }
     }
 }

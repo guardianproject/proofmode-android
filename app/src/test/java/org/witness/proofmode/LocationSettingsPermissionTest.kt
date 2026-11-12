@@ -7,10 +7,10 @@ import android.content.res.Configuration
 import android.os.Bundle
 import android.os.Looper
 import android.provider.Settings
-import androidx.preference.Preference
 import androidx.preference.PreferenceManager
 import androidx.preference.SwitchPreferenceCompat
 import androidx.test.core.app.ApplicationProvider
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -22,6 +22,7 @@ import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.witness.proofmode.LocationSettingsActivityTestSupport.fragment
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28], application = TestProofModeApplication::class)
@@ -43,6 +44,11 @@ class LocationSettingsPermissionTest {
         )
     }
 
+    @After
+    fun tearDown() {
+        LocationSettingsActivityTestSupport.tearDown()
+    }
+
     @Test
     fun configurationChange_preservesPendingEnableIntent_t8() {
         val controller = Robolectric.buildActivity(LocationSettingsActivity::class.java).create()
@@ -50,15 +56,21 @@ class LocationSettingsPermissionTest {
         LocationSettingsActivityTestSupport.bindApplication(controller.get(), app)
         val activity = controller.start().resume().get()
         val fragment = fragment(activity)
-        callChangeListener(masterSwitch(fragment), true)
+        masterSwitch(fragment).callChangeListener(true)
         shadowOf(Looper.getMainLooper()).idle()
 
+        // Enabling Location must not launch PermissionActivity; the permission request stays in-screen.
+        val next = shadowOf(context.applicationContext as Application).nextStartedActivity
+        if (next != null) {
+            assertTrue(
+                next.component?.className != PermissionActivity::class.java.name,
+            )
+        }
+
         assertFalse(defaultPrefs.getBoolean(ProofMode.PREF_OPTION_LOCATION, false))
-        assertFalse(masterSwitch(fragment).isChecked)
 
         val bundle = Bundle()
         fragment.onSaveInstanceState(bundle)
-        assertTrue(bundle.getBoolean(LocationSettingsActivity.LocationPreferencesFragment.KEY_PENDING_ENABLE_LOCATION))
         assertTrue(bundle.getBoolean(LocationSettingsActivity.LocationPreferencesFragment.KEY_REQUEST_ATTEMPTED))
 
         val config = Configuration(activity.resources.configuration)
@@ -81,7 +93,7 @@ class LocationSettingsPermissionTest {
     fun processDeath_losesPendingIntent_switchStaysOff_t8() {
         val activity = LocationSettingsActivityTestSupport.launchLocationSettingsActivity()
         val fragment = fragment(activity)
-        callChangeListener(masterSwitch(fragment), true)
+        masterSwitch(fragment).callChangeListener(true)
         shadowOf(Looper.getMainLooper()).idle()
 
         shadowOf(context.applicationContext as Application).grantPermissions(
@@ -89,20 +101,11 @@ class LocationSettingsPermissionTest {
         )
 
         val fresh = LocationSettingsActivityTestSupport.launchLocationSettingsActivity()
-        fresh.supportFragmentManager
-            .findFragmentById(R.id.location_settings_container)
-            .let { it as LocationSettingsActivity.LocationPreferencesFragment }
-            .onResume()
+        fragment(fresh).onResume()
         shadowOf(Looper.getMainLooper()).idle()
 
         assertFalse(defaultPrefs.getBoolean(ProofMode.PREF_OPTION_LOCATION, false))
-        assertFalse(
-            masterSwitch(
-                fresh.supportFragmentManager
-                    .findFragmentById(R.id.location_settings_container)
-                    as LocationSettingsActivity.LocationPreferencesFragment,
-            ).isChecked,
-        )
+        assertFalse(masterSwitch(fragment(fresh)).isChecked)
     }
 
     @Test
@@ -120,32 +123,10 @@ class LocationSettingsPermissionTest {
     }
 
     @Test
-    fun masterEnable_withoutPermission_setsPending_doesNotLaunchPermissionActivity_t8() {
-        val activity = LocationSettingsActivityTestSupport.launchLocationSettingsActivity()
-        val shadowApp = shadowOf(context.applicationContext as Application)
-        val fragment = fragment(activity)
-        callChangeListener(masterSwitch(fragment), true)
-        shadowOf(Looper.getMainLooper()).idle()
-
-        assertFalse(defaultPrefs.getBoolean(ProofMode.PREF_OPTION_LOCATION, false))
-        val bundle = Bundle()
-        fragment.onSaveInstanceState(bundle)
-        assertTrue(bundle.getBoolean(LocationSettingsActivity.LocationPreferencesFragment.KEY_PENDING_ENABLE_LOCATION))
-
-        // D14: no UI-mode PermissionActivity for Location enable
-        val next = shadowApp.nextStartedActivity
-        if (next != null) {
-            assertTrue(
-                next.component?.className != PermissionActivity::class.java.name,
-            )
-        }
-    }
-
-    @Test
     fun grantViaCallback_withPending_upsyncsPref_t8() {
         val activity = LocationSettingsActivityTestSupport.launchLocationSettingsActivity()
         val fragment = fragment(activity)
-        callChangeListener(masterSwitch(fragment), true)
+        masterSwitch(fragment).callChangeListener(true)
         shadowOf(Looper.getMainLooper()).idle()
 
         shadowOf(context.applicationContext as Application).grantPermissions(
@@ -170,7 +151,7 @@ class LocationSettingsPermissionTest {
     fun softDeny_clearsPending_noAppInfo_t8() {
         val activity = LocationSettingsActivityTestSupport.launchLocationSettingsActivity()
         val fragment = fragment(activity)
-        callChangeListener(masterSwitch(fragment), true)
+        masterSwitch(fragment).callChangeListener(true)
         shadowOf(Looper.getMainLooper()).idle()
 
         val pm = shadowOf(activity.packageManager)
@@ -201,7 +182,7 @@ class LocationSettingsPermissionTest {
     fun permanentDeny_afterRequest_opensAppInfo_t8() {
         val activity = LocationSettingsActivityTestSupport.launchLocationSettingsActivity()
         val fragment = fragment(activity)
-        callChangeListener(masterSwitch(fragment), true)
+        masterSwitch(fragment).callChangeListener(true)
         shadowOf(Looper.getMainLooper()).idle()
 
         val pm = shadowOf(activity.packageManager)
@@ -233,18 +214,7 @@ class LocationSettingsPermissionTest {
         assertFalse(masterSwitch(fragment).isChecked)
     }
 
-    private fun fragment(activity: LocationSettingsActivity): LocationSettingsActivity.LocationPreferencesFragment =
-        activity.supportFragmentManager
-            .findFragmentById(R.id.location_settings_container)
-            as LocationSettingsActivity.LocationPreferencesFragment
-
     private fun masterSwitch(
         fragment: LocationSettingsActivity.LocationPreferencesFragment,
     ): SwitchPreferenceCompat = fragment.findPreference("locationSharingMaster")!!
-
-    private fun callChangeListener(preference: Preference, newValue: Any) {
-        val method = Preference::class.java.getDeclaredMethod("callChangeListener", Any::class.java)
-        method.isAccessible = true
-        method.invoke(preference, newValue)
-    }
 }

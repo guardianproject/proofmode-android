@@ -1,13 +1,11 @@
 package org.witness.proofmode.plugins.lp.deeplink
 
 import android.content.Context
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.witness.proofmode.plugins.lp.deeplink.ParamOutcome
 import org.witness.proofmode.plugins.lp.R
+import org.witness.proofmode.plugins.lp.wallet.WalletSigningPlugin
 import org.witness.proofmode.plugins.lp.deeplink.WalletDeepLinkParseResult
 import org.witness.proofmode.plugins.lp.deeplink.WalletDeepLinkResult
-import org.witness.proofmode.plugins.wallet.infra.config.WalletChainPolicy
 import org.witness.proofmode.plugins.wallet.infra.factory.WalletProviderFactory
 import org.witness.proofmode.plugins.wallet.infra.factory.WalletSessionStore
 import org.witness.proofmode.plugins.wallet.infra.model.WalletProviderSelection
@@ -35,16 +33,9 @@ internal object WalletDeepLinkApplier {
             )
         }
 
-        val skipped = mutableListOf<String>()
-        var appliedChain: String? = null
-        var appliedSponsor: Boolean? = null
-        var appliedProjectId: String? = null
-        var skippedLeftoverSync = false
-
-        fun resultingSponsorshipOn(): Boolean = when (parseResult.sponsor?.outcome) {
-            ParamOutcome.VALID -> requireNotNull(parseResult.sponsor.value)
-            else -> sessionStore.isSponsorTransactionsEnabled()
-        }
+        var wroteAny = false
+        var skippedAny = false
+        var requestedChain: String? = null
 
         val hasAnyQueryParam = listOfNotNull(
             parseResult.chain,
@@ -63,14 +54,8 @@ internal object WalletDeepLinkApplier {
                 ParamOutcome.VALID -> {
                     val chainId = requireNotNull(param.value)
                     sessionStore.saveChainId(chainId)
-                    appliedChain = chainId
-                    val skipLeftoverSync = WalletChainPolicy.isLeftoverMainnet(chainId) &&
-                        (sessionStore.isSponsorTransactionsEnabled() || resultingSponsorshipOn())
-                    if (skipLeftoverSync) {
-                        skippedLeftoverSync = true
-                    } else {
-                        syncChain(chainId, providerSelection)
-                    }
+                    requestedChain = chainId
+                    wroteAny = true
                     Timber.tag(TAG).i("Applied chain=%s", chainId)
                 }
                 ParamOutcome.INVALID -> { /* unreachable — hard reject above */ }
@@ -83,10 +68,10 @@ internal object WalletDeepLinkApplier {
                 ParamOutcome.VALID -> {
                     val enabled = requireNotNull(param.value)
                     sessionStore.saveSponsorTransactionsEnabled(enabled)
-                    appliedSponsor = enabled
+                    wroteAny = true
                     Timber.tag(TAG).i("Applied sponsor=%s", enabled)
                 }
-                ParamOutcome.INVALID -> skipped.add("sponsor:invalid_value")
+                ParamOutcome.INVALID -> skippedAny = true
                 ParamOutcome.ABSENT -> Unit
             }
         }
@@ -96,71 +81,35 @@ internal object WalletDeepLinkApplier {
                 ParamOutcome.VALID -> {
                     val projectId = requireNotNull(param.value)
                     sessionStore.saveZeroDevProjectIdOverride(projectId)
-                    appliedProjectId = projectId
+                    wroteAny = true
                     Timber.tag(TAG).i("Applied projectId override (len=%d)", projectId.length)
                 }
-                ParamOutcome.INVALID -> skipped.add("projectId:invalid_value")
+                ParamOutcome.INVALID -> skippedAny = true
                 ParamOutcome.ABSENT -> Unit
             }
         }
 
-        val sponsorshipOn = sessionStore.isSponsorTransactionsEnabled()
-        val current = sessionStore.loadChainId()
-        val resolution = WalletChainPolicy.resolveSessionChainId(
-            storedChainId = current,
-            sponsorshipOn = sponsorshipOn,
+        // Persist every param first, then sync once, so the sync resolves against the final chain,
+        // sponsor flag, and project override. The sponsor and project writes also fire the prefs
+        // listener, which syncs too; both read the stored chain before the connector's own, so
+        // neither can push an older chain after the link's.
+        WalletProviderFactory.syncSessionChain(
+            selection = providerSelection,
+            sessionStore = sessionStore,
+            buildProjectId = WalletSigningPlugin.buildDefaultZeroDevProjectId(),
+            requestedChainId = requestedChain,
         )
-        val leftoverApplied = appliedChain
-        if (resolution.persistRemap) {
-            sessionStore.saveChainId(resolution.chainId)
-            syncChain(resolution.chainId, providerSelection)
-            appliedChain = resolution.chainId
-        } else if (
-            skippedLeftoverSync &&
-            leftoverApplied != null &&
-            WalletChainPolicy.isLeftoverMainnet(leftoverApplied) &&
-            !sponsorshipOn
-        ) {
-            syncChain(leftoverApplied, providerSelection)
-        }
 
-        return WalletDeepLinkResult(
-            appliedChain = appliedChain,
-            appliedSponsor = appliedSponsor,
-            appliedProjectId = appliedProjectId,
-            skipped = skipped,
-            userMessage = buildSummaryMessage(context, appliedChain, appliedSponsor, appliedProjectId, skipped),
-        )
-    }
-
-    private suspend fun syncChain(
-        chainId: String,
-        providerSelection: WalletProviderSelection,
-    ) {
-        withContext(Dispatchers.IO) {
-            val activeConnector = providerSelection.activeConnector
-            if (activeConnector.getIdentity() != null) {
-                activeConnector.setChain(chainId)
-            } else {
-                WalletProviderFactory.privyConnector(providerSelection).setChain(chainId)
-            }
-        }
+        return WalletDeepLinkResult(userMessage = buildSummaryMessage(context, wroteAny, skippedAny))
     }
 
     private fun buildSummaryMessage(
         context: Context,
-        chain: String?,
-        sponsor: Boolean?,
-        projectId: String?,
-        skipped: List<String>,
-    ): String? {
-        if (chain == null && sponsor == null && projectId == null && skipped.isEmpty()) return null
-        if (skipped.isNotEmpty() && (chain != null || sponsor != null || projectId != null)) {
-            return context.getString(R.string.wallet_deep_link_partial_apply)
-        }
-        if (chain != null || sponsor != null || projectId != null) {
-            return context.getString(R.string.wallet_deep_link_applied_summary)
-        }
-        return null
+        wroteAny: Boolean,
+        skippedAny: Boolean,
+    ): String? = when {
+        !wroteAny -> null
+        skippedAny -> context.getString(R.string.wallet_deep_link_partial_apply)
+        else -> context.getString(R.string.wallet_deep_link_applied_summary)
     }
 }

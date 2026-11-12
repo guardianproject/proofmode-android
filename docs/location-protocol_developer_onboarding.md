@@ -163,7 +163,7 @@ Key types by subpackage:
 
 `createCoordinator(storageProvider, context)` is the factory for callers (e.g. share flow, auto-capture orchestrator). It wires `EASAttestationManager` with the Flutter bridge provider and active wallet interfaces from `WalletSigningPlugin.providerSelection`.
 
-Also exposes wallet UX via the facade: `WalletSettingsActivity`, `wallet/auth/` onboarding, deep-link parsing (`parseWalletDeepLink` / `applyWalletDeepLink`), and activity binding for on-chain submit (`bindWalletActivity`).
+Also exposes wallet UX via the facade: `WalletSettingsActivity`, `wallet/auth/` onboarding, deep-link apply (`applyWalletDeepLink`), and activity binding for on-chain submit (`bindWalletActivity`).
 
 #### Where to put new code
 
@@ -188,7 +188,8 @@ A thin Flutter module wrapping the `location_protocol` Dart package. See also [f
 | Method                        | Purpose                                                   |
 | ----------------------------- | --------------------------------------------------------- |
 | `ping`                        | Health check                                              |
-| `build-eas-typed-data`        | LP payload → EIP-712 JSON for signing                     |
+| `get-eas-chain-params`        | chainId → EAS address + table version (live-read fallback) |
+| `build-eas-typed-data`        | LP payload + chainId + easVersion → EIP-712 JSON for signing |
 | `create-offchain-attestation` | typed data + signature → off-chain attestation JSON + UID |
 | `build-eas-onchain-data`      | LP payload + chainId → EAS contract calldata              |
 | `bridge/shutdown`             | Tear down isolate                                         |
@@ -198,9 +199,10 @@ A thin Flutter module wrapping the `location_protocol` Dart package. See also [f
 Off-chain flow inside `EASAttestationManager`:
 
 1. `bridge.awaitReady()`
-2. `build-eas-typed-data` with `LocationProtocolPayload`
-3. `walletSigner.signTypedData(easTypedDataJson)` via Privy
-4. `create-offchain-attestation` with typed data, signature, and `attesterAddress`
+2. `get-eas-chain-params`, then read the live EAS version (`VERSION()` then `version()`) over the chain's RPC URLs; the table version applies only if every RPC fails
+3. `build-eas-typed-data` with `LocationProtocolPayload`, `chainId` and the resolved `easVersion`
+4. `walletSigner.signTypedData(easTypedDataJson)` via Privy
+5. `create-offchain-attestation` with typed data, signature, and `attesterAddress`
 
 On-chain adds: `build-eas-onchain-data` → `transactionSender.sendTransaction()` → RPC receipt polling → UID extraction from logs.
 
@@ -262,7 +264,10 @@ sequenceDiagram
   Coord->>Helper: buildPayload() from proof JSON
   Helper-->>Coord: LocationProtocolPayload
   Coord->>EAS: createOffchainLocationAttestation()
-  EAS->>Dart: build-eas-typed-data
+  EAS->>Dart: get-eas-chain-params
+  Dart-->>EAS: EAS address + table version
+  EAS->>EAS: read live EAS version over RPC (table fallback)
+  EAS->>Dart: build-eas-typed-data (chainId, easVersion)
   Dart-->>EAS: EIP-712 JSON
   EAS->>Wallet: signTypedData()
   Wallet-->>EAS: 65-byte hex signature

@@ -59,7 +59,6 @@
     <string name="location_protocol_auto_capture_title">擷取時自動驗證</string>
     <string name="location_protocol_auto_capture_summary_location_required">請先開啟上方的位置分享，才能選擇自動驗證模式</string>
     <string name="location_protocol_auto_capture_summary_lp_required">請先開啟 Location Protocol 驗證，才能選擇自動驗證模式</string>
-    <string name="location_protocol_auto_capture_summary_wallet_required">請在錢包設定中連結錢包，才能選擇自動驗證模式</string>
     <string name="location_wallet_row_summary">管理用於簽署位置驗證的錢包</string>
     <string name="location_wallet_summary_location_required">請先開啟上方的位置分享，才能設定錢包</string>
     <string name="location_wallet_summary_lp_required">請先開啟 Location Protocol 驗證，才能設定錢包</string>
@@ -283,12 +282,14 @@
     <string name="signing_server_unreachable_message">內容憑證 (C2PA) 簽署已設為遠端，因此新的相片與影片會等到能連線至伺服器後才簽署。請檢查網路連線，或在設定中切換為本機簽署。</string>
     <string name="nostr_notarization">Nostr 公證</string>
     <string name="cid_manifest">CID 資訊清單</string>
+    <string name="root_cid_clip_label">根 CID</string>
     <string name="offchain_location_attestation">鏈下位置驗證</string>
     <string name="onchain_location_attestation">鏈上位置驗證</string>
     <string name="artifact_tap_to_view">輕觸以檢視</string>
     <string name="artifact_tap_to_view_manifest">輕觸以檢視完整資訊清單</string>
     <string name="lp_attestation_in_progress">驗證進行中…</string>
     <string name="view_on_eas_scan">在 EAS Scan 上檢視</string>
+    <string name="view_transaction">檢視交易</string>
     <string name="artifact_loading">載入中…</string>
     <string name="share_content_credentials_info">直接分享圖片或影片，證據中繼資料直接嵌入檔案本身，並由 Proofmode.org 驗證與簽署</string>
     <string name="optional_filename">檔案名稱（選填）</string>
@@ -330,6 +331,11 @@
     <string name="filebase_social_not_configured_share">分享但不上傳</string>
     <string name="filebase_proof_not_ready">證據尚未準備好上傳至 Filebase。</string>
     <string name="lp_attest_nothing_to_queue">證據尚未準備好進行位置驗證。</string>
+    <string name="lp_toast_offchain_success">位置已完成鏈下驗證</string>
+    <string name="lp_toast_offchain_failed">鏈下驗證未完成</string>
+    <string name="lp_toast_onchain_success">位置已提交至鏈上</string>
+    <string name="lp_toast_onchain_failed">鏈上驗證未完成</string>
+    <string name="proofset_toast_mixed">已完成 %1$d/%2$d</string>
     <string name="filebase_upload_success">已上傳至 Filebase</string>
     <string name="filebase_upload_failed">Filebase 上傳失敗</string>
     <string name="filebase_upload_oversize_title">媒體太大，無法上傳</string>
@@ -377,7 +383,6 @@
     <string name="lp_auto_capture_mode_both">兩者（先鏈下再鏈上）</string>
     <string name="lp_auto_capture_skip_location_unavailable">已略過自動位置驗證：此次擷取沒有可用的位置資料。</string>
     <string name="lp_auto_capture_skip_no_activity">已略過自動鏈上驗證：請開啟應用程式以提交至鏈上。</string>
-    <string name="lp_auto_capture_skip_wallet_unavailable">已略過自動位置驗證：未連結錢包。</string>
     <string name="settings_note">備註</string>
     <string name="settings_note_desc">作者備註</string>
     <string name="settings_version_placeholder">版本</string>

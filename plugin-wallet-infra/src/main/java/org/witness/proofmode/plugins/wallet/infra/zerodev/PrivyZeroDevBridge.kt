@@ -9,6 +9,7 @@ import io.privy.wallet.ethereum.EthereumRpcRequest
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.witness.proofmode.plugins.wallet.infra.hexToByteArray
 import org.witness.proofmode.plugins.wallet.infra.privy.PrivyWalletConnector
 import org.witness.proofmode.plugins.wallet.infra.exception.WalletLifecycleException
 import timber.log.Timber
@@ -123,14 +124,5 @@ class PrivyZeroDevBridge(
 
     private fun ByteArray.toHexString(): String {
         return joinToString("") { "%02x".format(it) }
-    }
-
-    private fun String.hexToByteArray(): ByteArray {
-        val clean = this.removePrefix("0x")
-        val result = ByteArray(clean.length / 2)
-        for (i in result.indices) {
-            result[i] = clean.substring(i * 2, i * 2 + 2).toInt(16).toByte()
-        }
-        return result
     }
 }

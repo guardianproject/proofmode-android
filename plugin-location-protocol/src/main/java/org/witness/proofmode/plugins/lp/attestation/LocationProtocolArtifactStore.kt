@@ -3,18 +3,18 @@ package org.witness.proofmode.plugins.lp.attestation
 import android.util.Log
 import org.witness.proofmode.storage.StorageListener
 import org.witness.proofmode.storage.StorageProvider
+import java.io.File
 import java.io.IOException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
-// FINDING (Phase 4): getProofSet uses unfiltered listFiles — LP artifacts do not require explicit whitelist entry
-
 /**
  * Persists and retrieves Location Protocol attestation JSON artifacts via
  * the existing [StorageProvider] contract.
  *
- * Files are stored under the key `<mediaHash>.lp.json` within the proof
+ * Files are stored under the keys `<mediaHash>.lp.offchain.json`, `.lp.onchain.json` and
+ * `.lp.onchain.pending.json` within the proof
  * storage bucket already owned by the calling media asset.
  *
  * LP artifacts are written into the same directory scanned by
@@ -30,59 +30,68 @@ class LocationProtocolArtifactStore(private val storageProvider: StorageProvider
         const val OFFCHAIN_SUFFIX = ".lp.offchain.json"
         const val ONCHAIN_SUFFIX = ".lp.onchain.json"
         const val ONCHAIN_PENDING_SUFFIX = ".lp.onchain.pending.json"
-        const val LEGACY_SUFFIX = ".lp.json"
     }
 
-    @Throws(LPArtifactStoreException::class)
-    suspend fun saveOffchainAttestation(mediaHash: String, attestationJson: String): String {
-        return saveAttestationInternal(mediaHash, attestationJson, OFFCHAIN_SUFFIX)
+    suspend fun saveOffchainAttestation(mediaHash: String, attestationJson: String) {
+        saveAttestationInternal(mediaHash, attestationJson, OFFCHAIN_SUFFIX)
     }
 
-    @Throws(LPArtifactStoreException::class)
-    suspend fun saveOnchainAttestation(mediaHash: String, attestationJson: String): String {
-        return saveAttestationInternal(mediaHash, attestationJson, ONCHAIN_SUFFIX)
+    /** Saves the confirmed record, then deletes the pending record it supersedes. */
+    suspend fun saveOnchainAttestation(mediaHash: String, attestationJson: String) {
+        saveAttestationInternal(mediaHash, attestationJson, ONCHAIN_SUFFIX)
+        // Runs on the already-saved early return too: a re-check and the live confirmation can
+        // both confirm one transaction, and whichever saves second still clears the pending record.
+        deletePendingOnchainAttestation(mediaHash)
     }
 
-    @Throws(LPArtifactStoreException::class)
-    suspend fun savePendingOnchainAttestation(mediaHash: String, attestationJson: String): String {
-        return saveAttestationInternal(mediaHash, attestationJson, ONCHAIN_PENDING_SUFFIX)
+    suspend fun savePendingOnchainAttestation(mediaHash: String, attestationJson: String) {
+        saveAttestationInternal(mediaHash, attestationJson, ONCHAIN_PENDING_SUFFIX)
     }
 
-    private suspend fun saveAttestationInternal(mediaHash: String, attestationJson: String, suffix: String): String {
+    private suspend fun saveAttestationInternal(mediaHash: String, attestationJson: String, suffix: String) {
         val identifier = "$mediaHash$suffix"
 
         if (storageProvider.proofIdentifierExists(mediaHash, identifier)) {
-            return identifier
+            return
         }
 
-        return suspendCoroutine { continuation ->
+        suspendCoroutine<Unit> { continuation ->
             storageProvider.saveText(
                 mediaHash,
                 identifier,
                 attestationJson,
                 object : StorageListener {
                     override fun saveSuccessful(hash: String, uri: String) {
-                        continuation.resume(uri.takeIf { it.isNotBlank() } ?: identifier)
+                        continuation.resume(Unit)
                     }
 
                     override fun saveFailed(exception: Exception) {
-                        continuation.resumeWithException(
-                            LPArtifactStoreException(
-                                "saveAttestation failed for identifier=$identifier",
-                                exception
-                            )
-                        )
+                        continuation.resumeWithException(exception)
                     }
                 }
             )
         }
     }
 
+    /**
+     * [StorageProvider] has no delete, so this resolves the pending record's `file://` URI from
+     * [StorageProvider.getProofSet] and deletes the file. Absent is a logged no-op.
+     */
+    fun deletePendingOnchainAttestation(mediaHash: String) {
+        val identifier = "$mediaHash$ONCHAIN_PENDING_SUFFIX"
+        val uri = storageProvider.getProofSet(mediaHash).orEmpty()
+            .firstOrNull { it.lastPathSegment == identifier }
+        if (uri == null) {
+            Log.d("LocationProtocolArtifactStore", "deletePending: no pending record identifier=$identifier")
+            return
+        }
+        if (!File(uri.path.orEmpty()).delete()) {
+            Log.w("LocationProtocolArtifactStore", "deletePending: delete failed identifier=$identifier")
+        }
+    }
+
     fun readOffchainAttestation(mediaHash: String): String? {
-        val offchain = "$mediaHash$OFFCHAIN_SUFFIX"
-        val legacy = "$mediaHash$LEGACY_SUFFIX"
-        
-        return tryRead(mediaHash, offchain) ?: tryRead(mediaHash, legacy)
+        return tryRead(mediaHash, "$mediaHash$OFFCHAIN_SUFFIX")
     }
 
     fun readOnchainAttestation(mediaHash: String): String? {
@@ -103,5 +112,3 @@ class LocationProtocolArtifactStore(private val storageProvider: StorageProvider
         }
     }
 }
-
-internal class LPArtifactStoreException(message: String, cause: Throwable? = null) : Exception(message, cause)

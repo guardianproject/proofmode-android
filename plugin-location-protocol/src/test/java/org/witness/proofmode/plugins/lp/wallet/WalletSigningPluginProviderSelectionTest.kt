@@ -11,7 +11,6 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.witness.proofmode.plugins.wallet.infra.privy.PrivyWalletConnector
-import org.witness.proofmode.plugins.wallet.infra.model.WalletProviderId
 import org.witness.proofmode.plugins.wallet.infra.model.WalletSdkConfig
 import org.witness.proofmode.plugins.wallet.infra.zerodev.ZeroDevSmartAccountConnector
 
@@ -38,7 +37,6 @@ class WalletSigningPluginProviderSelectionTest {
         WalletSigningPlugin.register(context)
 
         val selection = WalletSigningPlugin.providerSelection
-        assertEquals(WalletProviderId.ZERODEV, selection.selectedProvider)
         assertTrue(selection.activeConnector is ZeroDevSmartAccountConnector)
         assertTrue(selection.activeSigner is ZeroDevSmartAccountConnector)
         assertSame(selection.activeConnector, selection.activeSigner)

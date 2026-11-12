@@ -8,17 +8,18 @@ import org.junit.Test
 /** JVM unit tests for shared Filebase failure copy (no Robolectric). */
 class FilebaseFailureMessagesTest {
 
-    private val accountFallback = "ACCOUNT_FALLBACK_SAME_POLICY"
-    private val muteFallback = "MUTE_IPFS_403_SAME_POLICY"
+    private val samePolicyFallback = "SAME_POLICY_FALLBACK"
+    private val credentialsFallback = "CREDENTIALS_FALLBACK"
+    private val ipfsCredentialsFallback = "IPFS_CREDENTIALS_FALLBACK"
 
     private fun fmt(raw: String?) =
-        formatFilebaseFailureMessage(raw, accountFallback, muteFallback)
+        formatFilebaseFailureMessage(raw, samePolicyFallback, credentialsFallback, ipfsCredentialsFallback)
 
     @Test
-    fun blankOrNull_usesMuteIpfs403Fallback() {
-        assertEquals(muteFallback, fmt(null))
-        assertEquals(muteFallback, fmt(""))
-        assertEquals(muteFallback, fmt("   "))
+    fun blankOrNull_usesSamePolicyFallback() {
+        assertEquals(samePolicyFallback, fmt(null))
+        assertEquals(samePolicyFallback, fmt(""))
+        assertEquals(samePolicyFallback, fmt("   "))
     }
 
     @Test
@@ -29,28 +30,28 @@ class FilebaseFailureMessagesTest {
                 "<Message>Free accounts are limited to 25MB video uploads. Please upgrade your plan.</Message>" +
                 "</Error>"
         assertEquals(
-            "$accountFallback\n\nFree accounts are limited to 25MB video uploads. Please upgrade your plan.",
+            "$samePolicyFallback\n\nFree accounts are limited to 25MB video uploads. Please upgrade your plan.",
             fmt(raw),
         )
     }
 
     @Test
-    fun accountProblem_withoutMessageTags_usesAccountProblemFallback() {
+    fun accountProblem_withoutMessageTags_usesSamePolicyFallback() {
         val raw =
             "Upload failed: 403 Forbidden body=<Error><Code>AccountProblem</Code></Error>"
-        assertEquals(accountFallback, fmt(raw))
+        assertEquals(samePolicyFallback, fmt(raw))
     }
 
     @Test
-    fun muteIpfs403_emptyBody_usesMuteFallback() {
+    fun muteIpfs403_emptyBody_usesSamePolicyFallback() {
         val raw =
             "IPFS RPC upload failed: 403 declaredContentLength=35424055 body=(empty)"
-        assertEquals(muteFallback, fmt(raw))
+        assertEquals(samePolicyFallback, fmt(raw))
     }
 
     @Test
-    fun muteIpfs403_bareStatus_usesMuteFallback() {
-        assertEquals(muteFallback, fmt("IPFS RPC upload failed: 403"))
+    fun muteIpfs403_bareStatus_usesSamePolicyFallback() {
+        assertEquals(samePolicyFallback, fmt("IPFS RPC upload failed: 403"))
     }
 
     @Test
@@ -75,12 +76,11 @@ class FilebaseFailureMessagesTest {
     }
 
     @Test
-    fun ipfs403WithUsefulBody_passthroughNotMuteFallback() {
+    fun ipfs403WithBody_isCredentialFailure_notMuteFallback() {
         val raw =
             "IPFS RPC upload failed: 403 declaredContentLength=1 body=Gateway timeout detail"
-        val out = fmt(raw)
-        assertTrue(out.contains("Gateway timeout detail"))
-        assertFalse(out == muteFallback)
+        assertEquals(ipfsCredentialsFallback, fmt(raw))
+        assertTrue(isFilebaseReconfigureFailure(raw))
     }
 
     @Test
@@ -110,5 +110,23 @@ class FilebaseFailureMessagesTest {
                     "<Message>Please reduce your request rate.</Message></Error>",
             ),
         )
+    }
+
+    @Test
+    fun s3CredentialFailure_leadsWithCredentialsCopy_andReconfigures() {
+        val raw =
+            "Upload failed: 404 Not Found body=<Error><Code>NoSuchBucket</Code>" +
+                "<Message>The specified bucket does not exist</Message></Error>"
+        assertEquals("$credentialsFallback\n\nThe specified bucket does not exist", fmt(raw))
+        assertTrue(isFilebaseReconfigureFailure(raw))
+    }
+
+    @Test
+    fun ipfs401_showsIpfsCopyAndJsonReason_andReconfigures() {
+        val raw =
+            "IPFS RPC upload failed: 401 declaredContentLength=634093 " +
+                "body={\"Message\":\"api key does not exist\",\"Code\":0,\"Type\":\"error\"}"
+        assertEquals("$ipfsCredentialsFallback\n\napi key does not exist", fmt(raw))
+        assertTrue(isFilebaseReconfigureFailure(raw))
     }
 }

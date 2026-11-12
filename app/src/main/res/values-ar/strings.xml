@@ -230,7 +230,6 @@
     <string name="location_protocol_auto_capture_summary">تشغيل تصديق الموقع تلقائيًا بعد الالتقاط داخل التطبيق</string>
     <string name="location_protocol_auto_capture_summary_location_required">فعّل مشاركة الموقع أعلاه لاختيار وضع التصديق التلقائي</string>
     <string name="location_protocol_auto_capture_summary_lp_required">فعّل تصديق Location Protocol لاختيار وضع التصديق التلقائي</string>
-    <string name="location_protocol_auto_capture_summary_wallet_required">اربط محفظة من إعدادات المحفظة لاختيار وضع التصديق التلقائي</string>
     <string name="location_wallet_row_summary">إدارة المحفظة المستخدمة لتوقيع تصديقات الموقع</string>
     <string name="location_wallet_summary_location_required">فعّل مشاركة الموقع أعلاه لإعداد محفظة</string>
     <string name="location_wallet_summary_lp_required">فعّل تصديق Location Protocol لإعداد محفظة</string>
@@ -320,12 +319,14 @@
     <string name="signing_server_unreachable_message">توقيع وثائق تفويض المحتوى (C2PA) مضبوط على «عن بُعد»، لذا ستنتظر الصور ومقاطع الفيديو الجديدة التوقيع حتى يصبح الخادم متاحًا. تحقّق من اتصالك بالإنترنت، أو بدّل إلى التوقيع المحلي من الإعدادات.</string>
     <string name="nostr_notarization">توثيق Nostr</string>
     <string name="cid_manifest">بيان CID</string>
+    <string name="root_cid_clip_label">CID الجذر</string>
     <string name="offchain_location_attestation">تصديق الموقع خارج السلسلة</string>
     <string name="onchain_location_attestation">تصديق الموقع على السلسلة</string>
     <string name="artifact_tap_to_view">انقر للعرض</string>
     <string name="artifact_tap_to_view_manifest">انقر لعرض البيان كاملًا</string>
     <string name="lp_attestation_in_progress">التصديق قيد التنفيذ…</string>
     <string name="view_on_eas_scan">العرض على EAS Scan</string>
+    <string name="view_transaction">عرض المعاملة</string>
     <string name="artifact_loading">جارٍ التحميل…</string>
     <string name="filebase_ipfs_storage">مزامنة Filebase IPFS التلقائية (تجريبي)</string>
     <string name="filebase_ipfs_storage_description">أدخل بيانات اعتماد S3 (مفتاح الوصول والسر والحاوية ونقطة النهاية) أو رمز IPFS Bearer لتفعيل رفع الوسائط الملتقطة وبيانات الأدلة الوصفية الخاصة بها إلى Filebase.</string>
@@ -368,6 +369,11 @@
     <string name="filebase_social_not_configured_share">المشاركة دون رفع</string>
     <string name="filebase_proof_not_ready">الدليل غير جاهز للرفع إلى Filebase بعد.</string>
     <string name="lp_attest_nothing_to_queue">الدليل غير جاهز لتصديق الموقع بعد.</string>
+    <string name="lp_toast_offchain_success">تم تصديق الموقع خارج السلسلة</string>
+    <string name="lp_toast_offchain_failed">لم يكتمل التصديق خارج السلسلة</string>
+    <string name="lp_toast_onchain_success">تم إرسال الموقع على السلسلة</string>
+    <string name="lp_toast_onchain_failed">لم يكتمل التصديق على السلسلة</string>
+    <string name="proofset_toast_mixed">اكتمل %1$d من %2$d</string>
     <string name="filebase_upload_success">تم الرفع إلى Filebase</string>
     <string name="filebase_upload_failed">فشل الرفع إلى Filebase</string>
     <string name="filebase_upload_oversize_title">الوسائط كبيرة جدًا للرفع</string>
@@ -417,7 +423,6 @@
     <string name="lp_auto_capture_mode_both">كلاهما (خارج السلسلة ثم على السلسلة)</string>
     <string name="lp_auto_capture_skip_location_unavailable">تم تخطي تصديق الموقع التلقائي: بيانات الموقع غير متاحة لهذا الالتقاط.</string>
     <string name="lp_auto_capture_skip_no_activity">تم تخطي التصديق التلقائي على السلسلة: افتح التطبيق للإرسال إلى السلسلة.</string>
-    <string name="lp_auto_capture_skip_wallet_unavailable">تم تخطي تصديق الموقع التلقائي: المحفظة غير متصلة.</string>
     <string name="settings_note">ملاحظة</string>
     <string name="settings_note_desc">ملاحظات المؤلف</string>
     <string name="settings_version_placeholder">الإصدار</string>

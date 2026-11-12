@@ -1,46 +1,27 @@
 package org.witness.proofmode.plugins.wallet.infra.config
 
-data class SessionChainResolution(
-    val chainId: String,
-    val persistRemap: Boolean,
-)
-
 object WalletChainPolicy {
     const val DEFAULT_CHAIN_ID: String = "eip155:11155111"
 
-    val LEFTOVER_MAINNET_CHAIN_IDS: Set<String> = setOf(
-        "eip155:1",
-        "eip155:42161",
-        "eip155:8453",
-    )
-
-    val SPONSORED_VISIBLE_CHAIN_IDS: List<String> = listOf(
-        "eip155:11155111",
-        "eip155:421614",
-    )
-
-    fun isLeftoverMainnet(chainId: String): Boolean =
-        chainId in LEFTOVER_MAINNET_CHAIN_IDS
-
     /**
-     * Session restore / pref-notify chain policy.
+     * Session restore / pref-notify / deep-link chain policy.
      *
-     * When [sponsorshipOn] and the candidate is a leftover mainnet CAIP-2 id, result is Sepolia.
-     * [persistRemap] is true only when a **stored** leftover id is rewritten (empty store does
-     * not persist). Do not remap when sponsorship is off.
+     * With [sponsorshipOn] and a known, non-empty [sponsoredChains], a candidate outside the set
+     * becomes the default selection: [DEFAULT_CHAIN_ID] when sponsored, else the first sponsored
+     * chain. The candidate is kept when sponsorship is off, when the set is not yet known (null: no
+     * probe has answered for the project), or when it is known but empty (no remap target exists).
      */
     fun resolveSessionChainId(
         storedChainId: String?,
         sponsorshipOn: Boolean,
+        sponsoredChains: List<String>?,
         defaultChainId: String = DEFAULT_CHAIN_ID,
-    ): SessionChainResolution {
+    ): String {
         val candidate = storedChainId ?: defaultChainId
-        if (sponsorshipOn && isLeftoverMainnet(candidate)) {
-            return SessionChainResolution(
-                chainId = DEFAULT_CHAIN_ID,
-                persistRemap = storedChainId != null && storedChainId != DEFAULT_CHAIN_ID,
-            )
+        if (!sponsorshipOn || sponsoredChains.isNullOrEmpty() || candidate in sponsoredChains) {
+            return candidate
         }
-        return SessionChainResolution(chainId = candidate, persistRemap = false)
+        val target = if (DEFAULT_CHAIN_ID in sponsoredChains) DEFAULT_CHAIN_ID else sponsoredChains.first()
+        return target
     }
 }

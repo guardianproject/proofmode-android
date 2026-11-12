@@ -49,6 +49,8 @@
     <string name="wallet_sponsor_transactions_summary_on">On-chain attestations use sponsored gas when available.</string>
     <string name="wallet_sponsor_transactions_summary_off">Self-funded mode — gas is paid from your wallet balance.</string>
     <string name="wallet_empty_sponsored_networks">Gas sponsorship is not available for any networks. Disable the gas sponsorship toggle to make self-funded on-chain transactions.</string>
+    <string name="wallet_checking_sponsored_networks">Checking which networks are sponsored…</string>
+    <string name="wallet_could_not_check_sponsored_networks">Could not check which networks are sponsored. Check your connection and try again.</string>
     <string name="wallet_zerodev_project_id_label">Override ZeroDev Project ID</string>
     <string name="wallet_zerodev_project_id_error_invalid">Enter a valid UUID (e.g. 550e8400-e29b-41d4-a716-446655440000).</string>
     <string name="wallet_zerodev_project_id_saved">Project ID saved</string>

@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.witness.proofmode.plugins.wallet.infra.abbreviateAddress
 import org.witness.proofmode.plugins.wallet.infra.api.WalletCapabilityProvider
 import org.witness.proofmode.plugins.wallet.infra.api.WalletConnector
 import org.witness.proofmode.plugins.wallet.infra.api.WalletSigner
@@ -27,11 +28,10 @@ import org.witness.proofmode.plugins.wallet.infra.exception.WalletException
 import org.witness.proofmode.plugins.wallet.infra.exception.WalletLifecycleException
 import org.witness.proofmode.plugins.wallet.infra.exception.WalletNotInitializedException
 import org.witness.proofmode.plugins.wallet.infra.exception.WalletProviderSubmitException
-import org.witness.proofmode.plugins.wallet.infra.exception.WalletTransactionException
+import org.witness.proofmode.plugins.wallet.infra.hexToByteArray
 import org.witness.proofmode.plugins.wallet.infra.internal.SendTransactionErrorMapper
 import org.witness.proofmode.plugins.wallet.infra.model.WalletAuthenticating
 import org.witness.proofmode.plugins.wallet.infra.model.WalletAwaitingNetwork
-import org.witness.proofmode.plugins.wallet.infra.model.WalletCapabilities
 import org.witness.proofmode.plugins.wallet.infra.model.WalletConnected
 import org.witness.proofmode.plugins.wallet.infra.model.WalletConnecting
 import org.witness.proofmode.plugins.wallet.infra.model.WalletCreatingWallet
@@ -41,6 +41,7 @@ import org.witness.proofmode.plugins.wallet.infra.model.WalletState
 import org.witness.proofmode.plugins.wallet.infra.model.WalletUnavailable
 import org.witness.proofmode.plugins.wallet.infra.model.ZeroDevConfig
 import org.witness.proofmode.plugins.wallet.infra.privy.PrivyWalletConnector
+import org.witness.proofmode.plugins.wallet.infra.truncateHex
 import timber.log.Timber
 import java.math.BigInteger
 
@@ -58,14 +59,15 @@ class ZeroDevSmartAccountConnector(
         private const val TAG = "ZeroDevConnector"
     }
 
-    private enum class SponsoredInitPolicy {
-        /** connect(): cleanUpZeroDev(), throw WalletAuthException — caller disconnects */
-        FatalOnConnect,
-        /** setChain() SDK failure: cleanUpZeroDev(), WalletDisconnected — unchanged today */
-        DisconnectOnChainSwitch,
-        /** cold-start restore SDK failure: cleanUpZeroDev(), return null → caller emits self-funded EOA */
-        SelfFundedFallbackOnRestore,
-    }
+    /**
+     * What the live account (sponsored or self-funded EOA) was last built from. A setChain whose
+     * target matches it would rebuild the same thing, so it is skipped. Holding the resolved
+     * config, not only the chain, keeps a toggle flip, project override, or URL change re-initing.
+     */
+    private data class AppliedKey(val chainId: String, val config: ZeroDevConfig)
+
+    @Volatile
+    private var appliedKey: AppliedKey? = null
 
     private var account: Account? = null
     private var zeroDevContext: Context? = null
@@ -93,23 +95,11 @@ class ZeroDevSmartAccountConnector(
                         _stateFlow.value = privyState
                     } else if (privyState is WalletConnected) {
                         val chainId = privyState.identity.chainId
-                        if (isSponsorshipActive && account != null &&
-                            privyConnector.getIdentity()?.chainId == chainId
-                        ) {
-                            Timber.tag(TAG).d(
-                                "coldStartRestore: skip re-init chainId=%s sponsorshipAlreadyActive=true",
-                                chainId,
-                            )
-                            return@onEach
-                        }
                         val config = configResolver(chainId)
                         if (effectiveSponsorshipAllowed(config)) {
                             scope.launch {
                                 val restored = withContext(ioDispatcher) {
-                                    initializeSponsoredAccount(
-                                        chainId,
-                                        SponsoredInitPolicy.SelfFundedFallbackOnRestore,
-                                    )
+                                    initializeSponsoredAccount(chainId, config)
                                 }
                                 _stateFlow.value = restored ?: WalletConnected(
                                     WalletIdentity(privyConnector.address, chainId),
@@ -122,14 +112,7 @@ class ZeroDevSmartAccountConnector(
                                 )
                             }
                         } else {
-                            isSponsorshipActive = false
-                            _stateFlow.value = WalletConnected(
-                                WalletIdentity(privyConnector.address, chainId),
-                            )
-                            Timber.tag(TAG).i(
-                                "coldStartRestore: chainId=%s effectiveAllowed=false sponsorshipActive=false",
-                                chainId,
-                            )
+                            applySelfFunded(chainId, config)
                         }
                     }
                 }
@@ -141,19 +124,6 @@ class ZeroDevSmartAccountConnector(
 
     override var isSponsorshipActive: Boolean = false
         internal set
-
-    /**
-     * Whether sponsored smart-account execution is active for the current session.
-     *
-     * Addendum §C deactivation rows:
-     * - `sponsor_transactions_enabled = false` → self-funded EOA via `config.isSponsorshipEnabled = false`
-     * - Sponsored init not completed this session → remains `false` until `connect()`, `setChain()`,
-     *   or cold-start restore succeeds
-     */
-
-    fun getBundlerUrl(chainId: String): String {
-        return configResolver(chainId).bundlerUrl
-    }
 
     override val address: String
         get() = privyConnector.address
@@ -174,17 +144,7 @@ class ZeroDevSmartAccountConnector(
         privyConnector.refreshSession()
     }
 
-    override fun getCapabilities(): WalletCapabilities {
-        return WalletCapabilities(supportsSendTransaction = true)
-    }
-
-    override fun getIdentity(): WalletIdentity? {
-        val privyIdentity = privyConnector.getIdentity()
-            ?: return null
-        val addr = privyConnector.address
-        if (addr.isBlank()) return null
-        return WalletIdentity(privyConnector.address, privyIdentity.chainId)
-    }
+    override fun getIdentity(): WalletIdentity? = privyConnector.getIdentity()
 
     /**
      * Initiates connection. It first ensures Privy connection. If Privy is connected, it
@@ -203,39 +163,21 @@ class ZeroDevSmartAccountConnector(
         val config = configResolver(chainId)
 
         if (!effectiveSponsorshipAllowed(config)) {
-            isSponsorshipActive = false
-            Timber.tag(TAG).i(
-                "connect: self-funded EOA chainId=%s sponsorshipEnabled=%s projectPresent=%s bundlerPresent=%s paymasterPresent=%s",
-                chainId,
-                config.isSponsorshipEnabled,
-                config.projectId.isNotBlank(),
-                config.bundlerUrl.isNotBlank(),
-                config.paymasterUrl.isNotBlank(),
-            )
-            _stateFlow.value = WalletConnected(WalletIdentity(privyConnector.address, chainId))
+            applySelfFunded(chainId, config)
             return
         }
 
-        try {
-            Timber.tag(TAG).i(
-                "connect: sponsored smart account chainId=%s bundlerPresent=true paymasterPresent=true",
-                chainId,
-            )
-            val connected = initializeSponsoredAccount(chainId, SponsoredInitPolicy.FatalOnConnect)
-            if (connected != null) {
-                _stateFlow.value = connected
-                Timber.tag(TAG).d(
-                    "connect: sponsored smart account initialized smartAccount=%s sponsorshipActive=true",
-                    abbreviateAddress(connected.identity.address),
-                )
-            }
-        } catch (e: WalletAuthException) {
-            isSponsorshipActive = false
-            Timber.tag(TAG).e(e, "connect: sponsored smart account initialization failed, disconnecting")
+        Timber.tag(TAG).i("connect: sponsored smart account chainId=%s", chainId)
+        val connected = initializeSponsoredAccount(chainId, config)
+        if (connected == null) {
             disconnect()
-            _stateFlow.value = WalletDisconnected
-            throw e
+            throw WalletAuthException("ZeroDev initialization failed")
         }
+        _stateFlow.value = connected
+        Timber.tag(TAG).d(
+            "connect: sponsored smart account initialized smartAccount=%s sponsorshipActive=true",
+            abbreviateAddress(connected.identity.address),
+        )
     }
 
     /**
@@ -269,79 +211,69 @@ class ZeroDevSmartAccountConnector(
             return
         }
 
-        _stateFlow.value = WalletConnecting("Switching chain to $chainId")
-        cleanUpZeroDev()
-
         val config = configResolver(chainId)
-
-        if (!effectiveSponsorshipAllowed(config)) {
-            isSponsorshipActive = false
-            Timber.tag(TAG).i(
-                "setChain: self-funded EOA chainId=%s sponsorshipEnabled=%s projectPresent=%s bundlerPresent=%s paymasterPresent=%s",
-                chainId,
-                config.isSponsorshipEnabled,
-                config.projectId.isNotBlank(),
-                config.bundlerUrl.isNotBlank(),
-                config.paymasterUrl.isNotBlank(),
-            )
-            _stateFlow.value = WalletConnected(WalletIdentity(privyConnector.address, chainId))
+        if (_stateFlow.value is WalletConnected &&
+            appliedKey == AppliedKey(chainId, config) &&
+            isSponsorshipActive == effectiveSponsorshipAllowed(config)
+        ) {
+            Timber.tag(TAG).d("setChain: chainId=%s already applied with the same config — skipping re-init", chainId)
             return
         }
 
-        Timber.tag(TAG).i(
-            "setChain: sponsored smart account chainId=%s bundlerPresent=true paymasterPresent=true",
-            chainId,
-        )
-        val connected = initializeSponsoredAccount(chainId, SponsoredInitPolicy.DisconnectOnChainSwitch)
-        if (connected != null) {
-            _stateFlow.value = connected
-            Timber.tag(TAG).d(
-                "setChain: sponsored smart account initialized smartAccount=%s sponsorshipActive=true",
-                abbreviateAddress(connected.identity.address),
-            )
+        _stateFlow.value = WalletConnecting("Switching chain to $chainId")
+        cleanUpZeroDev()
+
+        if (!effectiveSponsorshipAllowed(config)) {
+            applySelfFunded(chainId, config)
+            return
         }
+
+        Timber.tag(TAG).i("setChain: sponsored smart account chainId=%s", chainId)
+        val connected = initializeSponsoredAccount(chainId, config)
+        if (connected == null) {
+            _stateFlow.value = WalletDisconnected
+            return
+        }
+        _stateFlow.value = connected
+        Timber.tag(TAG).d(
+            "setChain: sponsored smart account initialized smartAccount=%s sponsorshipActive=true",
+            abbreviateAddress(connected.identity.address),
+        )
+    }
+
+    /** Self-funded EOA: no ZeroDev account; the Privy address stays the identity. */
+    private fun applySelfFunded(chainId: String, config: ZeroDevConfig) {
+        isSponsorshipActive = false
+        Timber.tag(TAG).i(
+            "self-funded EOA chainId=%s sponsorshipEnabled=%s projectPresent=%s",
+            chainId,
+            config.isSponsorshipEnabled,
+            config.projectId.isNotBlank(),
+        )
+        appliedKey = AppliedKey(chainId, config)
+        _stateFlow.value = WalletConnected(WalletIdentity(privyConnector.address, chainId))
     }
 
     private fun effectiveSponsorshipAllowed(config: ZeroDevConfig): Boolean =
         config.isSponsorshipEnabled
             && config.projectId.isNotBlank()
-            && config.bundlerUrl.isNotBlank()
-            && config.paymasterUrl.isNotBlank()
 
-    private fun initializeSponsoredAccount(
-        chainId: String,
-        policy: SponsoredInitPolicy,
-    ): WalletConnected? {
-        val config = configResolver(chainId)
-        return try {
+    /** Provisions the sponsored account; on any failure cleans up and returns null. */
+    private fun initializeSponsoredAccount(chainId: String, config: ZeroDevConfig): WalletConnected? =
+        try {
             val session = sponsoredAccountProvisioner.provision(chainId, config, privyConnector)
             zeroDevSigner = session.signer
             zeroDevContext = session.context
             account = session.account
             isSponsorshipActive = true
+            appliedKey = AppliedKey(chainId, config)
             WalletConnected(WalletIdentity(session.account.getAddress().toString(), chainId))
         } catch (e: Throwable) {
-            when (policy) {
-                SponsoredInitPolicy.FatalOnConnect -> {
-                    cleanUpZeroDev()
-                    isSponsorshipActive = false
-                    throw WalletAuthException("ZeroDev initialization failed", e)
-                }
-                SponsoredInitPolicy.DisconnectOnChainSwitch -> {
-                    isSponsorshipActive = false
-                    Timber.tag(TAG).e(e, "setChain: sponsored smart account initialization failed")
-                    cleanUpZeroDev()
-                    _stateFlow.value = WalletDisconnected
-                    null
-                }
-                SponsoredInitPolicy.SelfFundedFallbackOnRestore -> {
-                    cleanUpZeroDev()
-                    isSponsorshipActive = false
-                    null
-                }
-            }
+            Timber.tag(TAG).e(e, "sponsored smart account initialization failed chainId=%s", chainId)
+            cleanUpZeroDev()
+            isSponsorshipActive = false
+            null
         }
-    }
 
     private fun cleanUpZeroDev() {
         try {
@@ -356,6 +288,7 @@ class ZeroDevSmartAccountConnector(
         account = null
         zeroDevContext = null
         zeroDevSigner = null
+        appliedKey = null
     }
 
     /**
@@ -417,8 +350,6 @@ class ZeroDevSmartAccountConnector(
                     privyConnector.sendTransaction(params)
                 }
             }
-        } catch (e: WalletTransactionException) {
-            throw e
         } catch (e: WalletException) {
             throw e
         } catch (e: Throwable) {
@@ -435,24 +366,5 @@ class ZeroDevSmartAccountConnector(
      */
     override suspend fun signTypedData(typedDataJson: String): String {
         return privyConnector.signTypedData(typedDataJson)
-    }
-
-    private fun String.hexToByteArray(): ByteArray {
-        val clean = this.removePrefix("0x")
-        val result = ByteArray(clean.length / 2)
-        for (i in result.indices) {
-            result[i] = clean.substring(i * 2, i * 2 + 2).toInt(16).toByte()
-        }
-        return result
-    }
-
-    private fun abbreviateAddress(address: String): String {
-        if (address.length <= 12) return address
-        return "${address.take(6)}…${address.takeLast(4)}"
-    }
-
-    private fun truncateHex(value: String, maxChars: Int = 18): String {
-        if (value.length <= maxChars) return value
-        return "${value.take(maxChars)}…(${value.length} chars)"
     }
 }

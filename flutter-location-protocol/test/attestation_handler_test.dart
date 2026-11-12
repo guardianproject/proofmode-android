@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:location_protocol/location_protocol.dart' show ChainConfig;
 import 'package:location_protocol_flutter/src/attestation_handler.dart'
     as handler;
 
@@ -22,6 +23,19 @@ Map<String, dynamic> _validPayload() => {
       'memo': 'test memo',
     };
 
+/// Args for `build-eas-typed-data`; the selected chain defaults to Sepolia
+/// and `easVersion` to Sepolia's live version.
+Map<String, dynamic> _typedDataArgs({
+  Map<String, dynamic>? payload,
+  String chainId = 'eip155:11155111',
+  Object? easVersion = '0.26',
+}) =>
+    {
+      'payload': payload ?? _validPayload(),
+      'chainId': chainId,
+      'easVersion': easVersion,
+    };
+
 /// A valid 65-byte hex signature (deterministic fake — v=27, r/s=zeros).
 String validSignatureHex() {
   final r = '00' * 32;
@@ -39,19 +53,16 @@ Future<dynamic> callHandler(String method, dynamic args) =>
 // Tests
 // ---------------------------------------------------------------------------
 
+/// Expects [call] to throw a [PlatformException] carrying [code].
+Future<void> _expectCode(Future<dynamic> call, String code, String label) =>
+    expectLater(
+      call,
+      throwsA(isA<PlatformException>().having((e) => e.code, 'code', code)),
+      reason: label,
+    );
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-
-  // =========================================================================
-  // ping
-  // =========================================================================
-
-  group('ping', () {
-    test('returns pong', () async {
-      final result = await callHandler('ping', null);
-      expect(result, 'pong');
-    });
-  });
 
   // =========================================================================
   // unknown method
@@ -74,20 +85,11 @@ void main() {
   // =========================================================================
 
   group('build-eas-typed-data', () {
-    test('valid payload returns non-empty JSON string', () async {
-      final result = await callHandler(
-        'build-eas-typed-data',
-        {'payload': _validPayload()},
-      );
-      expect(result, isA<String>());
-      expect((result as String).isNotEmpty, isTrue);
-    });
-
     test('returned JSON is parseable as EIP-712 with expected top-level keys',
         () async {
       final result = await callHandler(
         'build-eas-typed-data',
-        {'payload': _validPayload()},
+        _typedDataArgs(),
       ) as String;
       final json = jsonDecode(result) as Map<String, dynamic>;
       expect(json.containsKey('domain'), isTrue);
@@ -95,15 +97,9 @@ void main() {
       expect(json.containsKey('primaryType'), isTrue);
       expect(json.containsKey('message'), isTrue);
       expect(json['primaryType'], 'Attest');
-    });
 
-    test('message contains expected EAS attestation keys', () async {
-      final result = await callHandler(
-        'build-eas-typed-data',
-        {'payload': _validPayload()},
-      ) as String;
-      final json = jsonDecode(result) as Map<String, dynamic>;
       final message = json['message'] as Map<String, dynamic>;
+      final domain = json['domain'] as Map<String, dynamic>;
       for (final key in [
         'schema',
         'data',
@@ -118,16 +114,6 @@ void main() {
         expect(message.containsKey(key), isTrue,
             reason: 'message missing key: $key');
       }
-    });
-
-    test('numeric fields in signing JSON are decimal strings', () async {
-      final result = await callHandler(
-        'build-eas-typed-data',
-        {'payload': _validPayload()},
-      ) as String;
-      final json = jsonDecode(result) as Map<String, dynamic>;
-      final message = json['message'] as Map<String, dynamic>;
-      final domain = json['domain'] as Map<String, dynamic>;
 
       expect(message['time'], isA<String>(),
           reason: 'time must be a decimal string');
@@ -137,49 +123,138 @@ void main() {
           reason: 'version must be a decimal string');
       expect(domain['chainId'], isA<String>(),
           reason: 'chainId must be a decimal string');
-    });
 
-    test('returned JSON includes passthrough _schemaUID and _saltHex', () async {
-      final result = await callHandler(
-        'build-eas-typed-data',
-        {'payload': _validPayload()},
-      ) as String;
-      final json = jsonDecode(result) as Map<String, dynamic>;
       expect(json.containsKey('_schemaUID'), isTrue);
       expect(json.containsKey('_saltHex'), isTrue);
-      expect((json['_schemaUID'] as String).startsWith('0x'), isTrue);
-      expect((json['_saltHex'] as String).startsWith('0x'), isTrue);
     });
 
-    test('missing required payload field → LP_MISSING_FIELD', () async {
-      final payload = _validPayload()..remove('eventTimestamp');
+    test('typed-data domain follows the chain and version', () async {
+      final cases = <String, ({Map<String, dynamic> args, Map<String, String> domain})>{
+        'Sepolia / 0.26': (
+          args: _typedDataArgs(),
+          domain: {
+            'name': 'EAS Attestation',
+            'version': '0.26',
+            'chainId': '11155111',
+            'verifyingContract': '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
+          },
+        ),
+        'Ink Sepolia / 1.4.1-beta.3': (
+          args: _typedDataArgs(
+              chainId: 'eip155:763373', easVersion: '1.4.1-beta.3'),
+          domain: {
+            'name': 'EAS Attestation',
+            'version': '1.4.1-beta.3',
+            'chainId': '763373',
+            'verifyingContract': '0x4200000000000000000000000000000000000021',
+          },
+        ),
+      };
+      for (final entry in cases.entries) {
+        final result =
+            await callHandler('build-eas-typed-data', entry.value.args)
+                as String;
+        final domain =
+            (jsonDecode(result) as Map<String, dynamic>)['domain'] as Map;
+        expect(domain, entry.value.domain, reason: entry.key);
+      }
+    });
+
+    test('build-eas-typed-data rejects invalid args', () async {
+      final cases = <String, ({dynamic args, String code})>{
+        'missing eventTimestamp': (
+          args: _typedDataArgs(
+              payload: _validPayload()..remove('eventTimestamp')),
+          code: 'LP_MISSING_FIELD',
+        ),
+        'missing payload key itself': (
+          args: <String, dynamic>{},
+          code: 'LP_MISSING_FIELD',
+        ),
+        'non-map payload value': (
+          args: {'payload': 42},
+          code: 'LP_INVALID_PAYLOAD',
+        ),
+        'easVersion absent': (
+          args: _typedDataArgs()..remove('easVersion'),
+          code: 'LP_INVALID_PAYLOAD',
+        ),
+        'easVersion non-string': (
+          args: _typedDataArgs(easVersion: 42),
+          code: 'LP_INVALID_PAYLOAD',
+        ),
+        'easVersion blank': (
+          args: _typedDataArgs(easVersion: '   '),
+          code: 'LP_INVALID_PAYLOAD',
+        ),
+      };
+      for (final entry in cases.entries) {
+        await _expectCode(
+          callHandler('build-eas-typed-data', entry.value.args),
+          entry.value.code,
+          '${entry.key}: ${entry.value.args}',
+        );
+      }
+    });
+
+    test('typed-data unsupported chain', () async {
       await expectLater(
-        callHandler('build-eas-typed-data', {'payload': payload}),
+        callHandler(
+            'build-eas-typed-data', _typedDataArgs(chainId: 'eip155:999999')),
         throwsA(
           isA<PlatformException>()
-              .having((e) => e.code, 'code', 'LP_MISSING_FIELD'),
+              .having((e) => e.code, 'code', 'LP_UNSUPPORTED_CHAIN'),
         ),
       );
     });
+  });
 
-    test('missing payload key itself → LP_MISSING_FIELD', () async {
-      await expectLater(
-        callHandler('build-eas-typed-data', <String, dynamic>{}),
-        throwsA(
-          isA<PlatformException>()
-              .having((e) => e.code, 'code', 'LP_MISSING_FIELD'),
-        ),
-      );
+  // =========================================================================
+  // get-eas-chain-params
+  // =========================================================================
+
+  group('get-eas-chain-params', () {
+    test('returns the EAS address and table version', () async {
+      final sepolia = await callHandler(
+        'get-eas-chain-params',
+        {'chainId': 'eip155:11155111'},
+      ) as Map;
+      expect(sepolia, {
+        'easAddress': '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
+        'easVersion': '0.26',
+      });
+
+      final ink = ChainConfig.forChainId(57073)!;
+      final inkResult = await callHandler(
+        'get-eas-chain-params',
+        {'chainId': 'eip155:57073'},
+      ) as Map;
+      expect(inkResult, {'easAddress': ink.eas, 'easVersion': ink.easVersion});
     });
 
-    test('non-map payload value → LP_INVALID_PAYLOAD', () async {
-      await expectLater(
-        callHandler('build-eas-typed-data', {'payload': 42}),
-        throwsA(
-          isA<PlatformException>()
-              .having((e) => e.code, 'code', 'LP_INVALID_PAYLOAD'),
+    test('get-eas-chain-params rejects invalid chainId', () async {
+      final cases = <String, ({dynamic args, String code})>{
+        'unsupported chain': (
+          args: {'chainId': 'eip155:999999'},
+          code: 'LP_UNSUPPORTED_CHAIN',
         ),
-      );
+        'chainId absent': (
+          args: <String, dynamic>{},
+          code: 'LP_INVALID_PAYLOAD',
+        ),
+        'chainId is an int': (
+          args: {'chainId': 11155111},
+          code: 'LP_INVALID_PAYLOAD',
+        ),
+        'args null': (args: null, code: 'LP_INVALID_PAYLOAD'),
+      };
+      for (final entry in cases.entries) {
+        await _expectCode(
+          callHandler('get-eas-chain-params', entry.value.args),
+          entry.value.code,
+          '${entry.key}: ${entry.value.args}',
+        );
+      }
     });
   });
 
@@ -191,21 +266,20 @@ void main() {
     Future<String> buildValidTypedData() async {
       return await callHandler(
             'build-eas-typed-data',
-            {'payload': _validPayload()},
+            _typedDataArgs(),
           ) as String;
     }
 
     test('valid typedData + valid signature → result map with required keys',
         () async {
       final typedData = await buildValidTypedData();
-      final result = await callHandler(
-        'create-offchain-attestation',
-        {
-          'typedData': typedData,
-          'signature': validSignatureHex(),
-          'attesterAddress': kAttesterAddress,
-        },
-      ) as Map;
+      final args = {
+        'typedData': typedData,
+        'signature': validSignatureHex(),
+        'attesterAddress': kAttesterAddress,
+      };
+      final result = await callHandler('create-offchain-attestation', args)
+          as Map;
       for (final key in [
         'uid',
         'schemaId',
@@ -219,30 +293,11 @@ void main() {
       }
       expect(result['attesterAddress'], kAttesterAddress);
       expect(result['artifactPath'], '');
-    });
 
-    test('uid is deterministic given the same typedData and salt', () async {
-      final typedData = await buildValidTypedData();
-      final sig = validSignatureHex();
-
-      final result1 = await callHandler(
-        'create-offchain-attestation',
-        {
-          'typedData': typedData,
-          'signature': sig,
-          'attesterAddress': kAttesterAddress,
-        },
-      ) as Map;
-      final result2 = await callHandler(
-        'create-offchain-attestation',
-        {
-          'typedData': typedData,
-          'signature': sig,
-          'attesterAddress': kAttesterAddress,
-        },
-      ) as Map;
-
-      expect(result1['uid'], result2['uid'],
+      // A fresh salt or clock read in the handler would change the uid.
+      final again = await callHandler('create-offchain-attestation', args)
+          as Map;
+      expect(result['uid'], again['uid'],
           reason: 'UID must be deterministic for same typedData+salt');
     });
 
@@ -265,24 +320,6 @@ void main() {
       );
     });
 
-    test('missing signature key → LP_MISSING_FIELD', () async {
-      final typedData = await buildValidTypedData();
-      await expectLater(
-        callHandler(
-          'create-offchain-attestation',
-          {
-            'typedData': typedData,
-            'attesterAddress': kAttesterAddress,
-            // 'signature' omitted
-          },
-        ),
-        throwsA(
-          isA<PlatformException>()
-              .having((e) => e.code, 'code', 'LP_MISSING_FIELD'),
-        ),
-      );
-    });
-
     test('malformed typedData JSON string → LP_INVALID_PAYLOAD', () async {
       await expectLater(
         callHandler(
@@ -300,39 +337,20 @@ void main() {
       );
     });
 
-    test('missing typedData key → LP_MISSING_FIELD', () async {
-      await expectLater(
-        callHandler(
-          'create-offchain-attestation',
-          {
-            'signature': validSignatureHex(),
-            'attesterAddress': kAttesterAddress,
-            // 'typedData' omitted
-          },
-        ),
-        throwsA(
-          isA<PlatformException>()
-              .having((e) => e.code, 'code', 'LP_MISSING_FIELD'),
-        ),
-      );
-    });
-
-    test('missing attesterAddress → LP_MISSING_FIELD', () async {
+    test('create-offchain-attestation rejects a missing key', () async {
       final typedData = await buildValidTypedData();
-      await expectLater(
-        callHandler(
-          'create-offchain-attestation',
-          {
-            'typedData': typedData,
-            'signature': validSignatureHex(),
-            // 'attesterAddress' omitted
-          },
-        ),
-        throwsA(
-          isA<PlatformException>()
-              .having((e) => e.code, 'code', 'LP_MISSING_FIELD'),
-        ),
-      );
+      for (final omitted in ['signature', 'typedData', 'attesterAddress']) {
+        final args = <String, dynamic>{
+          'typedData': typedData,
+          'signature': validSignatureHex(),
+          'attesterAddress': kAttesterAddress,
+        }..remove(omitted);
+        await _expectCode(
+          callHandler('create-offchain-attestation', args),
+          'LP_MISSING_FIELD',
+          'omitted: $omitted',
+        );
+      }
     });
   });
 

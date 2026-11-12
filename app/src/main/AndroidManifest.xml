@@ -110,6 +110,12 @@
             android:exported="false"
             android:label="@string/location_settings_title" />
         <activity
+            android:name=".ui.WalletRequiredDialogActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.Proofmode.WalletRequiredDialog" />
+        <activity
             android:name=".ui.DataLegendActivity"
             android:label="@string/activity_datalegend_title" />
         <activity

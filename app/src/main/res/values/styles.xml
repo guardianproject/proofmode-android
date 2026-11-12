@@ -159,4 +159,8 @@
     <style name="AlertButtonStyle" parent="Widget.MaterialComponents.Button.TextButton">
         <item name="android:textColor">@color/colorAccent</item> <!-- Force visibility -->
     </style>
+
+    <style name="Theme.Proofmode.WalletRequiredDialog" parent="RoundedAlertDialog">
+        <item name="android:windowCloseOnTouchOutside">false</item>
+    </style>
 </resources>

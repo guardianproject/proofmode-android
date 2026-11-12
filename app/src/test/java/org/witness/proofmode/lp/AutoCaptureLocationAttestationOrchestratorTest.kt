@@ -1,6 +1,7 @@
 package org.witness.proofmode.lp
 
 import android.content.Context
+import android.net.Uri
 import androidx.preference.PreferenceManager
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.CoroutineScope
@@ -10,21 +11,18 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
-import org.mockito.kotlin.atMost
+import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
-import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
@@ -34,11 +32,12 @@ import org.witness.proofmode.FeatureFlags
 import org.witness.proofmode.ProofMode
 import org.witness.proofmode.plugins.lp.autocapture.AutoCaptureLpMode
 import org.witness.proofmode.plugins.lp.autocapture.AutoCaptureLpStateRegistry
+import org.witness.proofmode.plugins.lp.attestation.LocationProtocolArtifactStore
 import org.witness.proofmode.plugins.lp.attestation.LocationProtocolAttestationCoordinator
 import org.witness.proofmode.plugins.lp.attestation.LocationProtocolAttestationResult
+import org.witness.proofmode.plugins.lp.attestation.PendingOnchainRecheckOutcome
 import org.witness.proofmode.plugins.lp.LocationProtocolPlugin
 import org.witness.proofmode.plugins.lp.autocapture.LpRunState
-import org.witness.proofmode.service.ProofModeV1Constants
 import org.witness.proofmode.storage.StorageProvider
 
 @RunWith(RobolectricTestRunner::class)
@@ -47,7 +46,7 @@ import org.witness.proofmode.storage.StorageProvider
 class AutoCaptureLocationAttestationOrchestratorTest {
 
     private lateinit var context: Context
-    private var activeHandle: AutoCaptureLocationAttestationOrchestrator.TestOrchestratorHandle? = null
+    private var activeEngine: OrchestratorEngine? = null
     private var applicationScopeJob: Job? = null
 
     @Before
@@ -65,15 +64,12 @@ class AutoCaptureLocationAttestationOrchestratorTest {
         )
         AutoCaptureLpStateRegistry.clearForTests()
         AutoCaptureLocationAttestationOrchestrator.resetForTests()
-        AutoCaptureLocationAttestationOrchestrator.setEnqueueInterceptorForTests(enqueueNoOpForTests)
     }
 
     @After
     fun tearDown() {
-        activeHandle?.shutdownForTests()
-        activeHandle = null
-        AutoCaptureLocationAttestationOrchestrator.installSkipListener(null)
-        AutoCaptureLocationAttestationOrchestrator.setEnqueueInterceptorForTests(null)
+        activeEngine?.shutdown()
+        activeEngine = null
         AutoCaptureLocationAttestationOrchestrator.resetForTests()
         applicationScopeJob?.cancel()
         applicationScopeJob = null
@@ -95,246 +91,65 @@ class AutoCaptureLocationAttestationOrchestratorTest {
         FeatureFlags.lpEnabled = true
     }
 
-    private fun trackHandle(
-        handle: AutoCaptureLocationAttestationOrchestrator.TestOrchestratorHandle,
-    ): AutoCaptureLocationAttestationOrchestrator.TestOrchestratorHandle {
-        activeHandle?.shutdownForTests()
-        activeHandle = handle
-        return handle
-    }
-
-    private fun TestScope.createOrchestratorHandle(
+    private fun TestScope.createEngine(
         coordinatorFactory: (StorageProvider, Context) -> LocationProtocolAttestationCoordinator,
-        proofExistsDelayMs: Map<String, Long> = emptyMap(),
         storageFactory: ((Context) -> StorageProvider)? = null,
-        testGuards: OrchestratorTestGuards = OrchestratorTestGuards(),
-        walletActivityWaitTimeoutMs: Long =
-            AutoCaptureLocationAttestationOrchestrator.WALLET_ACTIVITY_WAIT_TIMEOUT_MS,
+        isWalletConnected: () -> Boolean = { true },
+        awaitWalletActivityBound: suspend () -> Boolean = { true },
+        skipListener: AutoCaptureSkipListener? = null,
         autoStart: Boolean = true,
-    ): AutoCaptureLocationAttestationOrchestrator.TestOrchestratorHandle {
+    ): OrchestratorEngine {
         val dispatcher = UnconfinedTestDispatcher(testScheduler)
-        return trackHandle(
-            AutoCaptureLocationAttestationOrchestrator.createForTests(
-                context = context,
-                coordinatorFactory = coordinatorFactory,
-                proofExistsDelayMs = proofExistsDelayMs,
-                storageFactory = storageFactory,
-                testGuards = testGuards,
-                walletActivityWaitTimeoutMs = walletActivityWaitTimeoutMs,
-                autoStart = autoStart,
-                scope = CoroutineScope(SupervisorJob() + dispatcher),
-                processorDispatcher = dispatcher,
-                ioDispatcher = dispatcher,
-            ),
+        activeEngine?.shutdown()
+        val engine = OrchestratorEngine(
+            appContext = context.applicationContext,
+            scope = CoroutineScope(SupervisorJob() + dispatcher),
+            coordinatorFactory = coordinatorFactory,
+            storageFactory = storageFactory,
+            isWalletConnected = isWalletConnected,
+            awaitWalletActivityBound = awaitWalletActivityBound,
+            processorDispatcher = dispatcher,
+            ioDispatcher = dispatcher,
+            skipListenerProvider = { skipListener },
         )
+        if (autoStart) engine.startProcessor()
+        activeEngine = engine
+        return engine
     }
 
-    @Test
-    fun autoCaptureJob_defaultsManualLegToNull() {
-        val job = AutoCaptureJob(
-            mediaHash = "hash1",
-            mediaUri = android.net.Uri.parse("content://test/1"),
-        )
-        assertNull(job.manualLeg)
-    }
+    private fun OrchestratorEngine.offer(
+        mediaHash: String,
+        manualLeg: LpManualLeg? = null,
+        onComplete: ((Boolean) -> Unit)? = null,
+    ) = offerDirect(Uri.parse("content://test/$mediaHash"), mediaHash, manualLeg, onComplete)
 
     @Test
-    fun enqueue_whenLocationMasterOff_doesNotQueue() {
+    fun offerDirect_manualLeg_whenAutoCaptureModeOff_stillQueuesBeforeProcessorStarts() = runTest {
         primeLpActiveEnabled()
-        primeLocationMasterOff()
-        FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFFCHAIN
-
-        AutoCaptureLocationAttestationOrchestrator.setEnqueueInterceptorForTests(null)
-        try {
-            AutoCaptureLocationAttestationOrchestrator.enqueue(
-                context,
-                android.net.Uri.parse("content://test/1"),
-                "hash1",
-            )
-
-            assertEquals(0, AutoCaptureLocationAttestationOrchestrator.pendingCountForTests())
-        } finally {
-            AutoCaptureLocationAttestationOrchestrator.resetForTests()
-            AutoCaptureLocationAttestationOrchestrator.setEnqueueInterceptorForTests(enqueueNoOpForTests)
-        }
-    }
-
-    @Test
-    fun enqueueManual_whenLocationMasterOff_doesNotQueue() {
-        primeLpActiveEnabled()
-        primeLocationMasterOff()
         FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFF
 
-        AutoCaptureLocationAttestationOrchestrator.setEnqueueInterceptorForTests(null)
-        try {
-            AutoCaptureLocationAttestationOrchestrator.enqueueManual(
-                context,
-                android.net.Uri.parse("content://test/1"),
-                "hash1",
-                LpManualLeg.OFFCHAIN,
-            )
-
-            assertEquals(0, AutoCaptureLocationAttestationOrchestrator.pendingCountForTests())
-        } finally {
-            AutoCaptureLocationAttestationOrchestrator.resetForTests()
-            AutoCaptureLocationAttestationOrchestrator.setEnqueueInterceptorForTests(enqueueNoOpForTests)
-        }
-    }
-
-    @Test
-    fun offer_whenLocationMasterOff_doesNotQueue() = runTest {
-        primeLpActiveEnabled()
-        primeLocationMasterOff()
-        FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFFCHAIN
-
-        val handle = createOrchestratorHandle(
+        val engine = createEngine(
             coordinatorFactory = { _, _ -> mock() },
             autoStart = false,
         )
-        handle.offerForTests(
-            context = context,
-            mediaHash = "hash1",
-        )
+        engine.offer("hash1", manualLeg = LpManualLeg.OFFCHAIN)
 
-        assertEquals(0, handle.pendingCountForTests())
-    }
-
-    @Test
-    fun processJob_whenLocationMasterOff_softSkips() = runTest {
-        primeLpActiveEnabled()
-        primeLocationMasterOff()
-        FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFFCHAIN
-        val coordinator = mock<LocationProtocolAttestationCoordinator>()
-        val storage = OrchestratorTestStorage()
-        storage.seedProof("hash1")
-
-        val handle = createOrchestratorHandle(
-            coordinatorFactory = { _, _ -> coordinator },
-            storageFactory = { storage },
-        )
-        handle.enqueueTestJob("hash1")
-        advanceUntilIdle()
-
-        verify(coordinator, never()).attestOffchain(any(), any(), any(), any())
-        verify(coordinator, never()).attestOnchain(any(), any(), any(), any(), any())
-    }
-
-    @Test
-    fun enqueue_whenLpDisabled_doesNotQueue() {
-        FeatureFlags.lpEnabled = false
-        FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFFCHAIN
-
-        AutoCaptureLocationAttestationOrchestrator.enqueue(
-            context,
-            android.net.Uri.parse("content://test/1"),
-            "hash1",
-        )
-
-        assertEquals(0, AutoCaptureLocationAttestationOrchestrator.pendingCountForTests())
-    }
-
-    @Test
-    fun enqueue_whenModeOff_doesNotQueue() {
-        primeLpActiveEnabled()
-        FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFF
-
-        AutoCaptureLocationAttestationOrchestrator.enqueue(
-            context,
-            android.net.Uri.parse("content://test/1"),
-            "hash1",
-        )
-
-        assertEquals(0, AutoCaptureLocationAttestationOrchestrator.pendingCountForTests())
-    }
-
-    @Test
-    fun processor_waitsForProofExistsBeforeCoordinator() = runTest {
-        primeLpActiveEnabled()
-        FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFFCHAIN
-        val coordinator = mock<LocationProtocolAttestationCoordinator>()
-        val storage = mock<StorageProvider>()
-        whenever(storage.proofExists("hash1")).thenReturn(false)
-
-        val handle = createOrchestratorHandle(
-            coordinatorFactory = { _, _ -> coordinator },
-            proofExistsDelayMs = mapOf("hash1" to 50L),
-            storageFactory = { storage },
-        )
-        handle.enqueueTestJob("hash1")
-        advanceTimeBy(51)
-        verify(coordinator, never()).attestOffchain(any(), any(), any(), any())
-    }
-
-    @Test
-    fun enqueueManual_whenLpDisabled_doesNotQueue() {
-        FeatureFlags.lpEnabled = false
-        FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFF
-
-        AutoCaptureLocationAttestationOrchestrator.enqueueManual(
-            context,
-            android.net.Uri.parse("content://test/1"),
-            "hash1",
-            LpManualLeg.OFFCHAIN,
-        )
-
-        assertEquals(0, AutoCaptureLocationAttestationOrchestrator.pendingCountForTests())
-    }
-
-    @Test
-    fun offerManual_whenAutoCaptureModeOff_stillQueuesBeforeProcessorStarts() = runTest {
-        primeLpActiveEnabled()
-        FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFF
-
-        val handle = createOrchestratorHandle(
-            coordinatorFactory = { _, _ -> mock() },
-            autoStart = false,
-        )
-        handle.offerManualForTests(
-            mediaHash = "hash1",
-            leg = LpManualLeg.OFFCHAIN,
-        )
-
-        assertEquals(1, handle.pendingCountForTests())
+        assertEquals(1, engine.pendingCount())
     }
 
     @Test
     fun enqueueManual_whenLpEnabled_doesNotCrashWithRegisteredScope() {
-        primeLpActiveEnabled()
-        FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFF
-
         AutoCaptureLocationAttestationOrchestrator.setEnqueueInterceptorForTests(null)
-        try {
-            AutoCaptureLocationAttestationOrchestrator.enqueueManual(
-                context,
-                android.net.Uri.parse("content://test/1"),
-                "hash1",
-                LpManualLeg.OFFCHAIN,
-            )
-        } finally {
-            AutoCaptureLocationAttestationOrchestrator.resetForTests()
-            AutoCaptureLocationAttestationOrchestrator.setEnqueueInterceptorForTests(enqueueNoOpForTests)
-        }
-    }
-
-    @Test
-    fun enqueueTestJob_withManualLeg_preservesLegOnQueuedJob() = runTest {
         primeLpActiveEnabled()
         FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFF
-        val coordinator = mock<LocationProtocolAttestationCoordinator>()
-        val storage = OrchestratorTestStorage()
-        storage.seedProof("hash1")
-        whenever(coordinator.attestOffchain(any(), any(), any(), any()))
-            .thenReturn(Result.success(mock<LocationProtocolAttestationResult>()))
 
-        val handle = createOrchestratorHandle(
-            coordinatorFactory = { _, _ -> coordinator },
-            storageFactory = { storage },
+        AutoCaptureLocationAttestationOrchestrator.enqueueManual(
+            context,
+            Uri.parse("content://test/1"),
+            "hash1",
+            LpManualLeg.OFFCHAIN,
+            onComplete = {},
         )
-        handle.enqueueTestJob("hash1", manualLeg = LpManualLeg.OFFCHAIN)
-        advanceUntilIdle()
-
-        verify(coordinator).attestOffchain(eq("hash1"), any(), any(), any())
-        verify(coordinator, never()).attestOnchain(any(), any(), any(), any(), any())
     }
 
     @Test
@@ -345,36 +160,61 @@ class AutoCaptureLocationAttestationOrchestratorTest {
         val storage = OrchestratorTestStorage()
         storage.seedProof("hash1")
 
-        val handle = createOrchestratorHandle(
+        val engine = createEngine(
             coordinatorFactory = { _, _ -> coordinator },
             storageFactory = { storage },
         )
-        handle.enqueueTestJob("hash1", manualLeg = null)
+        engine.offer("hash1", manualLeg = null)
         advanceUntilIdle()
 
         verify(coordinator, never()).attestOffchain(any(), any(), any(), any())
     }
 
     @Test
-    fun manualOffchainJob_walletUnavailable_marksOffchainSkippedOnly() = runTest {
+    fun manualOffchainJob_walletUnavailable_doesNotAttest() = runTest {
         primeLpActiveEnabled()
         FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFF
         val coordinator = mock<LocationProtocolAttestationCoordinator>()
         val storage = OrchestratorTestStorage()
         storage.seedProof("hash1")
+        val reports = mutableListOf<Boolean>()
 
-        val handle = createOrchestratorHandle(
+        val engine = createEngine(
             coordinatorFactory = { _, _ -> coordinator },
             storageFactory = { storage },
-            testGuards = OrchestratorTestGuards(walletConnected = false),
+            isWalletConnected = { false },
         )
-        handle.enqueueTestJob("hash1", manualLeg = LpManualLeg.OFFCHAIN)
+        engine.offer("hash1", manualLeg = LpManualLeg.OFFCHAIN, onComplete = { reports += it })
         advanceUntilIdle()
 
         val state = AutoCaptureLpStateRegistry.getState("hash1")
-        assertEquals(LpRunState.SKIPPED, state.offchain)
+        assertEquals(LpRunState.IDLE, state.offchain)
         assertEquals(LpRunState.IDLE, state.onchain)
         verify(coordinator, never()).attestOffchain(any(), any(), any(), any())
+        assertEquals(listOf(false), reports)
+    }
+
+    @Test
+    fun autoCaptureJob_walletUnavailable_notifiesAutoWalletReason() = runTest {
+        primeLpActiveEnabled()
+        FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.BOTH
+        val coordinator = mock<LocationProtocolAttestationCoordinator>()
+        val storage = OrchestratorTestStorage()
+        storage.seedProof("hash1")
+        val skipReasons = mutableListOf<AutoCaptureSkipReason>()
+
+        val engine = createEngine(
+            coordinatorFactory = { _, _ -> coordinator },
+            storageFactory = { storage },
+            isWalletConnected = { false },
+            skipListener = { skipReasons.add(it) },
+        )
+        engine.offer("hash1")
+        advanceUntilIdle()
+
+        verify(coordinator, never()).attestOffchain(any(), any(), any(), any())
+        verify(coordinator, never()).attestOnchain(any(), any(), any(), any(), any(), any())
+        assertEquals(listOf(AutoCaptureSkipReason.AUTO_CAPTURE_WALLET_UNAVAILABLE), skipReasons)
     }
 
     @Test
@@ -385,20 +225,20 @@ class AutoCaptureLocationAttestationOrchestratorTest {
         val storage = OrchestratorTestStorage()
         storage.seedProof("hash1", latitude = 0.0, longitude = 0.0)
         val skipReasons = mutableListOf<AutoCaptureSkipReason>()
-        AutoCaptureLocationAttestationOrchestrator.installSkipListener { skipReasons.add(it) }
 
-        val handle = createOrchestratorHandle(
+        val engine = createEngine(
             coordinatorFactory = { _, _ -> coordinator },
             storageFactory = { storage },
+            skipListener = { skipReasons.add(it) },
         )
-        handle.enqueueTestJob("hash1")
+        engine.offer("hash1")
         advanceUntilIdle()
 
         val state = AutoCaptureLpStateRegistry.getState("hash1")
-        assertEquals(LpRunState.SKIPPED, state.offchain)
-        assertEquals(LpRunState.SKIPPED, state.onchain)
+        assertEquals(LpRunState.IDLE, state.offchain)
+        assertEquals(LpRunState.IDLE, state.onchain)
         verify(coordinator, never()).attestOffchain(any(), any(), any(), any())
-        verify(coordinator, never()).attestOnchain(any(), any(), any(), any(), any())
+        verify(coordinator, never()).attestOnchain(any(), any(), any(), any(), any(), any())
         assertEquals(listOf(AutoCaptureSkipReason.LOCATION_UNAVAILABLE), skipReasons)
     }
 
@@ -412,11 +252,11 @@ class AutoCaptureLocationAttestationOrchestratorTest {
         val storage = OrchestratorTestStorage()
         storage.seedProof("hash1", latitude = 0.0, longitude = 30.0)
 
-        val handle = createOrchestratorHandle(
+        val engine = createEngine(
             coordinatorFactory = { _, _ -> coordinator },
             storageFactory = { storage },
         )
-        handle.enqueueTestJob("hash1")
+        engine.offer("hash1")
         advanceUntilIdle()
 
         assertEquals(LpRunState.SUCCEEDED, AutoCaptureLpStateRegistry.getState("hash1").offchain)
@@ -430,121 +270,307 @@ class AutoCaptureLocationAttestationOrchestratorTest {
         val coordinator = mock<LocationProtocolAttestationCoordinator>()
         val storage = OrchestratorTestStorage()
         storage.seedProof("hash1")
-        whenever(coordinator.attestOnchain(any(), any(), any(), any(), any()))
-            .thenReturn(Result.success(mock()))
+        whenever(coordinator.attestOnchain(any(), any(), any(), any(), any(), any())).thenAnswer {
+            storage.seedArtifactIdentifier("hash1", "hash1${LocationProtocolArtifactStore.ONCHAIN_SUFFIX}")
+            Result.success(mock<LocationProtocolAttestationResult>())
+        }
 
-        var bound = false
-        val handle = createOrchestratorHandle(
+        val engine = createEngine(
             coordinatorFactory = { _, _ -> coordinator },
             storageFactory = { storage },
-            testGuards = OrchestratorTestGuards(
-                walletActivityBoundProvider = { bound },
-            ),
+            awaitWalletActivityBound = { true },
         )
-        handle.enqueueTestJob("hash1", manualLeg = LpManualLeg.ONCHAIN)
-
-        advanceTimeBy(50)
-        var state = AutoCaptureLpStateRegistry.getState("hash1")
-        assertEquals(LpRunState.IDLE, state.onchain)
-        verify(coordinator, never()).attestOnchain(any(), any(), any(), any(), any())
-
-        bound = true
+        engine.offer("hash1", manualLeg = LpManualLeg.ONCHAIN)
         advanceUntilIdle()
 
-        state = AutoCaptureLpStateRegistry.getState("hash1")
-        assertEquals(LpRunState.SUCCEEDED, state.onchain)
-        verify(coordinator).attestOnchain(eq("hash1"), any(), any(), any(), any())
+        assertEquals(LpRunState.SUCCEEDED, AutoCaptureLpStateRegistry.getState("hash1").onchain)
+        verify(coordinator).attestOnchain(eq("hash1"), any(), any(), any(), any(), any())
     }
 
     @Test
-    fun manualOnchainJob_walletActivityTimeout_marksSkippedAndDoesNotAttest() = runTest {
+    fun manualOnchainJob_walletActivityTimeout_doesNotAttest() = runTest {
         primeLpActiveEnabled()
         FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFF
         val coordinator = mock<LocationProtocolAttestationCoordinator>()
         val storage = OrchestratorTestStorage()
         storage.seedProof("hash1")
         val skipReasons = mutableListOf<AutoCaptureSkipReason>()
-        AutoCaptureLocationAttestationOrchestrator.installSkipListener { skipReasons.add(it) }
+        val reports = mutableListOf<Boolean>()
 
-        val handle = createOrchestratorHandle(
+        val engine = createEngine(
             coordinatorFactory = { _, _ -> coordinator },
             storageFactory = { storage },
-            testGuards = OrchestratorTestGuards(walletActivityBoundProvider = { false }),
-            walletActivityWaitTimeoutMs = 300L,
+            awaitWalletActivityBound = { false },
+            skipListener = { skipReasons.add(it) },
         )
-        handle.enqueueTestJob("hash1", manualLeg = LpManualLeg.ONCHAIN)
+        engine.offer("hash1", manualLeg = LpManualLeg.ONCHAIN, onComplete = { reports += it })
         advanceUntilIdle()
 
         val state = AutoCaptureLpStateRegistry.getState("hash1")
-        assertEquals(LpRunState.SKIPPED, state.onchain)
-        verify(coordinator, never()).attestOnchain(any(), any(), any(), any(), any())
+        assertEquals(LpRunState.IDLE, state.onchain)
+        verify(coordinator, never()).attestOnchain(any(), any(), any(), any(), any(), any())
         assertEquals(listOf(AutoCaptureSkipReason.NO_FOREGROUND_ACTIVITY), skipReasons)
+        assertEquals(listOf(false), reports)
     }
 
     @Test
-    fun fifo_processesAutoCaptureThenManualJobsInArrivalOrder() = runTest {
+    fun manualJob_reportsOutcomeOncePerLeg() = runTest {
         primeLpActiveEnabled()
-        FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFFCHAIN
-        val callOrder = mutableListOf<String>()
+        FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFF
         val coordinator = mock<LocationProtocolAttestationCoordinator>()
-        whenever(coordinator.attestOffchain(any(), any(), any(), any())).thenAnswer {
-            callOrder.add(it.getArgument(0))
+        val success = Result.success(mock<LocationProtocolAttestationResult>())
+        val failure = Result.failure<LocationProtocolAttestationResult>(IllegalStateException("failed"))
+        // Every hash stubs both legs, the other leg with the opposite result, so a job sent to the
+        // wrong leg reports the wrong value instead of passing on an unstubbed mock.
+        whenever(coordinator.attestOffchain(eq("offchainOk"), any(), any(), any())).thenReturn(success)
+        whenever(coordinator.attestOnchain(eq("offchainOk"), any(), any(), any(), any(), any())).thenReturn(failure)
+        whenever(coordinator.attestOnchain(eq("onchainOk"), any(), any(), any(), any(), any())).thenReturn(success)
+        whenever(coordinator.attestOffchain(eq("onchainOk"), any(), any(), any())).thenReturn(failure)
+        whenever(coordinator.attestOffchain(eq("offchainFail"), any(), any(), any())).thenReturn(failure)
+        whenever(coordinator.attestOnchain(eq("offchainFail"), any(), any(), any(), any(), any())).thenReturn(success)
+        whenever(coordinator.attestOnchain(eq("onchainFail"), any(), any(), any(), any(), any())).thenReturn(failure)
+        whenever(coordinator.attestOffchain(eq("onchainFail"), any(), any(), any())).thenReturn(success)
+        val storage = OrchestratorTestStorage()
+        listOf("offchainOk", "onchainOk", "offchainFail", "onchainFail").forEach { storage.seedProof(it) }
+        val reports = HashMap<String, MutableList<Boolean>>()
+        fun reportTo(hash: String): (Boolean) -> Unit = { reports.getOrPut(hash) { mutableListOf() } += it }
+
+        val engine = createEngine(
+            coordinatorFactory = { _, _ -> coordinator },
+            storageFactory = { storage },
+        )
+        engine.offer("offchainOk", manualLeg = LpManualLeg.OFFCHAIN, onComplete = reportTo("offchainOk"))
+        engine.offer("onchainOk", manualLeg = LpManualLeg.ONCHAIN, onComplete = reportTo("onchainOk"))
+        engine.offer("offchainFail", manualLeg = LpManualLeg.OFFCHAIN, onComplete = reportTo("offchainFail"))
+        engine.offer("onchainFail", manualLeg = LpManualLeg.ONCHAIN, onComplete = reportTo("onchainFail"))
+        advanceUntilIdle()
+
+        assertEquals("offchain ok", listOf(true), reports["offchainOk"])
+        assertEquals("onchain ok", listOf(true), reports["onchainOk"])
+        assertEquals("offchain fail", listOf(false), reports["offchainFail"])
+        assertEquals("onchain fail", listOf(false), reports["onchainFail"])
+    }
+
+    @Test
+    fun manualJob_existingArtifact_reportsOkWithoutAttesting() = runTest {
+        primeLpActiveEnabled()
+        FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFF
+        val coordinator = mock<LocationProtocolAttestationCoordinator>()
+        val storage = OrchestratorTestStorage()
+        storage.seedProof("offchain")
+        storage.seedArtifactIdentifier("offchain", "offchain${LocationProtocolArtifactStore.OFFCHAIN_SUFFIX}")
+        storage.seedProof("confirmed")
+        storage.seedArtifactIdentifier("confirmed", "confirmed${LocationProtocolArtifactStore.ONCHAIN_SUFFIX}")
+        val reports = mutableListOf<Boolean>()
+
+        val engine = createEngine(
+            coordinatorFactory = { _, _ -> coordinator },
+            storageFactory = { storage },
+        )
+        engine.offer("offchain", manualLeg = LpManualLeg.OFFCHAIN, onComplete = { reports += it })
+        engine.offer("confirmed", manualLeg = LpManualLeg.ONCHAIN, onComplete = { reports += it })
+        advanceUntilIdle()
+
+        assertEquals(listOf(true, true), reports)
+        verify(coordinator, never()).attestOffchain(any(), any(), any(), any())
+        verify(coordinator, never()).attestOnchain(any(), any(), any(), any(), any(), any())
+    }
+
+    private class PendingOnlyLegRun(
+        val coordinator: LocationProtocolAttestationCoordinator,
+        val reports: List<Boolean>,
+    )
+
+    /** Runs a manual onchain job for a proof holding only a pending record whose re-check finds [recheck]. */
+    private suspend fun TestScope.runPendingOnlyOnchainLeg(recheck: PendingOnchainRecheckOutcome): PendingOnlyLegRun {
+        primeLpActiveEnabled()
+        FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFF
+        val coordinator = mock<LocationProtocolAttestationCoordinator>()
+        whenever(coordinator.recheckPendingOnchain("hash1")).thenReturn(recheck)
+        whenever(coordinator.attestOnchain(any(), any(), any(), any(), any(), any()))
+            .thenReturn(Result.success(mock()))
+        val storage = OrchestratorTestStorage().apply {
+            seedProof("hash1")
+            seedArtifactIdentifier("hash1", "hash1${LocationProtocolArtifactStore.ONCHAIN_PENDING_SUFFIX}")
+        }
+        val reports = mutableListOf<Boolean>()
+
+        val engine = createEngine(
+            coordinatorFactory = { _, _ -> coordinator },
+            storageFactory = { storage },
+        )
+        engine.offer("hash1", manualLeg = LpManualLeg.ONCHAIN, onComplete = { reports += it })
+        advanceUntilIdle()
+        return PendingOnlyLegRun(coordinator, reports)
+    }
+
+    @Test
+    fun onchainLeg_pendingOnly_confirmed_succeeds_withoutAttesting() = runTest {
+        val run = runPendingOnlyOnchainLeg(PendingOnchainRecheckOutcome.Confirmed(mock()))
+
+        assertEquals(LpRunState.SUCCEEDED, AutoCaptureLpStateRegistry.getState("hash1").onchain)
+        verify(run.coordinator, never()).attestOnchain(any(), any(), any(), any(), any(), any())
+        assertEquals(listOf(true), run.reports)
+    }
+
+    @Test
+    fun onchainLeg_pendingOnly_resubmit_attestsAsFresh() = runTest {
+        val run = runPendingOnlyOnchainLeg(PendingOnchainRecheckOutcome.Resubmit)
+
+        verify(run.coordinator).attestOnchain(eq("hash1"), any(), any(), any(), any(), any())
+    }
+
+    @Test
+    fun onchainLeg_pendingOnly_stillPending_skips() = runTest {
+        val run = runPendingOnlyOnchainLeg(PendingOnchainRecheckOutcome.StillPending)
+
+        assertEquals(LpRunState.SKIPPED, AutoCaptureLpStateRegistry.getState("hash1").onchain)
+        verify(run.coordinator, never()).attestOnchain(any(), any(), any(), any(), any(), any())
+    }
+
+    @Test
+    fun onchainLeg_confirmationFailureCallback_marksLegFailed() = runTest {
+        primeLpActiveEnabled()
+        FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFF
+        val coordinator = mock<LocationProtocolAttestationCoordinator>()
+        val storage = OrchestratorTestStorage()
+        storage.seedProof("hash1")
+        whenever(coordinator.attestOnchain(any(), any(), any(), any(), any(), any())).thenAnswer {
+            // Submit saved the pending record; the confirmation outcome arrives later.
+            storage.seedArtifactIdentifier("hash1", "hash1${LocationProtocolArtifactStore.ONCHAIN_PENDING_SUFFIX}")
             Result.success(mock<LocationProtocolAttestationResult>())
         }
-        val storage = OrchestratorTestStorage()
-        storage.seedProof("hashA")
-        storage.seedProof("hashB")
-        storage.seedProof("hashC")
 
-        val handle = createOrchestratorHandle(
+        val engine = createEngine(
             coordinatorFactory = { _, _ -> coordinator },
             storageFactory = { storage },
         )
-        handle.enqueueTestJob("hashA", manualLeg = null)
-        handle.enqueueTestJob("hashB", manualLeg = LpManualLeg.OFFCHAIN)
-        handle.enqueueTestJob("hashC", manualLeg = LpManualLeg.OFFCHAIN)
+        engine.offer("hash1", manualLeg = LpManualLeg.ONCHAIN)
         advanceUntilIdle()
+        assertEquals(LpRunState.RUNNING, AutoCaptureLpStateRegistry.getState("hash1").onchain)
 
-        assertEquals(listOf("hashA", "hashB", "hashC"), callOrder)
+        val onchainFailed = argumentCaptor<(String) -> Unit>()
+        verify(coordinator).attestOnchain(
+            mediaHash = any(),
+            mediaUri = any(),
+            context = any(),
+            memo = any(),
+            onchainConfirmed = any(),
+            onchainFailed = onchainFailed.capture(),
+        )
+        onchainFailed.firstValue.invoke("hash1")
+
+        assertEquals(LpRunState.FAILED, AutoCaptureLpStateRegistry.getState("hash1").onchain)
+    }
+
+    private class NotReadyRow(
+        val name: String,
+        val leg: LpManualLeg,
+        val seed: (OrchestratorTestStorage) -> Unit,
+        val afterSeed: () -> Unit = {},
+    )
+
+    @Test
+    fun manualJob_notReady_reportsFailedOnce() = runTest {
+        val rows = listOf(
+            NotReadyRow("locationUnavailable", LpManualLeg.ONCHAIN, { it.seedProof("hash1", latitude = 0.0, longitude = 0.0) }),
+            NotReadyRow("proofSidecarTimeout", LpManualLeg.OFFCHAIN, { }),
+            NotReadyRow("lpDisabledAtRun", LpManualLeg.OFFCHAIN, { it.seedProof("hash1") }, ::primeLocationMasterOff),
+        )
+        rows.forEach { row ->
+            primeLpActiveEnabled()
+            FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFF
+            val coordinator = mock<LocationProtocolAttestationCoordinator>()
+            val storage = OrchestratorTestStorage().also(row.seed)
+            row.afterSeed()
+            val reports = mutableListOf<Boolean>()
+
+            val engine = createEngine(
+                coordinatorFactory = { _, _ -> coordinator },
+                storageFactory = { storage },
+            )
+            engine.offer("hash1", manualLeg = row.leg, onComplete = { reports += it })
+            advanceUntilIdle()
+
+            assertEquals(row.name, listOf(false), reports)
+            verify(coordinator, never()).attestOffchain(any(), any(), any(), any())
+            verify(coordinator, never()).attestOnchain(any(), any(), any(), any(), any(), any())
+        }
     }
 
     @Test
-    fun fifo_manualOnchainJobs_deferredUntilBindThenAllAttest() = runTest {
+    fun manualJob_thrownJob_reportsFailedOnceAndProcessorSurvives() = runTest {
+        primeLpActiveEnabled()
+        FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFF
+        val coordinator = mock<LocationProtocolAttestationCoordinator>()
+        whenever(coordinator.attestOffchain(any(), any(), any(), any()))
+            .thenReturn(Result.success(mock<LocationProtocolAttestationResult>()))
+        val storage = OrchestratorTestStorage()
+        storage.seedProof("hash1")
+        storage.seedProof("hash2")
+        var storageCalls = 0
+        val first = mutableListOf<Boolean>()
+        val second = mutableListOf<Boolean>()
+
+        val engine = createEngine(
+            coordinatorFactory = { _, _ -> coordinator },
+            storageFactory = {
+                if (storageCalls++ == 0) throw IllegalStateException("storage unavailable")
+                storage
+            },
+        )
+        engine.offer("hash1", manualLeg = LpManualLeg.OFFCHAIN, onComplete = { first += it })
+        engine.offer("hash2", manualLeg = LpManualLeg.OFFCHAIN, onComplete = { second += it })
+        advanceUntilIdle()
+
+        assertEquals(listOf(false), first)
+        assertEquals(listOf(true), second)
+    }
+
+    @Test
+    fun enqueueManual_lpDisabled_reportsFailedAtOnce() {
+        AutoCaptureLocationAttestationOrchestrator.setEnqueueInterceptorForTests(null)
+        FeatureFlags.lpEnabled = false
+        FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFF
+        val reports = mutableListOf<Boolean>()
+
+        AutoCaptureLocationAttestationOrchestrator.enqueueManual(
+            context,
+            Uri.parse("content://test/1"),
+            "hash1",
+            LpManualLeg.OFFCHAIN,
+            onComplete = { reports += it },
+        )
+
+        assertEquals(listOf(false), reports)
+        assertEquals(0, AutoCaptureLocationAttestationOrchestrator.pendingCountForTests())
+    }
+
+    @Test
+    fun autoCaptureJob_neverReports() = runTest {
         primeLpActiveEnabled()
         FeatureFlags.autoCaptureLpMode = AutoCaptureLpMode.OFFCHAIN
         val coordinator = mock<LocationProtocolAttestationCoordinator>()
-        whenever(coordinator.attestOffchain(any(), any(), any(), any()))
-            .thenReturn(Result.success(mock()))
-        whenever(coordinator.attestOnchain(any(), any(), any(), any(), any()))
-            .thenReturn(Result.success(mock()))
+        whenever(coordinator.attestOffchain(eq("ok"), any(), any(), any()))
+            .thenReturn(Result.success(mock<LocationProtocolAttestationResult>()))
+        whenever(coordinator.attestOffchain(eq("bad"), any(), any(), any()))
+            .thenReturn(Result.failure(IllegalStateException("offchain failed")))
         val storage = OrchestratorTestStorage()
-        storage.seedProof("hashA")
-        storage.seedProof("hashB")
-        storage.seedProof("hashC")
+        storage.seedProof("ok")
+        storage.seedProof("bad")
+        storage.seedProof("skipped", latitude = 0.0, longitude = 0.0)
+        val reports = mutableListOf<Boolean>()
 
-        var bound = true
-        val handle = createOrchestratorHandle(
+        val engine = createEngine(
             coordinatorFactory = { _, _ -> coordinator },
             storageFactory = { storage },
-            testGuards = OrchestratorTestGuards(walletActivityBoundProvider = { bound }),
         )
-        handle.enqueueTestJob("hashA", manualLeg = LpManualLeg.ONCHAIN)
-        bound = false
-        handle.enqueueTestJob("hashB", manualLeg = LpManualLeg.ONCHAIN)
-        handle.enqueueTestJob("hashC", manualLeg = LpManualLeg.ONCHAIN)
-
-        advanceTimeBy(50)
-        verify(coordinator, atMost(1)).attestOnchain(any(), any(), any(), any(), any())
-
-        bound = true
+        engine.offer("ok", manualLeg = null, onComplete = { reports += it })
+        engine.offer("bad", manualLeg = null, onComplete = { reports += it })
+        engine.offer("skipped", manualLeg = null, onComplete = { reports += it })
         advanceUntilIdle()
 
-        verify(coordinator, times(3)).attestOnchain(any(), any(), any(), any(), any())
-        assertEquals(LpRunState.SUCCEEDED, AutoCaptureLpStateRegistry.getState("hashB").onchain)
-        assertEquals(LpRunState.SUCCEEDED, AutoCaptureLpStateRegistry.getState("hashC").onchain)
-    }
-
-    companion object {
-        private val enqueueNoOpForTests: (Context, android.net.Uri, String) -> Unit = { _, _, _ -> }
+        assertEquals(emptyList<Boolean>(), reports)
+        verify(coordinator).attestOffchain(eq("ok"), any(), any(), any())
     }
 }

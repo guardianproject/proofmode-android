@@ -3,12 +3,13 @@ package org.witness.proofmode.lp
 import android.content.Context
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -46,104 +47,100 @@ class LpManualEnqueueSupportIntegrationTest {
         AutoCaptureLocationAttestationOrchestrator.resetForTests()
     }
 
-    @Test
-    fun resolveMediaHashForAttest_usesCanonicalCacheKey() {
-        val uri = Uri.parse("content://test/item/1")
-        val cache = hashMapOf<String, String?>(canonicalMediaUriKey(uri) to "hash1")
-        val hash = resolveMediaHashForAttest(
-            storage = OrchestratorTestStorage().apply { seedProof("hash1") },
-            contentResolver = ApplicationProvider.getApplicationContext<Context>().contentResolver,
-            uri = uri,
-            hashCache = cache,
-            proofExistsResolver = { _, _, _ -> null },
-        )
-        assertEquals("hash1", hash)
+    private class TapDones {
+        val calls = mutableListOf<Pair<Int, Int>>()
+        val onTapDone: (Int, Int) -> Unit = { succeeded, total -> calls += succeeded to total }
+    }
+
+    private fun completeEveryEnqueuedJobWith(
+        ok: (hash: String) -> Boolean,
+        intercepted: MutableList<String> = mutableListOf(),
+    ): MutableList<String> {
+        AutoCaptureLocationAttestationOrchestrator.setEnqueueInterceptorForTests { _, _, hash, callback ->
+            intercepted += hash
+            callback!!.invoke(ok(hash))
+        }
+        return intercepted
     }
 
     @Test
-    fun enqueueManualAttestForShareProof_enqueuesAllUrisNotAlreadyAttested() = runTest {
+    fun loop_allAlreadyDone_callsOnTapDoneWithoutEnqueue() = runTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val storage = OrchestratorTestStorage()
-        storage.seedProof("hash1")
-        storage.seedProof("hash2")
-        val uris = listOf(
-            Uri.parse("content://test/1"),
-            Uri.parse("content://test/2"),
-        )
-        val cache = hashMapOf<String, String?>(
-            canonicalMediaUriKey(uris[0]) to "hash1",
-            canonicalMediaUriKey(uris[1]) to "hash2",
-        )
+        storage.seedArtifactIdentifier("hash1", "hash1${LocationProtocolArtifactStore.ONCHAIN_SUFFIX}")
+        storage.seedArtifactIdentifier("hash2", "hash2${LocationProtocolArtifactStore.ONCHAIN_SUFFIX}")
+        val items = listOf(Uri.parse("content://test/1") to "hash1", Uri.parse("content://test/2") to "hash2")
+        val intercepted = completeEveryEnqueuedJobWith(ok = { true })
+        val tap = TapDones()
 
-        val result = enqueueManualAttestForShareProof(
+        enqueueManualAttestForShareProof(
             appContext = context,
-            uris = uris,
-            leg = LpManualLeg.OFFCHAIN,
-            hashCache = cache,
+            items = items,
+            leg = LpManualLeg.ONCHAIN,
             storage = storage,
-            proofExistsResolver = { _, _, _ -> null },
+            onTapDone = tap.onTapDone,
         )
 
-        assertEquals(2, result.enqueuedCount)
-        assertEquals(0, result.hashMissCount)
+        assertEquals(emptyList<String>(), intercepted)
+        assertEquals(listOf(2 to 2), tap.calls)
     }
 
     @Test
-    fun enqueueManualAttestForShareProof_skipsUriWithExistingArtifact() = runTest {
+    fun loop_tapDoneWaitsForEveryEnqueuedJobCallback() = runTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val storage = OrchestratorTestStorage()
-        storage.seedProof("hash1")
-        storage.seedArtifactIdentifier("hash1", "hash1${LocationProtocolArtifactStore.OFFCHAIN_SUFFIX}")
-        val uris = listOf(Uri.parse("content://test/1"))
-        val cache = hashMapOf<String, String?>(canonicalMediaUriKey(uris[0]) to "hash1")
+        val items = listOf(Uri.parse("content://test/1") to "hash1", Uri.parse("content://test/2") to "hash2")
+        val callbacks = java.util.concurrent.CopyOnWriteArrayList<(Boolean) -> Unit>()
+        val bothEnqueued = CompletableDeferred<Unit>()
+        AutoCaptureLocationAttestationOrchestrator.setEnqueueInterceptorForTests { _, _, _, callback ->
+            callbacks += callback!!
+            if (callbacks.size == items.size) bothEnqueued.complete(Unit)
+        }
+        val tap = TapDones()
 
-        val result = enqueueManualAttestForShareProof(
-            appContext = context,
-            uris = uris,
-            leg = LpManualLeg.OFFCHAIN,
-            hashCache = cache,
-            storage = storage,
-            proofExistsResolver = { _, _, _ -> null },
-        )
-
-        assertEquals(0, result.enqueuedCount)
-        assertEquals(0, AutoCaptureLocationAttestationOrchestrator.pendingCountForTests())
-    }
-
-    @Test
-    fun enqueueLoop_completesOnApplicationScopeAfterActivityScopeCancelled() = runTest {
-        LocationProtocolPlugin.registerApplicationScope(
-            CoroutineScope(SupervisorJob() + Dispatchers.Unconfined),
-        )
-        val activityScopeJob = Job()
-        val activityScope = CoroutineScope(activityScopeJob + Dispatchers.Unconfined)
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        val storage = OrchestratorTestStorage()
-        storage.seedProof("hash1")
-        storage.seedProof("hash2")
-        val uris = listOf(Uri.parse("content://test/1"), Uri.parse("content://test/2"))
-        val cache = hashMapOf<String, String?>(
-            canonicalMediaUriKey(uris[0]) to "hash1",
-            canonicalMediaUriKey(uris[1]) to "hash2",
-        )
-
-        activityScope.launch { delay(Long.MAX_VALUE) }
-
-        var result: ManualAttestEnqueueResult? = null
-        val appScopeWork = LocationProtocolPlugin.requireApplicationScope().launch {
-            result = enqueueManualAttestForShareProof(
+        val loop = LocationProtocolPlugin.requireApplicationScope().launch {
+            enqueueManualAttestForShareProof(
                 appContext = context,
-                uris = uris,
+                items = items,
                 leg = LpManualLeg.OFFCHAIN,
-                hashCache = cache,
                 storage = storage,
-                proofExistsResolver = { _, _, _ -> null },
+                onTapDone = tap.onTapDone,
             )
         }
+        // The loop runs on Dispatchers.IO in real time, so the wait is real, not virtual.
+        withContext(Dispatchers.Default) { withTimeout(5_000) { bothEnqueued.await() } }
+        callbacks[0](true)
+        assertEquals(emptyList<Pair<Int, Int>>(), tap.calls)
+        callbacks[1](true)
+        loop.join()
 
-        activityScopeJob.cancel()
-        appScopeWork.join()
+        assertEquals(listOf(2 to 2), tap.calls)
+    }
 
-        assertEquals(2, result!!.enqueuedCount)
+    @Test
+    fun loop_reportsExactlyOncePerUri_acrossDuplicateExistingAndNew() = runTest {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val storage = OrchestratorTestStorage()
+        storage.seedArtifactIdentifier("hash2", "hash2${LocationProtocolArtifactStore.OFFCHAIN_SUFFIX}")
+        val items = listOf(
+            Uri.parse("content://test/1") to "hash1",
+            Uri.parse("content://test/1-copy") to "hash1",
+            Uri.parse("content://test/2") to "hash2",
+            Uri.parse("content://test/3") to "hash3",
+        )
+        val intercepted = completeEveryEnqueuedJobWith(ok = { it != "hash3" })
+        val tap = TapDones()
+
+        enqueueManualAttestForShareProof(
+            appContext = context,
+            items = items,
+            leg = LpManualLeg.OFFCHAIN,
+            storage = storage,
+            onTapDone = tap.onTapDone,
+        )
+
+        assertEquals(listOf("hash1", "hash1", "hash3"), intercepted)
+        // hash1 twice ok, hash2 already done ok, hash3 failed
+        assertEquals(listOf(3 to 4), tap.calls)
     }
 }

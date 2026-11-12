@@ -197,7 +197,6 @@ class ProofSetMembershipPolicyTest {
             "$hash.lp.offchain.json",
             "$hash.lp.onchain.json",
             "$hash.lp.onchain.pending.json",
-            "$hash.lp.json",
             "$hash.ipfs-cids.json",
             "$hash.ipfs-cids.late-1718820000000.json",
         )

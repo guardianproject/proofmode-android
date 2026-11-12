@@ -4,7 +4,9 @@ import org.witness.proofmode.plugins.lp.wallet.WalletSigningPlugin
 
 /**
  * Test-only reset for [WalletSigningPlugin] singleton state between Robolectric tests.
- * Uses reflection because [providerSelection] is lateinit with private set.
+ * Uses reflection because [providerSelection] is lateinit with private set. The sponsorship
+ * probe is stubbed to answer UNKNOWN without a request, because the sponsor toggle defaults
+ * on and a real project id in secrets.properties would otherwise reach the network.
  */
 object TestWalletStackReset {
 
@@ -22,5 +24,6 @@ object TestWalletStackReset {
             isAccessible = true
             set(WalletSigningPlugin, null)
         }
+        WalletSigningPlugin.sponsorshipProbe = { _, _ -> null }
     }
 }

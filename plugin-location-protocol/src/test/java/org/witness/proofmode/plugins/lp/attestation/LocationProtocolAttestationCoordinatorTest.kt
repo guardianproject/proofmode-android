@@ -11,12 +11,14 @@ import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.mockito.kotlin.any
+import org.mockito.kotlin.KArgumentCaptor
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
@@ -29,10 +31,7 @@ import org.witness.proofmode.plugins.ipfscid.CidSidecarReadiness
 import org.witness.proofmode.plugins.ipfscid.CidSidecarRefs
 import org.witness.proofmode.plugins.lp.LocationProtocolPlugin
 import org.witness.proofmode.service.ProofModeV1Constants
-import org.witness.proofmode.storage.StorageListener
 import org.witness.proofmode.storage.StorageProvider
-import java.io.InputStream
-import java.util.ArrayList
 import java.util.concurrent.atomic.AtomicInteger
 
 private class CountingReadiness(
@@ -56,7 +55,7 @@ private class CountingReadiness(
 @Config(sdk = [28])
 class LocationProtocolAttestationCoordinatorTest {
 
-    private lateinit var storageProvider: CoordinatorFakeStorageProvider
+    private lateinit var storageProvider: TempDirStorageProvider
     private lateinit var easManager: EASAttestationManager
     private lateinit var coordinator: LocationProtocolAttestationCoordinator
     private lateinit var contentResolver: ContentResolver
@@ -66,8 +65,12 @@ class LocationProtocolAttestationCoordinatorTest {
     @Before
     fun setUp() {
         LocationProtocolPlugin.registerApplicationScope(CoroutineScope(SupervisorJob() + Dispatchers.Unconfined))
-        storageProvider = CoordinatorFakeStorageProvider()
+        storageProvider = TempDirStorageProvider.inNewTempDir()
         easManager = mock()
+        // attestOnchain launches the background confirmation; an unstubbed outcome would be null.
+        easManager.stub {
+            onBlocking { confirmOnchainLocationAttestation(any()) } doReturn OnchainConfirmationOutcome.Failed(Exception("receipt poll timed out"))
+        }
         val defaultReadiness = CountingReadiness { null }
         coordinator = LocationProtocolAttestationCoordinator(
             storageProvider = storageProvider,
@@ -83,8 +86,21 @@ class LocationProtocolAttestationCoordinatorTest {
         whenever(contentResolver.getType(mediaUri)).thenReturn("image/jpeg")
     }
 
+    @After
+    fun tearDown() {
+        storageProvider.deleteRoot()
+    }
+
+    private fun seedProof(mediaHash: String, proofData: Map<String, String>) {
+        storageProvider.seed(
+            mediaHash,
+            mediaHash + ProofMode.PROOF_FILE_JSON_TAG,
+            JSONObject(proofData).toString(),
+        )
+    }
+
     private fun seedProof(mediaHash: String) {
-        storageProvider.markProofExists(
+        seedProof(
             mediaHash,
             mapOf(
                 ProofModeV1Constants.FILE_HASH_SHA_256 to mediaHash,
@@ -97,6 +113,37 @@ class LocationProtocolAttestationCoordinatorTest {
         )
     }
 
+    /** Stubs the offchain EAS call and returns the captor of the payload it receives. */
+    private fun stubOffchainResult(): KArgumentCaptor<LocationProtocolPayload> {
+        val payloadCaptor = argumentCaptor<LocationProtocolPayload>()
+        easManager.stub {
+            onBlocking { createOffchainLocationAttestation(payloadCaptor.capture()) } doReturn Result.success(
+                LocationProtocolAttestationResult(
+                    uid = "u", attesterAddress = "a", timestamp = 1L,
+                    offchainPayloadJson = "{}",
+                ),
+            )
+        }
+        return payloadCaptor
+    }
+
+    private fun stubOnchainSubmit(
+        submitResult: OnchainSubmitResult = OnchainSubmitResult(
+            txHash = "0x1", easAddress = "0xe", chainIdStr = "eip155:1",
+            rpcUrls = listOf("https://rpc"), submittedAt = 1L,
+            sponsorshipActive = false, onChainAttester = "0xa",
+        ),
+        pendingJson: String = """{"status":"pending_broadcast"}""",
+    ) {
+        easManager.stub {
+            onBlocking { submitOnchainLocationAttestation(any()) } doReturn Result.success(submitResult)
+            on { buildPendingAttestationResult(submitResult) } doReturn LocationProtocolAttestationResult(
+                uid = "", attesterAddress = "0xa", timestamp = 1L,
+                offchainPayloadJson = pendingJson,
+            )
+        }
+    }
+
     @Test
     fun `attestOffchain enriches recipePayload and mediaData from readiness refs`() = runBlocking {
         seedProof("h1")
@@ -104,15 +151,7 @@ class LocationProtocolAttestationCoordinatorTest {
             CidSidecarRefs(rootCid = "bafyRoot", mediaCid = "bafkMedia")
         }
         coordinator = LocationProtocolAttestationCoordinator(storageProvider, easManager, readiness)
-        val payloadCaptor = argumentCaptor<LocationProtocolPayload>()
-        easManager.stub {
-            onBlocking { createOffchainLocationAttestation(payloadCaptor.capture()) } doReturn Result.success(
-                LocationProtocolAttestationResult(
-                    uid = "u", schemaId = "s", attesterAddress = "a", timestamp = 1L,
-                    offchainPayloadJson = "{}", artifactPath = "",
-                ),
-            )
-        }
+        val payloadCaptor = stubOffchainResult()
         assertTrue(coordinator.attestOffchain("h1", mediaUri, context).isSuccess)
         assertEquals("bafyRoot", payloadCaptor.firstValue.recipePayload[0])
         assertEquals("bafkMedia", payloadCaptor.firstValue.mediaData[0])
@@ -122,47 +161,28 @@ class LocationProtocolAttestationCoordinatorTest {
     }
 
     @Test
-    fun `attestOffchain keeps baseline when readiness returns null`() = runBlocking {
-        seedProof("h2")
-        val readiness = CountingReadiness { null }
-        coordinator = LocationProtocolAttestationCoordinator(storageProvider, easManager, readiness)
-        val payloadCaptor = argumentCaptor<LocationProtocolPayload>()
-        easManager.stub {
-            onBlocking { createOffchainLocationAttestation(payloadCaptor.capture()) } doReturn Result.success(
-                LocationProtocolAttestationResult(
-                    uid = "u", schemaId = "s", attesterAddress = "a", timestamp = 1L,
-                    offchainPayloadJson = "{}", artifactPath = "",
-                ),
-            )
-        }
-        assertTrue(coordinator.attestOffchain("h2", mediaUri, context).isSuccess)
-        assertEquals("", payloadCaptor.firstValue.recipePayload[0])
-        assertEquals("h2", payloadCaptor.firstValue.mediaData[0])
-    }
+    fun `attestOffchain keeps baseline payload when readiness returns null or throws`() = runBlocking {
+        val rows = listOf<Pair<String, suspend () -> CidSidecarRefs?>>(
+            "null" to { null },
+            "throws" to { error("boom") },
+        )
+        for ((label, behavior) in rows) {
+            val hash = "hBaseline-$label"
+            seedProof(hash)
+            coordinator = LocationProtocolAttestationCoordinator(storageProvider, easManager, CountingReadiness(behavior))
+            val payloadCaptor = stubOffchainResult()
 
-    @Test
-    fun `attestOffchain keeps baseline when readiness throws non-cancellation`() = runBlocking {
-        seedProof("h3")
-        val readiness = CountingReadiness { error("boom") }
-        coordinator = LocationProtocolAttestationCoordinator(storageProvider, easManager, readiness)
-        val payloadCaptor = argumentCaptor<LocationProtocolPayload>()
-        easManager.stub {
-            onBlocking { createOffchainLocationAttestation(payloadCaptor.capture()) } doReturn Result.success(
-                LocationProtocolAttestationResult(
-                    uid = "u", schemaId = "s", attesterAddress = "a", timestamp = 1L,
-                    offchainPayloadJson = "{}", artifactPath = "",
-                ),
-            )
+            assertTrue(label, coordinator.attestOffchain(hash, mediaUri, context).isSuccess)
+
+            assertEquals(label, "", payloadCaptor.firstValue.recipePayload[0])
+            assertEquals(label, hash, payloadCaptor.firstValue.mediaData[0])
         }
-        assertTrue(coordinator.attestOffchain("h3", mediaUri, context).isSuccess)
-        assertEquals("", payloadCaptor.firstValue.recipePayload[0])
-        assertEquals("h3", payloadCaptor.firstValue.mediaData[0])
     }
 
     @Test
     fun `attestOffchain rejects invalid coordinates before readiness or EAS`() = runBlocking {
         val mediaHash = "invalid-offchain-location"
-        storageProvider.markProofExists(
+        seedProof(
             mediaHash,
             mapOf(
                 ProofModeV1Constants.LOCATION_LATITUDE to "0.0",
@@ -200,70 +220,31 @@ class LocationProtocolAttestationCoordinatorTest {
     }
 
     @Test
-    fun `BOTH sequential offchain then onchain awaits readiness once per proofSetHash`() = runBlocking {
-        seedProof("hBoth")
-        val readiness = CountingReadiness {
-            CidSidecarRefs(rootCid = "bafyR", mediaCid = "bafkM")
-        }
-        coordinator = LocationProtocolAttestationCoordinator(storageProvider, easManager, readiness)
-        easManager.stub {
-            onBlocking { createOffchainLocationAttestation(any()) } doReturn Result.success(
-                LocationProtocolAttestationResult(
-                    uid = "u", schemaId = "s", attesterAddress = "a", timestamp = 1L,
-                    offchainPayloadJson = "{}", artifactPath = "",
-                ),
-            )
-            onBlocking { submitOnchainLocationAttestation(any()) } doReturn Result.success(
-                OnchainSubmitResult(
-                    txHash = "0x1", schemaId = "0xs", easAddress = "0xe", chainIdStr = "eip155:1",
-                    rpcUrls = listOf("https://rpc"), chainDisplayName = "t", submittedAt = 1L,
-                    sponsorshipActive = false, onChainAttester = "0xa",
-                ),
-            )
-            on { buildPendingAttestationResult(any()) } doReturn LocationProtocolAttestationResult(
-                uid = "", schemaId = "0xs", attesterAddress = "0xa", timestamp = 1L,
-                offchainPayloadJson = """{"status":"pending_broadcast"}""", artifactPath = "",
-            )
-        }
-        assertTrue(coordinator.attestOffchain("hBoth", mediaUri, context).isSuccess)
-        assertTrue(coordinator.attestOnchain("hBoth", mediaUri, context).isSuccess)
-        assertEquals(1, readiness.calls.get())
-    }
+    fun `BOTH sequential offchain then onchain awaits readiness once per proofSetHash, refs or null`() = runBlocking {
+        val rows = listOf<Pair<String, CidSidecarRefs?>>(
+            "refs" to CidSidecarRefs(rootCid = "bafyR", mediaCid = "bafkM"),
+            "null" to null,
+        )
+        for ((label, refs) in rows) {
+            val hash = "hBoth-$label"
+            seedProof(hash)
+            val readiness = CountingReadiness { refs }
+            coordinator = LocationProtocolAttestationCoordinator(storageProvider, easManager, readiness)
+            stubOffchainResult()
+            stubOnchainSubmit()
 
-    @Test
-    fun `BOTH sequential memoizes null readiness — awaitReady still once`() = runBlocking {
-        seedProof("hBothNull")
-        val readiness = CountingReadiness { null }
-        coordinator = LocationProtocolAttestationCoordinator(storageProvider, easManager, readiness)
-        easManager.stub {
-            onBlocking { createOffchainLocationAttestation(any()) } doReturn Result.success(
-                LocationProtocolAttestationResult(
-                    uid = "u", schemaId = "s", attesterAddress = "a", timestamp = 1L,
-                    offchainPayloadJson = "{}", artifactPath = "",
-                ),
-            )
-            onBlocking { submitOnchainLocationAttestation(any()) } doReturn Result.success(
-                OnchainSubmitResult(
-                    txHash = "0x1", schemaId = "0xs", easAddress = "0xe", chainIdStr = "eip155:1",
-                    rpcUrls = listOf("https://rpc"), chainDisplayName = "t", submittedAt = 1L,
-                    sponsorshipActive = false, onChainAttester = "0xa",
-                ),
-            )
-            on { buildPendingAttestationResult(any()) } doReturn LocationProtocolAttestationResult(
-                uid = "", schemaId = "0xs", attesterAddress = "0xa", timestamp = 1L,
-                offchainPayloadJson = """{"status":"pending_broadcast"}""", artifactPath = "",
-            )
+            assertTrue(label, coordinator.attestOffchain(hash, mediaUri, context).isSuccess)
+            assertTrue(label, coordinator.attestOnchain(hash, mediaUri, context).isSuccess)
+
+            assertEquals(label, 1, readiness.calls.get())
         }
-        assertTrue(coordinator.attestOffchain("hBothNull", mediaUri, context).isSuccess)
-        assertTrue(coordinator.attestOnchain("hBothNull", mediaUri, context).isSuccess)
-        assertEquals(1, readiness.calls.get())
     }
 
     @Test
     fun `attestOnchain persists pending artifact after submit`() {
         runBlocking {
             val mediaHash = "hash1"
-            storageProvider.markProofExists(
+            seedProof(
                 mediaHash,
                 mapOf(
                     ProofModeV1Constants.FILE_HASH_SHA_256 to mediaHash,
@@ -277,28 +258,16 @@ class LocationProtocolAttestationCoordinatorTest {
 
             val submitResult = OnchainSubmitResult(
                 txHash = "0xabc",
-                schemaId = "0xschema",
                 easAddress = "0xeas",
                 chainIdStr = "eip155:11155111",
                 rpcUrls = listOf("https://rpc.test"),
-                chainDisplayName = "Sepolia",
                 submittedAt = 1L,
                 sponsorshipActive = true,
                 onChainAttester = "0xattester",
             )
             val pendingJson =
                 """{"status":"pending_broadcast","txHash":"0xabc"}"""
-            easManager.stub {
-                onBlocking { submitOnchainLocationAttestation(any()) } doReturn Result.success(submitResult)
-                on { buildPendingAttestationResult(submitResult) } doReturn LocationProtocolAttestationResult(
-                    uid = "",
-                    schemaId = "0xschema",
-                    attesterAddress = "0xattester",
-                    timestamp = 1L,
-                    offchainPayloadJson = pendingJson,
-                    artifactPath = "",
-                )
-            }
+            stubOnchainSubmit(submitResult, pendingJson)
 
             val result = coordinator.attestOnchain(mediaHash, mediaUri, context)
 
@@ -314,7 +283,7 @@ class LocationProtocolAttestationCoordinatorTest {
     @Test
     fun `attestOnchain rejects invalid coordinates before readiness or EAS`() = runBlocking {
         val mediaHash = "invalid-onchain-location"
-        storageProvider.markProofExists(
+        seedProof(
             mediaHash,
             mapOf(
                 ProofModeV1Constants.LOCATION_LATITUDE to "not-a-number",
@@ -335,51 +304,5 @@ class LocationProtocolAttestationCoordinatorTest {
         assertEquals(0, readiness.calls.get())
         verify(easManager, never()).submitOnchainLocationAttestation(any())
         Unit
-    }
-
-    private class CoordinatorFakeStorageProvider : StorageProvider {
-        private val proofHashes = mutableSetOf<String>()
-        private val store = HashMap<String, ByteArray>()
-
-        fun markProofExists(hash: String, proofData: Map<String, String> = emptyMap()) {
-            proofHashes.add(hash)
-            if (proofData.isNotEmpty()) {
-                val identifier = hash + ProofMode.PROOF_FILE_JSON_TAG
-                store["$hash/$identifier"] = JSONObject(proofData).toString().toByteArray(Charsets.UTF_8)
-            }
-        }
-
-        override fun saveText(hash: String, identifier: String, data: String, listener: StorageListener) {
-            store["$hash/$identifier"] = data.toByteArray(Charsets.UTF_8)
-            listener.saveSuccessful(hash, identifier)
-        }
-
-        override fun replaceText(hash: String, identifier: String, data: String, listener: StorageListener) {
-            store["$hash/$identifier"] = data.toByteArray(Charsets.UTF_8)
-            listener.saveSuccessful(hash, identifier)
-        }
-
-        override fun saveStream(hash: String, identifier: String, stream: InputStream, listener: StorageListener) {
-            listener.saveSuccessful(hash, identifier)
-        }
-
-        override fun saveBytes(hash: String, identifier: String, data: ByteArray, listener: StorageListener) {
-            store["$hash/$identifier"] = data
-            listener.saveSuccessful(hash, identifier)
-        }
-
-        override fun getInputStream(hash: String, identifier: String): InputStream? {
-            val bytes = store["$hash/$identifier"] ?: return null
-            return bytes.inputStream()
-        }
-
-        override fun proofExists(hash: String): Boolean = proofHashes.contains(hash)
-
-        override fun proofIdentifierExists(hash: String, identifier: String): Boolean =
-            store.containsKey("$hash/$identifier")
-
-        override fun getProofSet(hash: String): ArrayList<Uri> = ArrayList()
-
-        override fun getProofItem(uri: Uri): InputStream? = null
     }
 }

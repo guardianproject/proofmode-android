@@ -8,7 +8,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.view.inputmethod.EditorInfo
-import androidx.annotation.VisibleForTesting
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
@@ -16,6 +15,8 @@ import android.widget.ImageButton
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
+import androidx.annotation.IdRes
+import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -27,9 +28,8 @@ import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.witness.proofmode.plugins.lp.R
 import org.witness.proofmode.plugins.lp.LocationProtocolPlugin
 import org.witness.proofmode.plugins.lp.config.ChainConfig
@@ -37,39 +37,42 @@ import org.witness.proofmode.plugins.lp.config.ChainSpinnerPolicy
 import org.witness.proofmode.plugins.lp.config.SUPPORTED_CHAINS
 import org.witness.proofmode.plugins.lp.config.easScanUrl
 import org.witness.proofmode.plugins.lp.config.explorerUrl
+import org.witness.proofmode.plugins.lp.config.walletExplorerLinkVisibility
 import org.witness.proofmode.plugins.lp.wallet.auth.WalletAuthBottomSheet
 import org.witness.proofmode.plugins.lp.wallet.auth.WalletOnboardingPreferences
 import org.witness.proofmode.plugins.lp.deeplink.WalletDeepLinkContract
 import org.witness.proofmode.plugins.lp.wallet.WalletSponsorshipSettingsPresenter
-import org.witness.proofmode.plugins.wallet.infra.BuildConfig
-import org.witness.proofmode.plugins.wallet.infra.config.WalletChainPolicy
+import org.witness.proofmode.plugins.wallet.infra.abbreviateAddress
+import org.witness.proofmode.plugins.wallet.infra.config.SponsoredSetState
 import org.witness.proofmode.plugins.wallet.infra.config.ZeroDevConfigResolver
+import org.witness.proofmode.plugins.wallet.infra.factory.WalletProviderFactory
+import org.witness.proofmode.plugins.wallet.infra.factory.WalletSessionStore
 import org.witness.proofmode.plugins.wallet.infra.model.WalletAuthenticating
 import org.witness.proofmode.plugins.wallet.infra.model.WalletAwaitingNetwork
 import org.witness.proofmode.plugins.wallet.infra.model.WalletConnected
-import org.witness.proofmode.plugins.wallet.infra.api.WalletCapabilityProvider
 import org.witness.proofmode.plugins.wallet.infra.model.WalletConnecting
 import org.witness.proofmode.plugins.wallet.infra.model.WalletCreatingWallet
 import org.witness.proofmode.plugins.wallet.infra.model.WalletUnavailable
 import org.witness.proofmode.plugins.wallet.infra.api.WalletConnector
 import org.witness.proofmode.plugins.wallet.infra.model.WalletDisconnected
+import org.witness.proofmode.util.ImeScrollPadding
 import timber.log.Timber
 
 class WalletSettingsActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "WalletSettings"
-
-        @VisibleForTesting
-        internal var lastDeepLinkRejectMessageForTests: String? = null
     }
 
     private val activeWalletConnector: WalletConnector
         get() = WalletSigningPlugin.providerSelection.activeConnector
 
     private var visibleChains: List<ChainConfig> = SUPPORTED_CHAINS
+    private var sponsoredSet: SponsoredSetState = SponsoredSetState.NotYetKnown
+    private var sponsorshipProbeJob: Job? = null
     private var selectedChainIndex: Int = 0
     private lateinit var spinnerChain: Spinner
+    private lateinit var sessionStore: WalletSessionStore
     private var sponsorshipRefresh: (() -> Unit)? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -79,7 +82,9 @@ class WalletSettingsActivity : AppCompatActivity() {
             finish()
             return
         }
+        sessionStore = checkNotNull(WalletSigningPlugin.sessionStore())
         setContentView(R.layout.activity_wallet_settings)
+        ImeScrollPadding.bind(findViewById(R.id.scroll_wallet_settings))
 
         setSupportActionBar(findViewById(R.id.toolbar))
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
@@ -103,53 +108,30 @@ class WalletSettingsActivity : AppCompatActivity() {
         val btnDisconnect = findViewById<Button>(R.id.btn_disconnect_wallet)
         val btnRetryWallet = findViewById<Button>(R.id.btn_retry_wallet)
         val btnCopyAddress = findViewById<ImageButton>(R.id.btn_copy_address)
-        val btnInfoWeb3 = findViewById<ImageButton>(R.id.btn_info_web3_wallet)
-        val btnInfoNetwork = findViewById<ImageButton>(R.id.btn_info_network)
-        val btnInfoPrivy = findViewById<ImageButton>(R.id.btn_info_privy)
         val cardExplorerLinks = findViewById<MaterialCardView>(R.id.card_explorer_links)
         spinnerChain = findViewById(R.id.spinner_chain)
 
-        val deepLinkAppliedChain =
-            intent.getStringExtra(WalletDeepLinkContract.EXTRA_DEEP_LINK_APPLIED_CHAIN)
-        val storeChain = WalletSigningPlugin.sessionStore()?.loadChainId()
-        val initialChainId = when {
-            deepLinkAppliedChain != null -> deepLinkAppliedChain
-            storeChain != null -> storeChain
-            else -> activeWalletConnector.getIdentity()?.chainId
-                ?: WalletChainPolicy.DEFAULT_CHAIN_ID
-        }
-        bindChainSpinner(initialChainId)
-
-        val connectorType = activeWalletConnector.javaClass.simpleName
-        Timber.tag(TAG).d(
-            "Wallet settings opened: chainId=%s connector=%s address=%s sponsorshipActive=%s",
-            initialChainId,
-            connectorType,
-            abbreviateAddress(activeWalletConnector.getIdentity()?.address ?: "n/a"),
-            (activeWalletConnector as? WalletCapabilityProvider)?.isSponsorshipActive,
-        )
+        val initialChainId = sessionStore.loadChainId()
+        refreshSponsoredChains(initialChainId)
 
         spinnerChain.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                if (visibleChains.isEmpty()) return
-                val previousChain = visibleChains.getOrNull(selectedChainIndex)?.caip2Id
                 val newChain = visibleChains.getOrNull(position) ?: return
-                if (position == selectedChainIndex && previousChain == newChain.caip2Id) return
+                if (position == selectedChainIndex) return
 
                 selectedChainIndex = position
-                val connector = activeWalletConnector
-                Timber.tag(TAG).i(
-                    "Chain switch requested: %s → %s connector=%s address=%s",
-                    previousChain,
-                    newChain.caip2Id,
-                    connector.javaClass.simpleName,
-                    abbreviateAddress(connector.getIdentity()?.address ?: "n/a"),
-                )
+                applyExplorerLinkVisibility()
+                val selection = WalletSigningPlugin.providerSelection
                 lifecycleScope.launch {
                     try {
-                        withContext(Dispatchers.IO) {
-                            connector.setChain(newChain.caip2Id)
-                        }
+                        WalletProviderFactory.syncSessionChain(
+                            selection = selection,
+                            sessionStore = sessionStore,
+                            buildProjectId = WalletSigningPlugin.buildDefaultZeroDevProjectId(),
+                            requestedChainId = newChain.caip2Id,
+                        )
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         Timber.w(e, "setChain failed")
                         Toast.makeText(
@@ -159,111 +141,48 @@ class WalletSettingsActivity : AppCompatActivity() {
                         ).show()
                     }
                 }
-                Timber.tag(TAG).d(
-                    "Chain switch result: chainId=%s sponsorshipActive=%s connectorAddress=%s",
-                    newChain.caip2Id,
-                    (connector as? WalletCapabilityProvider)?.isSponsorshipActive,
-                    abbreviateAddress(connector.getIdentity()?.address ?: "n/a"),
-                )
             }
 
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
 
         sponsorshipRefresh = configureSponsorshipSection()
-        findViewById<ImageButton>(R.id.btn_info_sponsorship).setOnClickListener {
-            MaterialAlertDialogBuilder(this)
-                .setTitle(R.string.info_sponsorship_title)
-                .setMessage(R.string.info_sponsorship_body)
-                .setPositiveButton(R.string.close, null)
-                .show()
-        }
+        infoButton(R.id.btn_info_sponsorship, R.string.info_sponsorship_title, R.string.info_sponsorship_body)
 
         // Observe Wallet State
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 activeWalletConnector.stateFlow.collect { state ->
+                    // Only the text `when` is exhaustive; a new WalletState must also be classified in the three flags.
+                    val connected = state is WalletConnected
+                    val busy = state is WalletConnecting || state is WalletCreatingWallet || state is WalletAuthenticating
+                    // canConnect: connect button shown (disabled while busy), disconnect hidden.
+                    val canConnect = busy || state is WalletDisconnected
                     when (state) {
-                        is WalletConnected -> {
-                            tvAddress.text = connectedAddressText(state.identity.address)
-                            btnConnect.visibility = View.GONE
-                            btnDisconnect.visibility = View.VISIBLE
-                            btnRetryWallet.visibility = View.GONE
-                            btnCopyAddress.visibility = View.VISIBLE
-                            cardExplorerLinks.visibility = View.VISIBLE
-                            btnConnect.isEnabled = true
-
-                            val index = visibleChains.indexOfFirst { it.caip2Id == state.identity.chainId }
-                            if (index < 0) {
-                                bindChainSpinner(state.identity.chainId)
-                            } else if (index != selectedChainIndex) {
-                                val previousChain = visibleChains.getOrNull(selectedChainIndex)?.caip2Id
-                                Timber.tag(TAG).d(
-                                    "Chain synced from wallet state: %s → %s address=%s sponsorshipActive=%s",
-                                    previousChain,
-                                    state.identity.chainId,
-                                    abbreviateAddress(state.identity.address),
-                                    (activeWalletConnector as? WalletCapabilityProvider)?.isSponsorshipActive,
-                                )
-                                selectedChainIndex = index
-                                spinnerChain.setSelection(index, false)
-                            }
-                        }
-                        is WalletDisconnected -> {
-                            tvAddress.setText(R.string.wallet_not_connected)
-                            btnConnect.visibility = View.VISIBLE
-                            btnDisconnect.visibility = View.GONE
-                            btnRetryWallet.visibility = View.GONE
-                            btnCopyAddress.visibility = View.GONE
-                            cardExplorerLinks.visibility = View.GONE
-                            btnConnect.isEnabled = true
-                        }
-                        is WalletConnecting -> {
-                            tvAddress.setText(R.string.wallet_connecting)
-                            btnConnect.visibility = View.VISIBLE
-                            btnDisconnect.visibility = View.GONE
-                            btnRetryWallet.visibility = View.GONE
-                            btnCopyAddress.visibility = View.GONE
-                            cardExplorerLinks.visibility = View.GONE
-                            btnConnect.isEnabled = false
-                        }
-                        is WalletCreatingWallet -> {
-                            tvAddress.setText(R.string.wallet_creating)
-                            btnConnect.visibility = View.VISIBLE
-                            btnDisconnect.visibility = View.GONE
-                            btnRetryWallet.visibility = View.GONE
-                            btnCopyAddress.visibility = View.GONE
-                            cardExplorerLinks.visibility = View.GONE
-                            btnConnect.isEnabled = false
-                        }
-                        is WalletUnavailable -> {
-                            tvAddress.setText(R.string.wallet_unavailable)
-                            btnConnect.visibility = View.GONE
-                            btnDisconnect.visibility = View.VISIBLE
-                            btnRetryWallet.visibility = View.VISIBLE
-                            btnCopyAddress.visibility = View.GONE
-                            cardExplorerLinks.visibility = View.GONE
-                            btnConnect.isEnabled = true
-                        }
-                        is WalletAwaitingNetwork -> {
-                            // Saved session not yet verified. The connector asks Privy to verify it
-                            // (onNetworkRestored) when the network returns and on each onStart.
-                            tvAddress.setText(R.string.wallet_awaiting_network)
-                            btnConnect.visibility = View.GONE
-                            btnDisconnect.visibility = View.VISIBLE
-                            btnRetryWallet.visibility = View.GONE
-                            btnCopyAddress.visibility = View.GONE
-                            cardExplorerLinks.visibility = View.GONE
-                            btnConnect.isEnabled = true
-                        }
-                        is WalletAuthenticating -> {
-                            tvAddress.setText(R.string.wallet_authenticating)
-                            btnConnect.visibility = View.VISIBLE
-                            btnDisconnect.visibility = View.GONE
-                            btnRetryWallet.visibility = View.GONE
-                            btnCopyAddress.visibility = View.GONE
-                            cardExplorerLinks.visibility = View.GONE
-                            btnConnect.isEnabled = false
+                        is WalletConnected -> tvAddress.text = connectedAddressText(state.identity.address)
+                        is WalletDisconnected -> tvAddress.setText(R.string.wallet_not_connected)
+                        is WalletConnecting -> tvAddress.setText(R.string.wallet_connecting)
+                        is WalletCreatingWallet -> tvAddress.setText(R.string.wallet_creating)
+                        is WalletUnavailable -> tvAddress.setText(R.string.wallet_unavailable)
+                        // Saved session not yet verified. The connector asks Privy to verify it
+                        // (onNetworkRestored) when the network returns and on each onStart.
+                        is WalletAwaitingNetwork -> tvAddress.setText(R.string.wallet_awaiting_network)
+                        is WalletAuthenticating -> tvAddress.setText(R.string.wallet_authenticating)
+                    }
+                    btnConnect.visibility = visibleWhen(canConnect)
+                    btnConnect.isEnabled = !busy
+                    btnDisconnect.visibility = visibleWhen(!canConnect)
+                    btnRetryWallet.visibility = visibleWhen(state is WalletUnavailable)
+                    btnCopyAddress.visibility = visibleWhen(connected)
+                    cardExplorerLinks.visibility = visibleWhen(connected)
+                    if (state is WalletConnected) {
+                        val index = visibleChains.indexOfFirst { it.caip2Id == state.identity.chainId }
+                        if (index < 0) {
+                            bindChainSpinner(state.identity.chainId)
+                        } else if (index != selectedChainIndex) {
+                            selectedChainIndex = index
+                            applyExplorerLinkVisibility()
+                            spinnerChain.setSelection(index, false)
                         }
                     }
                 }
@@ -298,6 +217,10 @@ class WalletSettingsActivity : AppCompatActivity() {
             }
         }
 
+        findViewById<Button>(R.id.btn_retry_sponsored_networks).setOnClickListener {
+            refreshSponsoredChains(sessionStore.loadChainId())
+        }
+
         btnDisconnect.setOnClickListener {
             lifecycleScope.launch { activeWalletConnector.disconnect() }
         }
@@ -313,48 +236,15 @@ class WalletSettingsActivity : AppCompatActivity() {
         }
 
         findViewById<Button>(R.id.btn_view_transactions).setOnClickListener {
-            val identity = activeWalletConnector.getIdentity() ?: return@setOnClickListener
-            val config = chainConfig(visibleChains.getOrNull(selectedChainIndex)?.caip2Id)
-                ?: return@setOnClickListener
-            runCatching {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(config.explorerUrl(identity.address)))
-                startActivity(intent)
-            }
+            openAddressLink(ChainConfig::explorerUrl)
         }
-
         findViewById<Button>(R.id.btn_view_attestations).setOnClickListener {
-            val identity = activeWalletConnector.getIdentity() ?: return@setOnClickListener
-            val config = chainConfig(visibleChains.getOrNull(selectedChainIndex)?.caip2Id)
-                ?: return@setOnClickListener
-            runCatching {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(config.easScanUrl(identity.address)))
-                startActivity(intent)
-            }
+            openAddressLink(ChainConfig::easScanUrl)
         }
 
-        btnInfoWeb3.setOnClickListener {
-            MaterialAlertDialogBuilder(this)
-                .setTitle(R.string.info_web3_wallet_title)
-                .setMessage(R.string.info_web3_wallet_body)
-                .setPositiveButton(R.string.close, null)
-                .show()
-        }
-
-        btnInfoNetwork.setOnClickListener {
-            MaterialAlertDialogBuilder(this)
-                .setTitle(R.string.info_network_title)
-                .setMessage(R.string.info_network_body)
-                .setPositiveButton(R.string.close, null)
-                .show()
-        }
-
-        btnInfoPrivy.setOnClickListener {
-            MaterialAlertDialogBuilder(this)
-                .setTitle(R.string.info_privy_title)
-                .setMessage(R.string.info_privy_body)
-                .setPositiveButton(R.string.close, null)
-                .show()
-        }
+        infoButton(R.id.btn_info_web3_wallet, R.string.info_web3_wallet_title, R.string.info_web3_wallet_body)
+        infoButton(R.id.btn_info_network, R.string.info_network_title, R.string.info_network_body)
+        infoButton(R.id.btn_info_privy, R.string.info_privy_title, R.string.info_privy_body)
 
         handleDeepLinkExtras(intent)
     }
@@ -362,10 +252,12 @@ class WalletSettingsActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        refreshSponsoredChains(sessionStore.loadChainId())
+        sponsorshipRefresh?.invoke()
         handleDeepLinkExtras(intent)
     }
 
-    internal fun handleDeepLinkExtras(intent: Intent) {
+    private fun handleDeepLinkExtras(intent: Intent) {
         if (!intent.hasExtra(WalletDeepLinkContract.EXTRA_DEEP_LINK_REJECTED) &&
             intent.getStringExtra(WalletDeepLinkContract.EXTRA_DEEP_LINK_MESSAGE) == null
         ) {
@@ -375,11 +267,7 @@ class WalletSettingsActivity : AppCompatActivity() {
         val rejected = intent.getBooleanExtra(WalletDeepLinkContract.EXTRA_DEEP_LINK_REJECTED, false)
         val message = intent.getStringExtra(WalletDeepLinkContract.EXTRA_DEEP_LINK_MESSAGE)
 
-        refreshChainSpinnerFromSession()
-        sponsorshipRefresh?.invoke()
-
         if (rejected) {
-            lastDeepLinkRejectMessageForTests = message
             MaterialAlertDialogBuilder(this)
                 .setMessage(message ?: getString(R.string.wallet_deep_link_chain_rejected))
                 .setPositiveButton(R.string.close, null)
@@ -391,28 +279,12 @@ class WalletSettingsActivity : AppCompatActivity() {
         Snackbar.make(findViewById(android.R.id.content), snackbarMessage, Snackbar.LENGTH_LONG).show()
     }
 
-    private fun refreshChainSpinnerFromSession() {
-        val appliedChain = intent.getStringExtra(WalletDeepLinkContract.EXTRA_DEEP_LINK_APPLIED_CHAIN)
-        val chainId = appliedChain
-            ?: WalletSigningPlugin.sessionStore()?.loadChainId()
-            ?: return
-        bindChainSpinner(chainId)
-    }
-
     override fun onStart() {
         super.onStart()
         val connector = activeWalletConnector
         connector.bindActivity(this)
         // Manual trigger for a session still awaiting verification; a no-op in any other state.
-        lifecycleScope.launch {
-            try {
-                connector.refreshSession()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (t: Throwable) {
-                Timber.tag(TAG).w(t, "refreshSession failed")
-            }
-        }
+        lifecycleScope.launch { connector.refreshSession() }
     }
 
     override fun onStop() {
@@ -423,6 +295,23 @@ class WalletSettingsActivity : AppCompatActivity() {
     override fun onSupportNavigateUp(): Boolean {
         onBackPressedDispatcher.onBackPressed()
         return true
+    }
+
+    private fun infoButton(@IdRes buttonId: Int, @StringRes titleRes: Int, @StringRes bodyRes: Int) {
+        findViewById<ImageButton>(buttonId).setOnClickListener {
+            MaterialAlertDialogBuilder(this)
+                .setTitle(titleRes)
+                .setMessage(bodyRes)
+                .setPositiveButton(R.string.close, null)
+                .show()
+        }
+    }
+
+    private fun openAddressLink(urlFor: ChainConfig.(String) -> String?) {
+        val identity = activeWalletConnector.getIdentity() ?: return
+        val config = visibleChains.getOrNull(selectedChainIndex) ?: return
+        val url = config.urlFor(identity.address) ?: return
+        runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
     }
 
     private fun showOnboardingTour() {
@@ -436,35 +325,103 @@ class WalletSettingsActivity : AppCompatActivity() {
         sheet.show(supportFragmentManager, WalletAuthBottomSheet.TAG)
     }
 
-    private fun abbreviateAddress(address: String): String {
-        if (address.length <= 12) return address
-        return "${address.take(6)}…${address.takeLast(4)}"
-    }
+    private fun visibleWhen(shown: Boolean) = if (shown) View.VISIBLE else View.GONE
 
     private fun connectedAddressText(address: String): String =
         getString(R.string.wallet_address_connected, abbreviateAddress(address))
 
-    private fun chainConfig(caip2: String?): ChainConfig? =
-        caip2?.let { id -> SUPPORTED_CHAINS.firstOrNull { it.caip2Id == id } }
+    // Re-applied after every selectedChainIndex write; the spinner listener skips programmatic selections.
+    private fun applyExplorerLinkVisibility() {
+        val visibility = walletExplorerLinkVisibility(visibleChains.getOrNull(selectedChainIndex))
+        findViewById<Button>(R.id.btn_view_transactions).visibility =
+            if (visibility.transactions) View.VISIBLE else View.GONE
+        findViewById<Button>(R.id.btn_view_attestations).visibility =
+            if (visibility.attestations) View.VISIBLE else View.GONE
+    }
 
-    private fun hasEffectiveProjectId(): Boolean {
-        val store = WalletSigningPlugin.sessionStore()
+    private fun effectiveProjectId(): String {
         val buildDefault = WalletSigningPlugin.buildDefaultZeroDevProjectId()
-        val effective = ZeroDevConfigResolver.effectiveProjectId(
-            sessionOverride = store?.loadZeroDevProjectIdOverride(),
+        return ZeroDevConfigResolver.effectiveProjectId(
+            sessionOverride = sessionStore.loadZeroDevProjectIdOverride(),
             buildProjectId = buildDefault,
         )
-        return ZeroDevConfigResolver.isConfiguredSecret(effective)
+    }
+
+    private fun isSponsorshipToggleOn(): Boolean =
+        sessionStore.isSponsorTransactionsEnabled()
+
+    /** The project id to probe, or null when the spinner does not depend on a probe. */
+    private fun probeProjectId(): String? {
+        val projectId = effectiveProjectId()
+        val probe = ChainSpinnerPolicy.shouldProbe(
+            sponsorshipOn = isSponsorshipToggleOn(),
+            hasEffectiveProjectId = ZeroDevConfigResolver.isConfiguredSecret(projectId),
+        )
+        return projectId.takeIf { probe }
+    }
+
+    // Cancelling the previous launch keeps an answer for a superseded project id or toggle
+    // state from reaching the spinner or the cache. The probe is not launched from
+    // bindChainSpinner because the wallet-state collector re-renders on every emission.
+    private fun refreshSponsoredChains(savedChainId: String?) {
+        val projectId = probeProjectId()
+        sponsorshipProbeJob?.cancel()
+        sponsoredSet = cachedSponsoredSet(projectId)
+        bindChainSpinner(savedChainId)
+        if (projectId == null) return
+
+        sponsorshipProbeJob = lifecycleScope.launch {
+            val answer = WalletSigningPlugin.sponsorshipProbe(projectId, SUPPORTED_CHAINS.map { it.caip2Id })
+            val cacheWritten = applyProbeAnswer(projectId, answer)
+            bindChainSpinner(sessionStore.loadChainId())
+            if (!cacheWritten) return@launch
+            syncSessionChainAfterProbe()
+            bindChainSpinner(sessionStore.loadChainId())
+        }
+    }
+
+    // Runs inside the probe job: a superseded job is cancelled before the sync's IO block, so a
+    // stale answer never remaps.
+    private suspend fun syncSessionChainAfterProbe() {
+        try {
+            WalletProviderFactory.syncSessionChain(
+                selection = WalletSigningPlugin.providerSelection,
+                sessionStore = sessionStore,
+                buildProjectId = WalletSigningPlugin.buildDefaultZeroDevProjectId(),
+            )
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.tag(TAG).w(e, "Session chain sync after probe failed")
+        }
+    }
+
+    private fun cachedSponsoredSet(projectId: String?): SponsoredSetState {
+        val cached = projectId?.let { sessionStore.loadSponsoredChains(it) }
+        return cached?.let { SponsoredSetState.Known(it) } ?: SponsoredSetState.NotYetKnown
+    }
+
+    /** Returns true when the answer was usable and its set is now cached. */
+    private fun applyProbeAnswer(projectId: String, sponsored: List<String>?): Boolean {
+        if (sponsored != null) {
+            sessionStore.saveSponsoredChains(projectId, sponsored)
+            sponsoredSet = SponsoredSetState.Known(sponsored)
+            return true
+        }
+        if (sponsoredSet == SponsoredSetState.NotYetKnown) {
+            // A failure with a cache keeps showing the cache.
+            sponsoredSet = SponsoredSetState.CheckFailed
+        }
+        return false
     }
 
     private fun bindChainSpinner(savedChainId: String?) {
-        val compileOn = BuildConfig.FEATURE_SPONSORSHIP_ENABLED
-        val toggleOn = WalletSigningPlugin.sessionStore()?.isSponsorTransactionsEnabled() == true
-        val hasProject = hasEffectiveProjectId()
+        val toggleOn = isSponsorshipToggleOn()
+        val hasProject = ZeroDevConfigResolver.isConfiguredSecret(effectiveProjectId())
         visibleChains = ChainSpinnerPolicy.visibleChains(
             sponsorshipOn = toggleOn,
             hasEffectiveProjectId = hasProject,
-            compileSponsorshipEnabled = compileOn,
+            sponsoredSet = sponsoredSet,
         )
         val adapter = ArrayAdapter(
             this,
@@ -474,34 +431,29 @@ class WalletSettingsActivity : AppCompatActivity() {
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinnerChain.adapter = adapter
         spinnerChain.isEnabled = visibleChains.isNotEmpty()
-        val note = findViewById<TextView>(R.id.tv_empty_sponsored_networks)
-        note.visibility = if (
-            ChainSpinnerPolicy.showEmptySponsoredNote(
-                sponsorshipOn = toggleOn,
-                hasEffectiveProjectId = hasProject,
-                compileSponsorshipEnabled = compileOn,
-            )
-        ) View.VISIBLE else View.GONE
+        val note = ChainSpinnerPolicy.note(
+            sponsorshipOn = toggleOn,
+            hasEffectiveProjectId = hasProject,
+            sponsoredSet = sponsoredSet,
+        )
+        findViewById<TextView>(R.id.tv_empty_sponsored_networks).visibility =
+            visibleWhen(note == ChainSpinnerPolicy.NoteState.NoSponsored)
+        findViewById<TextView>(R.id.tv_checking_sponsored_networks).visibility =
+            visibleWhen(note == ChainSpinnerPolicy.NoteState.Checking)
+        findViewById<TextView>(R.id.tv_could_not_check_sponsored_networks).visibility =
+            visibleWhen(note == ChainSpinnerPolicy.NoteState.CouldNotCheck)
+        findViewById<Button>(R.id.btn_retry_sponsored_networks).visibility =
+            visibleWhen(note == ChainSpinnerPolicy.NoteState.CouldNotCheck)
 
         val index = ChainSpinnerPolicy.defaultSelectionIndex(visibleChains, savedChainId)
         selectedChainIndex = index
+        applyExplorerLinkVisibility()
         if (visibleChains.isNotEmpty()) {
             spinnerChain.setSelection(index, false)
         }
     }
 
-    private fun configureSponsorshipSection(): (() -> Unit)? {
-        val card = findViewById<MaterialCardView>(R.id.card_sponsorship)
-        if (!BuildConfig.FEATURE_SPONSORSHIP_ENABLED) {
-            card.visibility = View.GONE
-            return null
-        }
-
-        val sessionStore = WalletSigningPlugin.sessionStore()
-            ?: run {
-                card.visibility = View.GONE
-                return null
-            }
+    private fun configureSponsorshipSection(): () -> Unit {
         val buildDefault = WalletSigningPlugin.buildDefaultZeroDevProjectId()
         val presenter = WalletSponsorshipSettingsPresenter()
 
@@ -544,17 +496,10 @@ class WalletSettingsActivity : AppCompatActivity() {
             if (sessionStore.isSponsorTransactionsEnabled() == isChecked) return@setOnCheckedChangeListener
             sessionStore.saveSponsorTransactionsEnabled(isChecked)
             bindToggleUi()
-            bindChainSpinner(sessionStore.loadChainId())
-            Timber.tag(TAG).d(
-                "Sponsor toggle saved: enabled=%s sponsorshipActive=%s",
-                isChecked,
-                (activeWalletConnector as? WalletCapabilityProvider)?.isSponsorshipActive,
-            )
+            refreshSponsoredChains(sessionStore.loadChainId())
         }
 
         fun saveProjectId() {
-            if (!hasBuildDefault) return
-
             val raw = etProjectId.text?.toString().orEmpty()
             val validation = presenter.validateProjectIdInput(raw)
             if (!validation.isValid) {
@@ -566,13 +511,8 @@ class WalletSettingsActivity : AppCompatActivity() {
 
             sessionStore.saveZeroDevProjectIdOverride(newOverride)
             bindProjectIdUi()
-            bindChainSpinner(sessionStore.loadChainId())
+            refreshSponsoredChains(sessionStore.loadChainId())
             Toast.makeText(this, R.string.wallet_zerodev_project_id_saved, Toast.LENGTH_SHORT).show()
-            Timber.tag(TAG).d(
-                "Project ID saved: override=%s sponsorshipActive=%s",
-                newOverride ?: "(build default)",
-                (activeWalletConnector as? WalletCapabilityProvider)?.isSponsorshipActive,
-            )
         }
 
         btnSave.setOnClickListener { saveProjectId() }

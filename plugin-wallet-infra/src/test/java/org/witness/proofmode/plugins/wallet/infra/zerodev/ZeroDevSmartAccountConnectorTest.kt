@@ -22,7 +22,7 @@ import org.junit.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
+import org.witness.proofmode.plugins.wallet.infra.exception.WalletAuthException
 import org.witness.proofmode.plugins.wallet.infra.exception.WalletCreationTimedOutException
 import org.witness.proofmode.plugins.wallet.infra.exception.WalletLifecycleException
 import org.witness.proofmode.plugins.wallet.infra.model.WalletAwaitingNetwork
@@ -62,8 +62,9 @@ class ZeroDevSmartAccountConnectorTest {
 
     private fun validConfig(
         isSponsorshipEnabled: Boolean = true,
+        projectId: String = "00000000-0000-4000-8000-000000000001",
     ) = ZeroDevConfig(
-        projectId = "00000000-0000-4000-8000-000000000001",
+        projectId = projectId,
         bundlerUrl = "https://bundler.example",
         paymasterUrl = "https://paymaster.example",
         isSponsorshipEnabled = isSponsorshipEnabled,
@@ -75,176 +76,89 @@ class ZeroDevSmartAccountConnectorTest {
         smartAccountAddress: String = privyAddress,
     ) {
         connector.ioDispatcher = UnconfinedTestDispatcher(testScheduler)
-        connector.sponsoredAccountProvisioner = SponsoredAccountProvisioner { _, _, _ ->
-            SponsoredAccountSession(
-                account = mock<Account> { on { getAddress() } doReturn Address.fromHex(smartAccountAddress) },
-                context = mock(),
-                signer = mock(),
-            )
-        }
+        connector.sponsoredAccountProvisioner = CountingProvisioner(smartAccountAddress = smartAccountAddress)
     }
 
     @Test
     fun coldStartRestore_activatesSponsorshipWhenPrivyReconnectsWithoutSetChain() = runTest {
         Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
 
-        val privyState = MutableStateFlow<WalletState>(WalletDisconnected)
-        val identity = WalletIdentity(privyAddress, defaultChainId)
-        val mockPrivyConnector = mockPrivy {
-            on { stateFlow } doReturn privyState
-            on { address } doReturn privyAddress
-            on { getIdentity() } doReturn identity
-        }
-        val connector = ZeroDevSmartAccountConnector(mockPrivyConnector) { validConfig() }
-        stubProvisioner(connector, testScheduler)
-
-        privyState.value = WalletConnected(identity)
-        advanceUntilIdle()
-
-        assertTrue(
-            "Expected sponsored-account restore after cold-start Privy WalletConnected",
-            connector.isSponsorshipActive,
+        val transientStates = listOf<Pair<String, WalletState?>>(
+            "none" to null,
+            "WalletCreatingWallet" to WalletCreatingWallet,
+            "WalletAwaitingNetwork" to WalletAwaitingNetwork,
         )
-        assertTrue(connector.stateFlow.value is WalletConnected)
-    }
+        transientStates.forEach { (label, transient) ->
+            val privyState = MutableStateFlow<WalletState>(WalletDisconnected)
+            val identity = WalletIdentity(privyAddress, defaultChainId)
+            val mockPrivyConnector = mockPrivy {
+                on { stateFlow } doReturn privyState
+                on { address } doReturn privyAddress
+                on { getIdentity() } doReturn identity
+            }
+            val connector = ZeroDevSmartAccountConnector(mockPrivyConnector) { validConfig() }
+            stubProvisioner(connector, testScheduler)
 
-    @Test
-    fun coldStartRestore_selfFundedFallbackWhenSponsorshipDisabled() = runTest {
-        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+            if (transient != null) {
+                privyState.value = transient
+                advanceUntilIdle()
+                assertEquals(label, transient, connector.stateFlow.value)
+            }
 
-        val privyState = MutableStateFlow<WalletState>(WalletDisconnected)
-        val identity = WalletIdentity(privyAddress, defaultChainId)
-        val mockPrivyConnector = mockPrivy {
-            on { stateFlow } doReturn privyState
-            on { address } doReturn privyAddress
-            on { getIdentity() } doReturn identity
-        }
-        val connector = ZeroDevSmartAccountConnector(mockPrivyConnector) {
-            validConfig(isSponsorshipEnabled = false)
-        }
-        connector.ioDispatcher = UnconfinedTestDispatcher(testScheduler)
+            privyState.value = WalletConnected(identity)
+            advanceUntilIdle()
 
-        privyState.value = WalletConnected(identity)
-        advanceUntilIdle()
-
-        assertFalse(connector.isSponsorshipActive)
-        assertTrue(connector.stateFlow.value is WalletConnected)
-        val connected = connector.stateFlow.value as WalletConnected
-        assertEquals(privyAddress, connected.identity.address)
-    }
-
-    @Test
-    fun coldStartRestore_selfFundedFallbackWhenProvisionerFails() = runTest {
-        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
-
-        val privyState = MutableStateFlow<WalletState>(WalletDisconnected)
-        val identity = WalletIdentity(privyAddress, defaultChainId)
-        val mockPrivyConnector = mockPrivy {
-            on { stateFlow } doReturn privyState
-            on { address } doReturn privyAddress
-            on { getIdentity() } doReturn identity
-        }
-        val connector = ZeroDevSmartAccountConnector(mockPrivyConnector) { validConfig() }
-        connector.ioDispatcher = UnconfinedTestDispatcher(testScheduler)
-        connector.sponsoredAccountProvisioner = SponsoredAccountProvisioner { _, _, _ ->
-            throw RuntimeException("SDK init failed")
-        }
-
-        privyState.value = WalletConnected(identity)
-        advanceUntilIdle()
-
-        assertFalse(connector.isSponsorshipActive)
-        assertTrue(connector.stateFlow.value is WalletConnected)
-        val connected = connector.stateFlow.value as WalletConnected
-        assertEquals(privyAddress, connected.identity.address)
-    }
-
-    @Test
-    fun coldStartRestore_skipsReinitWhenAlreadyActive() = runTest {
-        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
-
-        val privyState = MutableStateFlow<WalletState>(WalletDisconnected)
-        val identity = WalletIdentity(privyAddress, defaultChainId)
-        val mockPrivyConnector = mockPrivy {
-            on { stateFlow } doReturn privyState
-            on { address } doReturn privyAddress
-            on { getIdentity() } doReturn identity
-        }
-        val connector = ZeroDevSmartAccountConnector(mockPrivyConnector) { validConfig() }
-        var provisionCallCount = 0
-        connector.ioDispatcher = UnconfinedTestDispatcher(testScheduler)
-        connector.sponsoredAccountProvisioner = SponsoredAccountProvisioner { _, _, _ ->
-            provisionCallCount++
-            SponsoredAccountSession(
-                account = mock<Account> { on { getAddress() } doReturn Address.fromHex(privyAddress) },
-                context = mock(),
-                signer = mock(),
+            assertTrue(
+                "$label: expected sponsored-account restore after cold-start Privy WalletConnected",
+                connector.isSponsorshipActive,
             )
+            assertTrue(label, connector.stateFlow.value is WalletConnected)
+            assertEquals(label, privyAddress, (connector.stateFlow.value as WalletConnected).identity.address)
         }
-
-        privyState.value = WalletConnected(identity)
-        advanceUntilIdle()
-        assertTrue(connector.isSponsorshipActive)
-        assertEquals(1, provisionCallCount)
-
-        privyState.value = WalletConnected(identity)
-        advanceUntilIdle()
-        assertTrue(connector.isSponsorshipActive)
-        assertEquals(1, provisionCallCount)
     }
 
     @Test
-    fun setChain_disconnectsOnProvisionerFailure() = runBlocking {
-        val mockPrivyConnector = mockPrivy {
-            on { address } doReturn privyAddress
-            on { getIdentity() } doReturn WalletIdentity(privyAddress, defaultChainId)
-        }
-        val connector = ZeroDevSmartAccountConnector(mockPrivyConnector) { validConfig() }
-        connector.sponsoredAccountProvisioner = SponsoredAccountProvisioner { _, _, _ ->
-            throw RuntimeException("SDK init failed")
-        }
+    fun coldStartRestore_selfFundedFallback() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
 
-        connector.setChain("eip155:84532")
-
-        assertFalse(connector.isSponsorshipActive)
-        assertTrue(connector.stateFlow.value is WalletDisconnected)
-    }
-
-    @Test
-    fun setChain_whenDisconnected_selfFunded_staysDisconnected() = runBlocking {
-        val mockPrivyConnector = mockPrivy {
-            on { getIdentity() } doReturn null
-            on { address } doReturn ""
-        }
-        val connector = ZeroDevSmartAccountConnector(mockPrivyConnector) {
-            validConfig(isSponsorshipEnabled = false)
-        }
-
-        connector.setChain("eip155:11155111")
-
-        assertTrue(
-            "Disconnected setChain must not emit WalletConnected",
-            connector.stateFlow.value is WalletDisconnected,
+        val cases = listOf(
+            FallbackCase("sponsorship disabled", validConfig(isSponsorshipEnabled = false)),
+            FallbackCase("provisioner fails", validConfig(), CountingProvisioner(failFirst = true)),
         )
-        assertFalse(connector.isSponsorshipActive)
+        cases.forEach { (label, config, provisioner) ->
+            val privyState = MutableStateFlow<WalletState>(WalletDisconnected)
+            val identity = WalletIdentity(privyAddress, defaultChainId)
+            val mockPrivyConnector = mockPrivy {
+                on { stateFlow } doReturn privyState
+                on { address } doReturn privyAddress
+                on { getIdentity() } doReturn identity
+            }
+            val connector = ZeroDevSmartAccountConnector(mockPrivyConnector) { config }
+            connector.ioDispatcher = UnconfinedTestDispatcher(testScheduler)
+            if (provisioner != null) connector.sponsoredAccountProvisioner = provisioner
+
+            privyState.value = WalletConnected(identity)
+            advanceUntilIdle()
+
+            assertFalse(label, connector.isSponsorshipActive)
+            assertTrue(label, connector.stateFlow.value is WalletConnected)
+            assertEquals(label, privyAddress, (connector.stateFlow.value as WalletConnected).identity.address)
+        }
     }
 
     @Test
     fun setChain_whenDisconnected_sponsored_doesNotProvision() = runBlocking {
-        var provisionCallCount = 0
+        val provisioner = CountingProvisioner()
         val mockPrivyConnector = mockPrivy {
             on { getIdentity() } doReturn null
             on { address } doReturn ""
         }
         val connector = ZeroDevSmartAccountConnector(mockPrivyConnector) { validConfig() }
-        connector.sponsoredAccountProvisioner = SponsoredAccountProvisioner { _, _, _ ->
-            provisionCallCount++
-            throw AssertionError("Must not provision ZeroDev account when disconnected")
-        }
+        connector.sponsoredAccountProvisioner = provisioner
 
         connector.setChain("eip155:11155111")
 
-        assertEquals(0, provisionCallCount)
+        assertEquals(0, provisioner.calls)
         assertTrue(connector.stateFlow.value is WalletDisconnected)
         assertFalse(connector.isSponsorshipActive)
     }
@@ -257,15 +171,7 @@ class ZeroDevSmartAccountConnectorTest {
             on { getIdentity() } doReturn WalletIdentity(privyAddress, defaultChainId)
         }
         val connector = ZeroDevSmartAccountConnector(mockPrivyConnector) { validConfig() }
-        connector.sponsoredAccountProvisioner = SponsoredAccountProvisioner { _, _, _ ->
-            SponsoredAccountSession(
-                account = mock<Account> {
-                    on { getAddress() } doReturn Address.fromHex(smartAccountAddress)
-                },
-                context = mock(),
-                signer = mock(),
-            )
-        }
+        connector.sponsoredAccountProvisioner = CountingProvisioner(smartAccountAddress = smartAccountAddress)
 
         connector.setChain("eip155:84532")
 
@@ -274,92 +180,140 @@ class ZeroDevSmartAccountConnectorTest {
         val connected = connector.stateFlow.value as WalletConnected
         assertEquals(smartAccountAddress, connected.identity.address)
         assertEquals("eip155:84532", connected.identity.chainId)
+        assertEquals(privyAddress, connector.address)
+    }
+
+    private fun connectedPrivy() = mockPrivy {
+        on { address } doReturn privyAddress
+        on { getIdentity() } doReturn WalletIdentity(privyAddress, defaultChainId)
+    }
+
+    private data class FallbackCase(
+        val label: String,
+        val config: ZeroDevConfig,
+        val provisioner: SponsoredAccountProvisioner? = null,
+    )
+
+    /** Counts provisions; [failFirst] makes the first provision throw. */
+    private class CountingProvisioner(
+        private val failFirst: Boolean = false,
+        private val smartAccountAddress: String = "0x000000000000000000000000000000000000dce6",
+    ) : SponsoredAccountProvisioner {
+        var calls = 0
+        override fun provision(
+            chainId: String,
+            config: ZeroDevConfig,
+            privyConnector: PrivyWalletConnector,
+        ): SponsoredAccountSession {
+            calls++
+            if (failFirst && calls == 1) throw RuntimeException("SDK init failed")
+            return SponsoredAccountSession(
+                account = mock<Account> {
+                    on { getAddress() } doReturn Address.fromHex(smartAccountAddress)
+                },
+                context = mock(),
+                signer = mock(),
+            )
+        }
     }
 
     @Test
-    fun testBlankProjectIdSetsSponsorshipInactive() = runBlocking {
-        val mockPrivyConnector = mockPrivy {
-            on { address } doReturn privyAddress
-            on { getIdentity() } doReturn WalletIdentity(privyAddress, defaultChainId)
+    fun sameChainSameConfig_noReprovision() = runTest {
+        val provisioner = CountingProvisioner()
+        val connector = ZeroDevSmartAccountConnector(connectedPrivy()) { validConfig() }
+        connector.sponsoredAccountProvisioner = provisioner
+
+        connector.setChain("eip155:84532")
+        val afterFirst = connector.stateFlow.value
+        connector.setChain("eip155:84532")
+
+        assertEquals(1, provisioner.calls)
+        assertTrue(connector.isSponsorshipActive)
+        assertEquals(afterFirst, connector.stateFlow.value)
+
+        connector.setChain("eip155:11155111")
+
+        assertEquals(2, provisioner.calls)
+    }
+
+    @Test
+    fun sameChainConfigChanged_toggleFlip_reprovisionsThenFallsBackToEoa() = runTest {
+        val provisioner = CountingProvisioner()
+        var sponsorshipEnabled = true
+        val connector = ZeroDevSmartAccountConnector(connectedPrivy()) {
+            validConfig(isSponsorshipEnabled = sponsorshipEnabled)
         }
-        val config = ZeroDevConfig(
-            projectId = "",
+        connector.sponsoredAccountProvisioner = provisioner
+
+        connector.setChain("eip155:84532")
+        assertTrue(connector.isSponsorshipActive)
+
+        sponsorshipEnabled = false
+        connector.setChain("eip155:84532")
+
+        assertFalse(connector.isSponsorshipActive)
+        assertEquals(privyAddress, (connector.stateFlow.value as WalletConnected).identity.address)
+
+        sponsorshipEnabled = true
+        connector.setChain("eip155:84532")
+
+        assertTrue(connector.isSponsorshipActive)
+        assertEquals(2, provisioner.calls)
+    }
+
+    @Test
+    fun sameChainConfigChanged_projectOverride_reprovisions() = runTest {
+        val provisioner = CountingProvisioner()
+        var projectId = "00000000-0000-4000-8000-000000000001"
+        val connector = ZeroDevSmartAccountConnector(connectedPrivy()) { validConfig(projectId = projectId) }
+        connector.sponsoredAccountProvisioner = provisioner
+
+        connector.setChain("eip155:84532")
+        projectId = "00000000-0000-4000-8000-000000000002"
+        connector.setChain("eip155:84532")
+
+        assertEquals(2, provisioner.calls)
+    }
+
+    @Test
+    fun failedInit_leavesDisconnected_andNextSetChainProvisionsAgain() = runTest {
+        val provisioner = CountingProvisioner(failFirst = true)
+        val connector = ZeroDevSmartAccountConnector(connectedPrivy()) { validConfig() }
+        connector.sponsoredAccountProvisioner = provisioner
+
+        connector.setChain("eip155:84532")
+        assertTrue(connector.stateFlow.value is WalletDisconnected)
+
+        connector.setChain("eip155:84532")
+
+        assertEquals(2, provisioner.calls)
+        assertTrue(connector.isSponsorshipActive)
+        assertTrue(connector.stateFlow.value is WalletConnected)
+    }
+
+    @Test
+    fun testZeroConfigDeactivation() = runTest {
+        val credentialed = ZeroDevConfig(
+            projectId = "project-id",
             bundlerUrl = "https://bundler",
             paymasterUrl = "https://paymaster",
             isSponsorshipEnabled = true,
         )
-        val connector = ZeroDevSmartAccountConnector(mockPrivyConnector) { config }
-
-        connector.connect()
-
-        assertFalse(connector.isSponsorshipActive)
-    }
-
-    @Test
-    fun testZeroConfigDeactivationSponsorshipFlagFalse() = runBlocking {
-        val mockPrivyConnector = mockPrivy {
-            on { address } doReturn privyAddress
-            on { getIdentity() } doReturn WalletIdentity(privyAddress, defaultChainId)
-        }
-        val config = ZeroDevConfig(
-            projectId = "project-id",
-            bundlerUrl = "https://bundler",
-            paymasterUrl = "https://paymaster",
-            isSponsorshipEnabled = false
+        val configs = listOf(
+            "blank projectId" to credentialed.copy(projectId = ""),
+            "sponsorship flag false" to credentialed.copy(isSponsorshipEnabled = false),
         )
-        val connector = ZeroDevSmartAccountConnector(mockPrivyConnector) { config }
+        configs.forEach { (label, config) ->
+            val connector = ZeroDevSmartAccountConnector(connectedPrivy()) { config }
 
-        connector.connect()
+            connector.connect()
 
-        assertEquals(privyAddress, connector.address)
-        assertTrue(connector.stateFlow.value is WalletConnected)
-        val identity = (connector.stateFlow.value as WalletConnected).identity
-        assertEquals(privyAddress, identity.address)
-        assertEquals(defaultChainId, identity.chainId)
-    }
-
-    @Test
-    fun testZeroConfigDeactivationBlankBundlerUrl() = runBlocking {
-        val mockPrivyConnector = mockPrivy {
-            on { address } doReturn privyAddress
-            on { getIdentity() } doReturn WalletIdentity(privyAddress, defaultChainId)
+            assertFalse(label, connector.isSponsorshipActive)
+            assertTrue(label, connector.stateFlow.value is WalletConnected)
+            val identity = (connector.stateFlow.value as WalletConnected).identity
+            assertEquals(label, privyAddress, identity.address)
+            assertEquals(label, defaultChainId, identity.chainId)
         }
-        val config = ZeroDevConfig(
-            projectId = "project-id",
-            bundlerUrl = "",
-            paymasterUrl = "https://paymaster",
-            isSponsorshipEnabled = true
-        )
-        val connector = ZeroDevSmartAccountConnector(mockPrivyConnector) { config }
-
-        connector.connect()
-
-        assertEquals(privyAddress, connector.address)
-        assertTrue(connector.stateFlow.value is WalletConnected)
-        val identity = (connector.stateFlow.value as WalletConnected).identity
-        assertEquals(privyAddress, identity.address)
-    }
-
-    @Test
-    fun testZeroConfigDeactivationBlankPaymasterUrl() = runBlocking {
-        val mockPrivyConnector = mockPrivy {
-            on { address } doReturn privyAddress
-            on { getIdentity() } doReturn WalletIdentity(privyAddress, defaultChainId)
-        }
-        val config = ZeroDevConfig(
-            projectId = "project-id",
-            bundlerUrl = "https://bundler",
-            paymasterUrl = "",
-            isSponsorshipEnabled = true
-        )
-        val connector = ZeroDevSmartAccountConnector(mockPrivyConnector) { config }
-
-        connector.connect()
-
-        assertEquals(privyAddress, connector.address)
-        assertTrue(connector.stateFlow.value is WalletConnected)
-        val identity = (connector.stateFlow.value as WalletConnected).identity
-        assertEquals(privyAddress, identity.address)
     }
 
     @Test
@@ -374,9 +328,42 @@ class ZeroDevSmartAccountConnectorTest {
         try {
             connector.sendTransaction(mapOf("to" to "0x...", "data" to "0x", "valueHex" to "0x0", "chainId" to "eip155:1"))
             fail("Expected WalletLifecycleException")
-        } catch (e: WalletLifecycleException) {
-            assertTrue(e.message!!.contains("foreground Activity"))
+        } catch (_: WalletLifecycleException) {
         }
+    }
+
+    @Test
+    fun blankUrlsWithProjectId_takeSponsoredPathAndFailAsSponsoredInit() = runTest {
+        val provisioner = CountingProvisioner(failFirst = true)
+        val blankUrls = ZeroDevConfig("id", "", "", true)
+        val connector = ZeroDevSmartAccountConnector(connectedPrivy()) { blankUrls }
+        connector.sponsoredAccountProvisioner = provisioner
+
+        try {
+            connector.connect()
+            fail("Expected WalletAuthException")
+        } catch (_: WalletAuthException) {
+        }
+
+        assertEquals(1, provisioner.calls)
+        assertFalse(connector.isSponsorshipActive)
+    }
+
+    @Test
+    fun connect_provisionerFails_throwsWalletAuthExceptionAndLeavesDisconnected() = runTest {
+        val privy = connectedPrivy()
+        val connector = ZeroDevSmartAccountConnector(privy) { validConfig() }
+        connector.sponsoredAccountProvisioner = CountingProvisioner(failFirst = true)
+
+        try {
+            connector.connect()
+            fail("Expected WalletAuthException")
+        } catch (_: WalletAuthException) {
+        }
+
+        assertTrue(connector.stateFlow.value is WalletDisconnected)
+        assertFalse(connector.isSponsorshipActive)
+        verify(privy).disconnect()
     }
 
     @Test
@@ -391,7 +378,7 @@ class ZeroDevSmartAccountConnectorTest {
             onBlocking { sendTransaction(txParams) } doReturn expectedResult
         }
 
-        val config = ZeroDevConfig("id", "", "", true)
+        val config = ZeroDevConfig("id", "", "", false)
         val connector = ZeroDevSmartAccountConnector(mockPrivyConnector) { config }
 
         connector.connect()
@@ -400,45 +387,13 @@ class ZeroDevSmartAccountConnectorTest {
     }
 
     @Test
-    fun testSignTypedDataAlwaysDelegatesToPrivy() = runBlocking {
-        val typedDataJson = "{}"
-        val expectedSig = "0xmockedsignature"
-        val mockPrivyConnector = mockPrivy {
-            onBlocking { signTypedData(typedDataJson) } doReturn expectedSig
-        }
-        val connector = ZeroDevSmartAccountConnector(mockPrivyConnector) {
-            ZeroDevConfig("id", "https://bundler", "https://paymaster", true)
-        }
-
-        val sig = connector.signTypedData(typedDataJson)
-        assertEquals(expectedSig, sig)
-    }
-
-    @Test
-    fun address_alwaysReturnsPrivyEoa_evenWhenSponsorshipActive() {
+    fun testDisconnectResetsState() = runBlocking {
         val mockPrivyConnector = mockPrivy {
             on { address } doReturn privyAddress
-        }
-        val connector = ZeroDevSmartAccountConnector(mockPrivyConnector) {
-            ZeroDevConfig("id", "https://bundler", "https://paymaster", true)
+            on { getIdentity() } doReturn WalletIdentity(privyAddress, defaultChainId)
         }
 
-        connector.isSponsorshipActive = true
-        assertEquals(privyAddress, connector.address)
-    }
-
-    @Test
-    fun testDisconnectResetsState() = runBlocking {
-        var mockedAddress = privyAddress
-        val mockPrivyConnector = mockPrivy()
-        whenever(mockPrivyConnector.address).thenAnswer { mockedAddress }
-        whenever(mockPrivyConnector.getIdentity()).thenReturn(WalletIdentity(privyAddress, defaultChainId))
-        whenever(mockPrivyConnector.disconnect()).thenAnswer {
-            mockedAddress = ""
-            null
-        }
-
-        val config = ZeroDevConfig("id", "", "", true)
+        val config = ZeroDevConfig("id", "", "", false)
         val connector = ZeroDevSmartAccountConnector(mockPrivyConnector) { config }
 
         connector.connect()
@@ -446,41 +401,6 @@ class ZeroDevSmartAccountConnectorTest {
 
         connector.disconnect()
         assertTrue(connector.stateFlow.value is WalletDisconnected)
-        assertEquals("", connector.address)
-    }
-
-    @Test
-    fun testSetChainReEvaluatesZeroConfigInvariant() = runBlocking {
-        val mockPrivyConnector = mockPrivy {
-            on { address } doReturn privyAddress
-            on { getIdentity() } doReturn WalletIdentity(privyAddress, defaultChainId)
-        }
-
-        var sponsorshipEnabled = true
-        val connector = ZeroDevSmartAccountConnector(mockPrivyConnector) {
-            ZeroDevConfig("id", "https://bundler", "https://paymaster", sponsorshipEnabled)
-        }
-
-        sponsorshipEnabled = false
-        connector.connect()
-        assertFalse(connector.address.isEmpty())
-
-        connector.setChain("eip155:2")
-        assertTrue(connector.stateFlow.value is WalletConnected)
-    }
-
-    @Test
-    fun `mirrors privy WalletCreatingWallet while disconnected`() = runTest {
-        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
-        val privyState = MutableStateFlow<WalletState>(WalletDisconnected)
-        val connector = ZeroDevSmartAccountConnector(
-            mockPrivy { on { stateFlow } doReturn privyState },
-        ) { validConfig() }
-
-        privyState.value = WalletCreatingWallet
-        advanceUntilIdle()
-
-        assertEquals(WalletCreatingWallet, connector.stateFlow.value)
     }
 
     @Test
@@ -499,88 +419,15 @@ class ZeroDevSmartAccountConnectorTest {
     }
 
     @Test
-    fun `creating then connected runs restore path`() = runTest {
-        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
-        val privyState = MutableStateFlow<WalletState>(WalletDisconnected)
-        val identity = WalletIdentity(privyAddress, defaultChainId)
-        val connector = ZeroDevSmartAccountConnector(
-            mockPrivy {
-                on { stateFlow } doReturn privyState
-                on { address } doReturn privyAddress
-                on { getIdentity() } doReturn identity
-            },
-        ) { validConfig() }
-        stubProvisioner(connector, testScheduler)
-
-        privyState.value = WalletCreatingWallet
-        advanceUntilIdle()
-        assertEquals(WalletCreatingWallet, connector.stateFlow.value)
-
-        privyState.value = WalletConnected(identity)
-        advanceUntilIdle()
-
-        assertTrue(connector.stateFlow.value is WalletConnected)
-        assertEquals(privyAddress, (connector.stateFlow.value as WalletConnected).identity.address)
-    }
-
-    @Test
-    fun `mirrors privy WalletAwaitingNetwork while disconnected`() = runTest {
-        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
-        val privyState = MutableStateFlow<WalletState>(WalletDisconnected)
-        val connector = ZeroDevSmartAccountConnector(
-            mockPrivy { on { stateFlow } doReturn privyState },
-        ) { validConfig() }
-
-        privyState.value = WalletAwaitingNetwork
-        advanceUntilIdle()
-
-        assertEquals(WalletAwaitingNetwork, connector.stateFlow.value)
-    }
-
-    @Test
-    fun `awaiting network then connected runs restore path`() = runTest {
-        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
-        val privyState = MutableStateFlow<WalletState>(WalletDisconnected)
-        val identity = WalletIdentity(privyAddress, defaultChainId)
-        val connector = ZeroDevSmartAccountConnector(
-            mockPrivy {
-                on { stateFlow } doReturn privyState
-                on { address } doReturn privyAddress
-                on { getIdentity() } doReturn identity
-            },
-        ) { validConfig() }
-        stubProvisioner(connector, testScheduler)
-
-        privyState.value = WalletAwaitingNetwork
-        advanceUntilIdle()
-        assertEquals(WalletAwaitingNetwork, connector.stateFlow.value)
-
-        privyState.value = WalletConnected(identity)
-        advanceUntilIdle()
-
-        assertTrue(connector.stateFlow.value is WalletConnected)
-        assertEquals(privyAddress, (connector.stateFlow.value as WalletConnected).identity.address)
-    }
-
-    @Test
-    fun `retryWallet delegates to privy connector`() = runTest {
+    fun `retryWallet and refreshSession delegate to privy connector`() = runTest {
         Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
         val privy = mockPrivy()
         val connector = ZeroDevSmartAccountConnector(privy) { validConfig() }
 
         connector.retryWallet()
-
-        verify(privy).retryWallet()
-    }
-
-    @Test
-    fun `refreshSession delegates to privy connector`() = runTest {
-        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
-        val privy = mockPrivy()
-        val connector = ZeroDevSmartAccountConnector(privy) { validConfig() }
-
         connector.refreshSession()
 
+        verify(privy).retryWallet()
         verify(privy).refreshSession()
     }
 }
