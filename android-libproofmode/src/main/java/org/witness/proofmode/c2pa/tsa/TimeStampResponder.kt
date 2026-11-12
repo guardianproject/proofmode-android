@@ -70,6 +70,15 @@ class TimeStampResponder(
      */
     override fun handle(query: ByteArray): ByteArray = respond(query)
 
+    /**
+     * Synchronized because [tokenGenerators] are shared and BouncyCastle's are not
+     * thread-safe: each holds one SignerInfoGenerator, i.e. one digest calculator and
+     * one `java.security.Signature`. [LocalTsaServer] answers on several workers, and two
+     * overlapping signs interleaved their bytes into the same digest, producing tokens
+     * whose signed messageDigest no longer matched their TSTInfo. c2pa-rs rejects those
+     * at sign time with "time stamp does not match data", leaving the media unsigned.
+     */
+    @Synchronized
     fun respond(requestDer: ByteArray): ByteArray {
         val reading = clock()
         val responseGenerator = TimeStampResponseGenerator(tokenGenerators.getValue(reading.source), TSPAlgorithms.ALLOWED)

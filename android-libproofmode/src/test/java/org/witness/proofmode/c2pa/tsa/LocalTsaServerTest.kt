@@ -23,6 +23,10 @@ import java.security.KeyPairGenerator
 import java.security.MessageDigest
 import java.security.cert.X509Certificate
 import java.security.spec.ECGenParameterSpec
+import java.util.concurrent.Callable
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 /**
  * End-to-end coverage of the on-device RFC 3161 TSA: a real HTTP POST over
@@ -247,5 +251,45 @@ class LocalTsaServerTest {
         assertNotNull(cert.getExtensionValue("2.5.29.14"))
         assertTrue(cert.keyUsage[0]) // digitalSignature
         assertEquals(-1, cert.basicConstraints) // end entity, not a CA
+    }
+
+    /**
+     * LocalTsaServer answers on several workers and overlapping signs hit one responder.
+     * Its BouncyCastle generators are shared and not thread-safe; unsynchronized, about
+     * 40% of tokens came out with a signed messageDigest that didn't match their TSTInfo,
+     * which c2pa-rs rejects as "time stamp does not match data".
+     */
+    @Test
+    fun concurrentRequestsEachGetAValidToken() {
+        val responder = TimeStampResponder(keyPair.private, cert)
+        val threads = 4
+        val perThread = 50
+        val start = CountDownLatch(1)
+        val pool = Executors.newFixedThreadPool(threads)
+        try {
+            val jobs = (0 until threads).map { t ->
+                pool.submit(Callable {
+                    start.await()
+                    (0 until perThread).map { i ->
+                        // Distinct imprint and nonce per request, so a mixed-up reply shows too.
+                        val digest = MessageDigest.getInstance("SHA-256").digest("claim $t/$i".toByteArray())
+                        val req = TimeStampRequestGenerator().apply { setCertReq(true) }
+                            .generate(TSPAlgorithms.SHA256, digest, BigInteger.valueOf(t * 1000L + i + 1))
+                        req to TimeStampResponse(responder.respond(req.encoded))
+                    }
+                })
+            }
+            start.countDown()
+            val results = jobs.flatMap { it.get(60, TimeUnit.SECONDS) }
+            assertEquals(threads * perThread, results.size)
+            results.forEach { (req, resp) ->
+                assertEquals(PKIStatus.GRANTED, resp.status)
+                resp.validate(req)
+                // Checks the signed messageDigest against the TSTInfo and the signature over it.
+                resp.timeStampToken.validate(JcaSimpleSignerInfoVerifierBuilder().build(cert))
+            }
+        } finally {
+            pool.shutdownNow()
+        }
     }
 }
