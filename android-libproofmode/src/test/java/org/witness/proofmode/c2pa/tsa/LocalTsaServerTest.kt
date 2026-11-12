@@ -225,8 +225,18 @@ class LocalTsaServerTest {
     }
 
     @Test
-    fun proxyNeverSendsKeyOverPlainHttp() {
-        assertEquals(null, TsaProxy.urlFor("http://tsa.example.com/", "key"))
+    fun handlerRuntimeFailureIsBadGatewayNotACrash() {
+        val failing = LocalTsaServer({ throw IllegalStateException("keystore unavailable") })
+        try {
+            val conn = (URL(failing.url).openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"; doOutput = true
+                setRequestProperty("Content-Type", TimeStampResponder.CONTENT_TYPE_QUERY)
+                outputStream.use { it.write(request().encoded) }
+            }
+            assertEquals(502, conn.responseCode)
+        } finally {
+            failing.close()
+        }
     }
 
     @Test

@@ -178,4 +178,7 @@ secrets {
     ignoreList.add("sdk.*")
     // Octet keys are consumed by :app only (see app/build.gradle.kts).
     ignoreList.add("OCTET_.*")
+    // The TSA (and its Trufo key) is reached through ProofSign now; never let a stale local value back into BuildConfig.
+    ignoreList.add("TSA_API_KEY")
+    ignoreList.add("TSA_SERVER")
 }

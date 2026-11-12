@@ -1,5 +1,6 @@
 package org.witness.proofmode.c2pa
 
+import android.webkit.MimeTypeMap
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
@@ -25,7 +26,6 @@ import kotlinx.serialization.json.put
 import org.contentauth.c2pa.Action
 import org.contentauth.c2pa.Builder
 import org.contentauth.c2pa.BuilderIntent
-import org.contentauth.c2pa.C2PA
 import org.contentauth.c2pa.C2PAContext
 import org.contentauth.c2pa.C2PASettings
 import org.contentauth.c2pa.CertificateManager
@@ -33,6 +33,7 @@ import org.contentauth.c2pa.DigitalSourceType
 import org.contentauth.c2pa.FileStream
 import org.contentauth.c2pa.KeyStoreSigner
 import org.contentauth.c2pa.PredefinedAction
+import org.contentauth.c2pa.Reader
 import org.contentauth.c2pa.Signer
 import org.contentauth.c2pa.SigningAlgorithm
 import org.contentauth.c2pa.Stream
@@ -48,6 +49,7 @@ import org.witness.proofmode.LocationCapturePolicy
 import org.witness.proofmode.ProofMode
 import org.witness.proofmode.c2pa.proofsign.CaptureAuthority
 import org.witness.proofmode.c2pa.proofsign.CompromisedEnvironmentException
+import org.witness.proofmode.c2pa.proofsign.DeviceKey
 import org.witness.proofmode.c2pa.proofsign.ProofSignC2PASigner
 import org.witness.proofmode.c2pa.proofsign.ProofSignClient
 import org.witness.proofmode.c2pa.proofsign.Result
@@ -56,6 +58,8 @@ import org.witness.proofmode.c2pa.selfsign.CAWGIdentityManager
 import org.witness.proofmode.c2pa.selfsign.CertificateSigningService
 import org.witness.proofmode.c2pa.tsa.LocalTsa
 import org.witness.proofmode.c2pa.tsa.TsaProxy
+import org.witness.proofmode.c2pa.tsa.proofSignTimestampUrl
+import org.witness.proofmode.c2pa.tsa.selectTsaUrl
 import org.witness.proofmode.crypto.HashUtils
 import org.witness.proofmode.library.BuildConfig
 import timber.log.Timber
@@ -315,31 +319,9 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             // be cached/reused: the CAWG path (Signer.withCawgIdentity) *consumes*
             // the base signer, zeroing its native pointer. A reused signer would
             // therefore throw "c2pa signer is already closed" on the second sign.
-            val tsaUrl = resolveTsaUrl(signingMode)
-            val signer = if (signingMode == SigningMode.REMOTE) {
-                if (!ProofSignClient.isPlayIntegrityAvailable(context)) {
-                    // Remote signing requires Play Integrity. No-Play devices
-                    // never contact the server — sign locally instead.
-                    Timber.i("C2PA: Play Integrity unavailable - using local keystore signer")
-                    createSigner(SigningMode.KEYSTORE, tsaUrl)
-                }
-                //we only allow C2PA on devices that have been patched within 90 days
-                else if (checkOSSecurityPatchDate(DEFAULT_SECURITY_PATH_DAYS, certChain)) {
-                    Timber.i("C2PA: Security Patches within 90 days - enabling signer - ${signingMode.name}")
-
-                    createSigner(signingMode, tsaUrl)
-                }
-                else
-                {
-                    Timber.i("C2PA: OS Security Patches not updated within 90 days - using local keystore signer")
-                    //fall back to using a local keystore signer as fallback
-                    createSigner(SigningMode.KEYSTORE, tsaUrl)
-                }
-            }
-            else //local signing
-            {
-                createSigner(signingMode, tsaUrl)
-            }
+            val effectiveMode = effectiveSigningMode(signingMode, certChain)
+            val tsaUrl = resolveTsaUrl(signingMode, effectiveMode)
+            val signer = createSigner(effectiveMode, tsaUrl)
 
             signer?.let {
                 // Sign the image using C2PA library. We open a thread-local
@@ -384,7 +366,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         }
     }
 
-    private suspend fun createSigner(mode: SigningMode, tsaUrl: String): Signer? = withContext(Dispatchers.IO) {
+    private suspend fun createSigner(mode: SigningMode, tsaUrl: String?): Signer? = withContext(Dispatchers.IO) {
         when (mode) {
             SigningMode.KEYSTORE -> createKeystoreSigner(tsaUrl)
             SigningMode.HARDWARE -> createHardwareSigner(tsaUrl)
@@ -484,7 +466,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         return result
     }
 
-    private suspend fun createKeystoreSigner(tsaUrl: String): Signer {
+    private suspend fun createKeystoreSigner(tsaUrl: String?): Signer {
         val keyAlias = "C2PA_SOFTWARE_KEY_SECURE"
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
         keyStore.load(null)
@@ -528,7 +510,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
     }
 
 
-    private suspend fun createHardwareSigner(tsaUrl: String): Signer? {
+    private suspend fun createHardwareSigner(tsaUrl: String?): Signer? {
         val keyAlias =
             preferencesManager.hardwareKeyAlias.first()
                 ?: "$KEYSTORE_ALIAS_PREFIX${SigningMode.HARDWARE.name}"
@@ -589,7 +571,7 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             return null
     }
 
-    private suspend fun createCustomSigner(tsaUrl: String): Signer {
+    private suspend fun createCustomSigner(tsaUrl: String?): Signer {
         val certPEM =
             preferencesManager.customCertificate.first()
                 ?: throw IllegalStateException("Custom certificate not configured")
@@ -641,9 +623,9 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
         )
     }
 
-    private suspend fun createProofSignSigner (tsaUrl: String): Signer {
+    private suspend fun createProofSignSigner (tsaUrl: String?): Signer {
         val resolvedSigner = resolveProofSignServerUrl()
-        Timber.d("ProofSign: createProofSignSinger using serverUrl=%s", tsaUrl)
+        Timber.d("ProofSign: createProofSignSigner using serverUrl=%s", resolvedSigner)
         val signer = ProofSignC2PASigner(context, resolvedSigner, tsaUrl)
         return signer.createSigner()
     }
@@ -663,40 +645,53 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
     }
 
     /**
-     * [mode] is the mode the user chose, not the one a REMOTE request may fall back to:
-     * a remote user whose device can't do Play Integrity still gets their configured TSA.
+     * The signer that will actually run for [chosen]. REMOTE signing requires Play Integrity
+     * and an OS patched within [DEFAULT_SECURITY_PATH_DAYS]; otherwise it falls back to a
+     * local keystore signer.
      */
-    private fun resolveTsaUrl(mode: SigningMode): String {
-        // Local signing always timestamps on-device; the TSA URL setting is only
-        // offered (and only honoured) for remote signing.
-        if (mode != SigningMode.REMOTE) {
-            LocalTsa.localUrl(context)?.let { return it }
-            Timber.w("C2PA: local TSA unavailable - falling back to the default TSA")
-            return withApiKey(BuildConfig.TSA_SERVER)
+    private fun effectiveSigningMode(chosen: SigningMode, certChain: ArrayList<X509Certificate>?): SigningMode {
+        if (chosen != SigningMode.REMOTE) return chosen
+        if (!ProofSignClient.isPlayIntegrityAvailable(context)) {
+            // Remote signing requires Play Integrity. No-Play devices
+            // never contact the server - sign locally instead.
+            Timber.i("C2PA: Play Integrity unavailable - using local keystore signer")
+            return SigningMode.KEYSTORE
         }
-
-        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-        val configured = prefs.getString(
-            ProofMode.PREF_OPTION_TSA_SERVER,
-            BuildConfig.TSA_SERVER
-        )?.trim().orEmpty()
-        // A loopback URL (e.g. http://127.0.0.1:3161/) is served by the on-device TSA.
-        return LocalTsa.resolve(context, withApiKey(configured.ifEmpty { BuildConfig.TSA_SERVER }))
+        //we only allow C2PA on devices that have been patched within 90 days
+        if (checkOSSecurityPatchDate(DEFAULT_SECURITY_PATH_DAYS, certChain)) {
+            Timber.i("C2PA: Security Patches within 90 days - enabling signer - ${chosen.name}")
+            return chosen
+        }
+        Timber.i("C2PA: OS Security Patches not updated within 90 days - using local keystore signer")
+        return SigningMode.KEYSTORE
     }
 
     /**
-     * The built-in TSA requires an X-API-Key header, which c2pa-rs can't send, so it
-     * is reached through a loopback proxy that adds one. Only that exact URL gets the
-     * key: a user-configured TSA is called directly and never sees it.
+     * The TSA for one sign, or null to sign without a timestamp; the rules are in
+     * [selectTsaUrl]. [chosen] is the mode the user picked, [effective] the signer that runs.
      */
-    private fun withApiKey(tsaUrl: String): String {
-        val key = BuildConfig.TSA_API_KEY.trim()
-        if (key.isEmpty() || tsaUrl.toHttpUrlOrNull() != BuildConfig.TSA_SERVER.trim().toHttpUrlOrNull()) {
-            return tsaUrl
-        }
-        return TsaProxy.urlFor(tsaUrl, key) ?: tsaUrl.also {
-            Timber.w("C2PA: TSA key proxy unavailable - calling the TSA without its API key")
-        }
+    private fun resolveTsaUrl(chosen: SigningMode, effective: SigningMode): String? {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        val configured = prefs.getString(ProofMode.PREF_OPTION_TSA_SERVER, "").orEmpty()
+        val server = resolveProofSignServerUrl()
+        val timestampUrl = proofSignTimestampUrl(server)
+        val deviceKey = DeviceKey(context)
+        var branch = "none"
+        val url = selectTsaUrl(
+            chosen = chosen,
+            effective = effective,
+            configured = configured,
+            deviceRegistered = deviceKey.isRegisteredWith(server),
+            localTsaUrl = { LocalTsa.localUrl(context)?.also { branch = "on-device" } },
+            proofSignProxyUrl = {
+                TsaProxy.urlFor(timestampUrl, deviceKey.requestSigner())?.also { branch = "ProofSign" }
+            },
+            // A loopback URL (e.g. http://127.0.0.1:3161/) is served by the on-device TSA.
+            resolveLoopback = { LocalTsa.resolve(context, it).also { branch = "user TSA" } },
+        )
+        // Never log the proxy URL: its random path is what keeps other apps off it.
+        Timber.i("C2PA: TSA for %s (signing as %s): %s", chosen.name, effective.name, branch)
+        return url
     }
 
     private fun createKeystoreKey(alias: String, useHardware: Boolean) {
@@ -917,15 +912,6 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                 put ("trust_config", trustConfig)
             })
 
-            /**
-            put ("signer", buildJsonObject {
-                put ("time_authority_url","https://tsa.trufo.ai/")
-                put ("timestamp_request_headers", buildJsonObject {
-                    put ("name", "X-API-Key")
-                    put ("value", "foo")
-                })
-            })**/
-
 
         }
 
@@ -1049,12 +1035,10 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
             })
         }
 
-        C2PA.loadSettings(settingsJson.toString(),"json")
-
         try {
 
             // Read and verify using C2PA
-            val manifestJSON = C2PA.readFile(filePath)
+            val manifestJSON = readManifestJson(filePath, settingsJson.toString())
             Timber.d("Manifest JSON length: ${manifestJSON.length} characters")
            // Timber.d("Menifest JSON:\n${manifestJSON}")
 
@@ -1125,12 +1109,25 @@ class C2PAManager(private val context: Context, private val preferencesManager: 
                 put ("allowed_list", allowedList)
             })
         }
-        C2PA.loadSettings(settingsJson.toString(),"json")
+        return readManifestJson(filePath, settingsJson.toString())
+    }
 
-        // Read and verify using C2PA
-        val manifestJSON = C2PA.readFile(filePath)
-        return manifestJSON
-
+    /**
+     * Reads [filePath]'s manifest store as JSON, validated against [settingsJson]. Settings are
+     * scoped to this read through a [C2PAContext]: c2pa-android 0.1 has no global settings.
+     */
+    private fun readManifestJson(filePath: String, settingsJson: String): String {
+        val file = File(filePath)
+        val format = MimeTypeMap.getSingleton().getMimeTypeFromExtension(file.extension.lowercase())
+            ?: file.extension.lowercase()
+        return C2PASettings.create().use { settings ->
+            settings.updateFromString(settingsJson, "json")
+            C2PAContext.fromSettings(settings).use { context ->
+                FileStream(file, FileStream.Mode.READ).use { stream ->
+                    Reader.fromContext(context).withStream(format, stream).use { it.json() }
+                }
+            }
+        }
     }
 
     private fun createC2PAMetadataAssertion(context: Context, location: Location?, fileIn: File, contentType: String): AssertionDefinition {
