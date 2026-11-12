@@ -24,7 +24,6 @@ package org.witness.proofmode.c2pa.proofsign
  */
 
 import android.content.Context
-import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
@@ -38,11 +37,8 @@ import com.google.android.play.core.integrity.StandardIntegrityManager.StandardI
 import java.io.IOException
 import java.security.KeyPairGenerator
 import java.security.KeyStore
-import java.security.PrivateKey
-import java.security.Signature
 import java.security.cert.X509Certificate
 import java.security.spec.ECGenParameterSpec
-import java.util.UUID
 import java.util.Base64
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
@@ -80,8 +76,7 @@ class ProofSignClient(
             .writeTimeout(30, TimeUnit.SECONDS)
             .build()
 
-    private val prefs: SharedPreferences =
-        context.getSharedPreferences("proofsign_prefs", Context.MODE_PRIVATE)
+    private val deviceKey = DeviceKey(context)
 
     private val standardIntegrityManager: StandardIntegrityManager =
         IntegrityManagerFactory.createStandard(context)
@@ -94,10 +89,7 @@ class ProofSignClient(
 
     companion object {
         private const val TAG = "ProofSignClient"
-        private const val PREF_DEVICE_ID = "device_id"
-        private const val PREF_DEVICE_REGISTERED = "device_registered"
-        private const val PREF_LAST_SERVER_URL = "last_server_url"
-        private const val KEYSTORE_ALIAS = "proofsign_device_key"
+        private const val KEYSTORE_ALIAS = DeviceKey.KEYSTORE_ALIAS
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
         private const val PLAY_STORE_PACKAGE = "com.android.vending"
 
@@ -141,31 +133,17 @@ class ProofSignClient(
      * device against the new server.
      */
     private fun invalidateIfServerChanged() {
-        val lastUrl = prefs.getString(PREF_LAST_SERVER_URL, null)
-        if (lastUrl != serverUrl) {
-            Log.d(TAG, "Server URL changed (was=$lastUrl now=$serverUrl) — invalidating registration")
-            prefs.edit()
-                .putString(PREF_LAST_SERVER_URL, serverUrl)
-                .putBoolean(PREF_DEVICE_REGISTERED, false)
-                .apply()
+        if (deviceKey.invalidateIfServerChanged(serverUrl)) {
+            Log.d(TAG, "Server URL changed (now=$serverUrl) - invalidating registration")
         }
     }
 
-    private fun getDeviceId(): String {
-        var deviceId = prefs.getString(PREF_DEVICE_ID, null)
-        if (deviceId == null) {
-            deviceId = UUID.randomUUID().toString()
-            prefs.edit().putString(PREF_DEVICE_ID, deviceId).apply()
-        }
-        return deviceId
-    }
+    private fun getDeviceId(): String = deviceKey.deviceId()
 
     /** Whether this device has completed key-attestation registration with the current server. */
-    fun isDeviceRegistered(): Boolean = prefs.getBoolean(PREF_DEVICE_REGISTERED, false)
+    fun isDeviceRegistered(): Boolean = deviceKey.isRegistered()
 
-    private fun persistRegistration() {
-        prefs.edit().putBoolean(PREF_DEVICE_REGISTERED, true).apply()
-    }
+    private fun persistRegistration() = deviceKey.markRegistered()
 
     // region: device keypair
 
@@ -200,16 +178,7 @@ class ProofSignClient(
         return chain.map { it as X509Certificate }
     }
 
-    private fun signWithDeviceKey(data: ByteArray): String {
-        val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
-        keyStore.load(null)
-        val privateKey = keyStore.getKey(KEYSTORE_ALIAS, null) as PrivateKey
-
-        val signature = Signature.getInstance("SHA256withECDSA")
-        signature.initSign(privateKey)
-        signature.update(data)
-        return Base64.getEncoder().encodeToString(signature.sign())
-    }
+    private fun signWithDeviceKey(data: ByteArray): String = deviceKey.sign(data)
 
     /** Decode a hex string (server-issued KA challenge) into its raw bytes. */
     private fun hexDecode(hex: String): ByteArray {
