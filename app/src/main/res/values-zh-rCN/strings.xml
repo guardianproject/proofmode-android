@@ -74,7 +74,7 @@
     <string name="packaging_proof">正在打包证据以便分享…</string>
     <string name="include_mobile_network">包含移动网络信息</string>
     <string name="choose_my_settings">更改设置</string>
-    <string name="got_it">我知道了</string>
+    <string name="got_it">知道了</string>
     <string name="share_proof_action">分享证据</string>
     <string name="action_generate">生成证据</string>
     <string name="proof_error_message_final">无法生成此文件的证据。</string>
@@ -419,4 +419,9 @@
     <string name="note_dialog_explanation">备注会以说明文字的形式附加到所拍摄媒体的内容凭据中</string>
     <string name="cawg_creator_notes_title">创作者备注</string>
     <string name="cawg_creator_notes_dialog">创作者备注：要包含在创作者元数据中的其他信息</string>
+    <string name="notary_ots_title">OpenTimestamps</string>
+    <string name="notary_nostr_title">Nostr</string>
+    <string name="settings_signing_cawg_edit_key_hint">-----BEGIN PRIVATE KEY-----</string>
+    <string name="settings_signing_cawg_edit_cert_hint">-----BEGIN CERTIFICATE-----</string>
+    <string name="ultra_hdr">Ultra HDR</string>
 </resources>
