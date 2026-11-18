@@ -20,7 +20,7 @@ object MediaLinkNaming {
             if (!name.startsWith("$proofSetHash.")) continue
             if (ProofSetCidMembershipPolicy.isExcludedFromManifest(name)) continue
             if (ProofSetCidMembershipPolicy.isCoreArtifactForTest(proofSetHash, name)) continue
-            if (name == "$proofSetHash.ots" || name == "$proofSetHash.nostr") continue
+            if (name == "$proofSetHash.ots" || name == "$proofSetHash.nostr" || name == "$proofSetHash.oct") continue
             val t = sidecar.tsizes[name] ?: continue
             return CachedMediaLeaf(name, cid, t)
         }

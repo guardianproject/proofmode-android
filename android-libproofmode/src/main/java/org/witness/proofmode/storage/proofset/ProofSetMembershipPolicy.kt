@@ -67,6 +67,13 @@ object ProofSetMembershipPolicy {
             providerPrefKey = ProofMode.PREF_OPTION_NOTARY_NOSTR,
             providerDefault = ProofMode.PREF_OPTION_NOTARY_NOSTR_DEFAULT,
         ),
+        ArtifactRule.PrefGated(
+            suffix = ProofMode.OCTET_FILE_TAG,
+            globalPrefKey = ProofMode.PREF_OPTION_NOTARY,
+            globalDefault = ProofMode.PREF_OPTION_NOTARY_DEFAULT,
+            providerPrefKey = ProofMode.PREF_OPTION_NOTARY_OCTET,
+            providerDefault = ProofMode.PREF_OPTION_NOTARY_OCTET_DEFAULT,
+        ),
         ArtifactRule.AlwaysExclude { it.endsWith(".uri") },
         ArtifactRule.AlwaysExclude { it.endsWith(".ipfs-cids.json") },
         ArtifactRule.AlwaysExclude { it.contains(".ipfs-cids.late-") && it.endsWith(".json") },

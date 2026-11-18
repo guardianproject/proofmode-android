@@ -120,7 +120,9 @@ class LocalTsaServer(
 
             val reply = try {
                 handler.handle(body)
-            } catch (e: IOException) {
+            } catch (e: Exception) {
+                // Any handler failure, not only IOException: this runs on a pool thread, where
+                // an uncaught exception would kill the app instead of failing one timestamp.
                 Timber.w(e, "LocalTsa: no reply from %s", handler.javaClass.simpleName)
                 return writeStatus(output, 502, "Bad Gateway")
             }

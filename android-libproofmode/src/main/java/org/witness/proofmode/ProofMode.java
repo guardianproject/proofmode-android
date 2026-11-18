@@ -50,6 +50,7 @@ public class ProofMode {
     public final static String PREF_OPTION_NOTARY = "autoNotarize";
     public final static String PREF_OPTION_NOTARY_OTS = "autoNotarizeOts";
     public final static String PREF_OPTION_NOTARY_NOSTR = "autoNotarizeNostr";
+    public final static String PREF_OPTION_NOTARY_OCTET = "autoNotarizeOctet";
     public final static String PREF_OPTION_LOCATION = "trackLocation";
     public final static String PREF_OPTION_PHONE = "trackDeviceId";
     public final static String PREF_OPTION_NETWORK = "trackMobileNetwork";
@@ -76,7 +77,8 @@ public class ProofMode {
 
     public final static boolean PREF_OPTION_NOTARY_DEFAULT = true;
     public final static boolean PREF_OPTION_NOTARY_OTS_DEFAULT = true;
-    public final static boolean PREF_OPTION_NOTARY_NOSTR_DEFAULT = true;
+    public final static boolean PREF_OPTION_NOTARY_NOSTR_DEFAULT = false; // off for new installs; existing installs pinned on in ProofModeApp
+    public final static boolean PREF_OPTION_NOTARY_OCTET_DEFAULT = false;
     public final static boolean PREF_OPTION_LOCATION_DEFAULT = false;
     public final static boolean PREF_OPTION_PHONE_DEFAULT = false;
     public final static boolean PREF_OPTION_NETWORK_DEFAULT = false;
@@ -91,6 +93,7 @@ public class ProofMode {
     public final static String OPENTIMESTAMPS_FILE_TAG = ".ots";
     public final static String GOOGLE_SAFETYNET_FILE_TAG = ".gst";
     public final static String NOSTR_FILE_TAG = ".nostr";
+    public final static String OCTET_FILE_TAG = ".oct";
 
     public final static String PROVIDER_TAG = ".provider";
 
@@ -106,12 +109,15 @@ public class ProofMode {
     public final static String EVENT_PROOF_START = "org.witness.proofmode.PROOF_START";
     public final static String EVENT_PROOF_GENERATED = "org.witness.proofmode.PROOF_GENERATED";
     public final static String EVENT_PROOF_GENERATED_IMPORT = "org.witness.proofmode.PROOF_GENERATED_IMPORT";
+    /** An import was refused by ImportMediaValidator; carries EXTRA_URI and EXTRA_REJECT_REASONS. */
+    public final static String EVENT_PROOF_IMPORT_REJECTED = "org.witness.proofmode.PROOF_IMPORT_REJECTED";
 
 
     public final static String EVENT_PROOF_EXISTS = "org.witness.proofmode.PROOF_EXISTS";
 
     public final static String EVENT_PROOF_FAILED = "org.witness.proofmode.PROOF_FAILED";
     public final static String EVENT_PROOF_EXTRA_HASH = "org.witness.proofmode.PROOF_HASH";
+    public final static String EVENT_PROOF_EXTRA_REJECT_REASONS = "org.witness.proofmode.REJECT_REASONS";
     public final static String EVENT_PROOF_EXTRA_URI = "org.witness.proofmode.PROOF_URI";
     public final static BouncyCastleProvider sProvider = new BouncyCastleProvider();
     // The File system to store proof on, it could be any storage system like encrypted storage

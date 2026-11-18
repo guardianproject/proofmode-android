@@ -27,6 +27,7 @@ import org.witness.proofmode.c2pa.C2PAManager
 import org.witness.proofmode.c2pa.PreferencesManager
 import org.witness.proofmode.c2pa.SigningMode
 import org.witness.proofmode.c2pa.proofsign.ProofSignClient
+import org.witness.proofmode.c2pa.tsa.proofSignTimestampUrl
 import org.witness.proofmode.databinding.ActivitySettingsBinding
 import org.witness.proofmode.databinding.ActivitySigningSettingsBinding
 import org.witness.proofmode.library.BuildConfig
@@ -86,10 +87,11 @@ class SigningSettingsActivity : AppCompatActivity() {
             }
 
             // For the remote signing servers, show the user's configured value when set, and
-            // otherwise fall back to the env-secret default the signer actually uses (see
-            // ProofModeApp/C2PAManager). These mirror BuildConfig.SIGNING_SERVER/TSA_SERVER.
-            configureServerDefault(ProofMode.PREF_OPTION_PROOFSIGN_SERVER, BuildConfig.SIGNING_SERVER)
-            configureServerDefault(ProofMode.PREF_OPTION_TSA_SERVER, BuildConfig.TSA_SERVER) {
+            // otherwise fall back to the default the signer actually uses (see
+            // ProofModeApp/C2PAManager): BuildConfig.SIGNING_SERVER, and that server's
+            // timestamp endpoint, which follows the ProofSign server as it is edited.
+            configureServerDefault(ProofMode.PREF_OPTION_PROOFSIGN_SERVER, { BuildConfig.SIGNING_SERVER })
+            configureServerDefault(ProofMode.PREF_OPTION_TSA_SERVER, ::defaultTsaUrl) {
                 // Local signing always uses the on-device TSA (C2PAManager.resolveTsaUrl),
                 // so say that rather than show a URL that isn't used.
                 if (currentModeValue() == MODE_LOCAL) getString(R.string.settings_signing_tsa_local) else null
@@ -237,14 +239,23 @@ class SigningSettingsActivity : AppCompatActivity() {
          * stored value is empty, so seeding only happens if the user explicitly saves.
          * A non-null [summaryOverride] replaces the summary entirely.
          */
-        private fun configureServerDefault(key: String, default: String, summaryOverride: () -> String? = { null }) {
+        /** ProofSign's timestamp endpoint on the configured (or default) ProofSign server. */
+        private fun defaultTsaUrl(): String {
+            val server = preferenceManager.sharedPreferences
+                ?.getString(ProofMode.PREF_OPTION_PROOFSIGN_SERVER, null)
+                ?.takeIf { it.isNotBlank() }
+                ?: BuildConfig.SIGNING_SERVER
+            return proofSignTimestampUrl(server)
+        }
+
+        private fun configureServerDefault(key: String, default: () -> String, summaryOverride: () -> String? = { null }) {
             findPreference<EditTextPreference>(key)?.apply {
                 summaryProvider = Preference.SummaryProvider<EditTextPreference> { pref ->
-                    summaryOverride() ?: pref.text?.takeIf { it.isNotBlank() } ?: default
+                    summaryOverride() ?: pref.text?.takeIf { it.isNotBlank() } ?: default()
                 }
                 setOnBindEditTextListener { editText ->
                     if (editText.text.isNullOrBlank()) {
-                        editText.setText(default)
+                        editText.setText(default())
                         editText.setSelection(editText.text.length)
                     }
                 }

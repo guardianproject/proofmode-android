@@ -88,6 +88,20 @@ class ProofSetMembershipPolicyTest {
     }
 
     @Test
+    fun isManifestMember_octet_requiresGlobalAndProviderPref() {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        prefs.edit().putBoolean(ProofMode.PREF_OPTION_NOTARY, true).commit()
+        // Off by default.
+        assertFalse(ProofSetMembershipPolicy.isManifestMember(context, hash, "$hash.oct"))
+
+        prefs.edit().putBoolean(ProofMode.PREF_OPTION_NOTARY_OCTET, true).commit()
+        assertTrue(ProofSetMembershipPolicy.isManifestMember(context, hash, "$hash.oct"))
+
+        prefs.edit().putBoolean(ProofMode.PREF_OPTION_NOTARY, false).commit()
+        assertFalse(ProofSetMembershipPolicy.isManifestMember(context, hash, "$hash.oct"))
+    }
+
+    @Test
     fun globalNotaryOff_otsOnDisk_notAMember() {
         PreferenceManager.getDefaultSharedPreferences(context).edit()
             .putBoolean(ProofMode.PREF_OPTION_NOTARY, false)

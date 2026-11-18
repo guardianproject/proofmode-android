@@ -41,6 +41,9 @@ import org.witness.proofmode.notaries.NostrNotarizationProvider
 import org.witness.proofmode.notaries.OpenTimestampsNotarizationProvider
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import com.octetproof.sdk.api.Octet
+import com.octetproof.sdk.api.OctetConfig
+import com.octetproof.sdk.api.OctetSdk
 import org.witness.proofmode.notarization.NotarizationProvider
 import org.witness.proofmode.lp.AutoCaptureLocationAttestationOrchestrator
 import org.witness.proofmode.lp.AutoCaptureSkipReason
@@ -53,9 +56,13 @@ import java.io.IOException
 import java.util.concurrent.Executors
 import kotlin.system.exitProcess
 import info.guardianproject.durindoor.Native
+import org.witness.proofmode.org.witness.proofmode.octet.OctetNotarizationProvider
 
 private var mPgpUtils: PgpUtils? = null
 private lateinit var mPrefs: SharedPreferences
+
+
+private var sdkOctet: OctetSdk? = null
 
 internal fun registerExperimentalPluginsIfEnabled(
     lpEnabled: Boolean,
@@ -243,6 +250,8 @@ class ProofModeApp : Application(), Configuration.Provider {
         // Spec F7 dual choke: normalize legacy filebase prefs before MediaWatcher /
         // storage init. Schema behavior covered by FilebaseConfigTest; call order by review.
         FilebaseConfig.ensurePrefsSchema(mPrefs)
+
+        pinNostrNotaryDefault()
 
         // Reconcile the keystore-wrapped passphrase with the on-disk keyring
         // *before* anything else can touch PassphraseKeystore. If init(this)
@@ -621,6 +630,24 @@ class ProofModeApp : Application(), Configuration.Provider {
         ExperimentalFeatureActivator.bootstrapAtColdStart(this)
     }
 
+    /**
+     * Nostr notarization is off by default for new installs. Existing installs that never
+     * touched the toggle have no stored value and were relying on the old default (on), so
+     * write that value once, on the first launch after an upgrade, to keep their behaviour.
+     */
+    private fun pinNostrNotaryDefault() {
+        if (mPrefs.contains(ProofMode.PREF_OPTION_NOTARY_NOSTR)) return
+        val isUpgrade = try {
+            val info = packageManager.getPackageInfo(packageName, 0)
+            info.firstInstallTime != info.lastUpdateTime
+        } catch (e: Exception) {
+            false
+        }
+        mPrefs.edit()
+            .putBoolean(ProofMode.PREF_OPTION_NOTARY_NOSTR, isUpgrade || ProofMode.PREF_OPTION_NOTARY_NOSTR_DEFAULT)
+            .apply()
+    }
+
     private fun addDefaultNotarizationProviders() {
 
         try {
@@ -628,8 +655,10 @@ class ProofModeApp : Application(), Configuration.Provider {
             Class.forName("com.eternitywall.ots.OpenTimestamps")
             val nProvider: NotarizationProvider = OpenTimestampsNotarizationProvider(this)
             ProofMode.addNotarizationProvider(this, nProvider)
-        } catch (e: ClassNotFoundException) {
+        } catch (e: Exception) {
             //class not available
+            Timber.d("Opentimestamps not available")
+
         }
 
         try {
@@ -637,10 +666,38 @@ class ProofModeApp : Application(), Configuration.Provider {
             Class.forName("rust.nostr.sdk.Keys")
             val nProvider: NotarizationProvider = NostrNotarizationProvider(this)
             ProofMode.addNotarizationProvider(this, nProvider)
-            Timber.d("OpenTimestamps notarization provider registered")
-        } catch (e: ClassNotFoundException) {
+            Timber.d("Nostr notarization provider registered")
+        } catch (e: Exception) {
             //class not available
-            Timber.d("OpenTimestamps not available")
+            Timber.d("Nostr not available")
+        }
+
+        try {
+            if (org.witness.proofmode.org.witness.proofmode.octet.OctetSupport.isConfigured) {
+
+                //no license key required, all handled through app attestation
+                val config = OctetConfig(licenseKey = "")
+
+                // Octet.start is a suspend fun; run it on the app-wide scope (the Application
+                // equivalent of lifecycleScope). Catch here: an uncaught throw in a launch on this
+                // SupervisorJob scope would crash the process.
+                applicationScope.launch(Dispatchers.IO) {
+                    try {
+                        val sdk = Octet.start(applicationContext, config = config)
+                        sdkOctet = sdk
+                        ProofMode.addNotarizationProvider(
+                            applicationContext,
+                            OctetNotarizationProvider(applicationContext, sdk)
+                        )
+                        Timber.d("Octet notarization provider registered")
+                    } catch (e: Exception) {
+                        Timber.e(e, "Octet SDK failed to start")
+                    }
+                }
+            }
+        }
+        catch (e: Exception) {
+            Timber.d("Octet not available")
         }
 
     }

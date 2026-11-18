@@ -33,7 +33,8 @@ import java.util.concurrent.TimeUnit
 class ProofSignC2PASigner (
     private val context: Context,
     private val serverUrl: String,
-    private val timestampUrlOverride: String
+    /** The TSA c2pa-rs is pointed at, or null for no timestamp (see C2PAManager.resolveTsaUrl). */
+    private val timestampUrl: String?,
 ) {
 
     private val configurationURL: String = serverUrl.trimEnd('/') + BuildConfig.API_ENDPOINT
@@ -64,14 +65,16 @@ class ProofSignC2PASigner (
         val signingAlgorithm = mapAlgorithm(configuration.algorithm)
         val certificateChain = parseCertificateChain(configuration.certificate_chain)
 
-        var configTsaUrl = configuration.timestamp_url.takeIf { it.isNotEmpty() }
-        if (timestampUrlOverride.isNotEmpty())
-            configTsaUrl = timestampUrlOverride
-        
+        // Register first: the default TSA is ProofSign's timestamp endpoint, which only
+        // accepts a registered device, and c2pa-rs may ask for the timestamp before the
+        // first signData call. The configuration's timestamp_url is deliberately not used:
+        // it would be called without the device credentials the endpoint needs.
+        ensureRegistered()
+
         return Signer.withCallback(
             algorithm = signingAlgorithm,
             certificateChainPEM = certificateChain,
-            tsaURL = configTsaUrl,
+            tsaURL = timestampUrl,
         ) { data -> signData(data) }
     }
 
@@ -126,26 +129,7 @@ class ProofSignC2PASigner (
                 "ProofSignC2PASigner.signData called outside an authorized capture-signing scope"
             )
         }
-        if (!proofSignClient.isDeviceRegistered()) {
-            val verifyLatch = java.util.concurrent.CountDownLatch(1)
-            var verifyError: String? = null
-
-            proofSignClient.verifyDevice() { result -> when (result) {
-                                         is Result.Success -> {}
-                                         is Result.Failure -> {
-                                             verifyError = result.error
-                                         }
-                                     }
-                                 verifyLatch.countDown()
-            }
-
-
-        if (!verifyLatch.await(60, java.util.concurrent.TimeUnit.SECONDS)) {
-                throw SignerException.HttpError(-1, "Device verification timed out")
-            }
-
-            verifyError?.let { throw SignerException.HttpError(-1, "Device verification failed: $it") }
-        }
+        ensureRegistered()
 
         val dataToSignBase64 = Base64.encodeToString(data, Base64.NO_WRAP)
 
@@ -172,6 +156,21 @@ class ProofSignC2PASigner (
         signingError?.let { throw SignerException.HttpError(-1, it) }
 
         return signedData ?: throw SignerException.InvalidSignature
+    }
+
+    /** Completes Key Attestation registration if this device has not yet done so. */
+    private fun ensureRegistered() {
+        if (proofSignClient.isDeviceRegistered()) return
+        val verifyLatch = java.util.concurrent.CountDownLatch(1)
+        var verifyError: String? = null
+        proofSignClient.verifyDevice { result ->
+            if (result is Result.Failure) verifyError = result.error
+            verifyLatch.countDown()
+        }
+        if (!verifyLatch.await(60, java.util.concurrent.TimeUnit.SECONDS)) {
+            throw SignerException.HttpError(-1, "Device verification timed out")
+        }
+        verifyError?.let { throw SignerException.HttpError(-1, "Device verification failed: $it") }
     }
 
     private fun parseCertificateChain(base64Chain: String): String {

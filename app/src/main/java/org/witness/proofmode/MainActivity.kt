@@ -10,7 +10,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.provider.OpenableColumns
 import android.view.Menu
@@ -30,7 +29,6 @@ import org.witness.proofmode.filebase.FilebaseOnDemandUiEvents
 import org.witness.proofmode.share.FilebaseSettingsActivity
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.toMutableStateList
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
@@ -58,14 +56,19 @@ import org.witness.proofmode.ui.ActivityType
 import org.witness.proofmode.ui.DataLegendActivity
 import org.witness.proofmode.ui.DigitalSignaturesActivity
 import org.witness.proofmode.ui.ProofableItem
-import timber.log.Timber
 import java.io.File
-import java.io.IOException
 import java.util.Date
 import java.util.UUID
 import androidx.core.content.edit
 import androidx.core.net.toUri
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import android.widget.Toast
+import org.witness.proofmode.importing.ImportMediaValidator
+import org.witness.proofmode.util.MediaImport
+import com.octetproof.sdk.api.Octet
+import com.octetproof.sdk.api.OctetConfig
+import com.octetproof.sdk.api.OctetSdk
+import org.witness.proofmode.org.witness.proofmode.octet.OctetNotarizationProvider
 
 class MainActivity : AppCompatActivity(),
     ActivitiesViewDelegate {
@@ -79,13 +82,6 @@ class MainActivity : AppCompatActivity(),
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            requiredPermissions = arrayOf(
-                Manifest.permission.CAMERA
-            )
-        }
-
 
         mPrefs = PreferenceManager.getDefaultSharedPreferences(this)
 
@@ -109,6 +105,11 @@ class MainActivity : AppCompatActivity(),
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
 
+        ContextCompat.registerReceiver(this,
+            importRejectedReceiver, IntentFilter(ProofMode.EVENT_PROOF_IMPORT_REJECTED),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+
         initUI()
 
         if (intent?.action == ACTION_OPEN_CAMERA)
@@ -119,7 +120,6 @@ class MainActivity : AppCompatActivity(),
         {
 
         }
-
 
     }
 
@@ -304,7 +304,49 @@ class MainActivity : AppCompatActivity(),
         ActivityResultContracts.PickMultipleVisualMedia()
     ) { uris ->
         if (uris.isNotEmpty()) {
-            showShareProof(uris)
+            // Straight into the feed: no share screen, no "generate" tap.
+            MediaImport.importMedia(applicationContext, uris)
+            Toast.makeText(this, getString(R.string.import_started, uris.size), Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Imports MediaWatcher refused. Rejections arrive one per file, so they are collected
+    // into a single dialog that grows while it is open.
+    private val importRejectReasons = linkedSetOf<ImportMediaValidator.Reason>()
+    private var importRejectCount = 0
+    private var importRejectDialog: androidx.appcompat.app.AlertDialog? = null
+
+    private val importRejectedReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val reasons = MediaImport.parseReasons(
+                intent?.getStringArrayExtra(ProofMode.EVENT_PROOF_EXTRA_REJECT_REASONS)
+            )
+            runOnUiThread { showImportRejected(reasons) }
+        }
+    }
+
+    private fun showImportRejected(reasons: List<ImportMediaValidator.Reason>) {
+        if (importRejectDialog?.isShowing != true) {
+            importRejectReasons.clear()
+            importRejectCount = 0
+        }
+        importRejectReasons += reasons
+        importRejectCount++
+        // Count only, not a total: the picker doesn't tell us which other files will be refused.
+        val message = MediaImport.rejectionMessage(this, importRejectReasons, importRejectCount, 1)
+        val title = if (importRejectCount > 1)
+            getString(R.string.import_rejected_title_count, importRejectCount)
+        else getString(R.string.import_rejected_title)
+        val dialog = importRejectDialog
+        if (dialog?.isShowing == true) {
+            dialog.setTitle(title)
+            dialog.setMessage(message)
+        } else {
+            importRejectDialog = MaterialAlertDialogBuilder(this)
+                .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
         }
     }
 
@@ -428,10 +470,10 @@ class MainActivity : AppCompatActivity(),
         }
 
 
-        /**
         if (id == R.id.action_share_photos) {
-            showMediaPicker();
-        }**/
+            showMediaPicker()
+            return true
+        }
 
         if (id == R.id.menu_settings) {
             drawer.closeDrawer(GravityCompat.START)
@@ -640,7 +682,7 @@ class MainActivity : AppCompatActivity(),
          */
         private var requiredPermissions = arrayOf(
             Manifest.permission.CAMERA
-        )
+            )
         //
         /**
          * Manifest.permission.ACCESS_FINE_LOCATION
@@ -707,6 +749,8 @@ class MainActivity : AppCompatActivity(),
             }
         }
     }
+
+
 }
 
 fun showFilebaseOnDemandDialog(activity: android.app.Activity, event: FilebaseOnDemandUiEvent) {
