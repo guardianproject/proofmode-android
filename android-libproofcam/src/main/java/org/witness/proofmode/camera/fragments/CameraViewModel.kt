@@ -39,6 +39,7 @@ import androidx.camera.core.resolutionselector.AspectRatioStrategy
 import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.lifecycle.awaitInstance
+import androidx.camera.video.AudioStats
 import androidx.camera.video.ExperimentalPersistentRecording
 import androidx.camera.video.FallbackStrategy
 import androidx.camera.video.MediaStoreOutputOptions
@@ -121,8 +122,9 @@ class CameraViewModel(private val app: Application) : AndroidViewModel(app) {
     val exposureIndex: StateFlow<Int> = _exposureIndex
     private var _cameraDelay:MutableStateFlow<CameraDelay> = MutableStateFlow(CameraDelay.Zero)
     val cameraDelay: StateFlow<CameraDelay> = _cameraDelay
-    // Manual ISO / shutter / focus / white balance for the photo "Pro" mode. Declared
-    // ahead of the preview use case, which carries its capture callback.
+    // Manual ISO / shutter / focus / white balance / AE-AWB lock for "Pro" mode, in
+    // photo and video alike. Declared ahead of the preview use case, which carries its
+    // capture callback.
     val pro = ProCameraController()
     private val _proMode = MutableStateFlow(
         sharedPrefsManager.getBoolean(SharedPrefsManager.KEY_PRO_MODE, false)
@@ -268,8 +270,32 @@ class CameraViewModel(private val app: Application) : AndroidViewModel(app) {
 
     private var _torchOn = MutableStateFlow(false)
     val torchOn: StateFlow<Boolean> = _torchOn
-    private var _supportedFrameRates = MutableStateFlow(emptySet<Range<Int>>())
-    val supportedFrameRates: StateFlow<Set<Range<Int>>> = _supportedFrameRates
+
+    // Video frame rate. The user's choice is kept as-is; [activeVideoFps] is what the
+    // bound camera actually got, since lenses differ (front cameras rarely do 60).
+    private val _videoFps = MutableStateFlow(
+        sharedPrefsManager.getInt(SharedPrefsManager.KEY_VIDEO_FPS, DEFAULT_VIDEO_FPS)
+    )
+    /** Fixed frame rates from [VIDEO_FPS_CHOICES] the bound camera supports. */
+    private val _videoFrameRates = MutableStateFlow<List<Int>>(emptyList())
+    val videoFrameRates: StateFlow<List<Int>> = _videoFrameRates
+    private val _activeVideoFps = MutableStateFlow<Int?>(null)
+    val activeVideoFps: StateFlow<Int?> = _activeVideoFps
+
+    private val _videoStabilization = MutableStateFlow(
+        sharedPrefsManager.getBoolean(SharedPrefsManager.KEY_VIDEO_STABILIZATION, true)
+    )
+    val videoStabilization: StateFlow<Boolean> = _videoStabilization
+    private val _stabilizationSupported = MutableStateFlow(false)
+    val stabilizationSupported: StateFlow<Boolean> = _stabilizationSupported
+
+    private val _audioMuted = MutableStateFlow(
+        sharedPrefsManager.getBoolean(SharedPrefsManager.KEY_VIDEO_MUTED, false)
+    )
+    val audioMuted: StateFlow<Boolean> = _audioMuted
+    /** Live microphone level in 0..1 while recording, from the recorder's own stats. */
+    private val _audioLevel = MutableStateFlow(0f)
+    val audioLevel: StateFlow<Float> = _audioLevel
     var zoomState: LiveData<ZoomState?> = MutableLiveData(null)
         private set
 
@@ -517,39 +543,41 @@ class CameraViewModel(private val app: Application) : AndroidViewModel(app) {
 
     suspend fun changeQuality(quality:Quality,lifecycleOwner: LifecycleOwner) {
         _selectedQuality.update{ quality}
+        rebindVideoDimmed(lifecycleOwner)
+    }
+
+    /** Pick a frame rate (24 / 25 / 30 / 60) and rebind. Not while recording. */
+    suspend fun changeVideoFps(fps: Int, lifecycleOwner: LifecycleOwner) {
+        if (isRecordingInProgress() || _videoFps.value == fps) return
+        _videoFps.update { fps }
+        sharedPrefsManager.putInt(SharedPrefsManager.KEY_VIDEO_FPS, fps)
+        rebindVideoDimmed(lifecycleOwner)
+    }
+
+    /** Turn video stabilization on or off and rebind. Not while recording. */
+    suspend fun setVideoStabilization(enabled: Boolean, lifecycleOwner: LifecycleOwner) {
+        if (isRecordingInProgress() || _videoStabilization.value == enabled) return
+        _videoStabilization.update { enabled }
+        sharedPrefsManager.putBoolean(SharedPrefsManager.KEY_VIDEO_STABILIZATION, enabled)
+        rebindVideoDimmed(lifecycleOwner)
+    }
+
+    /** Mute or unmute the microphone; applies to a take in progress as well as the next. */
+    fun toggleAudioMuted() {
+        val muted = !_audioMuted.value
+        _audioMuted.update { muted }
+        sharedPrefsManager.putBoolean(SharedPrefsManager.KEY_VIDEO_MUTED, muted)
+        recording?.mute(muted)
+        if (muted) _audioLevel.update { 0f }
+    }
+
+    private suspend fun rebindVideoDimmed(lifecycleOwner: LifecycleOwner) {
         cameraProvider?.unbindAll()
         _previewAlpha.update { 0.5f }
         delay(800)
         _previewAlpha.update { 1f }
-
-        videoCapture = null
-        recorder = null
-        recorder = Recorder.Builder()
-
-            .setQualitySelector(QualitySelector.from(_selectedQuality.value!!, FallbackStrategy.lowerQualityThan(
-                _selectedQuality.value!!)))
-            .build()
-        videoCapture = VideoCapture.withOutput(recorder!!).apply {
-            targetRotation = deviceRotation.value
-        }
-        try {
-            camera = cameraProvider!!.bindToLifecycle(lifecycleOwner = lifecycleOwner,CameraSelector.Builder().requireLensFacing(lensFacing.value?:CameraSelector.LENS_FACING_BACK).build(),
-                previewUseCase,videoCapture)
-            camera?.cameraInfo?.supportedFrameRateRanges.let { ranges->
-                _supportedFrameRates.update { ranges as Set<Range<Int>> }
-
-            }
-            zoomState = camera!!.cameraInfo.zoomState
-            cameraControl = camera?.cameraControl
-            applyTorchState()
-            refreshExposureState()
-            pro.bind(camera!!, active = false)
-        } catch (ex: Exception) {
-            Timber.e(ex, "Failed to bind video capture with quality $quality")
-        }
-
+        bindVideoUseCases(lifecycleOwner)
     }
-
 
 suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
     cameraProvider = (cameraProvider?: ProcessCameraProvider.awaitInstance(app.applicationContext)).also {
@@ -559,35 +587,84 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
         _cameraQualities.update { qualities }
         it.unbindAll()
     }
-    //cameraProvider?.unbindAll()
-    recorder = Recorder.Builder()
-        .apply {
-            selectedQuality.value?.let {
-                setQualitySelector(QualitySelector.from(it, FallbackStrategy.lowerQualityThan(it)))
+    bindVideoUseCases(lifecycleOwner)
+}
+
+    /**
+     * Builds a fresh [Recorder] + [VideoCapture] from the current quality, frame rate and
+     * stabilization choices and binds them with the preview. Not for use mid-recording:
+     * a persistent recording must keep its VideoCapture (see [rebindVideoForLensSwitch]).
+     *
+     * Frame rate and stabilization are only asked for when the camera says it can do
+     * them; if the bind is still refused, it is retried without either rather than
+     * leaving the viewfinder dead.
+     */
+    private fun bindVideoUseCases(lifecycleOwner: LifecycleOwner) {
+        val provider = cameraProvider ?: return
+        val selector = CameraSelector.Builder()
+            .requireLensFacing(lensFacing.value ?: CameraSelector.LENS_FACING_BACK).build()
+        val cameraInfo = runCatching { provider.getCameraInfo(selector) }.getOrNull()
+
+        val rates = cameraInfo?.supportedFrameRateRanges.orEmpty()
+            .filter { it.lower == it.upper && it.upper in VIDEO_FPS_CHOICES }
+            .map { it.upper }
+            .distinct()
+            .sorted()
+        _videoFrameRates.update { rates }
+        val fps = when {
+            _videoFps.value in rates -> _videoFps.value
+            DEFAULT_VIDEO_FPS in rates -> DEFAULT_VIDEO_FPS
+            else -> null
+        }
+        _stabilizationSupported.update {
+            cameraInfo != null &&
+                    runCatching { Recorder.getVideoCapabilities(cameraInfo).isStabilizationSupported }
+                        .getOrDefault(false)
+        }
+
+        fun build(withOptions: Boolean): VideoCapture<Recorder> {
+            val newRecorder = Recorder.Builder()
+                .apply {
+                    selectedQuality.value?.let {
+                        setQualitySelector(QualitySelector.from(it, FallbackStrategy.lowerQualityThan(it)))
+                    }
+                }
+                .build()
+            recorder = newRecorder
+            return VideoCapture.Builder(newRecorder)
+                .apply {
+                    if (withOptions) {
+                        fps?.let { setTargetFrameRate(Range(it, it)) }
+                        // Set explicitly either way: left unset, the HAL's recording
+                        // template decides, and on many phones that means on.
+                        if (_stabilizationSupported.value) {
+                            setVideoStabilizationEnabled(_videoStabilization.value)
+                        }
+                    }
+                }
+                .build()
+                .apply { targetRotation = deviceRotation.value }
+        }
+
+        for (withOptions in listOf(true, false)) {
+            videoCapture = build(withOptions)
+            try {
+                camera = provider.bindToLifecycle(lifecycleOwner, selector, previewUseCase, videoCapture)
+                _activeVideoFps.update { if (withOptions) fps else null }
+                zoomState = camera!!.cameraInfo.zoomState
+                cameraControl = camera?.cameraControl
+                refreshZoomState()
+                applyTorchState()
+                refreshExposureState()
+                pro.bind(camera!!, active = _proMode.value, videoFps = _activeVideoFps.value ?: DEFAULT_VIDEO_FPS)
+                return
+            } catch (ex: Exception) {
+                Timber.e(ex, "Failed to bind video use cases (fps=%s, stabilization=%s, options=%b)",
+                    fps, _videoStabilization.value, withOptions)
+                provider.unbindAll()
             }
         }
-        .build()
-    videoCapture = VideoCapture
-        .withOutput(recorder!!)
-        .apply {
-            targetRotation = deviceRotation.value
-        }
-    try {
-        camera = cameraProvider!!.bindToLifecycle(lifecycleOwner = lifecycleOwner,CameraSelector.Builder().requireLensFacing(lensFacing.value?:CameraSelector.LENS_FACING_BACK).build(),
-            previewUseCase,videoCapture)
-        zoomState = camera!!.cameraInfo.zoomState
-        cameraControl = camera?.cameraControl
-        applyTorchState()
-        refreshExposureState()
-        // Pro settings are photo-only, but they live on the camera rather than on a
-        // use case, so they have to be cleared explicitly or they'd carry into video.
-        pro.bind(camera!!, active = false)
-    } catch (ex:Exception){
-        Timber.e("Binding failed")
     }
-
-
-}
     suspend fun bindUseCasesForImage(lifecycleOwner: LifecycleOwner) {
         // Attach the provider to the current UI lifecycle
         lifecycleOwner.lifecycle.addObserver(orientationProvider)
@@ -734,7 +811,16 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
                     is VideoRecordEvent.Start-> {
                         _recordingState.update { RecordingState.Recording }
                     }
+                    is VideoRecordEvent.Status -> {
+                        val audio = recordEvent.recordingStats.audioStats
+                        _audioLevel.update {
+                            if (audio.audioState == AudioStats.AUDIO_STATE_ACTIVE)
+                                audio.audioAmplitude.toFloat().coerceIn(0f, 1f)
+                            else 0f
+                        }
+                    }
                     is VideoRecordEvent.Finalize -> {
+                        _audioLevel.update { 0f }
                         stopTimer()
                         if (!recordEvent.hasError()) {
 
@@ -775,7 +861,8 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
 
 
             }
-
+        // Muting is a property of the recording, so a take started muted has to be told.
+        if (_audioMuted.value) recording?.mute(true)
 
     }
 
@@ -963,7 +1050,7 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
             refreshZoomState()
             applyTorchState()
             refreshExposureState()
-            pro.bind(camera!!, active = false)
+            pro.bind(camera!!, active = _proMode.value, videoFps = _activeVideoFps.value ?: DEFAULT_VIDEO_FPS)
             true
         } catch (ex: Exception) {
             Timber.e(ex, "Failed to rebind video capture to lens facing %d while recording", facing)
@@ -1069,6 +1156,10 @@ suspend fun bindUseCasesForVideo(lifecycleOwner: LifecycleOwner) {
 
 
 }
+
+/** Frame rates offered for video, where the camera supports them as a fixed range. */
+val VIDEO_FPS_CHOICES = listOf(24, 25, 30, 60)
+const val DEFAULT_VIDEO_FPS = 30
 
 enum class CameraEventType {
     NEW_IMAGE,

@@ -44,6 +44,14 @@
     <string name="pro_auto">AUTO</string>
     <string name="pro_reset_description">Reset all pro settings to auto</string>
     <string name="pro_close_slider_description">Close slider</string>
+    <string name="pro_lock">AE-L</string>
+    <string name="pro_lock_description">Lock exposure and white balance</string>
+    <string name="video_frame_rate">Frame rate</string>
+    <string name="video_fps">%1$d fps</string>
+    <string name="video_stabilization">Stabilization</string>
+    <string name="video_stabilization_description">Off keeps every frame uncropped and unwarped, as the sensor saw it.</string>
+    <string name="mute_audio">Mute audio</string>
+    <string name="unmute_audio">Unmute audio</string>
     <string name="note_dialog_explanation">Notes are attached to content credentials for captured media as captions</string>
 
 </resources>

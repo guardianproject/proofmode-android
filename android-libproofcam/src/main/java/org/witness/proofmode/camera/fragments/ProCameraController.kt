@@ -38,6 +38,8 @@ data class ProSettings(
     val shutterNs: Long? = null,
     val focusDiopters: Float? = null,
     val whiteBalanceK: Int? = null,
+    /** Hold auto-exposure and auto white balance where they are (CONTROL_AE/AWB_LOCK). */
+    val aeAwbLock: Boolean = false,
 ) {
     val manualExposure: Boolean get() = iso != null && shutterNs != null
 }
@@ -49,7 +51,11 @@ data class ProCapabilities(
     /** Closest focus in diopters (1 / metres); 0 for a fixed-focus lens. */
     val minFocusDiopters: Float = 0f,
     val manualWhiteBalance: Boolean = false,
+    val aeLock: Boolean = false,
+    val awbLock: Boolean = false,
 ) {
+    /** The lock is offered if the HAL can hold either AE or AWB. */
+    val aeAwbLock: Boolean get() = aeLock || awbLock
     val manualExposure: Boolean get() = isoRange != null && shutterRangeNs != null
     val manualFocus: Boolean get() = minFocusDiopters > 0f
 }
@@ -67,10 +73,11 @@ data class ProLiveReadout(
  *
  * CameraX has no manual-sensor API of its own, so the overrides are pushed as
  * [CaptureRequestOptions] onto the bound camera's [Camera2CameraControl]; they apply
- * to the repeating preview request and to still captures alike, so the preview shows
- * what will be saved. The overrides live on the camera, not on a use case, which is
- * why [bind] has to be called after every (re)bind — including the video ones, with
- * `active = false`, so photo-only settings never leak into a recording.
+ * to the repeating request — which feeds the preview and the video encoder alike — and
+ * to still captures, so the preview shows what will be saved. They can be changed
+ * mid-recording (a focus pull, say) without touching the encoder. The overrides live on
+ * the camera, not on a use case, which is why [bind] has to be called after every
+ * (re)bind, photo and video alike.
  */
 @OptIn(ExperimentalCamera2Interop::class)
 class ProCameraController {
@@ -85,6 +92,8 @@ class ProCameraController {
     private var control: Camera2CameraControl? = null
     private var cameraId: String? = null
     private var active = false
+    /** Frame rate of the bound video session, or null when binding for stills. */
+    private var videoFps: Int? = null
 
     // Written on the camera thread by the capture callback, read on the main thread.
     @Volatile private var lastGains: RggbChannelVector? = null
@@ -134,11 +143,18 @@ class ProCameraController {
 
     /**
      * Point the controller at a freshly bound [camera]. Manual values survive a rebind
-     * of the same camera (aspect ratio, quality, a trip through video) but are dropped
-     * on a lens switch, since the other sensor has different ranges and calibration.
+     * of the same camera (aspect ratio, quality, a trip between photo and video) but are
+     * dropped on a lens switch, since the other sensor has different ranges and
+     * calibration.
+     *
+     * [videoFps] is the frame rate of a video session (null for stills). It caps the
+     * shutter at one frame duration — a longer exposure would drop frames — and, since
+     * Camera2 takes the frame duration from the request once auto-exposure is off, is
+     * what manual exposure pins the frame duration to.
      */
-    fun bind(camera: Camera, active: Boolean) {
+    fun bind(camera: Camera, active: Boolean, videoFps: Int? = null) {
         this.active = active
+        this.videoFps = videoFps
         try {
             val info = Camera2CameraInfo.from(camera.cameraInfo)
             control = Camera2CameraControl.from(camera.cameraControl)
@@ -150,7 +166,12 @@ class ProCameraController {
                 rejected.clear()
                 probes.clear()
             }
-            _capabilities.value = readCapabilities(info)
+            val caps = readCapabilities(info)
+            _capabilities.value = caps
+            // A shutter set for a still can be longer than a video frame.
+            caps.shutterRangeNs?.let { range ->
+                _settings.update { it.copy(shutterNs = it.shutterNs?.coerceIn(range)) }
+            }
         } catch (e: IllegalArgumentException) {
             // Not a Camera2-backed camera: no manual controls.
             Timber.w(e, "Camera2 interop unavailable; pro controls disabled")
@@ -220,14 +241,26 @@ class ProCameraController {
         apply()
     }
 
+    /** Hold (or release) auto-exposure and auto white balance at their current values. */
+    fun setAeAwbLock(locked: Boolean) {
+        if (locked && !_capabilities.value.aeAwbLock) return
+        _settings.update { it.copy(aeAwbLock = locked) }
+        apply()
+    }
+
     fun resetAll() {
         wbAnchor = null
         _settings.value = ProSettings()
         apply()
     }
 
+    /**
+     * Where manual shutter starts when ISO is set first: what AE was using, or failing
+     * that 1/60 s for stills and the 180° shutter (half a frame) for video.
+     */
     private fun seedShutter(range: LongRange): Long =
-        (_live.value.shutterNs ?: DEFAULT_SHUTTER_NS).coerceIn(range)
+        (_live.value.shutterNs ?: videoFps?.let { NANOS_PER_SECOND / (2L * it) } ?: DEFAULT_SHUTTER_NS)
+            .coerceIn(range)
 
     /**
      * Offer a control whenever the camera lists the matching "off" mode (and, where
@@ -251,6 +284,8 @@ class ProCameraController {
         val iso = info.getCameraCharacteristic(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
         val shutter = info.getCameraCharacteristic(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
         val minFocus = info.getCameraCharacteristic(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE)
+        val aeLock = info.getCameraCharacteristic(CameraCharacteristics.CONTROL_AE_LOCK_AVAILABLE) == true
+        val awbLock = info.getCameraCharacteristic(CameraCharacteristics.CONTROL_AWB_LOCK_AVAILABLE) == true
 
         // Camera2 only takes ISO or shutter with AE off, and then needs both.
         val manualExposure = CameraMetadata.CONTROL_AE_MODE_OFF in aeModes &&
@@ -259,18 +294,23 @@ class ProCameraController {
                 ManualControl.FOCUS !in rejected
         val manualWhiteBalance = CameraMetadata.CONTROL_AWB_MODE_OFF in awbModes &&
                 ManualControl.WHITE_BALANCE !in rejected
+        // Video can't expose for longer than a frame; stills are capped where the
+        // preview (which shares the exposure) gets too slow to frame with.
+        val maxShutterNs = videoFps?.let { NANOS_PER_SECOND / it } ?: MAX_SHUTTER_NS
         Timber.d(
-            "Pro capabilities for camera %s: exposure=%b focus=%b (min %s dpt) whiteBalance=%b",
-            info.cameraId, manualExposure, manualFocus, minFocus, manualWhiteBalance
+            "Pro capabilities for camera %s: exposure=%b focus=%b (min %s dpt) whiteBalance=%b " +
+                    "aeLock=%b awbLock=%b videoFps=%s",
+            info.cameraId, manualExposure, manualFocus, minFocus, manualWhiteBalance,
+            aeLock, awbLock, videoFps
         )
         return ProCapabilities(
             isoRange = iso?.takeIf { manualExposure && it.lower < it.upper }?.let { it.lower..it.upper },
-            // Sensors advertise exposures of many seconds; past a second the preview
-            // (which shares the exposure) is too slow to frame with.
             shutterRangeNs = shutter?.takeIf { manualExposure && it.lower < it.upper }
-                ?.let { it.lower..it.upper.coerceAtMost(MAX_SHUTTER_NS).coerceAtLeast(it.lower) },
+                ?.let { it.lower..it.upper.coerceAtMost(maxShutterNs).coerceAtLeast(it.lower) },
             minFocusDiopters = minFocus?.takeIf { manualFocus } ?: 0f,
             manualWhiteBalance = manualWhiteBalance,
+            aeLock = aeLock,
+            awbLock = awbLock,
         )
     }
 
@@ -375,6 +415,12 @@ class ProCameraController {
             options.setCaptureRequestOption(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF)
             options.setCaptureRequestOption(CaptureRequest.SENSOR_SENSITIVITY, s.iso)
             options.setCaptureRequestOption(CaptureRequest.SENSOR_EXPOSURE_TIME, s.shutterNs)
+            // With AE off the HAL takes the frame duration from the request too, and
+            // CameraX's target FPS range no longer applies; without this a video could
+            // come out at whatever rate the request template happens to default to.
+            videoFps?.let {
+                options.setCaptureRequestOption(CaptureRequest.SENSOR_FRAME_DURATION, NANOS_PER_SECOND / it)
+            }
             inUse += ManualControl.EXPOSURE
         }
         if (s.focusDiopters != null && caps.manualFocus) {
@@ -398,6 +444,9 @@ class ProCameraController {
             }
             inUse += ManualControl.WHITE_BALANCE
         }
+        // Harmless alongside a manual value: a lock only holds the auto algorithm.
+        if (s.aeAwbLock && caps.aeLock) options.setCaptureRequestOption(CaptureRequest.CONTROL_AE_LOCK, true)
+        if (s.aeAwbLock && caps.awbLock) options.setCaptureRequestOption(CaptureRequest.CONTROL_AWB_LOCK, true)
         // Replaces whatever was set before, so a cleared setting really goes back to auto.
         control.setCaptureRequestOptions(options.build())
         startProbes(inUse)
@@ -406,7 +455,8 @@ class ProCameraController {
     companion object {
         const val WB_MIN_KELVIN = 2500
         const val WB_MAX_KELVIN = 9000
-        private const val MAX_SHUTTER_NS = 1_000_000_000L
+        private const val NANOS_PER_SECOND = 1_000_000_000L
+        private const val MAX_SHUTTER_NS = NANOS_PER_SECOND
         private const val DEFAULT_SHUTTER_NS = 16_666_667L // 1/60 s
         private const val DEFAULT_ISO = 100
         private const val LIVE_READOUT_FRAME_INTERVAL = 6

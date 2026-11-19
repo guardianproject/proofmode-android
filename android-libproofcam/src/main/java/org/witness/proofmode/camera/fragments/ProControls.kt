@@ -45,6 +45,9 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
@@ -232,7 +235,7 @@ fun ProControls(
             ))
         }
     }
-    if (items.isEmpty()) return
+    if (items.isEmpty() && !caps.aeAwbLock) return
     // A lens switch can take the open setting away (front cameras are often fixed-focus).
     val open = items.firstOrNull { it.setting == selected && it.enabled }
 
@@ -263,6 +266,30 @@ fun ProControls(
                     .padding(6.dp)
                     .size(18.dp)
             )
+            // AE/AWB lock: a plain toggle, no slider. Mostly for video, where it stops
+            // exposure and colour drifting mid-take when something crosses the frame.
+            if (caps.aeAwbLock) {
+                val lockDescription = stringResource(R.string.pro_lock_description)
+                Text(
+                    text = stringResource(R.string.pro_lock),
+                    maxLines = 1,
+                    color = if (settings.aeAwbLock) CameraBlack else Color.White,
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(if (settings.aeAwbLock) AccentGreen else Color.Transparent)
+                        .clickable {
+                            haptics.tick()
+                            pro.setAeAwbLock(!settings.aeAwbLock)
+                        }
+                        .semantics {
+                            contentDescription = lockDescription
+                            // `this.`: the bar has its own `selected` (the open slider).
+                            this.selected = settings.aeAwbLock
+                        }
+                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                )
+            }
             items.forEach { item ->
                 val isOpen = item === open
                 Text(

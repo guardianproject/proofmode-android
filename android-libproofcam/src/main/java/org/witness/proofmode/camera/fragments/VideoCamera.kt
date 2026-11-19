@@ -1,6 +1,13 @@
 package org.witness.proofmode.camera.fragments
 
 import android.Manifest
+import android.view.Surface
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Switch
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.constraintlayout.compose.Dimension
 import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -139,7 +146,16 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
         }
     }
 
-    val ranges by cameraViewModel.supportedFrameRates.collectAsStateWithLifecycle()
+    val proMode by cameraViewModel.proMode.collectAsStateWithLifecycle()
+    val proModeDescription = stringResource(R.string.pro_mode_description)
+    val deviceRotation by cameraViewModel.deviceRotation.collectAsStateWithLifecycle()
+    val videoFrameRates by cameraViewModel.videoFrameRates.collectAsStateWithLifecycle()
+    val activeVideoFps by cameraViewModel.activeVideoFps.collectAsStateWithLifecycle()
+    val videoStabilization by cameraViewModel.videoStabilization.collectAsStateWithLifecycle()
+    val stabilizationSupported by cameraViewModel.stabilizationSupported.collectAsStateWithLifecycle()
+    val audioMuted by cameraViewModel.audioMuted.collectAsStateWithLifecycle()
+    val audioLevel by cameraViewModel.audioLevel.collectAsStateWithLifecycle()
+    val isRecording = recordingState == RecordingState.Recording || recordingState == RecordingState.Paused
 
     var autofocusRequest by remember {
         mutableStateOf(UUID.randomUUID() to Offset.Unspecified)
@@ -310,7 +326,8 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                     // Exposure lives over the preview rather than in the top bar, so it
                     // is adjusted while looking at the scene it affects.
                     AnimatedVisibility(
-                        visible = showExposureSlider,
+                        // In Pro mode exposure compensation lives in the Pro bar instead.
+                        visible = showExposureSlider && !proMode,
                         enter = fadeIn(),
                         exit = fadeOut(),
                         modifier = Modifier
@@ -329,7 +346,15 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
 
                 BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                     val isPortrait = minWidth < minHeight
-                    val constraints = if (isPortrait) portraitConstraints() else landscapeConstraints()
+                    // The activity is locked to portrait, so when the phone is held in
+                    // landscape the Pro bar is turned to read upright and moved to whichever
+                    // long edge is now physically at the bottom (as in PhotoCamera).
+                    val proLandscape = deviceRotation == Surface.ROTATION_90 ||
+                            deviceRotation == Surface.ROTATION_270
+                    // ROTATION_90: left edge down, so "up" for the reader is screen-right.
+                    val proOnStartEdge = deviceRotation == Surface.ROTATION_90
+                    val constraints = if (isPortrait) portraitConstraints(proLandscape, proOnStartEdge)
+                    else landscapeConstraints()
 
                     val topBarButtons = remember {
                         movableContentOf{
@@ -366,6 +391,19 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                                     tint = if (torchOn) AccentGreen else Color.White,contentDescription = if (torchOn) stringResource(
                                         R.string.turn_flash_off
                                     ) else stringResource(R.string.turn_flash_on)
+                                )
+                            }
+                            IconButton(onClick = { cameraViewModel.toggleAudioMuted() }) {
+                                MicIcon(muted = audioMuted)
+                            }
+                            IconButton(onClick = { cameraViewModel.setProMode(!proMode) }) {
+                                Text(
+                                    stringResource(R.string.pro_mode),
+                                    color = if (proMode) AccentGreen else Color.White,
+                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                    modifier = Modifier.semantics {
+                                        contentDescription = proModeDescription
+                                    }
                                 )
                             }
                             IconButton(onClick = {
@@ -432,7 +470,38 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
                                 enter = fadeIn(),
                                 exit = fadeOut(),
                                 modifier = Modifier.layoutId("chipTimer")) {
-                                ElevatedAssistChip(onClick = {}, label = { Text(elapsedTime) })
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    ElevatedAssistChip(onClick = {}, label = { Text(elapsedTime) })
+                                    Spacer(Modifier.width(8.dp))
+                                    // Mute stays reachable mid-take (the top bar is hidden
+                                    // while recording); the meter shows the mic is live.
+                                    AudioLevelControl(
+                                        muted = audioMuted,
+                                        level = audioLevel,
+                                        onToggleMute = { cameraViewModel.toggleAudioMuted() }
+                                    )
+                                }
+                            }
+
+                            // Pro bar: floats just above the record button and stays up while
+                            // recording, so exposure, focus and white balance can be ridden
+                            // mid-take. Its slider opens underneath, pushing the bar up.
+                            AnimatedVisibility(
+                                visible = proMode,
+                                enter = fadeIn(),
+                                exit = fadeOut(),
+                                modifier = Modifier.layoutId("proControls")
+                            ) {
+                                ProControls(
+                                    pro = cameraViewModel.pro,
+                                    exposureState = exposureState,
+                                    exposureIndex = exposureIndex,
+                                    onExposureIndexChange = { cameraViewModel.updateExposureCompensation(it) },
+                                    modifier = if (proLandscape)
+                                        Modifier.quarterTurn(clockwise = proOnStartEdge).fillMaxWidth()
+                                    else
+                                        Modifier.fillMaxWidth()
+                                )
                             }
 
                             Box(modifier = Modifier
@@ -480,7 +549,7 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
 
                             RecordButton(
                                 modifier = Modifier.layoutId("recordButton"),
-                                isRecording = recordingState == RecordingState.Recording || recordingState == RecordingState.Paused,
+                                isRecording = isRecording,
                                 onClick = {
                                     if (recordingState == RecordingState.Idle || recordingState == RecordingState.Stopped) {
                                         if (!audioPermissionState.status.isGranted) {
@@ -645,6 +714,65 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
 
                     }
 
+                    // Frame rate: only the fixed rates this lens supports. The rate actually
+                    // bound is highlighted, which can differ from the saved choice after a
+                    // switch to a lens that can't do it.
+                    if (videoFrameRates.size > 1) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(stringResource(R.string.video_frame_rate), style = MaterialTheme.typography.bodySmall)
+                                activeVideoFps?.let {
+                                    Text(stringResource(R.string.video_fps, it), style = MaterialTheme.typography.labelMedium)
+                                }
+                            }
+                            videoFrameRates.forEach { fps ->
+                                val isSelectedFps = activeVideoFps == fps
+                                Box(modifier = Modifier
+                                    .padding(start = 6.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(if (isSelectedFps) AccentGreen else Color.White.copy(alpha = 0.1f))
+                                    .clickable(enabled = !isRecording) {
+                                        scope.launch { cameraViewModel.changeVideoFps(fps, lifecycleOwner) }
+                                    }
+                                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                                ) {
+                                    Text(
+                                        fps.toString(),
+                                        color = if (isSelectedFps) CameraBlack else Color.White,
+                                        style = MaterialTheme.typography.labelLarge
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    if (stabilizationSupported) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(stringResource(R.string.video_stabilization), style = MaterialTheme.typography.bodySmall)
+                                Text(stringResource(R.string.video_stabilization_description), style = MaterialTheme.typography.labelMedium)
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            Switch(
+                                checked = videoStabilization,
+                                enabled = !isRecording,
+                                onCheckedChange = { enabled ->
+                                    scope.launch { cameraViewModel.setVideoStabilization(enabled, lifecycleOwner) }
+                                }
+                            )
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(40.dp))
                 }
             }
@@ -657,7 +785,7 @@ fun VideoCamera(modifier: Modifier = Modifier,cameraViewModel: CameraViewModel =
 }
 
 
-private fun portraitConstraints(): ConstraintSet {
+private fun portraitConstraints(proLandscape: Boolean, proOnStartEdge: Boolean): ConstraintSet {
     return ConstraintSet {
         val topScrim = createRefFor("topScrim")
         val topBar = createRefFor("topBar")
@@ -703,8 +831,28 @@ private fun portraitConstraints(): ConstraintSet {
             verticalBias = 0.2f
         }
 
+        val proControls = createRefFor("proControls")
+        constrain(proControls) {
+            if (proLandscape) {
+                // Run between the top bar and the record button row.
+                top.linkTo(parent.top, margin = 116.dp)
+                bottom.linkTo(bottomBg.top)
+                height = Dimension.fillToConstraints
+                if (proOnStartEdge) start.linkTo(parent.start, margin = 8.dp)
+                else end.linkTo(parent.end, margin = 8.dp)
+            } else {
+                bottom.linkTo(recordButton.top, margin = 12.dp)
+                start.linkTo(parent.start, margin = 12.dp)
+                end.linkTo(parent.end, margin = 12.dp)
+                width = Dimension.fillToConstraints
+            }
+        }
+
         constrain(chipTimer) {
-            bottom.linkTo(bottomBg.top, 8.dp)
+            // Above the Pro bar when it's up in portrait; collapses onto the scrim edge
+            // otherwise, since a hidden bar measures zero.
+            if (proLandscape) bottom.linkTo(bottomBg.top, 8.dp)
+            else bottom.linkTo(proControls.top, 8.dp)
             start.linkTo(parent.start)
             end.linkTo(parent.end)
         }
@@ -823,6 +971,13 @@ private fun landscapeConstraints(): ConstraintSet {
             end.linkTo(parent.end)
         }
 
+        constrain(createRefFor("proControls")) {
+            top.linkTo(parent.top, margin = 16.dp)
+            start.linkTo(topBar.end, margin = 8.dp)
+            end.linkTo(bottomBg.start, margin = 8.dp)
+            width = Dimension.fillToConstraints
+        }
+
         constrain(cameraSwitcher) {
             top.linkTo(parent.top)
             bottom.linkTo(recordButton.top)
@@ -871,12 +1026,48 @@ private fun landscapeConstraints(): ConstraintSet {
 }
 
 
+@Composable
+private fun MicIcon(muted: Boolean, modifier: Modifier = Modifier) {
+    Icon(
+        imageVector = ImageVector.vectorResource(if (muted) R.drawable.ic_mic_off else R.drawable.ic_mic),
+        tint = if (muted) InactiveWhite else Color.White,
+        contentDescription = stringResource(if (muted) R.string.unmute_audio else R.string.mute_audio),
+        modifier = modifier
+    )
+}
 
-
-
-
-
-
-
-
-
+/** Mic mute toggle with a small live level bar, shown beside the timer while recording. */
+@Composable
+private fun AudioLevelControl(muted: Boolean, level: Float, onToggleMute: () -> Unit) {
+    // Amplitude is linear and speech sits low on it; a square root spreads it out so
+    // normal talking reads as a healthy bar rather than a sliver.
+    val shown by animateFloatAsState(
+        targetValue = if (muted) 0f else kotlin.math.sqrt(level.coerceIn(0f, 1f)),
+        label = "audioLevel"
+    )
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(0xB3000000))
+            .clickable(onClick = onToggleMute)
+            .padding(horizontal = 8.dp, vertical = 6.dp)
+    ) {
+        MicIcon(muted = muted, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(6.dp))
+        Box(
+            modifier = Modifier
+                .width(48.dp)
+                .height(4.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(Color.White.copy(alpha = 0.2f))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(shown)
+                    .background(if (shown > 0.9f) Color(0xFFFF5252) else AccentGreen)
+            )
+        }
+    }
+}

@@ -13,6 +13,9 @@ class SharedPrefsManager private constructor(private val context: Context) {
         const val KEY_PHOTO_QUALITY = "photo_quality"
         const val KEY_PRO_MODE = "pro_mode"
         const val KEY_PHOTO_FORMAT = "photo_format"
+        const val KEY_VIDEO_FPS = "video_fps"
+        const val KEY_VIDEO_STABILIZATION = "video_stabilization"
+        const val KEY_VIDEO_MUTED = "video_muted"
 
         @Synchronized
         fun newInstance(context: Context) = SharedPrefsManager(context)
