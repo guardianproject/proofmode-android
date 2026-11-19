@@ -5,6 +5,16 @@
     <uses-feature
         android:name="android.hardware.camera.any"
         android:required="true" />
+    <!-- Implied features that Play treats as required unless declared optional:
+         ACCESS_WIFI_STATE (merged from truetime-android) implies android.hardware.wifi,
+         and android-libproofcam's portrait-locked activity implies
+         android.hardware.screen.portrait. Neither is essential. -->
+    <uses-feature
+        android:name="android.hardware.wifi"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.screen.portrait"
+        android:required="false" />
     <!-- ProofMode only reads and writes media it captures itself. On API 29+ the
          app owns the MediaStore rows it inserts, so no media-read permission is
          needed; imports go through the system photo picker, which grants per-URI
