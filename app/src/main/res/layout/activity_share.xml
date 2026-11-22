@@ -174,14 +174,14 @@
             android:layout_width="160dp"
             android:layout_height="wrap_content"
             android:layout_margin="10dp"
-            android:text="SHARE ZIP"
+            android:text="@string/action_share_proof_zip"
             android:onClick="clickAll"
             />
             <Button
                 android:layout_width="160dp"
                 android:layout_height="wrap_content"
                 android:layout_margin="10dp"
-                android:text="SAVE ZIP"
+                android:text="@string/action_save_proof_zip"
                 android:onClick="saveAll"
                 />
 
