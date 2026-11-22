@@ -441,4 +441,5 @@
     <string name="filebase_upload_oversize_batch_message">%d de ces éléments dépassent 25 Mo. Les envoyer sans le fichier média ?</string>
     <string name="filebase_reconfigure">Reconfigurer</string>
     <string name="action_share_proof_zip">Partager le Zip</string>
+    <string name="action_save_proof_zip">Enregistrer le Zip</string>
 </resources>
