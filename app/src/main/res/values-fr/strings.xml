@@ -441,6 +441,7 @@
     <string name="filebase_upload_oversize_batch_message">%d de ces éléments dépassent 25 Mo. Les envoyer sans le fichier média ?</string>
     <string name="filebase_reconfigure">Reconfigurer</string>
 <<<<<<< HEAD
+<<<<<<< HEAD
         <string name="filebase_copy_cid">Copier</string>
     <string name="filebase_uploading">Envoi vers Filebase…</string>
     <string name="filebase_uploads_group">Envois Filebase</string>
