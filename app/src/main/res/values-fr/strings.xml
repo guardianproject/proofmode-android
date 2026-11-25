@@ -440,6 +440,7 @@
     <string name="proofset_toast_mixed">%1$d sur %2$d terminés</string>
     <string name="filebase_upload_oversize_batch_message">%d de ces éléments dépassent 25 Mo. Les envoyer sans le fichier média ?</string>
     <string name="filebase_reconfigure">Reconfigurer</string>
+<<<<<<< HEAD
         <string name="filebase_copy_cid">Copier</string>
     <string name="filebase_uploading">Envoi vers Filebase…</string>
     <string name="filebase_uploads_group">Envois Filebase</string>
@@ -501,4 +502,6 @@
     <string name="video_settings">Paramètres vidéo</string>
     <string name="resolution">Résolution</string>
     <string name="timer">Minuteur</string>
+    <string name="action_share_proof_zip">Partager le Zip</string>
+    <string name="action_save_proof_zip">Enregistrer le Zip</string>
 </resources>
